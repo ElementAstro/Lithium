@@ -626,4 +626,99 @@ auto isExecutableFile(const std::string &fileName,
     return true;
 }
 
+auto getFileSize(const std::string &filePath) -> std::size_t {
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    return file.tellg();
+}
+
+auto calculateChunkSize(std::size_t fileSize, int numChunks) -> std::size_t {
+    return (fileSize + numChunks - 1) / numChunks;
+}
+
+void splitFile(const std::string &filePath, std::size_t chunkSize,
+               const std::string &outputPattern) {
+    std::ifstream inputFile(filePath, std::ios::binary);
+    if (!inputFile) {
+        LOG_F(ERROR, "Failed to open file: {}", filePath);
+        return;
+    }
+
+    std::size_t fileSize = getFileSize(filePath);
+    char *buffer = new char[chunkSize];
+    int partNumber = 0;
+    while (fileSize > 0) {
+        std::ostringstream partFileName;
+        if (outputPattern.empty()) {
+            partFileName << filePath << ".part" << partNumber;
+        } else {
+            partFileName << outputPattern << partNumber;
+        }
+
+        std::ofstream outputFile(partFileName.str(), std::ios::binary);
+        if (!outputFile) {
+            LOG_F(ERROR, "Failed to create part file: {}", partFileName.str());
+            delete[] buffer;
+            return;
+        }
+
+        std::size_t bytesToRead = std::min(chunkSize, fileSize);
+        inputFile.read(buffer, bytesToRead);
+        outputFile.write(buffer, bytesToRead);
+
+        fileSize -= bytesToRead;
+        partNumber++;
+    }
+
+    delete[] buffer;
+    inputFile.close();
+
+    LOG_F(INFO, "File split completed into {} parts", partNumber);
+}
+
+void mergeFiles(const std::string &outputFilePath,
+                const std::vector<std::string> &partFiles) {
+    std::ofstream outputFile(outputFilePath, std::ios::binary);
+    if (!outputFile) {
+        LOG_F(ERROR, "Failed to create output file: {}", outputFilePath);
+        return;
+    }
+
+    char buffer[1024];
+    for (const auto &partFile : partFiles) {
+        std::ifstream inputFile(partFile, std::ios::binary);
+        if (!inputFile) {
+            LOG_F(ERROR, "Failed to open part file: {}", partFile);
+            return;
+        }
+
+        while (inputFile.read(buffer, sizeof(buffer))) {
+            outputFile.write(buffer, sizeof(buffer));
+        }
+        outputFile.write(buffer, inputFile.gcount());
+
+        inputFile.close();
+    }
+
+    outputFile.close();
+    LOG_F(INFO, "Files merged into {}", outputFilePath);
+}
+
+void quickSplit(const std::string &filePath, int numChunks,
+                const std::string &outputPattern) {
+    std::size_t fileSize = getFileSize(filePath);
+    std::size_t chunkSize = calculateChunkSize(fileSize, numChunks);
+    splitFile(filePath, chunkSize, outputPattern);
+}
+
+void quickMerge(const std::string &outputFilePath,
+                const std::string &partPattern, int numChunks) {
+    std::vector<std::string> partFiles;
+    for (int i = 0; i < numChunks; ++i) {
+        std::ostringstream partFileName;
+        partFileName << partPattern << i;
+        partFiles.push_back(partFileName.str());
+    }
+    mergeFiles(outputFilePath, partFiles);
+}
+
 }  // namespace atom::io

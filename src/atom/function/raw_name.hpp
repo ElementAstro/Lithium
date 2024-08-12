@@ -119,14 +119,16 @@ constexpr auto raw_name_of_member() {
     if (end == std::string_view::npos) {
         end = name.size();
     } else {
-        end--; // Remove the last '}'
+        end--;  // Remove the last '}'
     }
     return name.substr(start, end - start + 1);
 #elif defined(__clang__)
     // Clang specific parsing
-    std::size_t start = name.rfind(".") + 1;
+    std::size_t start = name.rfind('{') + 1;
     std::size_t end = name.rfind('}');
-    return name.substr(start, end - start);
+    auto temp = name.substr(start, end - start);
+    std::size_t startT = temp.rfind("::") + 2;
+    return temp.substr(startT);
 #elif defined(_MSC_VER)
     // MSVC specific parsing
     std::size_t start = name.rfind("->") + 2;

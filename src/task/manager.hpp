@@ -6,13 +6,13 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 #include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;
 
 namespace lithium {
+
+enum class VariableType { INTEGER, STRING, BOOLEAN, JSON, UNKNOWN };
 
 class TaskInterpreterImpl;
 
@@ -36,8 +36,8 @@ public:
         const std::string& name,
         std::function<void(const std::exception&)> handler);
 
-    void setVariable(const std::string& name, const json& value);
-    auto getVariable(const std::string& name) -> json;
+    void setVariable(const std::string& name, const json& value, VariableType type);
+    [[nodiscard]] auto getVariable(const std::string& name) const -> json;
 
     void parseLabels(const json& script);
     void execute(const std::string& scriptName);

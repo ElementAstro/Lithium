@@ -15,16 +15,17 @@ Description: Task Generator
 #ifndef LITHIUM_TASK_GENERATOR_HPP
 #define LITHIUM_TASK_GENERATOR_HPP
 
+#include <functional>
 #include <memory>
+#include <string>
+#include <variant>
+#include <vector>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-#include <functional>
-#include <string>
-#include <variant>
-#include <vector>
 
 #include "atom/type/json_fwd.hpp"
 

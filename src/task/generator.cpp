@@ -84,7 +84,7 @@ void TaskGenerator::addMacro(const std::string& name, MacroValue value) {
 }
 
 void TaskGenerator::processJson(json& j) const {
-    for (auto& [key, value] : j.items()) {
+    for (const auto& [key, value] : j.items()) {
         if (value.is_string()) {
             std::string newValue = replaceMacros(value.get<std::string>());
             while (newValue != value.get<std::string>()) {
@@ -154,7 +154,7 @@ auto TaskGenerator::replaceMacros(const std::string& input) const
 }
 
 void TaskGenerator::processJsonWithJsonMacros(json& j) {
-    for (auto& [key, value] : j.items()) {
+    for (const auto& [key, value] : j.items()) {
         if (value.is_string()) {
             std::string newValue = replaceMacros(value.get<std::string>());
             while (newValue != value.get<std::string>()) {
@@ -169,7 +169,7 @@ void TaskGenerator::processJsonWithJsonMacros(json& j) {
 
     static const std::regex MACRO_PATTERN(
         R"(\$\{([^\{\}]+(?:\([^\{\}]*\))*)\})");
-    for (auto& [key, value] : j.items()) {
+    for (const auto& [key, value] : j.items()) {
         if (value.is_string()) {
             std::string strValue = value.get<std::string>();
             std::smatch match;

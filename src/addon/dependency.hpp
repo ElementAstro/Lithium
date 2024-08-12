@@ -8,12 +8,13 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "atom/type/json_fwd.hpp"
 
+#include "version.hpp"
+
+#include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;
 
 namespace lithium {
-class Version;
 /**
  * @brief A class that represents a directed dependency graph.
  *

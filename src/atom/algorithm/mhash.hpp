@@ -15,13 +15,15 @@ Description: Implementation of murmur3 hash and quick hash
 #ifndef ATOM_ALGORITHM_MHASH_HPP
 #define ATOM_ALGORITHM_MHASH_HPP
 
-#include <stdint.h>
-#include <cstdint>
 #include <functional>
 #include <limits>
 #include <ranges>
 #include <string>
 #include <vector>
+
+#if USE_OPENCL
+#include <CL/cl.h>
+#endif
 
 #include "macro.hpp"
 
@@ -66,6 +68,11 @@ public:
     explicit MinHash(size_t num_hashes);
 
     /**
+     * @brief Destructor to clean up OpenCL resources.
+     */
+    ~MinHash();
+
+    /**
      * @brief Computes the MinHash signature (hash values) for a given set.
      *
      * @tparam Range Type of the range representing the set elements.
@@ -76,16 +83,22 @@ public:
     auto computeSignature(const Range& set) const -> std::vector<size_t> {
         std::vector<size_t> signature(hash_functions_.size(),
                                       std::numeric_limits<size_t>::max());
-
-        for (const auto& element : set) {
-            size_t elementHash =
-                std::hash<typename Range::value_type>{}(element);
-            for (size_t i = 0; i < hash_functions_.size(); ++i) {
-                signature[i] =
-                    std::min(signature[i], hash_functions_[i](elementHash));
+#if USE_OPENCL
+        if (opencl_available_) {
+            computeSignatureOpenCL(set, signature);
+        } else {
+#endif
+            for (const auto& element : set) {
+                size_t elementHash =
+                    std::hash<typename Range::value_type>{}(element);
+                for (size_t i = 0; i < hash_functions_.size(); ++i) {
+                    signature[i] =
+                        std::min(signature[i], hash_functions_[i](elementHash));
+                }
             }
+#if USE_OPENCL
         }
-
+#endif
         return signature;
     }
 
@@ -112,8 +125,93 @@ private:
      * @return HashFunction Generated hash function.
      */
     static auto generateHashFunction() -> HashFunction;
+
+#if USE_OPENCL
+    /**
+     * @brief OpenCL resources and state.
+     */
+    cl_context context_;
+    cl_command_queue queue_;
+    cl_program program_;
+    cl_kernel minhash_kernel_;
+    bool opencl_available_;
+
+    /**
+     * @brief Initializes OpenCL context and resources.
+     */
+    void initializeOpenCL();
+
+    /**
+     * @brief Cleans up OpenCL resources.
+     */
+    void cleanupOpenCL();
+
+    /**
+     * @brief Computes the MinHash signature using OpenCL.
+     *
+     * @tparam Range Type of the range representing the set elements.
+     * @param set The set for which to compute the MinHash signature.
+     * @param signature The vector to store the computed signature.
+     */
+    template <std::ranges::range Range>
+    void computeSignatureOpenCL(const Range& set,
+                                std::vector<size_t>& signature) const {
+        cl_int err;
+        size_t numHashes = hash_functions_.size();
+        size_t numElements = set.size();
+
+        std::vector<size_t> hashes;
+        hashes.reserve(numElements);
+        for (const auto& element : set) {
+            hashes.push_back(std::hash<typename Range::value_type>{}(element));
+        }
+
+        std::vector<size_t> aValues(numHashes);
+        std::vector<size_t> bValues(numHashes);
+        for (size_t i = 0; i < numHashes; ++i) {
+            aValues;  // Use the generated hash function's "a" value
+            bValues;  // Use the generated hash function's "b" value
+        }
+
+        cl_mem hashesBuffer =
+            clCreateBuffer(context_, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                           numElements * sizeof(size_t), hashes.data(), &err);
+        cl_mem signatureBuffer =
+            clCreateBuffer(context_, CL_MEM_WRITE_ONLY,
+                           numHashes * sizeof(size_t), nullptr, &err);
+        cl_mem aValuesBuffer =
+            clCreateBuffer(context_, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                           numHashes * sizeof(size_t), aValues.data(), &err);
+        cl_mem bValuesBuffer =
+            clCreateBuffer(context_, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                           numHashes * sizeof(size_t), bValues.data(), &err);
+
+        size_t p = std::numeric_limits<size_t>::max();
+
+        clSetKernelArg(minhash_kernel_, 0, sizeof(cl_mem), &hashesBuffer);
+        clSetKernelArg(minhash_kernel_, 1, sizeof(cl_mem), &signatureBuffer);
+        clSetKernelArg(minhash_kernel_, 2, sizeof(cl_mem), &aValuesBuffer);
+        clSetKernelArg(minhash_kernel_, 3, sizeof(cl_mem), &bValuesBuffer);
+        clSetKernelArg(minhash_kernel_, 4, sizeof(size_t), &p);
+        clSetKernelArg(minhash_kernel_, 5, sizeof(size_t), &numHashes);
+        clSetKernelArg(minhash_kernel_, 6, sizeof(size_t), &numElements);
+
+        size_t globalWorkSize = numHashes;
+        clEnqueueNDRangeKernel(queue_, minhash_kernel_, 1, nullptr,
+                               &globalWorkSize, nullptr, 0, nullptr, nullptr);
+
+        clEnqueueReadBuffer(queue_, signatureBuffer, CL_TRUE, 0,
+                            numHashes * sizeof(size_t), signature.data(), 0,
+                            nullptr, nullptr);
+
+        clReleaseMemObject(hashesBuffer);
+        clReleaseMemObject(signatureBuffer);
+        clReleaseMemObject(aValuesBuffer);
+        clReleaseMemObject(bValuesBuffer);
+    }
+#endif
 };
 
 }  // namespace atom::algorithm
 
-#endif
+#endif  // ATOM_ALGORITHM_MHASH_HPP

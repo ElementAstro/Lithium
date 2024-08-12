@@ -310,7 +310,7 @@ public:
     /**
      * @brief Run the task.
      */
-    void run();
+    virtual void run();
 
     /**
      * @brief Complete the task.

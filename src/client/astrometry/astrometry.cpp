@@ -1,9 +1,13 @@
 #include "astrometry.hpp"
+#include <memory>
 #include <sstream>
 
+#include "atom/components/registry.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
+
+static auto astrometrySolver = std::make_shared<AstrometrySolver>("solver.astrometry");
 
 AstrometrySolver::AstrometrySolver(std::string name) : name_(name) {
     DLOG_F(INFO, "Initializing Astrometry Solver...");
@@ -159,3 +163,29 @@ auto AstrometrySolver::readSolveResult(const std::string &output)
 
     return result;
 }
+
+ATOM_MODULE(astrometry, [](Component &component) {
+    LOG_F(INFO, "Registering astrometry module...");
+    LOG_F(INFO, "AstrometryComponent Constructed");
+
+    component.def("connect", &AstrometrySolver::connect, "main",
+                  "Connect to astrometry solver");
+    component.def("disconnect", &AstrometrySolver::disconnect, "main",
+                  "Disconnect from astrometry solver");
+    component.def("reconnect", &AstrometrySolver::reconnect, "main",
+                  "Reconnect to astrometry solver");
+    component.def("isConnected", &AstrometrySolver::isConnected, "main",
+                  "Check if astrometry solver is connected");
+    component.def("scanSolver", &AstrometrySolver::scanSolver, "main",
+                  "Scan for astrometry solver");
+    component.def("solveImage", &AstrometrySolver::solveImage, "main",
+                  "Solve image");
+    component.def("getSolveResult", &AstrometrySolver::getSolveResult, "main",
+                  "Get solve result");
+
+    component.addVariable("astrometry.instance", "Astap solver instance");
+    component.defType<AstrometrySolver>("astrometry", "device.solver",
+                                        "Astap solver");
+
+    LOG_F(INFO, "Registered astrometry module.");
+})

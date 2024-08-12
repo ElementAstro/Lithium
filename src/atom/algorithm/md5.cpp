@@ -21,6 +21,10 @@ Description: Self implemented MD5 algorithm.
 #include <iomanip>
 #include <sstream>
 
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
+
 namespace atom::algorithm {
 
 constexpr std::array<uint32_t, 64> T{
@@ -100,6 +104,9 @@ void MD5::processBlock(const uint8_t *block) {
     uint32_t c = c_;
     uint32_t d = d_;
 
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
     for (uint32_t i = 0; i < 64; ++i) {
         uint32_t f, g;
         if (i < 16) {
@@ -123,10 +130,15 @@ void MD5::processBlock(const uint8_t *block) {
         a = temp;
     }
 
-    a_ += a;
-    b_ += b;
-    c_ += c;
-    d_ += d;
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+    {
+        a_ += a;
+        b_ += b;
+        c_ += c;
+        d_ += d;
+    }
 }
 
 auto MD5::F(uint32_t x, uint32_t y, uint32_t z) -> uint32_t {

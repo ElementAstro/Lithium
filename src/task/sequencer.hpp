@@ -10,13 +10,7 @@
 #include <thread>
 #include <vector>
 
-#include "task.hpp"
-
-// Forward declaration of StateMachine class
-class StateMachine;
-
-// Forward declaration of TaskEvent class
-class TaskEvent;
+class Task;
 
 class Target {
 public:
@@ -37,8 +31,8 @@ public:
 
     [[nodiscard]] auto isEnabled() const -> bool;
 
-    void execute(std::atomic<bool>& stopFlag, std::atomic<bool>& pauseFlag,
-                 std::condition_variable& cv, std::mutex& mtx);
+    void execute(std::stop_token stopToken, std::atomic<bool>& pauseFlag,
+                 std::condition_variable_any& cv, std::mutex& mtx);
 
     [[nodiscard]] auto getName() const -> std::string;
 
@@ -47,13 +41,12 @@ private:
     std::vector<std::shared_ptr<Task>> tasks_;
     int delayAfterTarget_;
     int priority_;
-    bool enabled_ = true;
+    bool enabled_;
 };
 
 class ExposureSequence {
 public:
     ExposureSequence();
-
     ~ExposureSequence();
 
     void addTarget(Target target);
@@ -77,13 +70,13 @@ public:
 
 private:
     mutable std::mutex mutex_;
-    std::condition_variable cv_;
+    std::condition_variable_any cv_;
     std::vector<std::shared_ptr<Target>> targets_;
     std::atomic<bool> stopFlag_;
     std::atomic<bool> pauseFlag_;
-    std::unique_ptr<std::thread> sequenceThread_;
+    std::unique_ptr<std::jthread> sequenceThread_;
 
-    void executeSequence();
+    void executeSequence(std::stop_token stopToken);
 };
 
-#endif
+#endif  // LITHIUM_TASK_SEQUENCER_HPP

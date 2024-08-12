@@ -1,6 +1,10 @@
 #include "algorithm.hpp"
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
 
 namespace atom::algorithm {
+
 KMP::KMP(std::string_view pattern) { setPattern(pattern); }
 
 auto KMP::search(std::string_view text) const -> std::vector<int> {
@@ -10,6 +14,33 @@ auto KMP::search(std::string_view text) const -> std::vector<int> {
     if (m == 0) {
         return occurrences;
     }
+
+#ifdef USE_OPENMP
+    std::vector<int> local_occurrences[omp_get_max_threads()];
+#pragma omp parallel
+    {
+        int i = omp_get_thread_num();
+        int j = 0;
+        while (i < n) {
+            if (text[i] == pattern_[j]) {
+                ++i;
+                ++j;
+                if (j == m) {
+                    local_occurrences[omp_get_thread_num()].push_back(i - m);
+                    j = failure_[j - 1];
+                }
+            } else if (j > 0) {
+                j = failure_[j - 1];
+            } else {
+                ++i;
+            }
+        }
+    }
+    for (int t = 0; t < omp_get_max_threads(); ++t) {
+        occurrences.insert(occurrences.end(), local_occurrences[t].begin(),
+                           local_occurrences[t].end());
+    }
+#else
     int i = 0;
     int j = 0;
     while (i < n) {
@@ -26,6 +57,7 @@ auto KMP::search(std::string_view text) const -> std::vector<int> {
             ++i;
         }
     }
+#endif
     return occurrences;
 }
 
@@ -58,6 +90,35 @@ auto BoyerMoore::search(std::string_view text) const -> std::vector<int> {
     if (m == 0) {
         return occurrences;
     }
+
+#ifdef USE_OPENMP
+    std::vector<int> local_occurrences[omp_get_max_threads()];
+#pragma omp parallel
+    {
+        int i = omp_get_thread_num();
+        while (i <= n - m) {
+            int j = m - 1;
+            while (j >= 0 && pattern_[j] == text[i + j]) {
+                --j;
+            }
+            if (j < 0) {
+                local_occurrences[omp_get_thread_num()].push_back(i);
+                i += good_suffix_shift_[0];
+            } else {
+                int badCharShift =
+                    bad_char_shift_.find(text[i + j]) != bad_char_shift_.end()
+                        ? bad_char_shift_.at(text[i + j])
+                        : m;
+                i += std::max(good_suffix_shift_[j + 1],
+                              badCharShift - m + 1 + j);
+            }
+        }
+    }
+    for (int t = 0; t < omp_get_max_threads(); ++t) {
+        occurrences.insert(occurrences.end(), local_occurrences[t].begin(),
+                           local_occurrences[t].end());
+    }
+#else
     int i = 0;
     while (i <= n - m) {
         int j = m - 1;
@@ -75,6 +136,7 @@ auto BoyerMoore::search(std::string_view text) const -> std::vector<int> {
             i += std::max(good_suffix_shift_[j + 1], badCharShift - m + 1 + j);
         }
     }
+#endif
     return occurrences;
 }
 

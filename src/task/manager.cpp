@@ -1,5 +1,7 @@
 #include "manager.hpp"
 #include "generator.hpp"
+#include "pool.hpp"
+#include "task.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -9,25 +11,49 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <shared_mutex>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "atom/error/exception.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
-#include "task.hpp"
 
 using namespace std::literals;
 using json = nlohmann::json;
 
+std::ostream& operator<<(std::ostream& os, const std::error_code& ec) {
+    os << "Error Code: " << ec.value() << ", Category: " << ec.category().name()
+       << ", Message: " << ec.message();
+    return os;
+}
+
 namespace lithium {
+
+auto determineType(const json& value) -> VariableType {
+    if (value.is_number_integer()) {
+        return VariableType::INTEGER;
+}
+    if (value.is_string()) {
+        return VariableType::STRING;
+}
+    if (value.is_boolean()) {
+        return VariableType::BOOLEAN;
+}
+    if (value.is_object() || value.is_array()) {
+        return VariableType::JSON;
+}
+    return VariableType::UNKNOWN;
+}
 
 class TaskInterpreterImpl {
 public:
     std::unordered_map<std::string, json> scripts_;
-    json variables_;
+    std::unordered_map<std::string, std::pair<VariableType, json>> variables_;
     std::unordered_map<std::string, std::function<json(const json&)>>
         functions_;
     std::unordered_map<std::string, size_t> labels_;
@@ -35,22 +61,32 @@ public:
         exceptionHandlers_;
     std::atomic<bool> stopRequested_{false};
     std::atomic<bool> pauseRequested_{false};
+    std::atomic<bool> isRunning_{false};
     std::jthread executionThread_;
     std::vector<std::string> callStack_;
-    std::mutex mtx_;
+    mutable std::shared_mutex mtx_;
     std::condition_variable_any cv_;
     std::queue<std::pair<std::string, json>> eventQueue_;
 
     std::shared_ptr<TaskGenerator> taskGenerator_;
+    std::shared_ptr<TaskPool> taskPool_;
 };
 
 TaskInterpreter::TaskInterpreter()
-    : impl_(std::make_unique<TaskInterpreterImpl>()) {}
+    : impl_(std::make_unique<TaskInterpreterImpl>()) {
+    if (auto ptr = GetPtrOrCreate<TaskPool>(
+            "lithium.task.pool", [] { return std::make_shared<TaskPool>(); });
+        ptr) {
+        impl_->taskPool_ = ptr;
+    } else {
+        THROW_RUNTIME_ERROR("Failed to create task pool.");
+    }
+}
 
 TaskInterpreter::~TaskInterpreter() {
     if (impl_->executionThread_.joinable()) {
         stop();
-        impl_->executionThread_.join();
+        // impl_->executionThread_.join();
     }
 }
 
@@ -59,7 +95,9 @@ auto TaskInterpreter::createShared() -> std::shared_ptr<TaskInterpreter> {
 }
 
 void TaskInterpreter::loadScript(const std::string& name, const json& script) {
+    std::unique_lock lock(impl_->mtx_);
     impl_->scripts_[name] = script;
+    lock.unlock();
     if (prepareScript(impl_->scripts_[name])) {
         parseLabels(script);
     } else {
@@ -68,18 +106,19 @@ void TaskInterpreter::loadScript(const std::string& name, const json& script) {
 }
 
 void TaskInterpreter::unloadScript(const std::string& name) {
-    if (hasScript(name)) {
-        impl_->scripts_.erase(name);
-    }
+    std::unique_lock lock(impl_->mtx_);
+    impl_->scripts_.erase(name);
 }
 
-bool TaskInterpreter::hasScript(const std::string& name) const {
+auto TaskInterpreter::hasScript(const std::string& name) const -> bool {
+    std::shared_lock lock(impl_->mtx_);
     return impl_->scripts_.contains(name);
 }
 
 auto TaskInterpreter::getScript(const std::string& name) const
     -> std::optional<json> {
-    if (hasScript(name)) {
+    std::shared_lock lock(impl_->mtx_);
+    if (impl_->scripts_.contains(name)) {
         return impl_->scripts_.at(name);
     }
     return std::nullopt;
@@ -100,6 +139,7 @@ auto TaskInterpreter::prepareScript(json& script) -> bool {
 
 void TaskInterpreter::registerFunction(const std::string& name,
                                        std::function<json(const json&)> func) {
+    std::unique_lock lock(impl_->mtx_);
     if (impl_->functions_.find(name) != impl_->functions_.end()) {
         THROW_RUNTIME_ERROR("Function '" + name + "' is already registered.");
     }
@@ -109,21 +149,41 @@ void TaskInterpreter::registerFunction(const std::string& name,
 void TaskInterpreter::registerExceptionHandler(
     const std::string& name,
     std::function<void(const std::exception&)> handler) {
+    std::unique_lock lock(impl_->mtx_);
     impl_->exceptionHandlers_[name] = std::move(handler);
 }
 
-void TaskInterpreter::setVariable(const std::string& name, const json& value) {
-    impl_->variables_[name] = value;
+void TaskInterpreter::setVariable(const std::string& name, const json& value, VariableType type) {
+    std::unique_lock lock(impl_->mtx_);
+    impl_->cv_.wait(lock, [this]() { return !impl_->isRunning_; });
+
+    VariableType currentType = determineType(value);
+    if (currentType != type) {
+        THROW_RUNTIME_ERROR("Type mismatch when setting variable '" + name + "'. Expected " + 
+                            std::to_string(static_cast<int>(type)) + ", got " +
+                            std::to_string(static_cast<int>(currentType)) + ".");
+    }
+
+    if (impl_->variables_.find(name) != impl_->variables_.end()) {
+        if (impl_->variables_[name].first != type) {
+            THROW_RUNTIME_ERROR("Type mismatch: Variable '" + name + "' already exists with a different type.");
+        }
+    }
+
+    impl_->variables_[name] = {type, value};
 }
 
-auto TaskInterpreter::getVariable(const std::string& name) -> json {
+auto TaskInterpreter::getVariable(const std::string& name) const -> json {
+    std::shared_lock lock(impl_->mtx_);
+    impl_->cv_.wait(lock, [this]() { return !impl_->isRunning_; });
     if (impl_->variables_.find(name) == impl_->variables_.end()) {
         THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
     }
-    return impl_->variables_[name];
+    return impl_->variables_.at(name).second;
 }
 
 void TaskInterpreter::parseLabels(const json& script) {
+    std::unique_lock lock(impl_->mtx_);
     for (size_t i = 0; i < script.size(); ++i) {
         if (script[i].contains("label")) {
             impl_->labels_[script[i]["label"]] = i;
@@ -133,16 +193,22 @@ void TaskInterpreter::parseLabels(const json& script) {
 
 void TaskInterpreter::execute(const std::string& scriptName) {
     impl_->stopRequested_ = false;
+    impl_->isRunning_ = true;
     if (impl_->executionThread_.joinable()) {
         impl_->executionThread_.join();
     }
 
+    if (!impl_->scripts_.contains(scriptName)) {
+        THROW_RUNTIME_ERROR("Script '" + scriptName + "' not found.");
+    }
+
     impl_->executionThread_ = std::jthread([this, scriptName]() {
+        std::exception_ptr exPtr = nullptr;
         try {
-            if (impl_->scripts_.find(scriptName) == impl_->scripts_.end()) {
-                THROW_RUNTIME_ERROR("Script '" + scriptName + "' not found.");
-            }
-            const json& script = impl_->scripts_[scriptName];
+            std::shared_lock lock(impl_->mtx_);
+            const json& script = impl_->scripts_.at(scriptName);
+            lock.unlock();
+
             size_t i = 0;
             while (i < script.size() && !impl_->stopRequested_) {
                 if (!executeStep(script[i], i, script)) {
@@ -150,9 +216,19 @@ void TaskInterpreter::execute(const std::string& scriptName) {
                 }
                 i++;
             }
-        } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error during script execution: {}", e.what());
-            handleException(scriptName, e);
+        } catch (...) {
+            exPtr = std::current_exception();
+        }
+
+        impl_->isRunning_ = false;
+        impl_->cv_.notify_all();
+
+        if (exPtr) {
+            try {
+                std::rethrow_exception(exPtr);
+            } catch (const std::exception& e) {
+                handleException(scriptName, e);
+            }
         }
     });
 }
@@ -173,7 +249,7 @@ void TaskInterpreter::resume() {
 
 void TaskInterpreter::queueEvent(const std::string& eventName,
                                  const json& eventData) {
-    std::lock_guard<std::mutex> lock(impl_->mtx_);
+    std::unique_lock lock(impl_->mtx_);
     impl_->eventQueue_.emplace(eventName, eventData);
     impl_->cv_.notify_all();
 }
@@ -301,42 +377,68 @@ void TaskInterpreter::executeDelay(const json& step) {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 }
 
-void TaskInterpreter::executeParallel(const json& step, size_t& idx,
+void TaskInterpreter::executeParallel(const json& step,
+                                      [[maybe_unused]] size_t& idx,
                                       const json& script) {
-    std::vector<std::jthread> threads;
+    std::vector<std::future<void>> futures;
 
     for (const auto& nestedStep : step["steps"]) {
-        threads.emplace_back([this, &nestedStep, &script]() {
-            size_t nestedIdx = 0;
-            executeStep(nestedStep, nestedIdx, script);
-        });
+        futures.emplace_back(
+            impl_->taskPool_->enqueue([this, nestedStep, &script]() {
+                size_t nestedIdx = 0;
+                executeStep(nestedStep, nestedIdx, script);
+            }));
     }
-    for (auto& thread : threads) {
-        thread.join();
+
+    for (auto& future : futures) {
+        future.get();
     }
 }
 
 void TaskInterpreter::executeCall(const json& step) {
-    std::string functionName = step["function"];
-    json params = step["params"];
-    for (const auto& [key, value] : params.items()) {
-        params[key] = evaluate(value);
-    }
-    if (impl_->functions_.find(functionName) != impl_->functions_.end()) {
-        auto task = std::make_shared<Task>(
-            functionName, params, impl_->functions_[functionName],
-            [](const std::exception& e) {
-                LOG_F(ERROR, "Task failed: {}", e.what());
-            });
-        task->run();
-        LOG_F(INFO, "Task {} executed", functionName);
-    } else {
-        LOG_F(ERROR, "Function {} not found.", functionName);
+    // 获取函数名
+    try {
+        std::string functionName = step["function"];
+
+        // 获取参数
+        json params = step.contains("params") ? step["params"] : json::object();
+
+        // 评估参数的值
+        for (const auto& [key, value] : params.items()) {
+            params[key] = evaluate(value);
+        }
+
+        // 获取目标变量名（可选）
+        std::string targetVariable =
+            step.contains("result") ? step["result"].get<std::string>() : "";
+
+        json returnValue;
+        {
+            std::shared_lock lock(impl_->mtx_);
+            // 检查函数是否已注册
+            if (impl_->functions_.contains(functionName)) {
+                // 调用函数并获取返回值
+                returnValue = impl_->functions_[functionName](params);
+            } else {
+                THROW_RUNTIME_ERROR("Function '" + functionName +
+                                    "' not found.");
+            }
+        }
+
+        // 如果指定了目标变量名，则将返回值存储到该变量中
+        if (!targetVariable.empty()) {
+            std::unique_lock ulock(impl_->mtx_);
+            impl_->variables_[targetVariable] = returnValue;
+        }
+    } catch (const std::system_error& e) {
+        LOG_F(ERROR, "Error during step execution: {} with code: {}", e.what(),
+              e.code().message());
     }
 }
 
 void TaskInterpreter::executeNestedScript(const json& step) {
     std::string scriptName = step["script"];
+    std::shared_lock lock(impl_->mtx_);
     if (impl_->scripts_.find(scriptName) != impl_->scripts_.end()) {
         execute(scriptName);
     } else {
@@ -347,11 +449,13 @@ void TaskInterpreter::executeNestedScript(const json& step) {
 void TaskInterpreter::executeAssign(const json& step) {
     std::string variable = step["variable"];
     json value = evaluate(step["value"]);
+    std::unique_lock lock(impl_->mtx_);
     impl_->variables_[variable] = value;
 }
 
 void TaskInterpreter::executeImport(const json& step) {
     std::string scriptName = step["script"];
+    std::shared_lock lock(impl_->mtx_);
     if (impl_->scripts_.find(scriptName) == impl_->scripts_.end()) {
         THROW_RUNTIME_ERROR("Script '" + scriptName + "' not found.");
     }
@@ -360,8 +464,8 @@ void TaskInterpreter::executeImport(const json& step) {
 
 void TaskInterpreter::executeWaitEvent(const json& step) {
     std::string eventName = step["event"];
-    std::unique_lock lk(impl_->mtx_);
-    impl_->cv_.wait(lk, [this, &eventName]() {
+    std::unique_lock lock(impl_->mtx_);
+    impl_->cv_.wait(lock, [this, &eventName]() {
         return !impl_->eventQueue_.empty() &&
                impl_->eventQueue_.front().first == eventName;
     });
@@ -392,11 +496,22 @@ void TaskInterpreter::executeTryCatch(const json& step, size_t& idx,
     }
 }
 
+// TODO: Switch to self implementation of CommandDispatcher
 void TaskInterpreter::executeFunction(const json& step) {
+    LOG_F(INFO, "Executing step {}", step.dump());
     std::string functionName = step["name"];
     json params = step.contains("params") ? step["params"] : json::object();
-    if (impl_->functions_.find(functionName) != impl_->functions_.end()) {
-        impl_->functions_[functionName](params);
+    // 用于处理返回值
+    std::string targetVariable =
+        step.contains("result") ? step["result"].get<std::string>() : "";
+    std::shared_lock lock(impl_->mtx_);
+    if (impl_->functions_.contains(functionName)) {
+        json returnValue = impl_->functions_[functionName](params);
+        // 如果指定了目标变量名，则将返回值存储到该变量中
+        if (!targetVariable.empty()) {
+            std::unique_lock ulock(impl_->mtx_);
+            impl_->variables_[targetVariable] = returnValue;
+        }
     } else {
         THROW_RUNTIME_ERROR("Function '" + functionName + "' not found.");
     }
@@ -424,21 +539,98 @@ void TaskInterpreter::executeSteps(const json& steps, size_t& idx,
 }
 
 auto TaskInterpreter::evaluate(const json& value) -> json {
-    if (value.is_primitive()) {
-        return value;
-    }
     if (value.is_string() &&
         impl_->variables_.contains(value.get<std::string>())) {
-        return impl_->variables_[value.get<std::string>()];
+        std::shared_lock lock(impl_->mtx_);
+        return impl_->variables_.at(value.get<std::string>());
+    }
+
+    if (value.is_object()) {
+        if (value.contains("$eq")) {  // 等于比较
+            auto operands = value["$eq"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]);
+                auto right = evaluate(operands[1]);
+                if (determineType(left) != determineType(right)) {
+                    THROW_RUNTIME_ERROR("Type mismatch in equality comparison: " + value.dump());
+                }
+                return left == right;
+            }
+        } else if (value.contains("$gt")) {  // 大于比较
+            auto operands = value["$gt"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]);
+                auto right = evaluate(operands[1]);
+                return left > right;
+            }
+        } else if (value.contains("$lt")) {  // 小于比较
+            auto operands = value["$lt"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]);
+                auto right = evaluate(operands[1]);
+                return left < right;
+            }
+        } else if (value.contains("$add")) {  // 加法运算
+            auto operands = value["$add"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]).get<int>();
+                auto right = evaluate(operands[1]).get<int>();
+                return left + right;
+            }
+        } else if (value.contains("$sub")) {  // 减法运算
+            auto operands = value["$sub"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]).get<int>();
+                auto right = evaluate(operands[1]).get<int>();
+                return left - right;
+            }
+        } else if (value.contains("$mul")) {  // 乘法运算
+            auto operands = value["$mul"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]).get<int>();
+                auto right = evaluate(operands[1]).get<int>();
+                return left * right;
+            }
+        } else if (value.contains("$div")) {  // 除法运算
+            auto operands = value["$div"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]).get<int>();
+                auto right = evaluate(operands[1]).get<int>();
+                if (right == 0) {
+                    THROW_RUNTIME_ERROR("Division by zero");
+                }
+                return left / right;
+            }
+        } else if (value.contains("$and")) {  // 逻辑与
+            auto operands = value["$and"];
+            if (operands.is_array()) {
+                for (const auto& operand : operands) {
+                    if (!evaluate(operand).get<bool>()) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        } else if (value.contains("$or")) {  // 逻辑或
+            auto operands = value["$or"];
+            if (operands.is_array()) {
+                for (const auto& operand : operands) {
+                    if (evaluate(operand).get<bool>()) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
     }
     return value;
 }
 
 void TaskInterpreter::handleException(const std::string& scriptName,
                                       const std::exception& e) {
-    if (impl_->exceptionHandlers_.find(scriptName) !=
-        impl_->exceptionHandlers_.end()) {
-        impl_->exceptionHandlers_[scriptName](e);
+    std::shared_lock lock(impl_->mtx_);
+    if (impl_->exceptionHandlers_.contains(scriptName)) {
+        impl_->exceptionHandlers_.at(scriptName)(e);
     } else {
         LOG_F(ERROR, "Unhandled exception in script '{}': {}", scriptName,
               e.what());

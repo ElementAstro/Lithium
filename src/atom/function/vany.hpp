@@ -1,6 +1,7 @@
 #ifndef ATOM_META_VANY_HPP
 #define ATOM_META_VANY_HPP
 
+#include <cstring>
 #include <functional>
 #include <sstream>
 #include <string>
@@ -123,7 +124,12 @@ public:
                 if (ptr == nullptr) {
                     throw std::bad_alloc();
                 }
-                vptr_->copy(other.getPtr(), ptr);
+                try {
+                    vptr_->copy(other.getPtr(), ptr);
+                } catch (...) {
+                    free(ptr);
+                    throw;
+                }
             }
         }
     }
@@ -161,20 +167,8 @@ public:
 
     auto operator=(const Any& other) -> Any& {
         if (this != &other) {
-            reset();
-            vptr_ = other.vptr_;
-            is_small_ = other.is_small_;
-            if (vptr_ != nullptr) {
-                if (is_small_) {
-                    vptr_->copy(other.getPtr(), storage);
-                } else {
-                    ptr = malloc(vptr_->size());
-                    if (ptr == nullptr) {
-                        throw std::bad_alloc();
-                    }
-                    vptr_->copy(other.getPtr(), ptr);
-                }
-            }
+            Any temp(other);
+            swap(temp);
         }
         return *this;
     }
@@ -184,17 +178,22 @@ public:
             reset();
             vptr_ = other.vptr_;
             is_small_ = other.is_small_;
-            if (vptr_ != nullptr) {
-                if (is_small_) {
-                    vptr_->move(other.storage, storage);
-                } else {
-                    ptr = other.ptr;
-                    other.ptr = nullptr;
-                }
-                other.vptr_ = nullptr;
+            if (!is_small_) {
+                ptr = other.ptr;
+                other.ptr = nullptr;
+            } else {
+                std::memcpy(storage, other.storage, SMALL_OBJECT_SIZE);
             }
+            other.vptr_ = nullptr;
         }
         return *this;
+    }
+
+    void swap(Any& other) noexcept {
+        std::swap(vptr_, other.vptr_);
+        std::swap(is_small_, other.is_small_);
+        std::swap(storage, other.storage);
+        std::swap(ptr, other.ptr);
     }
 
     template <typename T>

@@ -23,25 +23,7 @@ Description: Component wrapper for Astap
 AstrometryComponent::AstrometryComponent(const std::string& name)
     : Component(name),
       m_solver(std::make_shared<AstrometrySolver>("astrometry")) {
-    LOG_F(INFO, "AstrometryComponent Constructed");
-
-    def("connect", &AstrometrySolver::connect, m_solver, "main",
-        "Connect to astrometry solver");
-    def("disconnect", &AstrometrySolver::disconnect, m_solver, "main",
-        "Disconnect from astrometry solver");
-    def("reconnect", &AstrometrySolver::reconnect, m_solver, "main",
-        "Reconnect to astrometry solver");
-    def("isConnected", &AstrometrySolver::isConnected, m_solver, "main",
-        "Check if astrometry solver is connected");
-    def("scanSolver", &AstrometrySolver::scanSolver, m_solver, "main",
-        "Scan for astrometry solver");
-    def("solveImage", &AstrometrySolver::solveImage, m_solver, "main",
-        "Solve image");
-    def("getSolveResult", &AstrometrySolver::getSolveResult, m_solver, "main",
-        "Get solve result");
-
-    addVariable("astrometry.instance", m_solver, "Astap solver instance");
-    defType<AstrometrySolver>("astrometry", "device.solver", "Astap solver");
+    
 }
 
 AstrometryComponent::~AstrometryComponent() {

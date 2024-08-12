@@ -19,6 +19,8 @@
 #include <vector>
 #include "atom/async/async.hpp"
 #include "atom/macro.hpp"
+#include "function/type_info.hpp"
+#define ENABLE_DEBUG 1
 #if ENABLE_DEBUG
 #include <iostream>
 #endif
@@ -48,13 +50,17 @@ struct FunctionInfo {
     }
 } ATOM_ALIGNAS(128);
 
+// TODO: FIX ME - any cast can not cover all cases
 template <typename T>
 auto anyCastRef(std::any &operand) -> T && {
     return *std::any_cast<std::decay_t<T> *>(operand);
 }
 
 template <typename T>
-auto anyCastRef(const std::any &operand) -> T && {
+auto anyCastRef(const std::any &operand) -> T & {
+#if ENABLE_DEBUG
+    std::cout << "type: " << TypeInfo::fromType<T>().name() << "\n";
+#endif
     return *std::any_cast<std::decay_t<T> *>(operand);
 }
 
@@ -324,20 +330,17 @@ private:
                     std::reference_wrapper<typename Traits::class_type>>(
                     args[0])
                     .get();
-            auto boundFunc =
-                std::bind_front(this->func_, obj, std::placeholders::_1);
 
             if constexpr (std::is_void_v<typename Traits::return_type>) {
-                std::invoke(
-                    boundFunc,
+                (obj.*(this->func_))(
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is + 1])...);
                 return {};
             } else {
-                return std::make_any<typename Traits::return_type>(std::invoke(
-                    boundFunc,
-                    std::any_cast<typename Traits::template argument_t<Is>>(
-                        args[Is + 1])...));
+                return std::make_any<typename Traits::return_type>(
+                    (obj.*(this->func_))(
+                        std::any_cast<typename Traits::template argument_t<Is>>(
+                            args[Is + 1])...));
             }
         };
 

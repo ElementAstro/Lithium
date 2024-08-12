@@ -9,7 +9,7 @@
 Date: 2023-11-10
 
 Description: Implementation of one-dimensional and two-dimensional convolution
-and deconvolution.
+and deconvolution with optional OpenCL support.
 
 **************************************************/
 
@@ -24,9 +24,14 @@ and deconvolution.
 #include <thread>
 #include <vector>
 
+#if USE_OPENCL
+#include <CL/cl.h>
+#endif
+
 #include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
+
 // Function to convolve a 1D input with a kernel
 auto convolve(const std::vector<double> &input,
               const std::vector<double> &kernel) -> std::vector<double> {
@@ -82,10 +87,181 @@ auto extend2D(const std::vector<std::vector<T>> &input, std::size_t newRows,
     return extended;
 }
 
-// Function to convolve a 2D input with a 2D kernel using multithreading
+#if USE_OPENCL
+// OpenCL initialization and helper functions
+auto initializeOpenCL() -> cl_context {
+    cl_uint numPlatforms;
+    cl_platform_id platform = nullptr;
+    clGetPlatformIDs(1, &platform, &numPlatforms);
+
+    cl_context_properties properties[] = {CL_CONTEXT_PLATFORM,
+                                          (cl_context_properties)platform, 0};
+
+    cl_int err;
+    cl_context context = clCreateContextFromType(properties, CL_DEVICE_TYPE_GPU,
+                                                 nullptr, nullptr, &err);
+    if (err != CL_SUCCESS) {
+        THROW_RUNTIME_ERROR("Failed to create OpenCL context.");
+    }
+    return context;
+}
+
+auto createCommandQueue(cl_context context) -> cl_command_queue {
+    cl_device_id device_id;
+    clGetDeviceIDs(nullptr, CL_DEVICE_TYPE_GPU, 1, &device_id, nullptr);
+    cl_int err;
+    cl_command_queue commandQueue =
+        clCreateCommandQueue(context, device_id, 0, &err);
+    if (err != CL_SUCCESS) {
+        THROW_RUNTIME_ERROR("Failed to create OpenCL command queue.");
+    }
+    return commandQueue;
+}
+
+auto createProgram(const std::string &source,
+                   cl_context context) -> cl_program {
+    const char *sourceStr = source.c_str();
+    cl_int err;
+    cl_program program =
+        clCreateProgramWithSource(context, 1, &sourceStr, nullptr, &err);
+    if (err != CL_SUCCESS) {
+        THROW_RUNTIME_ERROR("Failed to create OpenCL program.");
+    }
+    return program;
+}
+
+void checkErr(cl_int err, const char *operation) {
+    if (err != CL_SUCCESS) {
+        std::string errMsg = "OpenCL Error during operation: ";
+        errMsg += operation;
+        THROW_RUNTIME_ERROR(errMsg.c_str());
+    }
+}
+
+// OpenCL kernel code for 2D convolution
+const std::string convolve2DKernelSrc = R"CLC(
+__kernel void convolve2D(__global const float* input,
+                         __global const float* kernel,
+                         __global float* output,
+                         const int inputRows,
+                         const int inputCols,
+                         const int kernelRows,
+                         const int kernelCols) {
+    int row = get_global_id(0);
+    int col = get_global_id(1);
+
+    int halfKernelRows = kernelRows / 2;
+    int halfKernelCols = kernelCols / 2;
+
+    float sum = 0.0;
+    for (int i = -halfKernelRows; i <= halfKernelRows; ++i) {
+        for (int j = -halfKernelCols; j <= halfKernelCols; ++j) {
+            int x = clamp(row + i, 0, inputRows - 1);
+            int y = clamp(col + j, 0, inputCols - 1);
+            sum += input[x * inputCols + y] * kernel[(i + halfKernelRows) * kernelCols + (j + halfKernelCols)];
+        }
+    }
+    output[row * inputCols + col] = sum;
+}
+)CLC";
+
+// Function to convolve a 2D input with a 2D kernel using OpenCL
+auto convolve2DOpenCL(const std::vector<std::vector<double>> &input,
+                      const std::vector<std::vector<double>> &kernel,
+                      int numThreads) -> std::vector<std::vector<double>> {
+    auto context = initializeOpenCL();
+    auto queue = createCommandQueue(context);
+
+    auto inputRows = input.size();
+    auto inputCols = input[0].size();
+    auto kernelRows = kernel.size();
+    auto kernelCols = kernel[0].size();
+
+    std::vector<float> inputFlattened(inputRows * inputCols);
+    std::vector<float> kernelFlattened(kernelRows * kernelCols);
+    std::vector<float> outputFlattened(inputRows * inputCols, 0.0);
+
+    for (size_t i = 0; i < inputRows; ++i)
+        for (size_t j = 0; j < inputCols; ++j)
+            inputFlattened[i * inputCols + j] = static_cast<float>(input[i][j]);
+
+    for (size_t i = 0; i < kernelRows; ++i)
+        for (size_t j = 0; j < kernelCols; ++j)
+            kernelFlattened[i * kernelCols + j] =
+                static_cast<float>(kernel[i][j]);
+
+    cl_int err;
+    cl_mem inputBuffer = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        sizeof(float) * inputFlattened.size(), inputFlattened.data(), &err);
+    checkErr(err, "Creating input buffer");
+
+    cl_mem kernelBuffer = clCreateBuffer(
+        context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+        sizeof(float) * kernelFlattened.size(), kernelFlattened.data(), &err);
+    checkErr(err, "Creating kernel buffer");
+
+    cl_mem outputBuffer =
+        clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+                       sizeof(float) * outputFlattened.size(), nullptr, &err);
+    checkErr(err, "Creating output buffer");
+
+    cl_program program = createProgram(convolve2DKernelSrc, context);
+    err = clBuildProgram(program, 0, nullptr, nullptr, nullptr, nullptr);
+    checkErr(err, "Building program");
+
+    cl_kernel kernel = clCreateKernel(program, "convolve2D", &err);
+    checkErr(err, "Creating kernel");
+
+    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &inputBuffer);
+    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &kernelBuffer);
+    err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &outputBuffer);
+    err |= clSetKernelArg(kernel, 3, sizeof(int), &inputRows);
+    err |= clSetKernelArg(kernel, 4, sizeof(int), &inputCols);
+    err |= clSetKernelArg(kernel, 5, sizeof(int), &kernelRows);
+    err |= clSetKernelArg(kernel, 6, sizeof(int), &kernelCols);
+    checkErr(err, "Setting kernel arguments");
+
+    size_t globalWorkSize[2] = {static_cast<size_t>(inputRows),
+                                static_cast<size_t>(inputCols)};
+    err = clEnqueueNDRangeKernel(queue, kernel, 2, nullptr, globalWorkSize,
+                                 nullptr, 0, nullptr, nullptr);
+    checkErr(err, "Enqueueing kernel");
+
+    err = clEnqueueReadBuffer(queue, outputBuffer, CL_TRUE, 0,
+                              sizeof(float) * outputFlattened.size(),
+                              outputFlattened.data(), 0, nullptr, nullptr);
+    checkErr(err, "Reading back output buffer");
+
+    // Convert output back to 2D vector
+    std::vector<std::vector<double>> output(
+        inputRows, std::vector<double>(inputCols, 0.0));
+    for (size_t i = 0; i < inputRows; ++i)
+        for (size_t j = 0; j < inputCols; ++j)
+            output[i][j] =
+                static_cast<double>(outputFlattened[i * inputCols + j]);
+
+    // Clean up OpenCL resources
+    clReleaseMemObject(inputBuffer);
+    clReleaseMemObject(kernelBuffer);
+    clReleaseMemObject(outputBuffer);
+    clReleaseKernel(kernel);
+    clReleaseProgram(program);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+
+    return output;
+}
+#endif
+
+// Function to convolve a 2D input with a 2D kernel using multithreading or
+// OpenCL
 auto convolve2D(const std::vector<std::vector<double>> &input,
                 const std::vector<std::vector<double>> &kernel,
                 int numThreads) -> std::vector<std::vector<double>> {
+#if USE_OPENCL
+    return convolve2DOpenCL(input, kernel, numThreads);
+#else
     auto inputRows = input.size();
     auto inputCols = input[0].size();
     auto kernelRows = kernel.size();
@@ -139,12 +315,15 @@ auto convolve2D(const std::vector<std::vector<double>> &input,
     }
 
     return output;
+#endif
 }
 
-// Function to deconvolve a 2D input with a 2D kernel using multithreading
+// Function to deconvolve a 2D input with a 2D kernel using multithreading or
+// OpenCL
 auto deconvolve2D(const std::vector<std::vector<double>> &signal,
                   const std::vector<std::vector<double>> &kernel,
                   int numThreads) -> std::vector<std::vector<double>> {
+    // Implement OpenCL support similarly if necessary
     int M = signal.size();
     int N = signal[0].size();
     int K = kernel.size();
@@ -303,7 +482,7 @@ auto generateGaussianKernel(int size,
         }
     }
 
-    // 归一化，确保权重和为1
+    // Normalize to ensure the sum of the weights is 1
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < size; ++j) {
             kernel[i][j] /= sum;

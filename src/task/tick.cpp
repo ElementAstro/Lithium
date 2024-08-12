@@ -19,7 +19,8 @@ Description: Tick Sheduler, just like Minecraft's
 #include "atom/utils/stopwatcher.hpp"
 
 namespace lithium {
-TickScheduler::TickScheduler() : currentTick(0), tickLength(100), stop(false) {
+
+TickScheduler::TickScheduler() {
     schedulerThread = std::jthread([this] { this->taskSchedulerLoop(); });
     pool = GetWeakPtr<TaskPool>("lithium.task.pool");
     stopwatch = std::make_unique<atom::utils::StopWatcher>();
@@ -46,19 +47,21 @@ bool TickScheduler::cancelTask(std::size_t taskId) {
 
 void TickScheduler::delayTask(std::optional<std::size_t> taskId,
                               std::optional<unsigned long long> delay) {
-    std::unique_lock lock(tasksMutex);
-    if (taskId.has_value()) {
-        auto it =
-            std::find_if(tasks.begin(), tasks.end(),
-                         [id = *taskId](const std::shared_ptr<TickTask>& task) {
-                             return task->id == id;
-                         });
-        if (it != tasks.end()) {
-            (*it)->tick += *delay;
-        }
-    } else {
-        for (auto& task : tasks) {
-            task->tick += *delay;
+    std::unique_lock lock(tasksMutex);  // 加锁保护任务队列
+    if (delay.has_value()) {            // 确保 delay 有效
+        if (taskId.has_value()) {  // 如果提供了 taskId，则仅延迟特定任务
+            auto it = std::find_if(
+                tasks.begin(), tasks.end(),
+                [id = *taskId](const std::shared_ptr<TickTask>& task) {
+                    return task->id == id;
+                });
+            if (it != tasks.end()) {
+                (*it)->tick += *delay;  // 延迟该任务的 tick
+            }
+        } else {  // 如果没有提供 taskId，则延迟所有任务
+            for (auto& task : tasks) {
+                task->tick += *delay;
+            }
         }
     }
 }
@@ -69,29 +72,30 @@ unsigned long long TickScheduler::getCurrentTick() const {
 
 void TickScheduler::addDependency(const std::shared_ptr<TickTask>& task,
                                   const std::shared_ptr<TickTask>& dependency) {
+    std::unique_lock lock(tasksMutex);
     task->dependencies.push_back(dependency);
 }
 
 void TickScheduler::setCompletionCallback(const std::shared_ptr<TickTask>& task,
                                           std::function<void()> callback) {
-    task->onCompletion = callback;
+    task->onCompletion = std::move(callback);
 }
 
-void TickScheduler::pause() { isPaused.store(true); }
+void TickScheduler::pause() { paused.store(true); }
 
 void TickScheduler::resume() {
-    isPaused.store(false);
+    paused.store(false);
     cv.notify_all();
 }
 
 void TickScheduler::setMaxConcurrentTasks(std::size_t max) { maxTasks = max; }
 
 void TickScheduler::setTickLength(std::chrono::milliseconds tickLength) {
-    this->tickLength = static_cast<int>(tickLength.count());
+    this->tickLength.store(static_cast<int>(tickLength.count()));
 }
 
 void TickScheduler::setTickLength(unsigned long long tickLength) {
-    this->tickLength = static_cast<int>(tickLength);
+    this->tickLength.store(static_cast<int>(tickLength));
 }
 
 int TickScheduler::getTickLength() const { return tickLength.load(); }
@@ -100,87 +104,108 @@ void TickScheduler::switchToManualMode() { manualMode.store(true); }
 
 void TickScheduler::switchToAutoMode() {
     manualMode.store(false);
-    cv.notify_all();  // 从手动模式切换回自动模式时唤醒调度线程
+    cv.notify_all();
 }
 
 void TickScheduler::triggerTasks() {
-    if (!manualMode.load()) {
-        LOG_F(ERROR, "Scheduler is not in manual mode.");
-        return;
+    if (manualMode) {
+        cv.notify_all();
     }
+}
 
-    // 手动触发任务执行的逻辑，与 taskSchedulerLoop 中的相似
-    std::unique_lock lock(tasksMutex);
-    auto it = tasks.begin();
-    while (it != tasks.end()) {
-        auto task = *it;
-        if (task->tick <= currentTick.load() && allDependenciesMet(task)) {
-            pool.lock()->enqueue([task]() {
-                task->func();
-                task->completed.store(true);
-                if (task->onCompletion) {
-                    task->onCompletion();
-                }
-            });
-            it = tasks.erase(it);  // 移除已触发的任务
-        } else {
-            ++it;
-        }
+// 新增的功能接口
+bool TickScheduler::isPaused() const { return paused.load(); }
+
+std::size_t TickScheduler::getPendingTaskCount() const {
+    std::shared_lock lock(tasksMutex);
+    return tasks.size();
+}
+
+std::vector<std::size_t> TickScheduler::getPendingTaskIds() const {
+    std::shared_lock lock(tasksMutex);
+    std::vector<std::size_t> ids;
+    ids.reserve(tasks.size());
+    for (const auto& task : tasks) {
+        ids.push_back(task->id);
     }
-    currentTick++;  // 手动模式下，每次触发后递增当前时刻
+    return ids;
+}
+
+std::optional<std::shared_ptr<TickTask>> TickScheduler::getTaskById(
+    std::size_t taskId) const {
+    std::shared_lock lock(tasksMutex);
+    auto it = std::find_if(tasks.begin(), tasks.end(),
+                           [taskId](const std::shared_ptr<TickTask>& task) {
+                               return task->id == taskId;
+                           });
+    if (it != tasks.end()) {
+        return *it;
+    }
+    return std::nullopt;
 }
 
 void TickScheduler::taskSchedulerLoop() {
     while (!stop.load()) {
-        if (manualMode.load()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(
-                tickLength.load()));  // 手动模式下，简单地等待
-            continue;  // 如果处于手动模式，跳过自动执行的逻辑
-        }
-
         std::unique_lock lock(tasksMutex);
-        cv.wait(lock, [this] {
-            return stop.load() || !tasks.empty() || isPaused.load();
-        });
-
-        if (stop.load())
-            break;
-
-        auto it = tasks.begin();
-        while (it != tasks.end() &&
-               (maxTasks == 0 || concurrentTasks < maxTasks)) {
-            auto task = *it;
-            if (task->tick <= currentTick.load() && allDependenciesMet(task)) {
-                pool.lock()->enqueue([this, task]() {
-                    task->isRunning.store(true);
-                    task->func();
-                    task->completed.store(true);
-                    if (task->onCompletion) {
-                        task->onCompletion();
-                    }
-                    task->isRunning.store(false);
-                    concurrentTasks--;
-                });
-                concurrentTasks++;
-                it = tasks.erase(it);
-            } else {
-                ++it;
-            }
+        if (paused.load()) {
+            cv.wait(lock, [this] { return !paused.load() || stop.load(); });
         }
 
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(tickLength.load()));  // Simulate a tick
+        if (stop.load()) {
+            break;
+        }
+
         currentTick++;
+
+        auto now = std::chrono::steady_clock::now();
+        tasks.erase(
+            std::remove_if(tasks.begin(), tasks.end(),
+                           [this, now](const std::shared_ptr<TickTask>& task) {
+                               if (task->tick <= currentTick.load()) {
+                                   if (task->isRunning.load() ||
+                                       task->completed.load()) {
+                                       return true;
+                                   }
+
+                                   if (allDependenciesMet(task)) {
+                                       task->isRunning.store(true);
+                                       if (auto poolPtr = pool.lock()) {
+                                           poolPtr->enqueue([task, now]() {
+                                               task->func();
+                                               task->completed.store(true);
+                                               task->isRunning.store(false);
+                                               if (task->onCompletion) {
+                                                   task->onCompletion();
+                                               }
+                                           });
+                                       } else {
+                                           task->func();
+                                           task->completed.store(true);
+                                           if (task->onCompletion) {
+                                               task->onCompletion();
+                                           }
+                                       }
+                                       return true;
+                                   }
+                               }
+                               return false;
+                           }),
+            tasks.end());
+
+        if (!manualMode.load()) {
+            cv.wait_for(lock, std::chrono::milliseconds(tickLength.load()));
+        } else {
+            cv.wait(lock);
+        }
     }
 }
 
-bool TickScheduler::allDependenciesMet(const std::shared_ptr<TickTask>& task) {
-    for (const auto& dep : task->dependencies) {
-        if (!dep->completed.load()) {
-            return false;
-        }
-    }
-    return true;
+auto TickScheduler::allDependenciesMet(
+    const std::shared_ptr<TickTask>& task) const -> bool {
+    return std::all_of(task->dependencies.begin(), task->dependencies.end(),
+                       [](const std::shared_ptr<TickTask>& dep) {
+                           return dep->completed.load();
+                       });
 }
 
 void TickScheduler::stopScheduler() {

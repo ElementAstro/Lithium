@@ -1,16 +1,14 @@
-/*
- * compiler.hpp
+/**
+ * @file compiler.hpp
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * @brief Contains the compiler definitions and declarations.
+ *
+ * This file includes all necessary definitions and declarations related to the
+ * compiler. It is part of the codebase developed by Max Qian.
+ *
+ * @copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * @date 2023-03-29
  */
-
-/*************************************************
-
-Date: 2023-3-29
-
-Description: Compiler
-
-**************************************************/
 
 #ifndef LITHIUM_ADDON_COMPILER_HPP
 #define LITHIUM_ADDON_COMPILER_HPP
@@ -20,6 +18,9 @@ Description: Compiler
 #include <string_view>
 #include <vector>
 #include "macro.hpp"
+
+#include "atom/type/json_fwd.hpp"
+using json = nlohmann::json;
 
 namespace lithium {
 
@@ -47,7 +48,7 @@ public:
      * 添加自定义编译选项
      * @param options 编译选项
      */
-    void addCompileOptions(const std::string& options);
+    void addCompileOptions(const std::string &options);
 
     /**
      * 获取可用编译器列表
@@ -58,6 +59,47 @@ public:
 
 private:
     std::unique_ptr<CompilerImpl> impl_;
+};
+
+class CppMemberGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
+};
+
+class CppConstructorGenerator {
+public:
+    static void generate(const std::string &className, const json &j,
+                         std::ostream &os);
+};
+
+class CppMethodGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
+};
+
+class CppAccessorGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
+};
+
+class CppMutatorGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
+};
+
+class CppFriendFunctionGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
+};
+
+class CppOperatorOverloadGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
+};
+
+class CppClassGenerator {
+public:
+    static void generate(const json &j, std::ostream &os);
 };
 
 }  // namespace lithium

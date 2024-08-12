@@ -1,104 +1,198 @@
-# Algorithm Library
+# 算法库文档
 
-这是一个用于C++的算法库,包含了几种常用的字符串搜索和相似度估计算法。
+## 概述
+
+该库是一个 C++实现的算法集合，包括 Knuth-Morris-Pratt (KMP)字符串搜索算法、Boyer-Moore 字符串搜索算法和一个通用的布隆过滤器（Bloom Filter）数据结构。
 
 ## 命名空间
 
-所有的算法类都位于`atom::algorithm`命名空间下。
+### `atom::algorithm`
+
+此命名空间包含了库中提供的所有算法实现的类和函数。
 
 ## 类
 
-### KMP
+### `KMP`
 
-KMP类实现了Knuth-Morris-Pratt字符串搜索算法。
-
-#### 构造函数
-
-- `explicit KMP(std::string_view pattern)`: 使用指定的模式字符串构造一个新的KMP对象。
-
-#### 成员函数
-
-- `auto search(std::string_view text) -> std::vector<int>`: 在给定文本中搜索模式的出现位置,返回所有出现位置的起始索引。
-- `void setPattern(std::string_view pattern)`: 设置一个新的搜索模式。
-
-#### 私有成员函数
-
-- `auto computeFailureFunction(std::string_view pattern) -> std::vector<int>`: 计算指定模式的失败函数。
-
-#### 私有成员变量
-
-- `std::string pattern_`: 要搜索的模式字符串。
-- `std::vector<int> failure_`: 当前模式的失败函数。
-
-### MinHash
-
-MinHash类实现了MinHash算法,用于估计集合之间的Jaccard相似度。
+实现了 Knuth-Morris-Pratt (KMP)字符串搜索算法。
 
 #### 构造函数
 
-- `explicit MinHash(int num_hash_functions)`: 使用指定数量的哈希函数构造一个新的MinHash对象。
+- `explicit KMP(std::string_view pattern)`
 
-#### 成员函数
+  使用给定的模式构造一个`KMP`对象。
 
-- `auto computeSignature(const std::unordered_set<std::string>& set) -> std::vector<unsigned long long>`: 计算给定集合的MinHash签名。
-- `auto estimateSimilarity(const std::vector<unsigned long long>& signature1, const std::vector<unsigned long long>& signature2) const -> double`: 使用MinHash签名估计两个集合之间的Jaccard相似度。
+  **参数:**
 
-#### 私有成员函数
+  - `pattern` - 要在文本中搜索的模式。
 
-- `unsigned long long hash(const std::string& element, int index)`: 使用特定的哈希函数计算元素的哈希值。
+#### 公共方法
 
-#### 私有成员变量
+- `[[nodiscard]] auto search(std::string_view text) const -> std::vector<int>`
 
-- `int m_num_hash_functions_`: 用于MinHash的哈希函数数量。
-- `std::vector<unsigned long long> m_coefficients_a_`: 哈希函数的系数'a'。
-- `std::vector<unsigned long long> m_coefficients_b_`: 哈希函数的系数'b'。
+  使用 KMP 算法在给定文本中搜索模式的出现位置。
 
-### BloomFilter
+  **参数:**
 
-BloomFilter类实现了布隆过滤器数据结构。
+  - `text` - 要搜索的文本。
+
+  **返回:**
+
+  - `std::vector<int>` - 包含模式在文本中起始位置的向量。
+
+- `void setPattern(std::string_view pattern)`
+
+  设置新的搜索模式。
+
+  **参数:**
+
+  - `pattern` - 要搜索的新模式。
+
+#### 私有方法
+
+- `auto computeFailureFunction(std::string_view pattern) -> std::vector<int>`
+
+  计算给定模式的失败函数（部分匹配表）。
+
+  **参数:**
+
+  - `pattern` - 要计算失败函数的模式。
+
+  **返回:**
+
+  - `std::vector<int>` - 计算出的失败函数（部分匹配表）。
+
+#### 数据成员
+
+- `std::string pattern_`
+
+  要搜索的模式。
+
+- `std::vector<int> failure_`
+
+  模式的失败函数（部分匹配表）。
+
+### `BloomFilter<N>`
+
+实现了布隆过滤器（Bloom Filter）数据结构。
 
 #### 模板参数
 
-- `N`: 布隆过滤器的大小(比特数)。
+- `N` - 布隆过滤器的大小（位数）。
 
 #### 构造函数
 
-- `explicit BloomFilter(std::size_t num_hash_functions)`: 使用指定数量的哈希函数构造一个新的BloomFilter对象。
+- `explicit BloomFilter(std::size_t num_hash_functions)`
 
-#### 成员函数
+  使用指定数量的哈希函数构造一个新的`BloomFilter`对象。
 
-- `void insert(std::string_view element)`: 将元素插入布隆过滤器。
-- `bool contains(std::string_view element) const`: 检查元素是否可能存在于布隆过滤器中。
+  **参数:**
 
-#### 私有成员函数
+  - `num_hash_functions` - 用于布隆过滤器的哈希函数数量。
 
-- `auto hash(std::string_view element, std::size_t seed) const -> std::size_t`: 使用特定的种子值计算元素的哈希值。
+#### 公共方法
 
-#### 私有成员变量
+- `void insert(std::string_view element)`
 
-- `std::bitset<N> m_bits_`: 表示布隆过滤器的比特集。
-- `std::size_t m_num_hash_functions_`: 使用的哈希函数数量。
+  将一个元素插入到布隆过滤器中。
 
-### BoyerMoore
+  **参数:**
 
-BoyerMoore类实现了Boyer-Moore字符串搜索算法。
+  - `element` - 要插入的元素。
+
+- `[[nodiscard]] auto contains(std::string_view element) const -> bool`
+
+  检查布隆过滤器中是否可能包含某个元素。
+
+  **参数:**
+
+  - `element` - 要检查的元素。
+
+  **返回:**
+
+  - `bool` - 如果元素可能存在则返回`true`，否则返回`false`。
+
+#### 私有方法
+
+- `auto hash(std::string_view element, std::size_t seed) const -> std::size_t`
+
+  使用特定的种子计算元素的哈希值。
+
+  **参数:**
+
+  - `element` - 要哈希的元素。
+  - `seed` - 哈希函数的种子值。
+
+  **返回:**
+
+  - `std::size_t` - 元素的哈希值。
+
+#### 数据成员
+
+- `std::bitset<N> m_bits_`
+
+  代表布隆过滤器的位集。
+
+- `std::size_t m_num_hash_functions_`
+
+  使用的哈希函数数量。
+
+### `BoyerMoore`
+
+实现了 Boyer-Moore 字符串搜索算法。
 
 #### 构造函数
 
-- `explicit BoyerMoore(std::string_view pattern)`: 使用指定的模式字符串构造一个新的BoyerMoore对象。
+- `explicit BoyerMoore(std::string_view pattern)`
 
-#### 成员函数
+  使用给定的模式构造一个`BoyerMoore`对象。
 
-- `auto search(std::string_view text) -> std::vector<int>`: 在给定文本中搜索模式的出现位置,返回所有出现位置的起始索引。
-- `void setPattern(std::string_view pattern)`: 为BoyerMoore对象设置一个新的搜索模式。
+  **参数:**
 
-#### 私有成员函数
+  - `pattern` - 要在文本中搜索的模式。
 
-- `void computeBadCharacterShift()`: 计算模式的坏字符移位表。
-- `void computeGoodSuffixShift()`: 计算模式的好后缀移位表。
+#### 公共方法
 
-#### 私有成员变量
+- `auto search(std::string_view text) const -> std::vector<int>`
 
-- `std::string pattern_`: 要搜索的模式字符串。
-- `std::unordered_map<char, int> bad_char_shift_`: 坏字符移位表。
-- `std::vector<int> good_suffix_shift_`: 好后缀移位表。
+  使用 Boyer-Moore 算法在给定文本中搜索模式的出现位置。
+
+  **参数:**
+
+  - `text` - 要搜索的文本。
+
+  **返回:**
+
+  - `std::vector<int>` - 包含模式在文本中起始位置的向量。
+
+- `void setPattern(std::string_view pattern)`
+
+  设置新的搜索模式。
+
+  **参数:**
+
+  - `pattern` - 要搜索的新模式。
+
+#### 私有方法
+
+- `void computeBadCharacterShift()`
+
+  计算当前模式的坏字符偏移表。
+
+- `void computeGoodSuffixShift()`
+
+  计算当前模式的好后缀偏移表。
+
+#### 数据成员
+
+- `std::string pattern_`
+
+  要搜索的模式。
+
+- `std::unordered_map<char, int> bad_char_shift_`
+
+  坏字符偏移表。
+
+- `std::vector<int> good_suffix_shift_`
+
+  好后缀偏移表。

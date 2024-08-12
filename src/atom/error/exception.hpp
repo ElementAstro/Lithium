@@ -379,6 +379,28 @@ public:
 #define THROW_JSON_VALUE_ERROR(...)                                   \
     throw atom::error::JsonValueError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                       ATOM_FUNC_NAME, __VA_ARGS__)
+
+// -------------------------------------------------------------------
+// Network Error
+// -------------------------------------------------------------------
+
+class CurlInitializationError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_CURL_INITIALIZATION_ERROR(...)                                   \
+    throw atom::error::CurlInitializationError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                               ATOM_FUNC_NAME, __VA_ARGS__)
+
+class CurlRuntimeError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_CURL_RUNTIME_ERROR(...)                                   \
+    throw atom::error::CurlRuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                        ATOM_FUNC_NAME, __VA_ARGS__)
 }  // namespace atom::error
 
 #endif

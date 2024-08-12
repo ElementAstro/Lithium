@@ -21,8 +21,11 @@ Description: Specialized task pool
 #include <functional>
 #include <future>
 #include <memory>
+#include <ranges>
 #include <shared_mutex>
+#include <stdexcept>
 #include <thread>
+#include <vector>
 
 namespace lithium {
 
@@ -38,6 +41,12 @@ struct Task {
      * @param func The function that this task should execute.
      */
     explicit Task(std::function<void()> func) : func(std::move(func)) {}
+
+    Task() = default;
+    Task(const Task&) = delete;
+    Task& operator=(const Task&) = delete;
+    Task(Task&&) noexcept = default;
+    Task& operator=(Task&&) noexcept = default;
 };
 
 /**
@@ -50,21 +59,20 @@ public:
     std::shared_mutex mutex;
 
     bool tryPop(std::shared_ptr<Task>& task);
-
     bool trySteal(std::shared_ptr<Task>& task);
-
     void push(std::shared_ptr<Task> task);
+    [[nodiscard]] bool empty() const;
 };
 
 /**
  * @class TaskPool
  * @brief A thread pool for executing tasks asynchronously.
  */
-class TaskPool {
+class TaskPool : public std::enable_shared_from_this<TaskPool> {
 private:
     std::atomic<bool> m_stop{false};
     std::atomic<bool> m_acceptTasks{true};
-    std::vector<std::thread> m_workers;
+    std::vector<std::jthread> m_workers;
     std::vector<std::unique_ptr<WorkerQueue>> m_queues;
     std::condition_variable_any m_condition;
     std::shared_mutex m_conditionMutex;
@@ -75,15 +83,19 @@ private:
 
 public:
     explicit TaskPool(size_t threads = std::thread::hardware_concurrency());
-
     ~TaskPool();
 
     static std::shared_ptr<TaskPool> createShared(size_t threads);
 
     template <class F, class... Args>
+        requires std::invocable<F, Args...>
     auto enqueue(F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>> {
         using return_type = std::invoke_result_t<F, Args...>;
+
+        if (!m_acceptTasks) {
+            throw std::runtime_error("TaskPool is not accepting new tasks.");
+        }
 
         auto task = std::make_shared<std::packaged_task<return_type()>>(
             std::bind(std::forward<F>(f), std::forward<Args>(args)...));
@@ -97,7 +109,7 @@ public:
                 if (t_localQueue) {
                     t_localQueue->push(wrappedTask);
                 } else {
-                    m_queues[0]->push(wrappedTask);
+                    m_queues.front()->push(wrappedTask);
                 }
                 m_condition.notify_one();
             }
@@ -106,16 +118,13 @@ public:
     }
 
     void resize(size_t newThreadCount);
-
     size_t getThreadCount() const;
+    void stopAcceptingTasks();
 
 private:
     void workerThread(size_t index);
-
     bool tryStealing(std::shared_ptr<Task>& task);
-
     void start(size_t threads);
-
     void stop();
 };
 

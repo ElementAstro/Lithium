@@ -32,6 +32,9 @@ public:
         : params_(ilist) {}
 
     [[nodiscard]] auto operator[](std::size_t t_i) const -> const std::any& {
+        if (t_i >= params_.size()) {
+            THROW_OUT_OF_RANGE("Index out of range");
+        }
         return params_.at(t_i);
     }
 

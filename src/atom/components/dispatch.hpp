@@ -227,10 +227,16 @@ void CommandDispatcher::defT(const std::string& name, const std::string& group,
                              std::optional<std::function<void()>> postcondition,
                              std::vector<Arg> arg_info) {
     auto _func = atom::meta::TimerProxyFunction(std::move(func));
+    std::function<std::any(const std::vector<std::any>&)> wrappedFunc =
+        [_func](const std::vector<std::any>& args) mutable -> std::any {
+        std::chrono::milliseconds defaultTimeout(1000);
+        return _func(args, defaultTimeout);
+    };
+
     auto info = _func.getFunctionInfo();
     auto it = commands_.find(name);
     if (it == commands_.end()) {
-        Command cmd{{std::move(_func)},
+        Command cmd{{std::move(wrappedFunc)},
                     {info.returnType},
                     {info.argumentTypes},
                     {info.hash},
@@ -242,7 +248,7 @@ void CommandDispatcher::defT(const std::string& name, const std::string& group,
         commands_[name] = std::move(cmd);
         groupMap_[name] = group;
     } else {
-        it->second.funcs.emplace_back(std::move(_func));
+        it->second.funcs.emplace_back(std::move(wrappedFunc));
         it->second.returnType.emplace_back(info.returnType);
         it->second.argTypes.emplace_back(info.argumentTypes);
         it->second.hash.emplace_back(info.hash);
@@ -385,6 +391,7 @@ ATOM_INLINE auto CommandDispatcher::executeWithoutTimeout(
 
 ATOM_INLINE auto CommandDispatcher::executeFunctions(
     const Command& cmd, const std::vector<std::any>& args) -> std::any {
+    // TODO: FIX ME - Overload resolution
     if (cmd.funcs.size() == 1) {
         return cmd.funcs[0](args);
     }
@@ -407,6 +414,7 @@ ATOM_INLINE auto CommandDispatcher::executeFunctions(
 ATOM_INLINE auto CommandDispatcher::computeFunctionHash(
     const std::vector<std::any>& args) -> std::string {
     std::vector<std::string> argTypes;
+    argTypes.reserve(args.size());
     for (const auto& arg : args) {
         argTypes.emplace_back(
             atom::meta::DemangleHelper::demangle(arg.type().name()));

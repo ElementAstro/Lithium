@@ -22,10 +22,17 @@ Description: Main Entry
 #include "atom/web/utils.hpp"
 
 // TODO: This is for debug only, please remove it in production
+#if !IN_PRODUCTION
 #define ENABLE_TERMINAL 1
+#endif
 #if ENABLE_TERMINAL
 #include "debug/terminal.hpp"
 using namespace lithium::debug;
+#endif
+
+// In release mode, we will disable the debugger
+#if IN_PRODUCTION
+#include "atom/system/nodebugger.hpp"
 #endif
 
 #include "server/App.hpp"

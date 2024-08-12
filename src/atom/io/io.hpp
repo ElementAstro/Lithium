@@ -457,6 +457,96 @@ enum class FileOption { PATH, NAME };
  */
 auto isExecutableFile(const std::string &fileName,
                       const std::string &fileExt) -> bool;
+
+/**
+ * @brief Get the file size.
+ *
+ * @param filePath The file path.
+ * @return The file size.
+ *
+ * 获取文件大小。
+ *
+ * @param filePath 文件路径。
+ * @return 文件大小。
+ */
+auto getFileSize(const std::string &filePath) -> std::size_t;
+
+/**
+ * @brief Calculate the chunk size.
+ *
+ * @param fileSize The file size.
+ * @param numChunks The number of chunks.
+ * @return The chunk size.
+ *
+ * 计算块大小。
+ *
+ * @param fileSize 文件大小。
+ * @param numChunks 要分割的块数。
+ * @return 块大小。
+ */
+auto calculateChunkSize(std::size_t fileSize, int numChunks) -> std::size_t;
+
+/**
+ * @brief Split a file into multiple parts.
+ *
+ * @param filePath The file path.
+ * @param chunkSize The chunk size.
+ * @param outputPattern The output file pattern.
+ *
+ * 将文件分割成多个部分。
+ *
+ * @param filePath 文件路径。
+ * @param chunkSize 块大小。
+ * @param outputPattern 输出文件模式。
+ */
+void splitFile(const std::string &filePath, std::size_t chunkSize,
+               const std::string &outputPattern = "");
+
+/**
+ * @brief Merge multiple parts into a single file.
+ *
+ * @param outputFilePath The output file path.
+ * @param partFiles The part files.
+ *
+ * 将多个部分合并成一个文件。
+ *
+ * @param outputFilePath 输出文件路径。
+ * @param partFiles 部分文件。
+ */
+void mergeFiles(const std::string &outputFilePath,
+                const std::vector<std::string> &partFiles);
+
+/**
+ * @brief Quickly split a file into multiple parts.
+ *
+ * @param filePath The file path.
+ * @param numChunks The number of chunks.
+ * @param outputPattern The output file pattern.
+ *
+ * 快速将文件分割成多个部分。
+ *
+ * @param filePath 文件路径。
+ * @param numChunks 要分割的块数。
+ * @param outputPattern 输出文件模式。
+ */
+void quickSplit(const std::string &filePath, int numChunks,
+                const std::string &outputPattern = "");
+
+/**
+ * @brief Quickly merge multiple parts into a single file.
+ *
+ * @param outputFilePath The output file path.
+ * @param partPattern The part file pattern.
+ * @param numChunks The number of chunks.
+ *
+ * 快速将多个部分合并成一个文件。
+ *
+ * @param outputFilePath 输出文件路径。
+ * @param partPattern 部分文件模式。
+ * @param numChunks 要分割的块数。
+ */
+void quickMerge(const std::string &outputFilePath,
+                const std::string &partPattern, int numChunks);
 }  // namespace atom::io
 
 #endif

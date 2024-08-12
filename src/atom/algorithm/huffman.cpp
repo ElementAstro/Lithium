@@ -16,6 +16,10 @@ Description: Simple implementation of Huffman encoding
 
 #include <queue>
 
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
+
 namespace atom::algorithm {
 HuffmanNode::HuffmanNode(char data, int frequency)
     : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
@@ -70,9 +74,24 @@ auto compressText(std::string_view TEXT,
                   const std::unordered_map<char, std::string>& huffmanCodes)
     -> std::string {
     std::string compressedText;
+
+#ifdef USE_OPENMP
+#pragma omp parallel
+    {
+        std::string local_compressed;
+#pragma omp for nowait schedule(static)
+        for (std::size_t i = 0; i < TEXT.size(); ++i) {
+            local_compressed += huffmanCodes.at(TEXT[i]);
+        }
+#pragma omp critical
+        compressedText += local_compressed;
+    }
+#else
     for (char c : TEXT) {
         compressedText += huffmanCodes.at(c);
     }
+#endif
+
     return compressedText;
 }
 

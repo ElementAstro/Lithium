@@ -14,6 +14,8 @@ Description: Specialized task pool
 
 #include "pool.hpp"
 
+#include "atom/log/loguru.hpp"
+
 namespace lithium {
 
 // Initialize static thread_local variables
@@ -45,9 +47,18 @@ void WorkerQueue::push(std::shared_ptr<Task> task) {
     queue.push_front(std::move(task));
 }
 
+bool WorkerQueue::empty() const {
+    std::shared_lock lock(mutex);
+    return queue.empty();
+}
+
 TaskPool::TaskPool(size_t threads) : m_defaultThreadCount(threads) {
+    if (threads == 0) {
+        throw std::invalid_argument("Thread count cannot be zero.");
+    }
+
     m_queues.resize(threads);
-    for (size_t i = 0; i < threads; ++i) {
+    for (size_t i : std::views::iota(0u, threads)) {
         m_queues[i] = std::make_unique<WorkerQueue>();
     }
     start(threads);
@@ -65,26 +76,30 @@ void TaskPool::workerThread(size_t index) {
 
     while (!m_stop) {
         std::shared_ptr<Task> task;
-        for (size_t i = 0; i < m_queues.size(); ++i) {
+        for (size_t i : std::views::iota(0u, m_queues.size())) {
             if (m_queues[(t_index + i) % m_queues.size()]->tryPop(task)) {
                 break;
             }
         }
         if (!task) {
             std::unique_lock lock(m_conditionMutex);
-            m_condition.wait_for(
-                lock, std::chrono::milliseconds(1),
-                [this, &task] { return m_stop || tryStealing(task); });
+            m_condition.wait(
+                lock, [this, &task] { return m_stop || tryStealing(task); });
         }
         if (task) {
-            task->func();
+            try {
+                task->func();
+            } catch (const std::exception& e) {
+                // Handle task-specific exceptions
+                LOG_F(ERROR, "Exception in task: %s", e.what());
+            }
         }
     }
 }
 
 bool TaskPool::tryStealing(std::shared_ptr<Task>& task) {
-    for (size_t i = 0; i < m_queues.size(); ++i) {
-        if (m_queues[(t_index + i + 1) % m_queues.size()]->trySteal(task)) {
+    for (size_t i : std::views::iota(1u, m_queues.size())) {
+        if (m_queues[(t_index + i) % m_queues.size()]->trySteal(task)) {
             return true;
         }
     }
@@ -93,9 +108,9 @@ bool TaskPool::tryStealing(std::shared_ptr<Task>& task) {
 
 void TaskPool::start(size_t threads) {
     m_queues.resize(threads);
-    for (size_t i = 0; i < threads; ++i) {
+    for (size_t i : std::views::iota(0u, threads)) {
         m_queues[i] = std::make_unique<WorkerQueue>();
-        m_workers.emplace_back([this, i] { workerThread(i); });
+        m_workers.emplace_back(&TaskPool::workerThread, this, i);
     }
 }
 
@@ -128,5 +143,10 @@ void TaskPool::resize(size_t newThreadCount) {
 }
 
 size_t TaskPool::getThreadCount() const { return m_defaultThreadCount; }
+
+void TaskPool::stopAcceptingTasks() {
+    std::unique_lock lock(m_conditionMutex);
+    m_acceptTasks = false;
+}
 
 }  // namespace lithium

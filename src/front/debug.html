@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced WebSocket Debug Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        line-height: 1.6;
+        background-color: #f0f0f0;
+      }
+      #messageLog {
+        height: 300px;
+        overflow-y: scroll;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 20px;
+        background-color: white;
+      }
+      input[type="text"],
+      button,
+      select {
+        padding: 8px;
+        margin: 5px 0;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      }
+      button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      #status {
+        font-weight: bold;
+      }
+      .settings {
+        margin-bottom: 20px;
+        background-color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .received {
+        color: blue;
+      }
+      .sent {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+
+      #jsonBuilder {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      #jsonBuilder input,
+      #jsonBuilder select {
+        margin: 5px;
+      }
+      #jsonPreview {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        white-space: pre-wrap;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+      .json-field {
+        margin-left: 20px;
+        border-left: 2px solid #ccc;
+        padding-left: 10px;
+        margin-bottom: 10px;
+      }
+      .json-field-controls {
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .json-field-controls > * {
+        margin-right: 5px;
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Advanced WebSocket Debug Page</h1>
+
+    <div class="settings">
+      <label for="wsUrl">WebSocket URL:</label>
+      <input type="text" id="wsUrl" value="ws://localhost:8080" size="40" />
+      <button onclick="connect()">Connect</button>
+      <button onclick="disconnect()">Disconnect</button>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="settings">
+      <label for="protocol">Protocol:</label>
+      <input type="text" id="protocol" placeholder="Optional protocol" />
+
+      <label for="autoReconnect">Auto Reconnect:</label>
+      <input type="checkbox" id="autoReconnect" />
+
+      <label for="reconnectInterval">Reconnect Interval (ms):</label>
+      <input type="number" id="reconnectInterval" value="5000" min="1000" />
+    </div>
+
+    <div>
+      <p>Status: <span id="status">Disconnected</span></p>
+    </div>
+
+    <div id="messageLog"></div>
+
+    <div>
+      <select id="messageType">
+        <option value="text">Text</option>
+        <option value="json">JSON</option>
+        <option value="binary">Binary</option>
+      </select>
+      <input type="text" id="message" placeholder="Enter message" size="40" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <div class="settings">
+      <button onclick="saveSettings()">Save Settings</button>
+      <button onclick="loadSettings()">Load Settings</button>
+    </div>
+
+    <div id="jsonBuilder">
+      <h3>JSON Message Builder</h3>
+      <div id="jsonFields"></div>
+      <button onclick="addJsonField()">Add Field</button>
+      <button onclick="buildJsonMessage()">Build JSON</button>
+      <div id="jsonPreview"></div>
+    </div>
+
+    <script>
+      let socket;
+      let reconnectTimer;
+      const statusElement = document.getElementById("status");
+      const messageLogElement = document.getElementById("messageLog");
+      const messageInput = document.getElementById("message");
+      const wsUrlInput = document.getElementById("wsUrl");
+      const protocolInput = document.getElementById("protocol");
+      const autoReconnectCheckbox = document.getElementById("autoReconnect");
+      const reconnectIntervalInput =
+        document.getElementById("reconnectInterval");
+      const messageTypeSelect = document.getElementById("messageType");
+
+      function connect() {
+        disconnect();
+        const url = wsUrlInput.value;
+        const protocol = protocolInput.value;
+
+        try {
+          socket = protocol ? new WebSocket(url, protocol) : new WebSocket(url);
+        } catch (error) {
+          updateStatus("Error");
+          log(`Connection error: ${error.message}`, "error");
+          return;
+        }
+
+        socket.binaryType = "arraybuffer";
+
+        socket.onopen = function (event) {
+          updateStatus("Connected");
+          log("Connection established");
+        };
+
+        socket.onmessage = function (event) {
+          if (event.data instanceof ArrayBuffer) {
+            const view = new Uint8Array(event.data);
+            log(`Received binary: ${view}`, "received");
+          } else {
+            log(`Received: ${event.data}`, "received");
+          }
+        };
+
+        socket.onclose = function (event) {
+          updateStatus("Disconnected");
+          log(
+            `Connection closed. Code: ${event.code}, Reason: ${event.reason}`
+          );
+          if (autoReconnectCheckbox.checked) {
+            reconnectTimer = setTimeout(
+              connect,
+              parseInt(reconnectIntervalInput.value)
+            );
+          }
+        };
+
+        socket.onerror = function (error) {
+          updateStatus("Error");
+          log(`Error: ${error.message}`, "error");
+        };
+      }
+
+      function disconnect() {
+        clearTimeout(reconnectTimer);
+        if (socket) {
+          socket.close();
+          socket = null;
+        }
+      }
+
+      function sendMessage() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          const message = messageInput.value;
+          const messageType = messageTypeSelect.value;
+
+          let dataToSend;
+          switch (messageType) {
+            case "json":
+              try {
+                dataToSend = JSON.parse(message);
+                socket.send(JSON.stringify(dataToSend));
+              } catch (error) {
+                log(`Invalid JSON: ${error.message}`, "error");
+                return;
+              }
+              break;
+            case "binary":
+              dataToSend = new TextEncoder().encode(message);
+              socket.send(dataToSend);
+              break;
+            default:
+              dataToSend = message;
+              socket.send(dataToSend);
+          }
+
+          log(`Sent (${messageType}): ${message}`, "sent");
+          messageInput.value = "";
+        } else {
+          alert("WebSocket is not connected");
+        }
+      }
+
+      function updateStatus(status) {
+        statusElement.textContent = status;
+      }
+
+      function log(message, className = "") {
+        const logEntry = document.createElement("div");
+        logEntry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+        logEntry.className = className;
+        messageLogElement.appendChild(logEntry);
+        messageLogElement.scrollTop = messageLogElement.scrollHeight;
+      }
+
+      function clearLog() {
+        messageLogElement.innerHTML = "";
+      }
+
+      function saveSettings() {
+        const settings = {
+          url: wsUrlInput.value,
+          protocol: protocolInput.value,
+          autoReconnect: autoReconnectCheckbox.checked,
+          reconnectInterval: reconnectIntervalInput.value,
+        };
+        localStorage.setItem("wsDebugSettings", JSON.stringify(settings));
+        alert("Settings saved");
+      }
+
+      function loadSettings() {
+        const settings = JSON.parse(localStorage.getItem("wsDebugSettings"));
+        if (settings) {
+          wsUrlInput.value = settings.url || "";
+          protocolInput.value = settings.protocol || "";
+          autoReconnectCheckbox.checked = settings.autoReconnect || false;
+          reconnectIntervalInput.value = settings.reconnectInterval || 5000;
+          alert("Settings loaded");
+        } else {
+          alert("No saved settings found");
+        }
+      }
+
+      // Event listeners
+      wsUrlInput.addEventListener("keyup", function (event) {
+        if (event.key === "Enter") {
+          connect();
+        }
+      });
+
+      messageInput.addEventListener("keyup", function (event) {
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+      });
+
+      // Load settings on page load
+      loadSettings();
+
+      let jsonFieldsCounter = 0;
+
+      function addJsonField(parentId = null) {
+        const fieldId = `field-${jsonFieldsCounter++}`;
+        const fieldHtml = `
+          <div id="${fieldId}" class="json-field">
+            <div class="json-field-controls">
+              <input type="text" id="key-${fieldId}" placeholder="Key">
+              <select id="type-${fieldId}" onchange="handleTypeChange('${fieldId}')">
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="null">Null</option>
+                <option value="object">Object</option>
+                <option value="array">Array</option>
+              </select>
+              <input type="text" id="value-${fieldId}" placeholder="Value">
+              <button onclick="addJsonField('${fieldId}')">Add Child</button>
+              <button onclick="removeJsonField('${fieldId}')">Remove</button>
+            </div>
+            <div id="children-${fieldId}"></div>
+          </div>
+        `;
+
+        if (parentId) {
+          document
+            .getElementById(`children-${parentId}`)
+            .insertAdjacentHTML("beforeend", fieldHtml);
+        } else {
+          document
+            .getElementById("jsonFields")
+            .insertAdjacentHTML("beforeend", fieldHtml);
+        }
+      }
+
+      function removeJsonField(fieldId) {
+        document.getElementById(fieldId).remove();
+      }
+
+      function handleTypeChange(fieldId) {
+        const type = document.getElementById(`type-${fieldId}`).value;
+        const valueInput = document.getElementById(`value-${fieldId}`);
+        const childrenContainer = document.getElementById(
+          `children-${fieldId}`
+        );
+
+        if (type === "object" || type === "array") {
+          valueInput.style.display = "none";
+          childrenContainer.style.display = "block";
+        } else {
+          valueInput.style.display = "inline-block";
+          childrenContainer.style.display = "none";
+        }
+      }
+
+      function buildJsonMessage() {
+        const rootObject = buildJsonObject("jsonFields");
+        const jsonString = JSON.stringify(rootObject, null, 2);
+        document.getElementById("jsonPreview").textContent = jsonString;
+        document.getElementById("message").value = jsonString;
+        messageTypeSelect.value = "json";
+      }
+
+      function buildJsonObject(containerId) {
+        const container = document.getElementById(containerId);
+        const fields = container.children;
+        const result = {};
+
+        for (const field of fields) {
+          const key = document.getElementById(`key-${field.id}`).value;
+          const type = document.getElementById(`type-${field.id}`).value;
+          let value;
+
+          switch (type) {
+            case "number":
+              value = Number(
+                document.getElementById(`value-${field.id}`).value
+              );
+              break;
+            case "boolean":
+              value =
+                document
+                  .getElementById(`value-${field.id}`)
+                  .value.toLowerCase() === "true";
+              break;
+            case "null":
+              value = null;
+              break;
+            case "object":
+              value = buildJsonObject(`children-${field.id}`);
+              break;
+            case "array":
+              value = buildJsonArray(`children-${field.id}`);
+              break;
+            default:
+              value = document.getElementById(`value-${field.id}`).value;
+          }
+
+          if (key) {
+            result[key] = value;
+          }
+        }
+
+        return result;
+      }
+
+      function buildJsonArray(containerId) {
+        const container = document.getElementById(containerId);
+        const fields = container.children;
+        const result = [];
+
+        for (const field of fields) {
+          const type = document.getElementById(`type-${field.id}`).value;
+          let value;
+
+          switch (type) {
+            case "number":
+              value = Number(
+                document.getElementById(`value-${field.id}`).value
+              );
+              break;
+            case "boolean":
+              value =
+                document
+                  .getElementById(`value-${field.id}`)
+                  .value.toLowerCase() === "true";
+              break;
+            case "null":
+              value = null;
+              break;
+            case "object":
+              value = buildJsonObject(`children-${field.id}`);
+              break;
+            case "array":
+              value = buildJsonArray(`children-${field.id}`);
+              break;
+            default:
+              value = document.getElementById(`value-${field.id}`).value;
+          }
+
+          result.push(value);
+        }
+
+        return result;
+      }
+
+      // 在页面加载时添加一个初始字段
+      window.addEventListener("load", () => {
+        addJsonField();
+      });
+    </script>
+  </body>
+</html>

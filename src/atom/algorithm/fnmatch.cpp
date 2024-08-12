@@ -16,6 +16,8 @@ Description: Python Like fnmatch for C++
 
 #include <algorithm>
 #include <cctype>
+#include <ranges>
+#include <regex>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -25,15 +27,16 @@ Description: Python Like fnmatch for C++
 
 namespace atom::algorithm {
 
+#ifdef _WIN32
 constexpr int FNM_NOESCAPE = 0x01;
 constexpr int FNM_PATHNAME = 0x02;
 constexpr int FNM_PERIOD = 0x04;
 constexpr int FNM_CASEFOLD = 0x08;
+#endif
 
-bool fnmatch(std::string_view pattern, std::string_view string, int flags) {
+auto fnmatch(std::string_view pattern, std::string_view string,
+             int flags) -> bool {
 #ifdef _WIN32
-    // Windows doesn't have a built-in fnmatch function, so we need to implement
-    // it ourselves
     auto p = pattern.begin();
     auto s = string.begin();
 
@@ -115,34 +118,33 @@ bool fnmatch(std::string_view pattern, std::string_view string, int flags) {
     }
     return p == pattern.end() && s == string.end();
 #else
-    // On POSIX systems, we can use the built-in fnmatch function
     return ::fnmatch(pattern.data(), string.data(), flags) == 0;
 #endif
 }
 
-bool filter(const std::vector<std::string>& names, std::string_view pattern,
-            int flags) {
-    return std::any_of(
-        names.begin(), names.end(),
-        [&](const std::string& name) { return fnmatch(pattern, name, flags); });
+auto filter(const std::vector<std::string>& names, std::string_view pattern,
+            int flags) -> bool {
+    return std::ranges::any_of(names, [&](const std::string& name) {
+        return fnmatch(pattern, name, flags);
+    });
 }
 
-std::vector<std::string> filter(const std::vector<std::string>& names,
-                                const std::vector<std::string>& patterns,
-                                int flags) {
+auto filter(const std::vector<std::string>& names,
+            const std::vector<std::string>& patterns,
+            int flags) -> std::vector<std::string> {
     std::vector<std::string> result;
     for (const auto& name : names) {
-        if (std::any_of(patterns.begin(), patterns.end(),
-                        [&](std::string_view pattern) {
-                            return fnmatch(pattern, name, flags);
-                        })) {
+        if (std::ranges::any_of(patterns, [&](std::string_view pattern) {
+                return fnmatch(pattern, name, flags);
+            })) {
             result.push_back(name);
         }
     }
     return result;
 }
 
-bool translate(std::string_view pattern, std::string& result, int flags) {
+auto translate(std::string_view pattern, std::string& result,
+               int flags) -> bool {
     result.clear();
     for (auto it = pattern.begin(); it != pattern.end(); ++it) {
         switch (*it) {
@@ -161,25 +163,21 @@ bool translate(std::string_view pattern, std::string& result, int flags) {
                     result += '^';
                     ++it;
                 }
-                bool first = true;
-                char last_char = 0;
-                while (it != pattern.end() && *it != ']') {
-                    if (!first && *it == '-' && last_char != 0 &&
-                        it + 1 != pattern.end() && *(it + 1) != ']') {
-                        result += last_char;
-                        result += '-';
-                        ++it;
+                if (it == pattern.end()) {
+                    return false;
+                }
+                char lastChar = *it;
+                result += *it;
+                while (++it != pattern.end() && *it != ']') {
+                    if (*it == '-' && it + 1 != pattern.end() &&
+                        *(it + 1) != ']') {
                         result += *it;
+                        result += *(++it);
+                        lastChar = *it;
                     } else {
-                        if (flags & FNM_NOESCAPE && *it == '\\' &&
-                            ++it == pattern.end()) {
-                            return false;
-                        }
                         result += *it;
-                        last_char = *it;
+                        lastChar = *it;
                     }
-                    first = false;
-                    ++it;
                 }
                 result += ']';
                 break;
@@ -190,7 +188,7 @@ bool translate(std::string_view pattern, std::string& result, int flags) {
                 }
                 [[fallthrough]];
             default:
-                if (flags & FNM_CASEFOLD && std::isalpha(*it)) {
+                if ((flags & FNM_CASEFOLD) && std::isalpha(*it)) {
                     result += '[';
                     result += std::tolower(*it);
                     result += std::toupper(*it);

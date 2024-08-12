@@ -8,12 +8,13 @@
 
 Date: 2023-12-7
 
-Description: Json to XML conversion
+Description: JSON to XML conversion
 
 **************************************************/
 
 #include "json2xml.hpp"
 
+#include <filesystem>
 #include <fstream>
 
 #include "atom/log/loguru.hpp"
@@ -21,7 +22,9 @@ Description: Json to XML conversion
 #include "tinyxml2/tinyxml2.h"
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
+namespace lithium::cxxtools::detail {
 void jsonToXml(const json &jsonData, tinyxml2::XMLElement *xmlElement) {
     tinyxml2::XMLDocument *xmlDoc = xmlElement->GetDocument();
 
@@ -47,31 +50,38 @@ void jsonToXml(const json &jsonData, tinyxml2::XMLElement *xmlElement) {
     }
 }
 
-bool convertJsonToXml(const std::string &jsonFilePath,
-                      const std::string &xmlFilePath) {
+auto convertJsonToXml(std::string_view jsonFilePath,
+                      std::string_view xmlFilePath) -> bool {
     DLOG_F(INFO, "Reading JSON file: {}", jsonFilePath);
-    // 读取 JSON 文件
-    std::ifstream jsonFile(jsonFilePath);
+    if (!fs::exists(jsonFilePath) || !fs::is_regular_file(jsonFilePath)) {
+        LOG_F(ERROR, "JSON file does not exist or is not a regular file: {}",
+              jsonFilePath);
+        return false;
+    }
+
+    std::ifstream jsonFile(jsonFilePath.data());
     if (!jsonFile.is_open()) {
         LOG_F(ERROR, "Failed to open JSON file: {}", jsonFilePath);
         return false;
     }
 
-    // 解析 JSON
     json jsonData;
-    jsonFile >> jsonData;
+    try {
+        jsonFile >> jsonData;
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Failed to parse JSON file: {}. Error: {}", jsonFilePath,
+              e.what());
+        return false;
+    }
     jsonFile.close();
 
-    // 创建 XML 文档
     tinyxml2::XMLDocument xmlDoc;
     tinyxml2::XMLElement *rootElement = xmlDoc.NewElement("root");
     xmlDoc.InsertFirstChild(rootElement);
 
-    // 转换 JSON 到 XML
     jsonToXml(jsonData, rootElement);
 
-    // 保存 XML 文档到文件
-    if (xmlDoc.SaveFile(xmlFilePath.c_str()) != tinyxml2::XML_SUCCESS) {
+    if (xmlDoc.SaveFile(xmlFilePath.data()) != tinyxml2::XML_SUCCESS) {
         LOG_F(ERROR, "Failed to save XML file: {}", xmlFilePath);
         return false;
     }
@@ -79,6 +89,7 @@ bool convertJsonToXml(const std::string &jsonFilePath,
     DLOG_F(INFO, "JSON to XML conversion succeeded.");
     return true;
 }
+}  // namespace lithium::cxxtools::detail
 
 #if ATOM_STANDALONE_COMPONENT_ENABLED
 #include <argparse/argparse.hpp>
@@ -117,22 +128,18 @@ int main(int argc, const char **argv) {
     return 0;
 }
 #else
-bool json_to_xml(const std::string &json_file, const std::string &xml_file) {
+namespace lithium::cxxtools {
+auto jsonToXml(std::string_view json_file, std::string_view xml_file) -> bool {
     if (json_file.empty() || xml_file.empty()) {
         DLOG_F(ERROR, "Invalid input file path.");
         return false;
     }
-    if (!std::filesystem::exists(json_file) ||
-        !std::filesystem::is_regular_file(json_file)) {
-        DLOG_F(ERROR, "Json file does not exist or is not a regular file.");
+    if (!fs::exists(json_file) || !fs::is_regular_file(json_file)) {
+        DLOG_F(ERROR, "JSON file does not exist or is not a regular file.");
         return false;
     }
-    if (convertJsonToXml(json_file, xml_file)) {
-        DLOG_F(INFO, "JSON to XML conversion succeeded.");
-        return true;
-    }
-    DLOG_F(INFO, "JSON to XML conversion failed.");
-
-    return false;
+    return detail::convertJsonToXml(json_file, xml_file);
 }
+}  // namespace lithium::cxxtools
+
 #endif

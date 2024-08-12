@@ -7,26 +7,26 @@ using namespace atom::meta;
 int freeFunction(int a, double b) { return a + static_cast<int>(b); }
 
 struct TestClass {
-    int memberFunction(int a, double b) { return a + static_cast<int>(b); }
-    int constMemberFunction(int a, double b) const {
+    auto memberFunction(int a, double b) -> int { return a + static_cast<int>(b); }
+    auto constMemberFunction(int a, double b) const -> int {
         return a + static_cast<int>(b);
     }
-    int volatileMemberFunction(int a, double b) volatile {
+    auto volatileMemberFunction(int a, double b) volatile -> int {
         return a + static_cast<int>(b);
     }
-    int constVolatileMemberFunction(int a, double b) const volatile {
+    auto constVolatileMemberFunction(int a, double b) const volatile -> int {
         return a + static_cast<int>(b);
     }
-    int lvalueReferenceMemberFunction(int a, double b) & {
+    auto lvalueReferenceMemberFunction(int a, double b) & -> int {
         return a + static_cast<int>(b);
     }
-    int rvalueReferenceMemberFunction(int a, double b) && {
+    auto rvalueReferenceMemberFunction(int a, double b) && -> int {
         return a + static_cast<int>(b);
     }
-    int noexceptMemberFunction(int a, double b) noexcept {
+    auto noexceptMemberFunction(int a, double b) noexcept -> int {
         return a + static_cast<int>(b);
     }
-    int variadicMemberFunction(int a, ...) { return a; }
+    auto variadicMemberFunction(int a, ...) -> int { return a; }
 };
 
 TEST(FunctionTraitsTest, FreeFunction) {
@@ -65,7 +65,7 @@ TEST(FunctionTraitsTest, MemberFunction) {
     static_assert(!Traits::is_const_member_function);
 
     EXPECT_EQ(Traits::full_name, "int (int, double)");
-    EXPECT_EQ(DemangleHelper::DemangleType<Traits::class_type>(), "TestClass");
+    EXPECT_EQ(DemangleHelper::demangleType<Traits::class_type>(), "TestClass");
 }
 
 TEST(FunctionTraitsTest, ConstMemberFunction) {

@@ -18,12 +18,11 @@ Description: Flat MultiMap
 #include <algorithm>
 #include <functional>
 #include <initializer_list>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
 template <typename Key, typename T, typename Compare = std::less<Key>>
-class flat_multimap {
+class FlatMultimap {
 public:
     using key_type = Key;
     using mapped_type = T;
@@ -41,12 +40,13 @@ public:
     using const_reverse_iterator =
         typename std::vector<value_type>::const_reverse_iterator;
 
-    flat_multimap() = default;
+    FlatMultimap() = default;
+    ~FlatMultimap() = default;
 
-    explicit flat_multimap(const Compare& comp) : compare_(comp) {}
+    explicit FlatMultimap(const Compare& comp) : compare_(comp) {}
 
     template <typename InputIt>
-    flat_multimap(InputIt first, InputIt last, const Compare& comp = Compare())
+    FlatMultimap(InputIt first, InputIt last, const Compare& comp = Compare())
         : compare_(comp), data_(first, last) {
         std::sort(data_.begin(), data_.end(),
                   [this](const auto& lhs, const auto& rhs) {
@@ -54,52 +54,62 @@ public:
                   });
     }
 
-    flat_multimap(std::initializer_list<value_type> init,
-                  const Compare& comp = Compare())
-        : flat_multimap(init.begin(), init.end(), comp) {}
+    FlatMultimap(std::initializer_list<value_type> init,
+                 const Compare& comp = Compare())
+        : FlatMultimap(init.begin(), init.end(), comp) {}
 
-    flat_multimap(const flat_multimap&) = default;
-    flat_multimap(flat_multimap&&) noexcept = default;
+    FlatMultimap(const FlatMultimap&) = default;
+    FlatMultimap(FlatMultimap&&) noexcept = default;
 
-    flat_multimap& operator=(const flat_multimap&) = default;
-    flat_multimap& operator=(flat_multimap&&) noexcept = default;
+    auto operator=(const FlatMultimap&) -> FlatMultimap& = default;
+    auto operator=(FlatMultimap&&) noexcept -> FlatMultimap& = default;
 
-    [[nodiscard]] iterator begin() noexcept { return data_.begin(); }
-    [[nodiscard]] const_iterator begin() const noexcept {
+    [[nodiscard]] auto begin() noexcept -> iterator { return data_.begin(); }
+    [[nodiscard]] auto begin() const noexcept -> const_iterator {
         return data_.begin();
     }
-    [[nodiscard]] const_iterator cbegin() const noexcept {
+    [[nodiscard]] auto cbegin() const noexcept -> const_iterator {
         return data_.cbegin();
     }
 
-    [[nodiscard]] iterator end() noexcept { return data_.end(); }
-    [[nodiscard]] const_iterator end() const noexcept { return data_.end(); }
-    [[nodiscard]] const_iterator cend() const noexcept { return data_.cend(); }
+    [[nodiscard]] auto end() noexcept -> iterator { return data_.end(); }
+    [[nodiscard]] auto end() const noexcept -> const_iterator {
+        return data_.end();
+    }
+    [[nodiscard]] auto cend() const noexcept -> const_iterator {
+        return data_.cend();
+    }
 
-    [[nodiscard]] reverse_iterator rbegin() noexcept { return data_.rbegin(); }
-    [[nodiscard]] const_reverse_iterator rbegin() const noexcept {
+    [[nodiscard]] auto rbegin() noexcept -> reverse_iterator {
         return data_.rbegin();
     }
-    [[nodiscard]] const_reverse_iterator crbegin() const noexcept {
+    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator {
+        return data_.rbegin();
+    }
+    [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator {
         return data_.crbegin();
     }
 
-    [[nodiscard]] reverse_iterator rend() noexcept { return data_.rend(); }
-    [[nodiscard]] const_reverse_iterator rend() const noexcept {
+    [[nodiscard]] auto rend() noexcept -> reverse_iterator {
         return data_.rend();
     }
-    [[nodiscard]] const_reverse_iterator crend() const noexcept {
+    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator {
+        return data_.rend();
+    }
+    [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator {
         return data_.crend();
     }
 
-    [[nodiscard]] bool empty() const noexcept { return data_.empty(); }
-    [[nodiscard]] size_type size() const noexcept { return data_.size(); }
-    [[nodiscard]] size_type max_size() const noexcept {
+    [[nodiscard]] auto empty() const noexcept -> bool { return data_.empty(); }
+    [[nodiscard]] auto size() const noexcept -> size_type {
+        return data_.size();
+    }
+    [[nodiscard]] auto maxSize() const noexcept -> size_type {
         return data_.max_size();
     }
 
     template <typename... Args>
-    iterator emplace(Args&&... args) {
+    auto emplace(Args&&... args) -> iterator {
         auto pos = std::lower_bound(data_.begin(), data_.end(),
                                     std::forward<Args>(args)...,
                                     [this](const auto& lhs, const auto& rhs) {
@@ -108,9 +118,11 @@ public:
         return data_.emplace(pos, std::forward<Args>(args)...);
     }
 
-    iterator insert(const value_type& value) { return emplace(value); }
+    auto insert(const value_type& value) -> iterator { return emplace(value); }
 
-    iterator insert(value_type&& value) { return emplace(std::move(value)); }
+    auto insert(value_type&& value) -> iterator {
+        return emplace(std::move(value));
+    }
 
     template <typename InputIt>
     void insert(InputIt first, InputIt last) {
@@ -126,42 +138,42 @@ public:
     }
 
     template <typename... Args>
-    iterator try_emplace(const key_type& k, Args&&... args) {
-        auto pos = lower_bound(k);
-        if (pos != end() && !compare_(k, pos->first)) {
+    auto tryEmplace(const key_type& key, Args&&... args) -> iterator {
+        auto pos = lower_bound(key);
+        if (pos != end() && !compare_(key, pos->first)) {
             return pos;
         }
-        return emplace(std::piecewise_construct, std::forward_as_tuple(k),
+        return emplace(std::piecewise_construct, std::forward_as_tuple(key),
                        std::forward_as_tuple(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
-    iterator try_emplace(key_type&& k, Args&&... args) {
-        auto pos = lower_bound(k);
-        if (pos != end() && !compare_(k, pos->first)) {
+    auto tryEmplace(key_type&& key, Args&&... args) -> iterator {
+        auto pos = lower_bound(key);
+        if (pos != end() && !compare_(key, pos->first)) {
             return pos;
         }
         return emplace(std::piecewise_construct,
-                       std::forward_as_tuple(std::move(k)),
+                       std::forward_as_tuple(std::move(key)),
                        std::forward_as_tuple(std::forward<Args>(args)...));
     }
 
-    iterator erase(iterator pos) { return data_.erase(pos); }
+    auto erase(iterator pos) -> iterator { return data_.erase(pos); }
 
-    iterator erase(const_iterator pos) { return data_.erase(pos); }
+    auto erase(const_iterator pos) -> iterator { return data_.erase(pos); }
 
-    iterator erase(const_iterator first, const_iterator last) {
+    auto erase(const_iterator first, const_iterator last) -> iterator {
         return data_.erase(first, last);
     }
 
-    size_type erase(const key_type& key) {
+    auto erase(const key_type& key) -> size_type {
         auto [first, last] = equal_range(key);
         auto cnt = std::distance(first, last);
         erase(first, last);
         return cnt;
     }
 
-    void swap(flat_multimap& other) noexcept {
+    void swap(FlatMultimap& other) noexcept {
         std::swap(data_, other.data_);
         std::swap(compare_, other.compare_);
     }
@@ -170,7 +182,7 @@ public:
 
     // TODO: Fix this
     template <typename K>
-    [[nodiscard]] iterator find(const K& key) {
+    [[nodiscard]] auto find(const K& key) -> iterator {
         auto pos = lower_bound(key);
         if (pos != end() && !compare_(key, pos->first)) {
             return pos;
@@ -179,7 +191,7 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] const_iterator find(const K& key) const {
+    [[nodiscard]] auto find(const K& key) const -> const_iterator {
         auto pos = lower_bound(key);
         if (pos != end() && !compare_(key, pos->first)) {
             return pos;
@@ -188,13 +200,13 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] size_type count(const K& key) const {
+    [[nodiscard]] auto count(const K& key) const -> size_type {
         auto [first, last] = equal_range(key);
         return std::distance(first, last);
     }
 
     template <typename K>
-    [[nodiscard]] iterator lower_bound(const K& key) {
+    [[nodiscard]] auto lowerBound(const K& key) -> iterator {
         return std::lower_bound(begin(), end(), key,
                                 [this](const auto& lhs, const auto& rhs) {
                                     return compare_(lhs.first, rhs);
@@ -202,7 +214,7 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] const_iterator lower_bound(const K& key) const {
+    [[nodiscard]] auto lowerBound(const K& key) const -> const_iterator {
         return std::lower_bound(begin(), end(), key,
                                 [this](const auto& lhs, const auto& rhs) {
                                     return compare_(lhs.first, rhs);
@@ -210,7 +222,7 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] iterator upper_bound(const K& key) {
+    [[nodiscard]] auto upperBound(const K& key) -> iterator {
         return std::upper_bound(begin(), end(), key,
                                 [this](const auto& lhs, const auto& rhs) {
                                     return compare_(lhs, rhs.first);
@@ -218,7 +230,7 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] const_iterator upper_bound(const K& key) const {
+    [[nodiscard]] auto upperBound(const K& key) const -> const_iterator {
         return std::upper_bound(begin(), end(), key,
                                 [this](const auto& lhs, const auto& rhs) {
                                     return compare_(lhs, rhs.first);
@@ -226,7 +238,8 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] std::pair<iterator, iterator> equal_range(const K& key) {
+    [[nodiscard]] auto equalRange(const K& key)
+        -> std::pair<iterator, iterator> {
         return std::equal_range(begin(), end(), key,
                                 [this](const value_type& lhs, const K& rhs) {
                                     return compare_(lhs.first, rhs);
@@ -234,20 +247,28 @@ public:
     }
 
     template <typename K>
-    [[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(
-        const K& key) const {
+    [[nodiscard]] auto equalRange(const K& key) const
+        -> std::pair<const_iterator, const_iterator> {
         return std::equal_range(begin(), end(), key,
                                 [this](const value_type& lhs, const K& rhs) {
                                     return compare_(lhs.first, rhs);
                                 });
     }
 
-    [[nodiscard]] key_compare key_comp() const { return compare_; }
+    [[nodiscard]] auto keyComp() const -> key_compare { return compare_; }
 
-    [[nodiscard]] value_type* data() noexcept { return data_.data(); }
+    [[nodiscard]] auto data() noexcept -> value_type* { return data_.data(); }
 
-    [[nodiscard]] const value_type* data() const noexcept {
+    [[nodiscard]] auto data() const noexcept -> const value_type* {
         return data_.data();
+    }
+
+    auto operator[](const key_type& key) -> mapped_type& {
+        auto pos = lower_bound(key);
+        if (pos != end() && !compare_(key, pos->first)) {
+            return pos->second;
+        }
+        return emplace(key, T()).first->second;
     }
 
 private:
@@ -256,47 +277,47 @@ private:
 };
 
 template <typename Key, typename T, typename Compare>
-bool operator==(const flat_multimap<Key, T, Compare>& lhs,
-                const flat_multimap<Key, T, Compare>& rhs) {
+auto operator==(const FlatMultimap<Key, T, Compare>& lhs,
+                const FlatMultimap<Key, T, Compare>& rhs) -> bool {
     return lhs.size() == rhs.size() &&
            std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template <typename Key, typename T, typename Compare>
-bool operator!=(const flat_multimap<Key, T, Compare>& lhs,
-                const flat_multimap<Key, T, Compare>& rhs) {
+auto operator!=(const FlatMultimap<Key, T, Compare>& lhs,
+                const FlatMultimap<Key, T, Compare>& rhs) -> bool {
     return !(lhs == rhs);
 }
 
 template <typename Key, typename T, typename Compare>
-bool operator<(const flat_multimap<Key, T, Compare>& lhs,
-               const flat_multimap<Key, T, Compare>& rhs) {
+auto operator<(const FlatMultimap<Key, T, Compare>& lhs,
+               const FlatMultimap<Key, T, Compare>& rhs) -> bool {
     return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
                                         rhs.end());
 }
 
 template <typename Key, typename T, typename Compare>
-bool operator<=(const flat_multimap<Key, T, Compare>& lhs,
-                const flat_multimap<Key, T, Compare>& rhs) {
+auto operator<=(const FlatMultimap<Key, T, Compare>& lhs,
+                const FlatMultimap<Key, T, Compare>& rhs) -> bool {
     return !(rhs < lhs);
 }
 
 template <typename Key, typename T, typename Compare>
-bool operator>(const flat_multimap<Key, T, Compare>& lhs,
-               const flat_multimap<Key, T, Compare>& rhs) {
+auto operator>(const FlatMultimap<Key, T, Compare>& lhs,
+               const FlatMultimap<Key, T, Compare>& rhs) -> bool {
     return rhs < lhs;
 }
 
 template <typename Key, typename T, typename Compare>
-bool operator>=(const flat_multimap<Key, T, Compare>& lhs,
-                const flat_multimap<Key, T, Compare>& rhs) {
+auto operator>=(const FlatMultimap<Key, T, Compare>& lhs,
+                const FlatMultimap<Key, T, Compare>& rhs) -> bool {
     return !(lhs < rhs);
 }
 
 template <typename Key, typename T, typename Compare>
 void swap(
-    flat_multimap<Key, T, Compare>& lhs,
-    flat_multimap<Key, T, Compare>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+    FlatMultimap<Key, T, Compare>& lhs,
+    FlatMultimap<Key, T, Compare>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 

@@ -7,9 +7,9 @@ public:
 
     MyClass(int v) : value(v) {}
 
-    int get_value() const { return value; }
+    auto getValue() const -> int { return value; }
 
-    void set_value(int v) { value = v; }
+    void setValue(int v) { value = v; }
 
     void print() const { std::cout << "MyClass value: " << value << std::endl; }
 };
@@ -20,12 +20,12 @@ TEST(TypeMetadataTest, ConstructorTest) {
     TypeMetadata metadata;
 
     // 添加构造函数
-    metadata.add_constructor([](std::vector<BoxedValue> args) -> BoxedValue {
+    metadata.addConstructor([](std::vector<BoxedValue> args) -> BoxedValue {
         int arg = std::any_cast<int>(args[0].get());
         return BoxedValue(std::make_shared<MyClass>(arg));
     });
 
-    auto constructor = metadata.get_constructor();
+    auto constructor = metadata.getConstructor();
     ASSERT_TRUE(constructor.has_value());
 
     // 使用构造函数创建一个对象
@@ -33,7 +33,7 @@ TEST(TypeMetadataTest, ConstructorTest) {
     auto myClassInstance =
         std::any_cast<std::shared_ptr<MyClass>>(instance.get());
 
-    ASSERT_EQ(myClassInstance->get_value(), 42);
+    ASSERT_EQ(myClassInstance->getValue(), 42);
 }
 
 TEST(TypeMetadataTest, MethodTest) {
@@ -41,14 +41,13 @@ TEST(TypeMetadataTest, MethodTest) {
 
     TypeMetadata metadata;
 
-    metadata.add_method(
-        "print", [](std::vector<BoxedValue> args) -> BoxedValue {
-            auto obj = std::any_cast<std::shared_ptr<MyClass>>(args[0].get());
-            obj->print();
-            return BoxedValue();
-        });
+    metadata.addMethod("print", [](std::vector<BoxedValue> args) -> BoxedValue {
+        auto obj = std::any_cast<std::shared_ptr<MyClass>>(args[0].get());
+        obj->print();
+        return {};
+    });
 
-    auto method = metadata.get_method("print");
+    auto method = metadata.getMethod("print");
     ASSERT_TRUE(method.has_value());
 
     auto myClassInstance = std::make_shared<MyClass>(10);
@@ -60,18 +59,18 @@ TEST(TypeMetadataTest, PropertyTest) {
 
     TypeMetadata metadata;
 
-    metadata.add_property(
+    metadata.addProperty(
         "value",
         [](const BoxedValue& obj) -> BoxedValue {
             return BoxedValue(std::any_cast<std::shared_ptr<MyClass>>(obj.get())
-                                  ->get_value());
+                                  ->getValue());
         },
         [](BoxedValue& obj, const BoxedValue& value) {
-            std::any_cast<std::shared_ptr<MyClass>>(obj.get())->set_value(
+            std::any_cast<std::shared_ptr<MyClass>>(obj.get())->setValue(
                 std::any_cast<int>(value.get()));
         });
 
-    auto property = metadata.get_property("value");
+    auto property = metadata.getProperty("value");
     ASSERT_TRUE(property.has_value());
 
     auto myClassInstance = std::make_shared<MyClass>(10);
@@ -92,19 +91,18 @@ TEST(TypeRegistryTest, RegisterAndGetTypeTest) {
     TypeRegistry& registry = TypeRegistry::instance();
 
     TypeMetadata metadata;
-    metadata.add_method(
-        "print", [](std::vector<BoxedValue> args) -> BoxedValue {
-            auto obj = std::any_cast<std::shared_ptr<MyClass>>(args[0].get());
-            obj->print();
-            return BoxedValue();
-        });
+    metadata.addMethod("print", [](std::vector<BoxedValue> args) -> BoxedValue {
+        auto obj = std::any_cast<std::shared_ptr<MyClass>>(args[0].get());
+        obj->print();
+        return {};
+    });
 
-    registry.register_type("MyClass", metadata);
+    registry.registerType("MyClass", metadata);
 
-    auto retrievedMetadata = registry.get_metadata("MyClass");
+    auto retrievedMetadata = registry.getMetadata("MyClass");
     ASSERT_TRUE(retrievedMetadata.has_value());
 
-    auto method = retrievedMetadata.value().get_method("print");
+    auto method = retrievedMetadata.value().getMethod("print");
     ASSERT_TRUE(method.has_value());
 
     auto myClassInstance = std::make_shared<MyClass>(10);

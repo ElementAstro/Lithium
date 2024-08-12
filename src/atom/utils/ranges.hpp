@@ -16,15 +16,18 @@ Description: Some ranges functions for C++20
 #define ATOM_EXPERIMENT_RANGES_HPP
 
 #include <algorithm>
-#include <chrono>
+#include <array>
+#include <concepts>
+#include <coroutine>
 #include <functional>
 #include <map>
 #include <numeric>
 #include <optional>
 #include <ranges>
-#include <thread>
+#include <utility>
 #include <vector>
 
+namespace atom::utils {
 /**
  * @brief Filters elements in a range satisfying a predicate and transforms them
  * using a function.
@@ -46,7 +49,7 @@ Description: Some ranges functions for C++20
  * }
  */
 template <typename Range, typename Pred, typename Func>
-auto filter_and_transform(Range&& range, Pred&& pred, Func&& func) {
+auto filterAndTransform(Range&& range, Pred&& pred, Func&& func) {
     return std::forward<Range>(range) |
            std::views::filter(std::forward<Pred>(pred)) |
            std::views::transform(std::forward<Func>(func));
@@ -71,7 +74,7 @@ auto filter_and_transform(Range&& range, Pred&& pred, Func&& func) {
  * }
  */
 template <typename Range, typename T>
-auto find_element(Range&& range, const T& value) {
+auto findElement(Range&& range, const T& value) {
     auto it = std::ranges::find(std::forward<Range>(range), value);
     return it != std::ranges::end(range)
                ? std::optional<std::remove_cvref_t<decltype(*it)>>{*it}
@@ -104,8 +107,8 @@ auto find_element(Range&& range, const T& value) {
  * }
  */
 template <typename Range, typename KeySelector, typename Aggregator>
-auto group_and_aggregate(Range&& range, KeySelector&& key_selector,
-                         Aggregator&& aggregator) {
+auto groupAndAggregate(Range&& range, KeySelector&& key_selector,
+                       Aggregator&& aggregator) {
     using Key = std::invoke_result_t<KeySelector,
                                      std::ranges::range_reference_t<Range>>;
     using Value =
@@ -177,7 +180,7 @@ auto take(Range&& range, std::ranges::range_difference_t<Range> n) {
  * std::cout << std::endl;
  */
 template <typename Range, typename Pred>
-auto take_while(Range&& range, Pred&& pred) {
+auto takeWhile(Range&& range, Pred&& pred) {
     return std::forward<Range>(range) |
            std::views::take_while(std::forward<Pred>(pred));
 }
@@ -199,7 +202,7 @@ auto take_while(Range&& range, Pred&& pred) {
  * std::cout << std::endl;
  */
 template <typename Range, typename Pred>
-auto drop_while(Range&& range, Pred&& pred) {
+auto dropWhile(Range&& range, Pred&& pred) {
     return std::forward<Range>(range) |
            std::views::drop_while(std::forward<Pred>(pred));
 }
@@ -262,10 +265,12 @@ auto accumulate(Range&& range, T init, BinaryOp&& op) {
  * std::cout << std::endl;
  */
 template <typename Iterator>
-std::vector<typename Iterator::value_type> Slice(Iterator begin, Iterator end,
-                                                 size_t start, size_t length) {
+auto slice(Iterator begin, Iterator end, size_t start,
+           size_t length) -> std::vector<typename Iterator::value_type> {
     std::vector<typename Iterator::value_type> result;
-    if (start >= std::distance(begin, end)) {
+    using distance_type =
+        typename std::iterator_traits<decltype(begin)>::difference_type;
+    if (static_cast<distance_type>(start) >= std::distance(begin, end)) {
         return result;
     }
     std::advance(begin, start);
@@ -302,5 +307,286 @@ auto slice(Container& c, Index start, Index end) {
 
     return std::vector<typename Container::value_type>(first, last);
 }
+
+template <typename T>
+struct generator {
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    struct promise_type {
+        T value;
+
+        auto yield_value(T value) noexcept {
+            this->value = value;
+            return std::suspend_always{};
+        }
+        auto initial_suspend() noexcept { return std::suspend_always{}; }
+        auto final_suspend() noexcept { return std::suspend_always{}; }
+        auto get_return_object() noexcept {
+            return generator{handle_type::from_promise(*this)};
+        }
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
+    };
+
+    handle_type handle;
+
+    explicit generator(handle_type handle) : handle(handle) {}
+    ~generator() {
+        if (handle) {
+            handle.destroy();
+        }
+    }
+
+    generator(const generator&) = delete;
+    auto operator=(const generator&) -> generator& = delete;
+
+    generator(generator&& other) noexcept
+        : handle(std::exchange(other.handle, {})) {}
+
+    auto operator=(generator&& other) noexcept -> generator& {
+        if (this != &other) {
+            if (handle) {
+                handle.destroy();
+            }
+            handle = std::exchange(other.handle, {});
+        }
+        return *this;
+    }
+
+    struct iterator {
+        handle_type handle;
+        bool done = false;
+
+        iterator() = default;
+        explicit iterator(handle_type handle) : handle(handle) {
+            handle.resume();
+            done = handle.done();
+        }
+
+        auto operator++() -> iterator& {
+            handle.resume();
+            done = handle.done();
+            return *this;
+        }
+
+        auto operator*() const -> T { return handle.promise().value; }
+        auto operator==(std::default_sentinel_t) const -> bool { return done; }
+    };
+
+    auto begin() -> iterator { return iterator{handle}; }
+    auto end() -> std::default_sentinel_t { return {}; }
+};
+
+template <typename T>
+struct generator<T&> {
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    struct promise_type {
+        T* value;
+
+        auto yield_value(T& value) noexcept {
+            this->value = std::addressof(value);
+            return std::suspend_always{};
+        }
+        auto initial_suspend() noexcept { return std::suspend_always{}; }
+        auto final_suspend() noexcept { return std::suspend_always{}; }
+        auto get_return_object() noexcept {
+            return generator{handle_type::from_promise(*this)};
+        }
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
+    };
+
+    handle_type handle;
+
+    explicit generator(handle_type handle) : handle(handle) {}
+    ~generator() {
+        if (handle) {
+            handle.destroy();
+        }
+    }
+
+    generator(const generator&) = delete;
+    auto operator=(const generator&) -> generator& = delete;
+
+    generator(generator&& other) noexcept
+        : handle(std::exchange(other.handle, {})) {}
+
+    auto operator=(generator&& other) noexcept -> generator& {
+        if (this != &other) {
+            if (handle) {
+                handle.destroy();
+            }
+            handle = std::exchange(other.handle, {});
+        }
+        return *this;
+    }
+
+    struct Iterator {
+        handle_type handle;
+        bool done = false;
+
+        Iterator() = default;
+        explicit Iterator(handle_type handle) : handle(handle) {
+            handle.resume();
+            done = handle.done();
+        }
+
+        auto operator++() -> Iterator& {
+            handle.resume();
+            done = handle.done();
+            return *this;
+        }
+
+        auto operator*() const -> T& { return *handle.promise().value; }
+        auto operator==(std::default_sentinel_t) const -> bool { return done; }
+    };
+
+    auto begin() -> Iterator { return Iterator{handle}; }
+    auto end() -> std::default_sentinel_t { return {}; }
+};
+
+struct MergeViewImpl {
+    template <std::ranges::input_range R1, std::ranges::input_range R2>
+        requires std::common_reference_with<std::ranges::range_reference_t<R1>,
+                                            std::ranges::range_reference_t<R2>>
+    auto operator()(R1&& r1, R2&& r2)
+        -> generator<
+            std::common_reference_t<std::ranges::range_reference_t<R1>,
+                                    std::ranges::range_reference_t<R2>>> {
+        auto it1 = std::ranges::begin(r1);
+        auto it2 = std::ranges::begin(r2);
+        auto end1 = std::ranges::end(r1);
+        auto end2 = std::ranges::end(r2);
+
+        while (it1 != end1 && it2 != end2) {
+            if (*it1 <= *it2) {
+                co_yield *it1;
+                ++it1;
+            } else {
+                co_yield *it2;
+                ++it2;
+            }
+        }
+
+        while (it1 != end1) {
+            co_yield *it1;
+            ++it1;
+        }
+
+        while (it2 != end2) {
+            co_yield *it2;
+            ++it2;
+        }
+    }
+};
+
+struct ZipViewImpl {
+    template <std::ranges::input_range... Rs>
+    auto operator()(Rs&&... ranges)
+        -> generator<std::tuple<std::ranges::range_value_t<Rs>...>> {
+        auto its = std::tuple{std::ranges::begin(ranges)...};
+        auto ends = std::tuple{std::ranges::end(ranges)...};
+
+        while (checkIterators(its, ends, std::index_sequence_for<Rs...>{})) {
+            co_yield getValues(its, std::index_sequence_for<Rs...>{});
+            incrementIterators(its, std::index_sequence_for<Rs...>{});
+        }
+    }
+
+private:
+    template <typename Tuple, size_t... Is>
+    static auto checkIterators(const Tuple& its, const Tuple& ends,
+                               std::index_sequence<Is...>) -> bool {
+        return ((std::get<Is>(its) != std::get<Is>(ends)) && ...);
+    }
+
+    template <typename Tuple, size_t... Is>
+    static auto getValues(const Tuple& its, std::index_sequence<Is...>) {
+        return std::tuple{*std::get<Is>(its)...};
+    }
+
+    template <typename Tuple, size_t... Is>
+    static void incrementIterators(Tuple& its, std::index_sequence<Is...>) {
+        (++std::get<Is>(its), ...);
+    }
+};
+
+struct ChunkViewImpl {
+    template <std::ranges::input_range R>
+    auto operator()(R&& range, size_t chunk_size)
+        -> generator<std::vector<std::ranges::range_value_t<R>>> {
+        std::vector<std::ranges::range_value_t<R>> chunk;
+        chunk.reserve(chunk_size);
+
+        for (auto&& elem : range) {
+            chunk.push_back(std::forward<decltype(elem)>(elem));
+            if (chunk.size() == chunk_size) {
+                co_yield std::move(chunk);
+                chunk.clear();
+            }
+        }
+
+        if (!chunk.empty()) {
+            co_yield std::move(chunk);
+        }
+    }
+};
+
+struct FilterViewImpl {
+    template <std::ranges::input_range R,
+              std::invocable<std::ranges::range_reference_t<R>> Pred>
+    auto operator()(R&& range,
+                    Pred pred) -> generator<std::ranges::range_reference_t<R>> {
+        for (auto&& elem : range) {
+            if (pred(elem)) {
+                co_yield elem;
+            }
+        }
+    }
+};
+
+struct TransformViewImpl {
+    template <std::ranges::input_range R,
+              std::invocable<std::ranges::range_reference_t<R>> F>
+    auto operator()(R&& range, F f)
+        -> generator<
+            std::invoke_result_t<F, std::ranges::range_reference_t<R>>> {
+        for (auto&& elem : range) {
+            co_yield f(elem);
+        }
+    }
+};
+
+struct AdjacentViewImpl {
+    template <std::ranges::forward_range R>
+    auto operator()(R&& range)
+        -> generator<std::pair<std::ranges::range_value_t<R>,
+                               std::ranges::range_value_t<R>>> {
+        auto it = std::ranges::begin(range);
+        auto end = std::ranges::end(range);
+        if (it == end) {
+            co_return;
+        }
+
+        auto prev = *it++;
+        while (it != end) {
+            co_yield {prev, *it};
+            prev = *it++;
+        }
+    }
+};
+
+template <typename Range>
+auto toVector(Range&& range) {
+    using ValueType =
+        typename std::decay<decltype(*std::begin(std::declval<Range>()))>::type;
+    std::vector<ValueType> result;
+    std::ranges::copy(std::forward<Range>(range), std::back_inserter(result));
+    return result;
+}
+}  // namespace atom::utils
 
 #endif

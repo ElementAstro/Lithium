@@ -26,8 +26,8 @@ Description: Basic Component Types Definition and Some Utilities
 // Helper to get the number of enum entries using constexpr reflection
 template <typename Enum>
 constexpr auto enumSize() {
-    if constexpr (requires { Enum::LastEnumValue; }) {
-        return static_cast<std::size_t>(Enum::LastEnumValue);
+    if constexpr (requires { Enum::LAST_ENUM_VALUE; }) {
+        return static_cast<std::size_t>(Enum::LAST_ENUM_VALUE);
     } else {
         return 0;  // Handle the error or throw a static_assert
     }
@@ -35,14 +35,14 @@ constexpr auto enumSize() {
 
 template <typename Enum, size_t N>
 struct EnumReflection {
-    std::array<std::pair<Enum, std::string_view>, N> data;
+    std::array<std::pair<Enum, std::string_view>, N> data{};
 
-    constexpr EnumReflection(const std::pair<Enum, std::string_view> (&arr)[N])
-        : data{} {
+    constexpr explicit EnumReflection(
+        const std::pair<Enum, std::string_view> (&arr)[N]) {
         std::copy(std::begin(arr), std::end(arr), std::begin(data));
     }
 
-    constexpr std::string_view toString(Enum e) const {
+    [[nodiscard]] constexpr auto toString(Enum e) const -> std::string_view {
         auto it = std::find_if(data.begin(), data.end(), [e](const auto& pair) {
             return pair.first == e;
         });
@@ -52,7 +52,8 @@ struct EnumReflection {
         return "Undefined";
     }
 
-    constexpr std::optional<Enum> fromString(std::string_view str) const {
+    [[nodiscard]] constexpr auto fromString(std::string_view str) const
+        -> std::optional<Enum> {
         auto it = std::find_if(
             data.begin(), data.end(),
             [str](const auto& pair) { return pair.second == str; });
@@ -65,21 +66,21 @@ struct EnumReflection {
 
 enum class ComponentType {
     NONE,
-    SHREAD,
-    SHREAD_INJECTED,
-    Script,
-    Executable,
-    Task,
-    LastEnumValue
+    SHARED,
+    SHARED_INJECTED,
+    SCRIPT,
+    EXECUTABLE,
+    TASK,
+    LAST_ENUM_VALUE
 };
 
-constexpr auto componentTypeReflection =
+constexpr auto COMPONENT_TYPE_REFLECTION =
     EnumReflection<ComponentType, enumSize<ComponentType>()>(
         {{ComponentType::NONE, "none"},
-         {ComponentType::SHREAD, "shared"},
-         {ComponentType::SHREAD_INJECTED, "injected"},
-         {ComponentType::Script, "script"},
-         {ComponentType::Executable, "executable"},
-         {ComponentType::Task, "task"}});
+         {ComponentType::SHARED, "shared"},
+         {ComponentType::SHARED_INJECTED, "injected"},
+         {ComponentType::SCRIPT, "script"},
+         {ComponentType::EXECUTABLE, "executable"},
+         {ComponentType::TASK, "task"}});
 
 #endif

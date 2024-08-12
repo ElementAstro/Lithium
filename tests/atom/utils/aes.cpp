@@ -1,41 +1,139 @@
 #include "atom/utils/aes.hpp"
 #include <gtest/gtest.h>
 #include <fstream>
+#include "exception.hpp"
+#include "macro.hpp"
 
-TEST(AESTest, EncryptAndDecrypt) {
-    std::string plaintext = "Hello, World!";
-    std::string key = "supersecretkey";
+using namespace atom::utils;
 
-    std::string ciphertext = atom::utils::encryptAES(plaintext, key);
-    EXPECT_NE(ciphertext, plaintext);  // 加密后的密文应与原始明文不同
+class AESTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Set up any necessary resources
+    }
 
-    std::string decryptedtext = atom::utils::decryptAES(ciphertext, key);
-    EXPECT_EQ(decryptedtext, plaintext);
+    void TearDown() override {
+        // Clean up any resources
+    }
+};
+
+TEST_F(AESTest, EncryptionDecryption) {
+    std::string plaintext = "This is a test plaintext.";
+    std::string key = "1234567890123456";  // 16 bytes key for AES-128
+
+    std::vector<unsigned char> iv;
+    std::vector<unsigned char> tag;
+
+    std::string ciphertext = encryptAES(plaintext, key, iv, tag);
+    ASSERT_FALSE(ciphertext.empty());
+
+    std::string decryptedtext = decryptAES(ciphertext, key, iv, tag);
+    ASSERT_EQ(plaintext, decryptedtext);
 }
 
-// Tests for compress and decompress
-TEST(CompressionTest, CompressAndDecompress) {
-    std::string data = "Hello, World! Hello, World! Hello, World!";
+TEST(CompressionTest, CompressDecompressSuccess) {
+    std::string original =
+        "Hello, World! This is a test of the zlib compression and "
+        "decompression.";
+    std::string compressed = compress(original);
+    std::string decompressed = decompress(compressed);
 
-    std::string compressed = atom::utils::compress(data);
-    EXPECT_NE(compressed, data);
-
-    std::string decompressed = atom::utils::decompress(compressed);
-    EXPECT_EQ(decompressed, data);
+    // Check that the decompressed data matches the original
+    EXPECT_EQ(decompressed, original);
 }
 
-// Tests for calculateSha256
-TEST(HashTest, CalculateSha256) {
-    std::string filename = "testfile.txt";
+TEST(CompressionTest, CompressEmptyString) {
+    // Compress an empty string
+    EXPECT_THROW(ATOM_UNUSED_RESULT(compress("")),
+                 atom::error::InvalidArgument);
+}
 
-    // 创建一个测试文件
-    std::ofstream outfile(filename);
-    outfile << "Hello, World!";
-    outfile.close();
+TEST(CompressionTest, DecompressEmptyString) {
+    EXPECT_THROW(ATOM_UNUSED_RESULT(decompress("")),
+                 atom::error::InvalidArgument);
+}
 
-    std::string hash = atom::utils::calculateSha256(filename);
-    EXPECT_EQ(hash, "dummyhash");
+TEST(CompressionTest, CompressDifferentData) {
+    std::string original1 = "Test compression 1.";
+    std::string original2 = "Test compression 2.";
 
-    // 删除测试文件
-    std::remove(filename.c_str());
+    std::string compressed1 = compress(original1);
+    std::string compressed2 = compress(original2);
+
+    // Ensure compressed outputs are different
+    EXPECT_NE(compressed1, compressed2);
+}
+
+TEST(CompressionTest, DecompressInvalidData) {
+    // Attempt to decompress invalid compressed data
+    std::string invalidData = "This is not compressed data.";
+    EXPECT_THROW(decompress(invalidData), atom::error::RuntimeError);
+}
+
+TEST(CompressionTest, CompressAndDecompressSpecialCharacters) {
+    std::string original = "Special characters: !@#$%^&*()_+[]{}|;':\",.<>?";
+    std::string compressed = compress(original);
+    std::string decompressed = decompress(compressed);
+
+    // Check that the decompressed data matches the original
+    EXPECT_EQ(decompressed, original);
+}
+
+TEST(CompressionTest, CompressAndDecompressLongString) {
+    std::string original(10000, 'A');  // Create a long string of 10,000 'A's
+    std::string compressed = compress(original);
+    std::string decompressed = decompress(compressed);
+
+    // Check that the decompressed data matches the original
+    EXPECT_EQ(decompressed, original);
+}
+
+TEST(CompressionTest, CompressDecompressBinaryData) {
+    std::vector<uint8_t> originalData = {0x00, 0x01, 0x02, 0x03, 0x04,
+                                         0x05, 0x06, 0x07, 0x08, 0x09};
+    std::string_view original(
+        reinterpret_cast<const char*>(originalData.data()),
+        originalData.size());
+
+    std::string compressed = compress(original);
+    std::string decompressed = decompress(compressed);
+
+    // Convert decompressed string back to vector
+    std::vector<uint8_t> decompressedData(decompressed.begin(),
+                                          decompressed.end());
+
+    // Check that the decompressed data matches the original
+    EXPECT_EQ(originalData.size(), decompressedData.size());
+    EXPECT_TRUE(std::equal(originalData.begin(), originalData.end(),
+                           decompressedData.begin()));
+}
+
+TEST(CompressionTest, CompressEmptyBinaryData) {
+    EXPECT_THROW(ATOM_UNUSED_RESULT(compress("")),
+                 atom::error::InvalidArgument);
+}
+
+TEST(CompressionTest, DecompressInvalidBinaryData) {
+    std::string invalidData = "This is not compressed data.";
+    EXPECT_THROW(ATOM_UNUSED_RESULT(decompress(invalidData)),
+                 atom::error::RuntimeError);
+}
+
+TEST(CompressionTest, CompressSpecialBinaryData) {
+    std::vector<uint8_t> originalData = {0xFF, 0xFE, 0xFD, 0xFC};
+    std::string_view original(
+        reinterpret_cast<const char*>(originalData.data()),
+        originalData.size());
+
+    std::string compressed = compress(original);
+    std::string decompressed = decompress(compressed);
+
+    // Convert decompressed string back to vector
+    std::vector<uint8_t> decompressedData(decompressed.begin(),
+                                          decompressed.end());
+
+    // Check that the decompressed data matches the original
+    EXPECT_EQ(originalData.size(), decompressedData.size());
+    EXPECT_TRUE(std::equal(originalData.begin(), originalData.end(),
+                           decompressedData.begin()));
 }

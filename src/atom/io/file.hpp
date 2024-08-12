@@ -30,28 +30,28 @@ public:
      * @param filename 文件名
      * @return 是否成功创建文件
      */
-    bool createFile(const std::string &filename);
+    auto createFile(const std::string &filename) -> bool;
 
     /**
      * 打开文件
      * @param filename 文件名
      * @return 是否成功打开文件
      */
-    bool openFile(const std::string &filename);
+    auto openFile(const std::string &filename) -> bool;
 
     /**
      * 读取文件内容
      * @param contents 存储文件内容的变量
      * @return 是否成功读取文件
      */
-    bool readFile(std::string &contents);
+    auto readFile(std::string &contents) -> bool;
 
     /**
      * 写入文件内容
      * @param contents 文件内容
      * @return 是否成功写入文件
      */
-    bool writeFile(const std::string &contents);
+    auto writeFile(const std::string &contents) -> bool;
 
     /**
      * 移动文件
@@ -59,32 +59,32 @@ public:
      * @param newFilename 新文件名
      * @return 是否成功移动文件
      */
-    bool moveFile(const std::string &oldFilename,
-                  const std::string &newFilename);
+    auto moveFile(const std::string &oldFilename,
+                  const std::string &newFilename) -> bool;
 
     /**
      * 删除文件
      * @param filename 文件名
      * @return 是否成功删除文件
      */
-    bool deleteFile(const std::string &filename);
+    auto deleteFile(const std::string &filename) -> bool;
 
     /**
      * 获取文件大小
      * @return 文件大小（字节数），如果获取失败则返回-1
      */
-    long getFileSize();
+    auto getFileSize() -> long;
 
     /**
      * 获取文件所在目录路径
      * @param filename 文件名
      * @return 文件所在目录的路径
      */
-    static std::string getFileDirectory(const std::string &filename);
+    static auto getFileDirectory(const std::string &filename) -> std::string;
 
 private:
-    std::fstream m_file;     ///< 文件流对象
-    std::string m_filename;  ///< 当前打开的文件名
+    std::fstream m_file_;     ///< 文件流对象
+    std::string m_filename_;  ///< 当前打开的文件名
 };
 
 }  // namespace atom::io

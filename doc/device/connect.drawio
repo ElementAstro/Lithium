@@ -1,0 +1,268 @@
+<mxfile host="65bd71144e">
+    <diagram id="QpifAZnbYVMh5grBf8ke" name="第 1 页">
+        <mxGraphModel dx="2215" dy="1266" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="5" value="" style="edgeStyle=none;html=1;fontSize=19;" edge="1" parent="1" target="4">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="350" y="350" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" value="&lt;font style=&quot;font-size: 19px;&quot;&gt;第一次设备连接顺序&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="262.5" y="190" width="175" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="启动INDI服务器" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="430" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="检查端口是否被占用" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="430" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="" style="endArrow=classic;html=1;fontSize=19;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="4" target="8">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="300" y="610" as="sourcePoint"/>
+                        <mxPoint x="400" y="610" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="11" value="失败" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=19;" connectable="0" vertex="1" parent="10">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="" style="edgeStyle=elbowEdgeStyle;html=1;fontSize=19;" edge="1" parent="1" source="12">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="150" y="700" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="12" value="再次尝试" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="570" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="" style="endArrow=classic;html=1;fontSize=19;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="8" target="12">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="300" y="610" as="sourcePoint"/>
+                        <mxPoint x="400" y="610" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="16" value="未被占用" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=19;" connectable="0" vertex="1" parent="15">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="查找进程，判断是否为INDI服务器" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-110" y="430" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="" style="endArrow=classic;html=1;fontSize=19;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="8" target="17">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="60" y="600" as="sourcePoint"/>
+                        <mxPoint x="160" y="600" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="20" value="被占用" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=19;" connectable="0" vertex="1" parent="19">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="直接杀死" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-110" y="570" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="" style="endArrow=classic;html=1;fontSize=19;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="23" target="12">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="90" y="630" as="sourcePoint"/>
+                        <mxPoint x="140" y="580" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="30" value="启动失败" style="ellipse;whiteSpace=wrap;html=1;fontSize=19;" vertex="1" parent="1">
+                    <mxGeometry x="-310" y="420" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="31" value="获取所有可用设备大类，扫描指定目录下的xml文件" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="570" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" value="" style="endArrow=classic;html=1;fontSize=19;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="4">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="250" y="700" as="sourcePoint"/>
+                        <mxPoint x="350" y="570" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="34" value="成功" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=19;" connectable="0" vertex="1" parent="33">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value="" style="endArrow=classic;html=1;fontSize=19;" edge="1" parent="1" source="12">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="250" y="590" as="sourcePoint"/>
+                        <mxPoint x="290" y="600" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="36" value="成功" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=19;" connectable="0" vertex="1" parent="35">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="39" value="启动失败" style="ellipse;whiteSpace=wrap;html=1;fontSize=19;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="700" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" value="" style="endArrow=classic;html=1;fontSize=19;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="31">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="340" y="590" as="sourcePoint"/>
+                        <mxPoint x="350" y="710" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="43" value="成功" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;fontSize=19;" connectable="0" vertex="1" parent="42">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="46" value="启动失败" style="ellipse;whiteSpace=wrap;html=1;fontSize=19;" vertex="1" parent="1">
+                    <mxGeometry x="510" y="560" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="48" value="Lithium服务器启动" style="ellipse;whiteSpace=wrap;html=1;shadow=0;fontSize=19;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="270" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="49" value="" style="endArrow=classic;html=1;fontSize=19;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="31" target="46">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="340" y="680" as="sourcePoint"/>
+                        <mxPoint x="440" y="680" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="50" value="失败" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;shadow=0;fontSize=19;gradientColor=default;" connectable="0" vertex="1" parent="49">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="52" value="&lt;font size=&quot;1&quot;&gt;包括但不限于找不到xml文件，解析错误，版本错误&lt;/font&gt;" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=19;" vertex="1" parent="1">
+                    <mxGeometry x="450" y="450" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="53" value="" style="endArrow=none;dashed=1;html=1;fontSize=10;entryX=0.31;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0;exitDx=0;exitDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="31" target="52">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="370" y="590" as="sourcePoint"/>
+                        <mxPoint x="420" y="540" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="54" value="" style="endArrow=classic;html=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="17" target="23">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="140" y="760" as="sourcePoint"/>
+                        <mxPoint x="240" y="760" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="55" value="是" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;shadow=0;fontSize=19;gradientColor=default;" connectable="0" vertex="1" parent="54">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="56" value="" style="endArrow=classic;html=1;fontSize=19;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="17" target="30">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="-250" y="640" as="sourcePoint"/>
+                        <mxPoint x="-70" y="460" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="57" value="否" style="edgeLabel;resizable=0;html=1;align=center;verticalAlign=middle;shadow=0;fontSize=19;gradientColor=default;" connectable="0" vertex="1" parent="56">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="59" value="此处如果为INDI服务器，那么我们可以放心的杀死，INDI会处理设备断开连接的问题，但是如果是其他软件则需要由用户判断" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="-220" y="290" width="150" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="" style="endArrow=none;dashed=1;html=1;fontSize=10;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="17" target="59">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="-150" y="460" as="sourcePoint"/>
+                        <mxPoint x="-100" y="410" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="61" value="这里类似的还有fifo管道文件是否已经创建、是否有缓存，都需要进行检查" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry y="300" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="62" value="" style="endArrow=none;dashed=1;html=1;fontSize=10;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="8" target="61">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="190" y="450" as="sourcePoint"/>
+                        <mxPoint x="240" y="400" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="63" value="这里直接杀死出错的概率极小，如果有问题，那确实是离谱了" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="-230" y="680" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="64" value="" style="endArrow=none;dashed=1;html=1;fontSize=10;exitX=0.486;exitY=0.108;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="63" target="23">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint y="640" as="sourcePoint"/>
+                        <mxPoint x="50" y="590" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="67" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=12;" edge="1" parent="1" source="65" target="66">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="65" value="推送至前端，等待用户选择" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;shadow=0;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="710" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="71" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=12;" edge="1" parent="1" source="66" target="70">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="66" value="通过fifo通知INDI启动指定大类设备" style="whiteSpace=wrap;html=1;shadow=0;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="880" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="68" value="这里可能可以添加一个对INDI日志的监视，分析检查错误" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="450" y="330" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="69" value="" style="endArrow=none;dashed=1;html=1;fontSize=12;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="4" target="68">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="430" y="510" as="sourcePoint"/>
+                        <mxPoint x="480" y="460" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="73" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=12;" edge="1" parent="1" source="70">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="350" y="1160" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="70" value="通过indi_getprop获取所有可以使用的设备" style="whiteSpace=wrap;html=1;shadow=0;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="1020" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="78" value="" style="edgeStyle=elbowEdgeStyle;html=1;fontSize=12;" edge="1" parent="1" source="74" target="77">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="74" value="推送前端，等待用户选择" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;shadow=0;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="1160" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="75" value="后续步骤出错概率较小，可以暂时不做异常处理，但是未来需要添加" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="450" y="800" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="76" value="" style="endArrow=none;dashed=1;html=1;fontSize=12;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;edgeStyle=elbowEdgeStyle;" edge="1" parent="1" source="66" target="75">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="430" y="870" as="sourcePoint"/>
+                        <mxPoint x="480" y="820" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="80" value="" style="edgeStyle=elbowEdgeStyle;html=1;fontSize=12;" edge="1" parent="1" source="77">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="350" y="1470" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="87" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=13;" edge="1" parent="1" source="77" target="86">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="77" value="通过indi_setprop设置所有选中设备，并且记录到设备列表中" style="whiteSpace=wrap;html=1;shadow=0;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="1330" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="81" value="&lt;span style=&quot;font-size: 19px;&quot;&gt;启动成功&lt;/span&gt;" style="ellipse;whiteSpace=wrap;html=1;shadow=0;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="1470" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="82" value="&lt;font style=&quot;font-size: 13px;&quot;&gt;进程监视启动&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;shadow=0;fontSize=19;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="1170" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="83" value="" style="endArrow=classic;html=1;fontSize=13;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="70" target="82">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="310" y="1050" as="sourcePoint"/>
+                        <mxPoint x="360" y="1000" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="84" value="记录用户选择的所有设备大类" style="rounded=0;whiteSpace=wrap;html=1;shadow=0;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="880" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="85" value="" style="endArrow=classic;html=1;fontSize=13;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="65" target="84">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="240" y="820" as="sourcePoint"/>
+                        <mxPoint x="360" y="790" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="86" value="记录用户选择具体设备" style="whiteSpace=wrap;html=1;shadow=0;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="1330" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="93" value="这里直接在大类驱动中添加" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;shadow=0;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="-80" y="1230" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="94" value="" style="endArrow=none;dashed=1;html=1;fontSize=13;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.875;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="86" target="93">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="210" y="1220" as="sourcePoint"/>
+                        <mxPoint x="260" y="1170" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="150" y="1300"/>
+                            <mxPoint x="25" y="1300"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

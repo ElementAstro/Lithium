@@ -27,12 +27,15 @@ public:
     static constexpr const char* PATH_SEPARATOR = "\\";
 #endif
     static constexpr const char* LIB_EXTENSION = ".dll";
+    static constexpr const char* EXECUTABLE_EXTENSION = ".exe";
 #elif defined(__APPLE__)
     static constexpr const char* PATH_SEPARATOR = "/";
     static constexpr const char* LIB_EXTENSION = ".dylib";
+    static constexpr const char* EXECUTABLE_EXTENSION = "";
 #else
     static constexpr const char* PATH_SEPARATOR = "/";
     static constexpr const char* LIB_EXTENSION = ".so";
+    static constexpr const char* EXECUTABLE_EXTENSION = "";
 #endif
 
     // Package info
@@ -78,6 +81,11 @@ public:
     static constexpr const char* LITHIUM_MODULE_LOADER = "lithium.addon.loader";
     static constexpr const char* LITHIUM_ADDON_MANAGER = "lithium.addon.addon";
     static constexpr const char* LITHIUM_UTILS_ENV = "lithium.utils.env";
+
+    static constexpr const char* LITHIUM_PROCESS_MANAGER = "lithium.system.process";
+
+    static constexpr const char* LITHIUM_DEVICE_LOADER = "lithium.device.loader";
+    static constexpr const char* LITHIUM_DEVICE_MANAGER = "lithium.device.manager";
 
     static std::vector<std::string> LITHIUM_RESOURCES;
     static std::vector<std::string_view> LITHIUM_RESOURCES_SHA256;

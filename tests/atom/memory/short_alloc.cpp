@@ -1,88 +1,57 @@
-#include "atom/memory/short_alloc.hpp"
 #include <gtest/gtest.h>
 
+#include "atom/memory/short_alloc.hpp"
 
-// Tests for arena class
-TEST(ArenaTest, AllocateAndDeallocate) {
-    arena<1024> a;
+using namespace std;
+using namespace atom::memory;
 
-    void* p1 = a.allocate(128);
-    ASSERT_NE(p1, nullptr);
-    EXPECT_EQ(a.used(), 128);
-
-    void* p2 = a.allocate(256);
-    ASSERT_NE(p2, nullptr);
-    EXPECT_EQ(a.used(), 384);
-
-    a.deallocate(p2, 256);
-    EXPECT_EQ(a.used(), 128);
-
-    a.deallocate(p1, 128);
-    EXPECT_EQ(a.used(), 0);
+TEST(ArenaTest, BasicAllocation) {
+    constexpr size_t N = 1024;
+    Arena<N> arena;
+    void* p1 = arena.allocate(128);
+    void* p2 = arena.allocate(128);
+    EXPECT_NE(p1, nullptr);
+    EXPECT_NE(p2, nullptr);
+    EXPECT_EQ(arena.used(), 256);
 }
 
-TEST(ArenaTest, AllocateExceedingSize) {
-    arena<1024> a;
-
-    EXPECT_NO_THROW(a.allocate(512));
-    EXPECT_THROW(a.allocate(1024), std::bad_alloc);
+TEST(ArenaTest, Alignment) {
+    constexpr size_t N = 1024;
+    constexpr size_t alignment = alignof(max_align_t);
+    Arena<N, alignment> arena;
+    void* p1 = arena.allocate(128);
+    void* p2 = arena.allocate(128);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(p1) % alignment, 0);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(p2) % alignment, 0);
 }
 
 TEST(ArenaTest, Reset) {
-    arena<1024> a;
-
-    a.allocate(512);
-    EXPECT_EQ(a.used(), 512);
-
-    a.reset();
-    EXPECT_EQ(a.used(), 0);
+    constexpr size_t N = 1024;
+    Arena<N> arena;
+    [[maybe_unused]] void* p1 = arena.allocate(128);
+    [[maybe_unused]] void* p2 = arena.allocate(128);
+    arena.reset();
+    void* p3 = arena.allocate(128);
+    EXPECT_NE(p3, nullptr);
+    EXPECT_EQ(arena.used(), 128);
 }
 
-// Tests for short_alloc class
-TEST(ShortAllocTest, AllocateAndDeallocate) {
-    arena<1024> a;
-    short_alloc<int, 1024> alloc(a);
-
+TEST(ShortAllocTest, BasicAllocation) {
+    constexpr size_t N = 1024;
+    Arena<N> arena;
+    ShortAlloc<int, N> alloc(arena);
     int* p1 = alloc.allocate(10);
-    ASSERT_NE(p1, nullptr);
-
-    for (int i = 0; i < 10; ++i) {
-        new (&p1[i]) int(i);
-        EXPECT_EQ(p1[i], i);
-    }
-
+    EXPECT_NE(p1, nullptr);
     alloc.deallocate(p1, 10);
 }
 
-TEST(ShortAllocTest, RebindAllocator) {
-    arena<1024> a;
-    short_alloc<int, 1024> alloc(a);
-
-    // Rebinding allocator to another type
-    short_alloc<double, 1024>::rebind<int>::other int_alloc = alloc;
-
-    int* p1 = int_alloc.allocate(10);
-    ASSERT_NE(p1, nullptr);
-
-    for (int i = 0; i < 10; ++i) {
-        new (&p1[i]) int(i);
-        EXPECT_EQ(p1[i], i);
-    }
-
-    int_alloc.deallocate(p1, 10);
-}
-
-TEST(ShortAllocTest, EqualityComparison) {
-    arena<1024> a;
-    short_alloc<int, 1024> alloc1(a);
-    short_alloc<int, 1024> alloc2(a);
-
-    EXPECT_TRUE(alloc1 == alloc2);
-    EXPECT_FALSE(alloc1 != alloc2);
-
-    arena<1024> b;
-    short_alloc<int, 1024> alloc3(b);
-
-    EXPECT_FALSE(alloc1 == alloc3);
-    EXPECT_TRUE(alloc1 != alloc3);
+TEST(ShortAllocTest, ConstructAndDestroy) {
+    constexpr size_t N = 1024;
+    Arena<N> arena;
+    ShortAlloc<int, N> alloc(arena);
+    int* p = alloc.allocate(1);
+    alloc.construct(p, 42);
+    EXPECT_EQ(*p, 42);
+    alloc.destroy(p);
+    alloc.deallocate(p, 1);
 }

@@ -1,291 +1,300 @@
-/*
- * shared_memory.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2024-1-4
-
-Description: Inter-process shared memory for local driver communication.
-
-*************************************************/
-
 #ifndef ATOM_CONNECTION_SHARED_MEMORY_HPP
 #define ATOM_CONNECTION_SHARED_MEMORY_HPP
 
+#include <atomic>
 #include <chrono>
 #include <cstring>
-#include <memory>
 #include <mutex>
+#include <optional>
+#include <span>
 #include <thread>
 #include <type_traits>
 
+#include "atom/async/async.hpp"
+#include "atom/error/exception.hpp"
+#include "atom/function/concept.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/type/noncopyable.hpp"
+#include "macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
-#else  // Unix-like
+#else
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
 
 namespace atom::connection {
-/**
- * @brief 实现共享内存,可用于进程间通信
- */
-template <typename T>
-class SharedMemory {
+
+template <TriviallyCopyable T>
+class SharedMemory : public NonCopyable {
 public:
-    /**
-     * @brief 构造函数,创建指定大小的共享内存
-     * @param name 共享内存名称
-     * @param create 是否创建新的共享内存
-     */
     explicit SharedMemory(std::string_view name, bool create = true);
+    ~SharedMemory() override;
 
-    /**
-     * @brief 析构函数,释放共享内存
-     */
-    ~SharedMemory();
-
-    /**
-     * @brief 将数据写入到共享内存中
-     * @param data 要写入的数据
-     * @param timeout 超时时间,默认为0,表示不设超时时间
-     */
     void write(const T& data, std::chrono::milliseconds timeout =
                                   std::chrono::milliseconds(0));
-
-    /**
-     * @brief 从共享内存中读取数据
-     * @param timeout 超时时间,默认为0,表示不设超时时间
-     * @return 读取到的数据
-     */
-    [[nodiscard]] T read(
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const;
-
-    /**
-     * @brief 清空共享内存中的数据
-     */
+    ATOM_NODISCARD auto read(std::chrono::milliseconds timeout =
+                                 std::chrono::milliseconds(0)) const -> T;
     void clear();
+    ATOM_NODISCARD auto isOccupied() const -> bool;
+    ATOM_NODISCARD auto getName() const ATOM_NOEXCEPT -> std::string_view;
+    ATOM_NODISCARD auto getSize() const ATOM_NOEXCEPT -> std::size_t;
+    ATOM_NODISCARD auto isCreator() const ATOM_NOEXCEPT -> bool;
 
-    /**
-     * @brief 判断共享内存是否被占用
-     * @return 如果共享内存已被占用,返回true；否则返回false
-     */
-    [[nodiscard]] bool isOccupied() const;
-
-    /**
-     * @brief 获取共享内存的名称
-     * @return 共享内存的名称
-     */
-    [[nodiscard]] std::string_view getName() const noexcept;
-
-    /**
-     * @brief 获取共享内存的大小
-     * @return 共享内存的大小,单位为字节
-     */
-    [[nodiscard]] std::size_t getSize() const noexcept;
-
-    /**
-     * @brief 判断当前进程是否是共享内存的创建者
-     * @return 如果当前进程是共享内存的创建者,返回true；否则返回false
-     */
-    [[nodiscard]] bool isCreator() const noexcept;
+    template <typename U>
+    void writePartial(
+        const U& data, std::size_t offset,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
+    template <typename U>
+    ATOM_NODISCARD auto readPartial(
+        std::size_t offset, std::chrono::milliseconds timeout =
+                                std::chrono::milliseconds(0)) const -> U;
+    ATOM_NODISCARD auto tryRead(
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const
+        -> std::optional<T>;
+    void writeSpan(
+        std::span<const std::byte> data,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
+    ATOM_NODISCARD auto readSpan(
+        std::span<std::byte> data,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const
+        -> std::size_t;
 
 private:
-    std::string name_;                  ///< 共享内存名称
-#if defined(_WIN32) || defined(_WIN64)  // Windows
-    HANDLE handle_;                     ///< 共享内存句柄
-#else                                   // Unix-like
-    int fd_;  ///< 共享内存文件描述符
+    std::string name_;
+#ifdef _WIN32
+    HANDLE handle_;
+#else
+    int fd_;
 #endif
-    void* buffer_;            ///< 共享内存指针
-    std::atomic_flag* flag_;  ///< 互斥锁,用于保证并发访问时数据的一致性
-    mutable std::mutex mutex_;  ///< 互斥量,用于保护互斥锁的修改
-    bool is_creator_;           ///< 是否是创建者
+    void* buffer_;
+    std::atomic_flag* flag_;
+    mutable std::mutex mutex_;
+    bool is_creator_;
+
+    template <typename Func>
+    auto withLock(Func&& func, std::chrono::milliseconds timeout) const
+        -> decltype(std::forward<Func>(func)());
 };
 
-template <typename T>
+template <TriviallyCopyable T>
 SharedMemory<T>::SharedMemory(std::string_view name, bool create)
     : name_(name), buffer_(nullptr), flag_(), is_creator_(create) {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "T must be a trivially copyable type.");
-    static_assert(std::is_standard_layout_v<T>,
-                  "T must be a standard layout type.");
-
-#if defined(_WIN32) || defined(_WIN64)  // Windows
-    if (is_creator_) {
-        handle_ = CreateFileMappingA(
-            INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
-            sizeof(T) + sizeof(std::atomic_flag), name.data());
-        if (handle_ == nullptr) {
-            LOG_F(ERROR, "Failed to create file mapping.");
-            throw std::runtime_error("Failed to create file mapping.");
-        }
-    } else {
-        handle_ = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, name.data());
-        if (handle_ == nullptr) {
-            LOG_F(ERROR, "Failed to open file mapping.");
-            throw std::runtime_error("Failed to open file mapping.");
-        }
+#ifdef _WIN32
+    handle_ = create
+                  ? CreateFileMappingA(
+                        INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
+                        sizeof(T) + sizeof(std::atomic_flag), name.data())
+                  : OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, name.data());
+    if (handle_ == nullptr) {
+        THROW_FAIL_TO_OPEN_FILE("Failed to create/open file mapping.");
     }
-
     buffer_ = MapViewOfFile(handle_, FILE_MAP_ALL_ACCESS, 0, 0,
                             sizeof(T) + sizeof(std::atomic_flag));
     if (buffer_ == nullptr) {
         CloseHandle(handle_);
-        LOG_F(ERROR, "Failed to map view of file.");
-        throw std::runtime_error("Failed to map view of file.");
+        THROW_UNLAWFUL_OPERATION("Failed to map view of file.");
     }
-#else  // Unix-like
-    if (is_creator_) {
-        fd_ = shm_open(name.data(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-        if (fd_ == -1) {
-            LOG_F(ERROR, "Failed to create shared memory.");
-            throw std::runtime_error("Failed to create shared memory.");
-        }
-
-        if (ftruncate(fd_, sizeof(T) + sizeof(std::atomic_flag)) == -1) {
-            close(fd_);
-            shm_unlink(name.data());
-            LOG_F(ERROR, "Failed to resize shared memory.");
-            throw std::runtime_error("Failed to resize shared memory.");
-        }
-    } else {
-        fd_ = shm_open(name.data(), O_RDWR, S_IRUSR | S_IWUSR);
-        if (fd_ == -1) {
-            LOG_F(ERROR, "Failed to open shared memory.");
-            throw std::runtime_error("Failed to open shared memory.");
-        }
+#else
+    fd_ = shm_open(name.data(), create ? (O_CREAT | O_RDWR) : O_RDWR,
+                   S_IRUSR | S_IWUSR);
+    if (fd_ == -1)
+        THROW_FAIL_TO_OPEN_FILE("Failed to create/open shared memory.");
+    if (create && ftruncate(fd_, sizeof(T) + sizeof(std::atomic_flag)) == -1) {
+        close(fd_);
+        shm_unlink(name.data());
+        THROW_UNLAWFUL_OPERATION("Failed to resize shared memory.");
     }
-
     buffer_ = mmap(nullptr, sizeof(T) + sizeof(std::atomic_flag),
                    PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
     close(fd_);
-
     if (buffer_ == MAP_FAILED) {
-        if (is_creator_) {
+        if (create)
             shm_unlink(name.data());
-        }
-        LOG_F(ERROR, "Failed to map shared memory.");
-        throw std::runtime_error("Failed to map shared memory.");
+        THROW_UNLAWFUL_OPERATION("Failed to map shared memory.");
     }
 #endif
     flag_ = new (buffer_) std::atomic_flag();
 }
 
-template <typename T>
+template <TriviallyCopyable T>
 SharedMemory<T>::~SharedMemory() {
-#if defined(_WIN32) || defined(_WIN64)  // Windows
+#ifdef _WIN32
     UnmapViewOfFile(buffer_);
     CloseHandle(handle_);
-#else  // Unix-like
+#else
     munmap(buffer_, sizeof(T) + sizeof(std::atomic_flag));
-    if (is_creator_) {
+    if (is_creator_)
         shm_unlink(name_.c_str());
-    }
 #endif
 }
 
-template <typename T>
-void SharedMemory<T>::write(const T& data, std::chrono::milliseconds timeout) {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "T must be a trivially copyable type.");
-    static_assert(std::is_standard_layout_v<T>,
-                  "T must be a standard layout type.");
-
-    std::unique_lock<std::mutex> lock(mutex_);
-
-    auto start_time = std::chrono::steady_clock::now();
+template <TriviallyCopyable T>
+template <typename Func>
+auto SharedMemory<T>::withLock(Func&& func, std::chrono::milliseconds timeout)
+    const -> decltype(std::forward<Func>(func)()) {
+    std::unique_lock lock(mutex_);
+    auto startTime = std::chrono::steady_clock::now();
     while (flag_->test_and_set(std::memory_order_acquire)) {
-        if (timeout != std::chrono::milliseconds(0)) {
-            auto elapsed_time =
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - start_time);
-            if (elapsed_time >= timeout) {
-                LOG_F(ERROR, "Failed to acquire mutex within timeout.");
-                throw std::runtime_error(
-                    "Failed to acquire mutex within timeout.");
-            }
+        if (timeout != std::chrono::milliseconds(0) &&
+            std::chrono::steady_clock::now() - startTime >= timeout) {
+            THROW_TIMEOUT_EXCEPTION("Failed to acquire mutex within timeout.");
         }
         std::this_thread::yield();
     }
-
-    std::memcpy(static_cast<char*>(buffer_) + sizeof(std::atomic_flag), &data,
-                sizeof(T));
-
-    DLOG_F(INFO, "Data written to shared memory.");
-
-    flag_->clear(std::memory_order_release);
+    if constexpr (std::is_void_v<decltype(std::forward<Func>(func)())>) {
+        std::forward<Func>(func)();
+        flag_->clear(std::memory_order_release);
+        return;
+    } else {
+        auto result = std::forward<Func>(func)();
+        flag_->clear(std::memory_order_release);
+        return result;
+    }
 }
 
-template <typename T>
-[[nodiscard]] T SharedMemory<T>::read(std::chrono::milliseconds timeout) const {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "T must be a trivially copyable type.");
-    static_assert(std::is_standard_layout_v<T>,
-                  "T must be a standard layout type.");
+template <TriviallyCopyable T>
+void SharedMemory<T>::write(const T& data, std::chrono::milliseconds timeout) {
+    withLock(
+        [&]() {
+            std::memcpy(static_cast<char*>(buffer_) + sizeof(std::atomic_flag),
+                        &data, sizeof(T));
+            DLOG_F(INFO, "Data written to shared memory.");
+        },
+        timeout);
+}
 
-    std::unique_lock<std::mutex> lock(mutex_);
-
-    auto start_time = std::chrono::steady_clock::now();
-    while (flag_->test_and_set(std::memory_order_acquire)) {
-        if (timeout != std::chrono::milliseconds(0)) {
-            auto elapsed_time =
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - start_time);
-            if (elapsed_time >= timeout) {
-                LOG_F(ERROR, "Failed to acquire mutex within timeout.");
-                throw std::runtime_error(
-                    "Failed to acquire mutex within timeout.");
-            }
-        }
-        std::this_thread::yield();
-    }
-
-    T data;
-    std::memcpy(&data,
+template <TriviallyCopyable T>
+auto SharedMemory<T>::read(std::chrono::milliseconds timeout) const -> T {
+    return withLock(
+        [&]() {
+            T data;
+            std::memcpy(
+                &data,
                 static_cast<const char*>(buffer_) + sizeof(std::atomic_flag),
                 sizeof(T));
-
-    DLOG_F(INFO, "Data read from shared memory.");
-
-    flag_->clear(std::memory_order_release);
-
-    return data;
+            DLOG_F(INFO, "Data read from shared memory.");
+            return data;
+        },
+        timeout);
 }
 
-template <typename T>
+template <TriviallyCopyable T>
 void SharedMemory<T>::clear() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    std::memset(static_cast<char*>(buffer_) + sizeof(std::atomic_flag), 0,
-                sizeof(T));
-    DLOG_F(INFO, "Shared memory cleared.");
+    withLock(
+        [&]() {
+            std::memset(static_cast<char*>(buffer_) + sizeof(std::atomic_flag),
+                        0, sizeof(T));
+            DLOG_F(INFO, "Shared memory cleared.");
+        },
+        std::chrono::milliseconds(0));
 }
 
-template <typename T>
-[[nodiscard]] bool SharedMemory<T>::isOccupied() const {
+template <TriviallyCopyable T>
+auto SharedMemory<T>::isOccupied() const -> bool {
     return flag_->test(std::memory_order_acquire);
 }
 
-template <typename T>
-[[nodiscard]] std::string_view SharedMemory<T>::getName() const noexcept {
+template <TriviallyCopyable T>
+auto SharedMemory<T>::getName() const ATOM_NOEXCEPT -> std::string_view {
     return name_;
 }
 
-template <typename T>
-[[nodiscard]] std::size_t SharedMemory<T>::getSize() const noexcept {
+template <TriviallyCopyable T>
+auto SharedMemory<T>::getSize() const ATOM_NOEXCEPT -> std::size_t {
     return sizeof(T);
 }
 
-template <typename T>
-[[nodiscard]] bool SharedMemory<T>::isCreator() const noexcept {
+template <TriviallyCopyable T>
+auto SharedMemory<T>::isCreator() const ATOM_NOEXCEPT -> bool {
     return is_creator_;
 }
+
+template <TriviallyCopyable T>
+template <typename U>
+void SharedMemory<T>::writePartial(const U& data, std::size_t offset,
+                                   std::chrono::milliseconds timeout) {
+    static_assert(std::is_trivially_copyable_v<U>,
+                  "U must be trivially copyable");
+    if (offset + sizeof(U) > sizeof(T)) {
+        THROW_INVALID_ARGUMENT("Partial write out of bounds");
+    }
+    withLock(
+        [&]() {
+            std::memcpy(
+                static_cast<char*>(buffer_) + sizeof(std::atomic_flag) + offset,
+                &data, sizeof(U));
+            DLOG_F(INFO, "Partial data written to shared memory.");
+        },
+        timeout);
+}
+
+template <TriviallyCopyable T>
+template <typename U>
+auto SharedMemory<T>::readPartial(
+    std::size_t offset, std::chrono::milliseconds timeout) const -> U {
+    static_assert(std::is_trivially_copyable_v<U>,
+                  "U must be trivially copyable");
+    if (offset + sizeof(U) > sizeof(T)) {
+        THROW_INVALID_ARGUMENT("Partial read out of bounds");
+    }
+    return withLock(
+        [&]() {
+            U data;
+            std::memcpy(&data,
+                        static_cast<const char*>(buffer_) +
+                            sizeof(std::atomic_flag) + offset,
+                        sizeof(U));
+            DLOG_F(INFO, "Partial data read from shared memory.");
+            return data;
+        },
+        timeout);
+}
+
+template <TriviallyCopyable T>
+auto SharedMemory<T>::tryRead(std::chrono::milliseconds timeout) const
+    -> std::optional<T> {
+    try {
+        return read(timeout);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+template <TriviallyCopyable T>
+void SharedMemory<T>::writeSpan(std::span<const std::byte> data,
+                                std::chrono::milliseconds timeout) {
+    if (data.size_bytes() > sizeof(T)) {
+        THROW_INVALID_ARGUMENT("Span write out of bounds");
+    }
+    withLock(
+        [&]() {
+            std::memcpy(static_cast<char*>(buffer_) + sizeof(std::atomic_flag),
+                        data.data(), data.size_bytes());
+            DLOG_F(INFO, "Span data written to shared memory.");
+        },
+        timeout);
+}
+
+template <TriviallyCopyable T>
+auto SharedMemory<T>::readSpan(std::span<std::byte> data,
+                               std::chrono::milliseconds timeout) const
+    -> std::size_t {
+    return withLock(
+        [&]() {
+            std::size_t bytesToRead = std::min(data.size_bytes(), sizeof(T));
+            std::memcpy(
+                data.data(),
+                static_cast<const char*>(buffer_) + sizeof(std::atomic_flag),
+                bytesToRead);
+            DLOG_F(INFO, "Span data read from shared memory.");
+            return bytesToRead;
+        },
+        timeout);
+}
+
 }  // namespace atom::connection
 
-#endif
+#endif  // ATOM_CONNECTION_SHARED_MEMORY_HPP

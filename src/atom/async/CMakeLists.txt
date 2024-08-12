@@ -11,6 +11,8 @@ project(atom-async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
+    daemon.cpp
+    limiter.cpp
     lock.cpp
     timer.cpp
 )
@@ -18,26 +20,28 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
-    async.inl
+    daemon.hpp
+    eventstack.hpp
+    limiter.hpp
     lock.hpp
+    message_bus.hpp
+    message_queue.hpp
     pool.hpp
     queue.hpp
-    queue.inl
+    safetype.hpp
     thread_wrapper.hpp
     timer.hpp
     trigger.hpp
-    trigger.inl
 )
 
 set(${PROJECT_NAME}_LIBS
     loguru
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
 set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
-
-target_link_libraries(${PROJECT_NAME}_OBJECT loguru)
 
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC
@@ -51,7 +55,6 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

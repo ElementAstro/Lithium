@@ -17,14 +17,15 @@ enum class Color {
     White
 };
 
-void clear_screen();
-void set_text_color(Color color);
-void set_background_color(Color color);
-void reset_text_format();
-void move_cursor(int row, int col);
-void hide_cursor();
-void show_cursor();
-std::pair<int, int> get_terminal_size();
+void clearScreen();
+void setTextColor(Color color);
+void setBackgroundColor(Color color);
+void resetTextFormat();
+void moveCursor(int row, int col);
+void hideCursor();
+void showCursor();
+auto getTerminalSize() -> std::pair<int, int>;
+auto supportsColor() -> bool;
 }  // namespace lithium::debug
 
 #endif

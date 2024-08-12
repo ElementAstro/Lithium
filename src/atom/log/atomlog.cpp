@@ -14,56 +14,65 @@ Description: Logger for Atom
 
 #include "atomlog.hpp"
 
+#include <algorithm>
+#include <sstream>
+
+#include "atom/error/exception.hpp"
+#include "atom/utils/time.hpp"
+
 namespace atom::log {
-Logger::Logger(const fs::path& file_name, LogLevel min_level,
-               size_t max_file_size, int max_files)
-    : file_name(file_name),
-      min_level(min_level),
-      max_file_size(max_file_size),
-      max_files(max_files),
-      worker([this] { run(); }) {
+Logger::Logger(const fs::path& file_name_, LogLevel min_level,
+               size_t max_file_size, int max_files_)
+    : file_name_(file_name_),
+      worker_([this] { run(); }),
+      max_file_size_(max_file_size),
+      max_files_(max_files_),
+      min_level_(min_level) {
     rotateLogFile();
 }
 
 Logger::~Logger() {
     {
-        std::lock_guard<std::mutex> lock(queue_mutex);
-        finished = true;
+        std::lock_guard lock(queue_mutex_);
+        finished_ = true;
     }
-    cv.notify_one();
-    if (log_file.is_open()) {
-        log_file.close();
+    cv_.notify_one();
+    if (log_file_.is_open()) {
+        log_file_.close();
     }
 }
 
 void Logger::setThreadName(const std::string& name) {
-    std::lock_guard<std::mutex> lock(queue_mutex);
-    thread_names[std::this_thread::get_id()] = name;
+    std::lock_guard lock(queue_mutex_);
+    thread_names_[std::this_thread::get_id()] = name;
 }
 
-void Logger::setLevel(LogLevel level) { min_level = level; }
+void Logger::setLevel(LogLevel level) { min_level_ = level; }
 
-void Logger::setPattern(const std::string& pattern) { this->pattern = pattern; }
+void Logger::setPattern(const std::string& pattern) {
+    this->pattern_ = pattern;
+}
 
 void Logger::registerSink(const std::shared_ptr<Logger>& logger) {
-    sinks.push_back(logger);
+    sinks_.push_back(logger);
 }
 
 void Logger::removeSink(const std::shared_ptr<Logger>& logger) {
-    sinks.erase(std::remove(sinks.begin(), sinks.end(), logger), sinks.end());
+    sinks_.erase(std::remove(sinks_.begin(), sinks_.end(), logger),
+                 sinks_.end());
 }
 
-void Logger::clearSinks() { sinks.clear(); }
+void Logger::clearSinks() { sinks_.clear(); }
 
-std::string Logger::getThreadName() {
+auto Logger::getThreadName() -> std::string {
     auto id = std::this_thread::get_id();
-    if (thread_names.find(id) != thread_names.end()) {
-        return thread_names[id];
+    if (thread_names_.find(id) != thread_names_.end()) {
+        return thread_names_[id];
     }
     return std::to_string(std::hash<std::thread::id>{}(id));
 }
 
-std::string Logger::logLevelToString(LogLevel level) {
+auto Logger::logLevelToString(LogLevel level) -> std::string {
     switch (level) {
         case LogLevel::TRACE:
             return "TRACE";
@@ -82,38 +91,32 @@ std::string Logger::logLevelToString(LogLevel level) {
     }
 }
 
-std::string Logger::formatMessage(LogLevel level, const std::string& msg) {
-    auto now = std::chrono::system_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
-    auto tm_now = fmt::localtime(time_t_now);
-    auto thread_name = getThreadName();
-    return fmt::format(
-        fmt::runtime(pattern), fmt::arg("Y", tm_now.tm_year + 1900),
-        fmt::arg("m", tm_now.tm_mon + 1), fmt::arg("d", tm_now.tm_mday),
-        fmt::arg("H", tm_now.tm_hour), fmt::arg("M", tm_now.tm_min),
-        fmt::arg("S", tm_now.tm_sec),
-        fmt::arg("e", std::chrono::duration_cast<std::chrono::milliseconds>(
-                          now.time_since_epoch())
-                              .count() %
-                          1000),
-        fmt::arg("l", logLevelToString(level)), fmt::arg("t", thread_name),
-        fmt::arg("v", msg));
+auto Logger::formatMessage(LogLevel level,
+                           const std::string& msg) -> std::string {
+    auto currentTime = utils::getChinaTimestampString();
+    auto threadName = getThreadName();
+    std::ostringstream sss;
+    sss << "[" << currentTime << "]"
+        << "[" << logLevelToString(level) << "]"
+        << "[" << threadName << "]"
+        << "[" << msg << "]";
+    return sss.str();
 }
 
 void Logger::log(LogLevel level, const std::string& msg) {
-    if (level < min_level) {
+    if (level < min_level_) {
         return;
     }
 
-    auto formatted_msg = formatMessage(level, msg);
+    auto formattedMsg = formatMessage(level, msg);
 
     {
-        std::lock_guard<std::mutex> lock(queue_mutex);
-        log_queue.push(formatted_msg);
+        std::lock_guard lock(queue_mutex_);
+        log_queue_.push(formattedMsg);
     }
-    cv.notify_one();
+    cv_.notify_one();
 
-    for (const auto& sink : sinks) {
+    for (const auto& sink : sinks_) {
         sink->log(level, msg);
     }
 }
@@ -122,40 +125,40 @@ void Logger::run() {
     std::string msg;
     while (true) {
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
-            cv.wait(lock, [this] { return !log_queue.empty() || finished; });
+            std::unique_lock lock(queue_mutex_);
+            cv_.wait(lock, [this] { return !log_queue_.empty() || finished_; });
 
-            if (finished && log_queue.empty()) {
+            if (finished_ && log_queue_.empty()) {
                 break;
             }
 
-            msg = log_queue.front();
-            log_queue.pop();
+            msg = log_queue_.front();
+            log_queue_.pop();
         }  // Release lock before I/O operation
 
-        log_file << msg << std::endl;
+        log_file_ << msg << std::endl;
 
-        if (log_file.tellp() >= static_cast<std::streampos>(max_file_size)) {
+        if (log_file_.tellp() >= static_cast<std::streampos>(max_file_size_)) {
             rotateLogFile();
         }
     }
 }
 
 void Logger::rotateLogFile() {
-    std::lock_guard<std::mutex> lock(queue_mutex);  // Lock during rotation
-    if (log_file.is_open()) {
-        log_file.close();
+    std::lock_guard lock(queue_mutex_);  // Lock during rotation
+    if (log_file_.is_open()) {
+        log_file_.close();
     }
 
-    if (max_files > 0) {
-        auto extension = file_name.extension();
-        auto stem = file_name.stem();
+    if (max_files_ > 0) {
+        auto extension = file_name_.extension();
+        auto stem = file_name_.stem();
 
-        for (int i = max_files - 1; i > 0; --i) {
+        for (int i = max_files_ - 1; i > 0; --i) {
             auto src =
-                file_name.parent_path() /
+                file_name_.parent_path() /
                 (stem.string() + "." + std::to_string(i) + extension.string());
-            auto dst = file_name.parent_path() /
+            auto dst = file_name_.parent_path() /
                        (stem.string() + "." + std::to_string(i + 1) +
                         extension.string());
 
@@ -167,21 +170,20 @@ void Logger::rotateLogFile() {
             }
         }
 
-        auto dst = file_name.parent_path() /
+        auto dst = file_name_.parent_path() /
                    (stem.string() + ".1" + extension.string());
-        if (fs::exists(file_name)) {
+        if (fs::exists(file_name_)) {
             if (fs::exists(dst)) {
                 fs::remove(dst);
             }
-            fs::rename(file_name, dst);
+            fs::rename(file_name_, dst);
         }
     }
 
-    log_file.open(file_name, std::ios::out | std::ios::app);
-    if (!log_file.is_open()) {
-        throw std::runtime_error("Failed to open log file: " +
-                                 file_name.string());
+    log_file_.open(file_name_, std::ios::out | std::ios::app);
+    if (!log_file_.is_open()) {
+        THROW_FAIL_TO_OPEN_FILE("Failed to open log file: " +
+                                file_name_.string());
     }
 }
-
 }  // namespace atom::log

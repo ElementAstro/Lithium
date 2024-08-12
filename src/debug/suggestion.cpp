@@ -10,11 +10,7 @@
 
 #include <algorithm>
 #include <cctype>
-#include <functional>
-#include <memory>
 #include <queue>
-#include <ranges>
-#include <unordered_set>
 
 namespace lithium::debug {
 SuggestionEngine::SuggestionEngine(const std::vector<std::string>& dataset,
@@ -23,8 +19,8 @@ SuggestionEngine::SuggestionEngine(const std::vector<std::string>& dataset,
     buildIndex();
 }
 
-std::vector<std::string> SuggestionEngine::suggest(
-    std::string_view input, MatchType matchType) {
+auto SuggestionEngine::suggest(std::string_view input, MatchType matchType)
+    -> std::vector<std::string> {
     std::vector<std::string> suggestions;
     std::string inputLower(input.size(), '\0');
     std::transform(input.begin(), input.end(), inputLower.begin(), ::tolower);
@@ -56,8 +52,9 @@ void SuggestionEngine::buildIndex() {
     }
 }
 
-bool SuggestionEngine::matches(const std::string& input,
-                               const std::string& item, MatchType matchType) {
+auto SuggestionEngine::matches(const std::string& input,
+                               const std::string& item,
+                               MatchType matchType) -> bool {
     switch (matchType) {
         case MatchType::Prefix:
             return item.starts_with(input);
@@ -67,8 +64,8 @@ bool SuggestionEngine::matches(const std::string& input,
     return false;
 }
 
-int SuggestionEngine::calculateScore(const std::string& input,
-                                     const std::string& item) {
+auto SuggestionEngine::calculateScore(const std::string& input,
+                                      const std::string& item) -> int {
     int score = 0;
     size_t inputPos = 0;
     for (char c : item) {

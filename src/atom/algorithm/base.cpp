@@ -14,370 +14,341 @@ Description: A collection of algorithms for C++
 
 #include "base.hpp"
 
-#include <algorithm>
 #include <array>
-#include <bit>
-#include <iomanip>
-#include <iostream>
-#include <stdexcept>
+#include <string_view>
+
+#include "atom/error/exception.hpp"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <arpa/inet.h>
 #endif
 
+#if USE_OPENCL
+#include <CL/cl.h>
+constexpr bool HAS_OPEN_CL = true;
+#else
+constexpr bool HAS_OPEN_CL = false;
+#endif
+
 namespace atom::algorithm {
-std::string base16Encode(const std::vector<unsigned char> &data) {
-    std::stringstream ss;
-    ss << std::hex << std::uppercase << std::setfill('0');
+namespace detail {
+#if USE_OPENCL
+const char* base64EncodeKernelSource = R"(
+        __kernel void base64EncodeKernel(__global const uchar* input, __global char* output, int size) {
+            int i = get_global_id(0);
+            if (i < size / 3) {
+                uchar3 in = vload3(i, input);
+                output[i * 4 + 0] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[(in.s0 >> 2) & 0x3F];
+                output[i * 4 + 1] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[((in.s0 & 0x03) << 4) | ((in.s1 >> 4) & 0x0F)];
+                output[i * 4 + 2] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[((in.s1 & 0x0F) << 2) | ((in.s2 >> 6) & 0x03)];
+                output[i * 4 + 3] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[in.s2 & 0x3F];
+            }
+        }
+    )";
 
-    for (unsigned char byte : data) {
-        ss << std::setw(2) << static_cast<int>(byte);
-    }
+const char* base64DecodeKernelSource = R"(
+        __kernel void base64DecodeKernel(__global const char* input, __global uchar* output, int size) {
+            int i = get_global_id(0);
+            if (i < size / 4) {
+                char4 in = vload4(i, input);
+                output[i * 3 + 0] = (uchar)((in.s0 << 2) | ((in.s1 >> 4) & 0x03));
+                output[i * 3 + 1] = (uchar)(((in.s1 & 0x0F) << 4) | ((in.s2 >> 2) & 0x0F));
+                output[i * 3 + 2] = (uchar)(((in.s2 & 0x03) << 6) | (in.s3 & 0x3F));
+            }
+        }
+    )";
 
-    return ss.str();
+// OpenCL kernel for XOR encryption/decryption
+const char* xorKernelSource = R"(
+        __kernel void xorKernel(__global const char* input, __global char* output, uchar key, int size) {
+            int i = get_global_id(0);
+            if (i < size) {
+                output[i] = input[i] ^ key;
+            }
+        }
+    )";
+
+// OpenCL setup and context management
+cl_context context;
+cl_command_queue queue;
+cl_program program;
+cl_kernel base64EncodeKernel, base64DecodeKernel, xorKernel;
+
+void initializeOpenCL() {
+    // Initialize OpenCL context, compile the kernels, etc.
+    // Error handling omitted for brevity
+    cl_platform_id platform;
+    cl_device_id device;
+    clGetPlatformIDs(1, &platform, nullptr);
+    clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
+    context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, nullptr);
+    queue = clCreateCommandQueue(context, device, 0, nullptr);
+
+    // Compile the kernels
+    const char* sources[] = {base64EncodeKernelSource, base64DecodeKernelSource,
+                             xorKernelSource};
+    program = clCreateProgramWithSource(context, 3, sources, nullptr, nullptr);
+    clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
+
+    base64EncodeKernel = clCreateKernel(program, "base64EncodeKernel", nullptr);
+    base64DecodeKernel = clCreateKernel(program, "base64DecodeKernel", nullptr);
+    xorKernel = clCreateKernel(program, "xorKernel", nullptr);
 }
 
-std::vector<unsigned char> base16Decode(const std::string &data) {
-    std::vector<unsigned char> result;
-
-    for (size_t i = 0; i < data.length(); i += 2) {
-        std::string byteStr = data.substr(i, 2);
-        unsigned char byte =
-            static_cast<unsigned char>(std::stoi(byteStr, nullptr, 16));
-        result.push_back(byte);
-    }
-
-    return result;
+void cleanupOpenCL() {
+    // Cleanup OpenCL resources
+    clReleaseKernel(base64EncodeKernel);
+    clReleaseKernel(base64DecodeKernel);
+    clReleaseKernel(xorKernel);
+    clReleaseProgram(program);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
 }
 
-constexpr std::string_view base32_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+void base64EncodeOpenCL(const unsigned char* input, char* output, size_t size) {
+    cl_mem inputBuffer =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size,
+                       (void*)input, nullptr);
+    cl_mem outputBuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+                                         (size + 2) / 3 * 4, nullptr, nullptr);
 
-std::string base32Encode(const uint8_t *data, size_t length) {
-    std::string result;
-    result.reserve((length + 4) / 5 * 8);
+    clSetKernelArg(base64EncodeKernel, 0, sizeof(cl_mem), &inputBuffer);
+    clSetKernelArg(base64EncodeKernel, 1, sizeof(cl_mem), &outputBuffer);
+    clSetKernelArg(base64EncodeKernel, 2, sizeof(int), &size);
 
-    size_t bits = 0;
-    int num_bits = 0;
-    for (size_t i = 0; i < length; ++i) {
-        bits = (bits << 8) | data[i];
-        num_bits += 8;
-        while (num_bits >= 5) {
-            result.push_back(base32_chars[(bits >> (num_bits - 5)) & 0x1F]);
-            num_bits -= 5;
+    size_t globalWorkSize = (size + 2) / 3;
+    clEnqueueNDRangeKernel(queue, base64EncodeKernel, 1, nullptr,
+                           &globalWorkSize, nullptr, 0, nullptr, nullptr);
+
+    clEnqueueReadBuffer(queue, outputBuffer, CL_TRUE, 0, (size + 2) / 3 * 4,
+                        output, 0, nullptr, nullptr);
+
+    clReleaseMemObject(inputBuffer);
+    clReleaseMemObject(outputBuffer);
+}
+
+void base64DecodeOpenCL(const char* input, unsigned char* output, size_t size) {
+    cl_mem inputBuffer =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size,
+                       (void*)input, nullptr);
+    cl_mem outputBuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+                                         size / 4 * 3, nullptr, nullptr);
+
+    clSetKernelArg(base64DecodeKernel, 0, sizeof(cl_mem), &inputBuffer);
+    clSetKernelArg(base64DecodeKernel, 1, sizeof(cl_mem), &outputBuffer);
+    clSetKernelArg(base64DecodeKernel, 2, sizeof(int), &size);
+
+    size_t globalWorkSize = size / 4;
+    clEnqueueNDRangeKernel(queue, base64DecodeKernel, 1, nullptr,
+                           &globalWorkSize, nullptr, 0, nullptr, nullptr);
+
+    clEnqueueReadBuffer(queue, outputBuffer, CL_TRUE, 0, size / 4 * 3, output,
+                        0, nullptr, nullptr);
+
+    clReleaseMemObject(inputBuffer);
+    clReleaseMemObject(outputBuffer);
+}
+
+void xorEncryptOpenCL(const char* input, char* output, uint8_t key,
+                      size_t size) {
+    cl_mem inputBuffer =
+        clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size,
+                       (void*)input, nullptr);
+    cl_mem outputBuffer =
+        clCreateBuffer(context, CL_MEM_WRITE_ONLY, size, nullptr, nullptr);
+
+    clSetKernelArg(xorKernel, 0, sizeof(cl_mem), &inputBuffer);
+    clSetKernelArg(xorKernel, 1, sizeof(cl_mem), &outputBuffer);
+    clSetKernelArg(xorKernel, 2, sizeof(uint8_t), &key);
+    clSetKernelArg(xorKernel, 3, sizeof(int), &size);
+
+    size_t globalWorkSize = size;
+    clEnqueueNDRangeKernel(queue, xorKernel, 1, nullptr, &globalWorkSize,
+                           nullptr, 0, nullptr, nullptr);
+
+    clEnqueueReadBuffer(queue, outputBuffer, CL_TRUE, 0, size, output, 0,
+                        nullptr, nullptr);
+
+    clReleaseMemObject(inputBuffer);
+    clReleaseMemObject(outputBuffer);
+}
+#endif
+template <typename InputIt, typename OutputIt>
+void base64Encode(InputIt begin, InputIt end, OutputIt dest) {
+    std::array<unsigned char, 3> charArray3{};
+    std::array<unsigned char, 4> charArray4{};
+
+    size_t i = 0;
+    for (auto it = begin; it != end; ++it, ++i) {
+        charArray3[i % 3] = static_cast<unsigned char>(*it);
+        if (i % 3 == 2) {
+            charArray4[0] = (charArray3[0] & 0xfc) >> 2;
+            charArray4[1] =
+                ((charArray3[0] & 0x03) << 4) + ((charArray3[1] & 0xf0) >> 4);
+            charArray4[2] =
+                ((charArray3[1] & 0x0f) << 2) + ((charArray3[2] & 0xc0) >> 6);
+            charArray4[3] = charArray3[2] & 0x3f;
+
+            for (int j = 0; j < 4; ++j) {
+                *dest++ = BASE64_CHARS[charArray4[j]];
+            }
         }
     }
 
-    if (num_bits > 0) {
-        bits <<= (5 - num_bits);
-        result.push_back(base32_chars[bits & 0x1F]);
-    }
-
-    int padding_chars = (8 - result.size() % 8) % 8;
-    result.append(padding_chars, '=');
-
-    return result;
-}
-
-std::string base32Decode(std::string_view encoded) {
-    std::string result;
-    result.reserve(encoded.size() * 5 / 8);
-
-    size_t bits = 0;
-    int num_bits = 0;
-    for (char c : encoded) {
-        if (c == '=') {
-            break;
+    if (i % 3 != 0) {
+        for (size_t j = i % 3; j < 3; ++j) {
+            charArray3[j] = '\0';
         }
-        auto pos = base32_chars.find(c);
-        if (pos == std::string_view::npos) {
-            throw std::invalid_argument(
-                "Invalid character in Base32 encoded string");
+
+        charArray4[0] = (charArray3[0] & 0xfc) >> 2;
+        charArray4[1] =
+            ((charArray3[0] & 0x03) << 4) + ((charArray3[1] & 0xf0) >> 4);
+        charArray4[2] =
+            ((charArray3[1] & 0x0f) << 2) + ((charArray3[2] & 0xc0) >> 6);
+        charArray4[3] = charArray3[2] & 0x3f;
+
+        for (size_t j = 0; j < i % 3 + 1; ++j) {
+            *dest++ = BASE64_CHARS[charArray4[j]];
         }
-        bits = (bits << 5) | pos;
-        num_bits += 5;
-        if (num_bits >= 8) {
-            result.push_back(static_cast<char>(bits >> (num_bits - 8)));
-            num_bits -= 8;
+
+        while (i++ % 3 != 0) {
+            *dest++ = '=';
         }
     }
-
-    return result;
 }
 
-std::string base64Encode(std::string_view bytes_to_encode) {
-    static constexpr std::string_view kBase64Chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
+template <typename InputIt, typename OutputIt>
+void base64Decode(InputIt begin, InputIt end, OutputIt dest) {
+    std::array<unsigned char, 4> charArray4{};
+    std::array<unsigned char, 3> charArray3{};
 
+    size_t i = 0;
+    for (auto it = begin; it != end && *it != '='; ++it) {
+        charArray4[i++] = static_cast<unsigned char>(BASE64_CHARS.find(*it));
+        if (i == 4) {
+            charArray3[0] =
+                (charArray4[0] << 2) + ((charArray4[1] & 0x30) >> 4);
+            charArray3[1] =
+                ((charArray4[1] & 0xf) << 4) + ((charArray4[2] & 0x3c) >> 2);
+            charArray3[2] = ((charArray4[2] & 0x3) << 6) + charArray4[3];
+
+            for (i = 0; i < 3; ++i) {
+                *dest++ = charArray3[i];
+            }
+            i = 0;
+        }
+    }
+
+    if (i != 0) {
+        for (size_t j = i; j < 4; ++j) {
+            charArray4[j] = 0;
+        }
+
+        charArray3[0] = (charArray4[0] << 2) + ((charArray4[1] & 0x30) >> 4);
+        charArray3[1] =
+            ((charArray4[1] & 0xf) << 4) + ((charArray4[2] & 0x3c) >> 2);
+
+        for (size_t j = 0; j < i - 1; ++j) {
+            *dest++ = charArray3[j];
+        }
+    }
+}
+}  // namespace detail
+
+auto base64Encode(std::string_view bytes_to_encode) -> std::string {
     std::string ret;
     ret.reserve((bytes_to_encode.size() + 2) / 3 * 4);
 
-    std::array<unsigned char, 3> char_array_3{};
-    std::array<unsigned char, 4> char_array_4{};
-
-    auto it = bytes_to_encode.begin();
-    auto end = bytes_to_encode.end();
-
-    while (it != end) {
-        int i = 0;
-        for (; i < 3 && it != end; ++i, ++it) {
-            char_array_3[i] = static_cast<unsigned char>(*it);
-        }
-
-        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-        char_array_4[1] =
-            ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-        char_array_4[2] =
-            ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-        char_array_4[3] = char_array_3[2] & 0x3f;
-
-        for (int j = 0; j < i + 1; ++j) {
-            ret.push_back(kBase64Chars[char_array_4[j]]);
-        }
-
-        if (i < 3) {
-            for (int j = i; j < 3; ++j) {
-                ret.push_back('=');
-            }
-            break;
-        }
+    if (HAS_OPEN_CL) {
+#if USE_OPENCL
+        detail::base64EncodeOpenCL(
+            reinterpret_cast<const unsigned char*>(bytes_to_encode.data()),
+            ret.data(), bytes_to_encode.size());
+#endif
+    } else {
+        detail::base64Encode(bytes_to_encode.begin(), bytes_to_encode.end(),
+                             std::back_inserter(ret));
     }
 
     return ret;
 }
 
-std::string base64Decode(std::string_view encoded_string) {
-    static constexpr std::string_view kBase64Chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
+auto base64Decode(std::string_view encoded_string) -> std::string {
     std::string ret;
     ret.reserve(encoded_string.size() / 4 * 3);
 
-    std::array<unsigned char, 4> char_array_4{};
-    std::array<unsigned char, 3> char_array_3{};
-
-    auto it = encoded_string.begin();
-    auto end = encoded_string.end();
-
-    while (it != end) {
-        int i = 0;
-        for (; i < 4 && it != end && *it != '='; ++i, ++it) {
-            char_array_4[i] =
-                static_cast<unsigned char>(kBase64Chars.find(*it));
-        }
-
-        char_array_3[0] =
-            (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-        char_array_3[1] =
-            ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-        for (int j = 0; j < i - 1; ++j) {
-            ret.push_back(static_cast<char>(char_array_3[j]));
-        }
+    if (HAS_OPEN_CL) {
+#if USE_OPENCL
+        detail::base64DecodeOpenCL(encoded_string.data(),
+                                   reinterpret_cast<unsigned char*>(ret.data()),
+                                   encoded_string.size());
+#endif
+    } else {
+        detail::base64Decode(encoded_string.begin(), encoded_string.end(),
+                             std::back_inserter(ret));
     }
 
     return ret;
 }
 
-const std::string base85_chars =
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<"
-    "=>?@^_`{|}~";
+auto fbase64Encode(std::span<const unsigned char> input) -> std::string {
+    std::string output;
+    output.reserve((input.size() + 2) / 3 * 4);
 
-std::string base85Encode(const std::vector<unsigned char> &data) {
-    std::string result;
-
-    unsigned int value = 0;
-    int count = 0;
-
-    for (unsigned char byte : data) {
-        value = value * 256 + byte;
-        count += 8;
-
-        while (count >= 5) {
-            int index = (value >> (count - 5)) & 0x1F;
-            result += base85_chars[index];
-            count -= 5;
-        }
+    if (HAS_OPEN_CL) {
+#if USE_OPENCL
+        detail::base64EncodeOpenCL(input.data(), output.data(), input.size());
+#endif
+    } else {
+        detail::base64Encode(input.begin(), input.end(),
+                             std::back_inserter(output));
     }
 
-    if (count > 0) {
-        value <<= (5 - count);
-        int index = value & 0x1F;
-        result += base85_chars[index];
-    }
-
-    return result;
+    return output;
 }
 
-std::vector<unsigned char> base85Decode(const std::string &data) {
-    std::vector<unsigned char> result;
-
-    unsigned int value = 0;
-    int count = 0;
-
-    for (char c : data) {
-        if (c >= '!' && c <= 'u') {
-            value = value * 85 + (c - '!');
-            count += 5;
-
-            if (count >= 8) {
-                result.push_back((value >> (count - 8)) & 0xFF);
-                count -= 8;
-            }
-        }
+auto fbase64Decode(std::span<const char> input) -> std::vector<unsigned char> {
+    if (input.size() % 4 != 0) {
+        THROW_INVALID_ARGUMENT("Invalid base64 input length");
     }
 
-    return result;
+    std::vector<unsigned char> output;
+    output.reserve(input.size() / 4 * 3);
+
+    if (HAS_OPEN_CL) {
+#if USE_OPENCL
+        detail::base64DecodeOpenCL(input.data(), output.data(), input.size());
+#endif
+    } else {
+        detail::base64Decode(input.begin(), input.end(),
+                             std::back_inserter(output));
+    }
+
+    return output;
 }
 
-constexpr std::array<char, 91> kEncodeTable = {
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '!', '#', '$',
-    '%', '&', '(', ')', '*', '+', ',', '.', '/', ':', ';', '<', '=',
-    '>', '?', '@', '[', ']', '^', '_', '`', '{', '|', '}', '~', '"'};
-
-constexpr std::array<int, 256> kDecodeTable = []() {
-    std::array<int, 256> table{};
-    table.fill(-1);
-    for (int i = 0; i < kEncodeTable.size(); ++i) {
-        table[kEncodeTable[i]] = i;
-    }
-    return table;
-}();
-
-std::string base91Encode(std::string_view data) {
-    std::string result;
-    result.reserve(data.size() * 2);
-
-    int ebq = 0;
-    int en = 0;
-    for (char c : data) {
-        ebq |= static_cast<unsigned char>(c) << en;
-        en += 8;
-        if (en > 13) {
-            int ev = ebq & 8191;
-            if (ev > 88) {
-                ebq >>= 13;
-                en -= 13;
-            } else {
-                ev = ebq & 16383;
-                ebq >>= 14;
-                en -= 14;
-            }
-            result += kEncodeTable[ev % 91];
-            result += kEncodeTable[ev / 91];
-        }
-    }
-
-    if (en > 0) {
-        result += kEncodeTable[ebq % 91];
-        if (en > 7 || ebq > 90) {
-            result += kEncodeTable[ebq / 91];
-        }
-    }
-
-    return result;
-}
-
-std::string base91Decode(std::string_view data) {
-    std::string result;
-    result.reserve(data.size());
-
-    int dbq = 0;
-    int dn = 0;
-    int dv = -1;
-
-    for (char c : data) {
-        if (c == '"') {
-            continue;
-        }
-        if (dv == -1) {
-            dv = kDecodeTable[c];
-        } else {
-            dv += kDecodeTable[c] * 91;
-            dbq |= dv << dn;
-            dn += (dv & 8191) > 88 ? 13 : 14;
-            do {
-                result += static_cast<char>(dbq & 0xFF);
-                dbq >>= 8;
-                dn -= 8;
-            } while (dn > 7);
-            dv = -1;
-        }
-    }
-
-    if (dv != -1) {
-        result += static_cast<char>((dbq | dv << dn) & 0xFF);
-    }
-
-    return result;
-}
-
-std::string base128Encode(const uint8_t *data, size_t length) {
-    std::string result;
-    result.reserve((length * 8 + 6) / 7);
-
-    size_t bits = 0;
-    int num_bits = 0;
-    for (size_t i = 0; i < length; ++i) {
-        bits = (bits << 8) | data[i];
-        num_bits += 8;
-        while (num_bits >= 7) {
-            result.push_back(
-                static_cast<char>((bits >> (num_bits - 7)) & 0x7F));
-            num_bits -= 7;
-        }
-    }
-
-    if (num_bits > 0) {
-        bits <<= (7 - num_bits);
-        result.push_back(static_cast<char>(bits & 0x7F));
-    }
-
-    return result;
-}
-
-std::string base128Decode(std::string_view encoded) {
-    std::string result;
-    result.reserve(encoded.size() * 7 / 8);
-
-    size_t bits = 0;
-    int num_bits = 0;
-    for (char c : encoded) {
-        if (static_cast<uint8_t>(c) > 127) {
-            throw std::invalid_argument(
-                "Invalid character in Base128 encoded string");
-        }
-        bits = (bits << 7) | static_cast<uint8_t>(c);
-        num_bits += 7;
-        if (num_bits >= 8) {
-            result.push_back(static_cast<char>(bits >> (num_bits - 8)));
-            num_bits -= 8;
-        }
-    }
-
-    return result;
-}
-
-std::string xorEncrypt(std::string_view plaintext, uint8_t key) {
+auto xorEncrypt(std::string_view plaintext, uint8_t key) -> std::string {
     std::string ciphertext;
     ciphertext.reserve(plaintext.size());
-    for (char c : plaintext) {
-        ciphertext.push_back(static_cast<char>(static_cast<uint8_t>(c) ^ key));
+
+    if (HAS_OPEN_CL) {
+#if USE_OPENCL
+        detail::xorEncryptOpenCL(plaintext.data(), ciphertext.data(), key,
+                                 plaintext.size());
+#endif
+    } else {
+        for (char c : plaintext) {
+            ciphertext.push_back(
+                static_cast<char>(static_cast<uint8_t>(c) ^ key));
+        }
     }
+
     return ciphertext;
 }
 
-std::string xorDecrypt(std::string_view ciphertext, uint8_t key) {
+auto xorDecrypt(std::string_view ciphertext, uint8_t key) -> std::string {
     return xorEncrypt(ciphertext, key);
 }
 }  // namespace atom::algorithm

@@ -11,11 +11,13 @@
 
 #include <utility>
 
+#include "func_traits.hpp"
+
 #include "atom/error/exception.hpp"
 
 namespace atom::meta {
 template <typename MemberFunc, typename ClassType>
-auto bind_member_function(MemberFunc ClassType::*member_func) {
+auto bindMemberFunction(MemberFunc ClassType::*member_func) {
     return [member_func](ClassType &obj, auto &&...params) {
         if constexpr (FunctionTraits<MemberFunc>::is_const_member_function) {
             return (std::as_const(obj).*
@@ -28,19 +30,19 @@ auto bind_member_function(MemberFunc ClassType::*member_func) {
 }
 
 template <typename Func>
-auto bind_static_function(Func func) {
+auto bindStaticFunction(Func func) {
     return func;
 }
 
 template <typename MemberType, typename ClassType>
-auto bind_member_variable(MemberType ClassType::*member_var) {
+auto bindMemberVariable(MemberType ClassType::*member_var) {
     return [member_var](ClassType &instance) -> MemberType & {
         return instance.*member_var;
     };
 }
 
 template <typename Class, typename... Params>
-auto build_shared_constructor_(Class (*)(Params...)) {
+auto buildSharedConstructor(Class (* /*unused*/)(Params...)) {
     return [](auto &&...params) {
         return std::make_shared<Class>(
             std::forward<decltype(params)>(params)...);
@@ -48,54 +50,54 @@ auto build_shared_constructor_(Class (*)(Params...)) {
 }
 
 template <typename Class, typename... Params>
-auto build_copy_constructor_(Class (*)(Params...)) {
+auto buildCopyConstructor(Class (* /*unused*/)(Params...)) {
     return [](auto &&...params) {
         return Class(std::forward<decltype(params)>(params)...);
     };
 }
 
 template <typename Class, typename... Params>
-auto build_plain_constructor_(Class (*)(Params...)) {
+auto buildPlainConstructor(Class (* /*unused*/)(Params...)) {
     return [](auto &&...params) {
         return Class(std::forward<decltype(params)>(params)...);
     };
 }
 
 template <typename Class, typename... Args>
-auto build_constructor_() {
+auto buildConstructor() {
     return [](Args... args) -> std::shared_ptr<Class> {
         return std::make_shared<Class>(std::forward<Args>(args)...);
     };
 }
 
 template <typename Class>
-auto build_default_constructor_() {
+auto buildDefaultConstructor() {
     return []() { return Class(); };
 }
 
 template <typename T>
 auto constructor() {
-    T *f = nullptr;
+    T *func = nullptr;
     using ClassType = typename FunctionTraits<T>::class_type;
 
     if constexpr (!std::is_copy_constructible_v<ClassType>) {
-        return build_shared_constructor_(f);
+        return build_shared_constructor_(func);
     } else {
-        return build_copy_constructor_(f);
+        return build_copy_constructor_(func);
     }
 }
 
 template <typename Class, typename... Args>
 auto constructor() {
-    return build_constructor_<Class, Args...>();
+    return buildConstructor<Class, Args...>();
 }
 
 template <typename Class>
-auto default_constructor() {
+auto defaultConstructor() {
     if constexpr (std::is_default_constructible_v<Class>) {
-        return build_default_constructor_<Class>();
+        return buildDefaultConstructor<Class>();
     } else {
-        THROW_EXCEPTION("Class is not default constructible");
+        THROW_NOT_FOUND("Class is not default constructible");
     }
 }
 }  // namespace atom::meta

@@ -15,11 +15,12 @@ Description: StackTrace
 #ifndef ATOM_ERROR_STACKTRACE_HPP
 #define ATOM_ERROR_STACKTRACE_HPP
 
-#include <memory>
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace atom::error {
+
 /**
  * @brief Class for capturing and representing a stack trace.
  *
@@ -41,7 +42,7 @@ public:
      *
      * @return A string representing the captured stack trace.
      */
-    std::string toString() const;
+    [[nodiscard]] auto toString() const -> std::string;
 
 private:
     /**
@@ -53,14 +54,13 @@ private:
     void capture();
 
 #ifdef _WIN32
-    std::vector<void*> frames; /**< Vector to store stack frames on Windows. */
+    std::vector<void*> frames_; /**< Vector to store stack frames on Windows. */
 #elif defined(__APPLE__) || defined(__linux__)
-    std::unique_ptr<char*, decltype(&free)> symbols{
-        nullptr,
-        &free}; /**< Pointer to store stack symbols on macOS or Linux. */
-    int num_frames = 0; /**< Number of stack frames captured. */
+    std::unique_ptr<char*, decltype(&free)> symbols_{nullptr, &free}; /**< Pointer to store stack symbols on macOS or Linux. */
+    int num_frames_ = 0; /**< Number of stack frames captured. */
 #endif
 };
+
 }  // namespace atom::error
 
 #endif

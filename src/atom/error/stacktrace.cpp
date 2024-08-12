@@ -13,15 +13,17 @@ Description: StackTrace
 **************************************************/
 
 #include "stacktrace.hpp"
+#include "atom/function/abi.hpp"
 
-#include <chrono>
-#include <ctime>
 #include <sstream>
-#include <thread>
+#include <string_view>
+#include <vector>
 
 #ifdef _WIN32
-#include <Windows.h>
-#include <DbgHelp.h>
+// clang-format off
+#include <windows.h>
+#include <dbghelp.h>
+// clang-format on
 #if !defined(__MINGW32__) && !defined(__MINGW64__)
 #pragma comment(lib, "dbghelp.lib")
 #endif
@@ -31,81 +33,86 @@ Description: StackTrace
 #endif
 
 namespace atom::error {
+
+#if defined(linux) || defined(__APPLE__)
+std::string processString(const std::string& input) {
+    // Find the position of "_Z" in the string
+    size_t startIndex = input.find("_Z");
+    if (startIndex == std::string::npos) {
+        return input;
+    }
+    size_t endIndex = input.find('+', startIndex);
+    if (endIndex == std::string::npos) {
+        return input;
+    }
+    std::string abiName = input.substr(startIndex, endIndex - startIndex);
+    abiName = meta::DemangleHelper::demangle(abiName);
+    std::string result = input;
+    result.replace(startIndex, endIndex - startIndex, abiName);
+    return result;
+}
+#endif
+
 StackTrace::StackTrace() { capture(); }
 
-std::string StackTrace::toString() const {
+auto StackTrace::toString() const -> std::string {
     std::ostringstream oss;
+
 #ifdef _WIN32
-    SYMBOL_INFO* symbol =
-        (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+    SYMBOL_INFO* symbol = reinterpret_cast<SYMBOL_INFO*>(
+        calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1));
     symbol->MaxNameLen = 255;
     symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 
-    for (void* frame : frames) {
-        SymFromAddr(GetCurrentProcess(), (DWORD64)frame, 0, symbol);
-        oss << "\t\t" << symbol->Name << " - 0x" << std::hex << symbol->Address
-            << "\n";
+    for (void* frame : frames_) {
+        SymFromAddr(GetCurrentProcess(), reinterpret_cast<DWORD64>(frame), 0,
+                    symbol);
+        std::string symbol_name = symbol->Name;
+        if (!symbol_name.empty()) {
+            oss << "\t\t"
+                << atom::meta::DemangleHelper::demangle("_" + symbol_name)
+                << " - 0x" << std::hex << symbol->Address << "\n";
+        }
     }
     free(symbol);
+
 #elif defined(__APPLE__) || defined(__linux__)
-    for (int i = 0; i < num_frames; ++i) {
-        char* symbol_name = nullptr;
-        char* offset_begin = nullptr;
-        char* offset_end = nullptr;
-
-        for (char* p = symbols.get()[i]; *p; ++p) {
-            if (*p == '(')
-                symbol_name = p;
-            else if (*p == '+')
-                offset_begin = p;
-            else if (*p == ')') {
-                offset_end = p;
-                break;
-            }
-        }
-
-        if (symbol_name && offset_begin && offset_end &&
-            symbol_name < offset_begin) {
-            *symbol_name++ = '\0';
-            *offset_begin++ = '\0';
-            *offset_end = '\0';
-
-            int status = 0;
-            char* demangled_name =
-                abi::__cxa_demangle(symbol_name, nullptr, 0, &status);
-            if (status == 0) {
-                oss << "\t\t" << demangled_name << " +" << offset_begin
-                    << offset_end << "\n";
-                free(demangled_name);
-            } else {
-                oss << "\t\t" << symbol_name << " +" << offset_begin
-                    << offset_end << "\n";
-            }
-        } else {
-            oss << "\t\t" << symbols.get()[i] << "\n";
-        }
+    for (int i = 0; i < num_frames_; ++i) {
+        std::string_view symbol(symbols_.get()[i]);
+        auto demangledName = processString(std::string(symbol));
+        oss << "\t\t" << demangledName << "\n";
     }
+
 #else
     oss << "\t\tStack trace not available on this platform.\n";
 #endif
+
     return oss.str();
 }
 
 void StackTrace::capture() {
 #ifdef _WIN32
-    const int max_frames = 64;
-    frames.resize(max_frames);
-    SymInitialize(GetCurrentProcess(), NULL, TRUE);
+    constexpr int max_frames = 64;
+    frames_.resize(max_frames);
+    SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+
+    std::array<void*, max_frames> frame_ptrs;
     WORD captured_frames =
-        CaptureStackBackTrace(0, max_frames, frames.data(), NULL);
-    frames.resize(captured_frames);
+        CaptureStackBackTrace(0, max_frames, frame_ptrs.data(), nullptr);
+
+    frames_.resize(captured_frames);
+    std::copy_n(frame_ptrs.begin(), captured_frames, frames_.begin());
+
 #elif defined(__APPLE__) || defined(__linux__)
-    const int max_frames = 64;
-    void* frame_pointers[max_frames];
-    num_frames = backtrace(frame_pointers, max_frames);
-    symbols.reset(backtrace_symbols(frame_pointers, num_frames));
+    constexpr int MAX_FRAMES = 64;
+    void* framePtrs[MAX_FRAMES];
+
+    num_frames_ = backtrace(framePtrs, MAX_FRAMES);
+    symbols_.reset(backtrace_symbols(framePtrs, num_frames_));
+
 #else
-    num_frames = 0;
+    num_frames_ = 0;
 #endif
 }
+
 }  // namespace atom::error

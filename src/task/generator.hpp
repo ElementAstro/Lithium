@@ -15,70 +15,44 @@ Description: Task Generator
 #ifndef LITHIUM_TASK_GENERATOR_HPP
 #define LITHIUM_TASK_GENERATOR_HPP
 
+#include <functional>
+#include <memory>
+#include <string>
+#include <variant>
+#include <vector>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-#include <fstream>
-#include <optional>
 
-#include "atom/task/task.hpp"
-
-using json = nlohmann::json;
+#include "atom/type/json_fwd.hpp"
 
 namespace lithium {
+using MacroValue = std::variant<
+    std::string, nlohmann::json,
+    std::function<nlohmann::json(const std::vector<std::string>&)>>;
+
 class TaskGenerator {
 public:
-    explicit TaskGenerator();
-    ~TaskGenerator() = default;
+    TaskGenerator();
 
-    // -------------------------------------------------------------------
-    // Common methods
-    // -------------------------------------------------------------------
+    static auto createShared() -> std::shared_ptr<TaskGenerator>;
 
-    static std::shared_ptr<TaskGenerator> createShared();
-
-    // -------------------------------------------------------------------
-    // Macro methods
-    // -------------------------------------------------------------------
-
-    bool loadMacros(const std::string &macroFileName);
-    bool loadMacrosFromFolder(const std::string &folderPath);
-    bool addMacro(const std::string &name, const std::string &content);
-    bool deleteMacro(const std::string &name);
-    std::optional<std::string> getMacroContent(const std::string &name);
-
-    // -------------------------------------------------------------------
-    // Task methods
-    // -------------------------------------------------------------------
-
-    bool generateTasks(const std::string &jsonFileName);
+    void addMacro(const std::string& name, MacroValue value);
+    void processJson(nlohmann::json& j) const;
+    void processJsonWithJsonMacros(nlohmann::json& j);
 
 private:
-    // -------------------------------------------------------------------
-    // Task methods
-    // -------------------------------------------------------------------
+    std::unordered_map<std::string, MacroValue> macros_;
 
-    bool parseJsonFile(const std::string &jsonFileName, json &jsonTasks);
-    void saveTasksToJson(const std::string &jsonFileName,
-                         const json &jsonTasks);
-
-    // -------------------------------------------------------------------
-    // Macro methods
-    // -------------------------------------------------------------------
-
-    void processMacroFile(const std::string &sfilePath);
-
-private:
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::string> m_MacroMap;
-#else
-    std::unordered_map<std::string, std::string> m_MacroMap;
-#endif
-
-    std::mutex m_Mutex;
+    auto evaluateMacro(const std::string& name,
+                       const std::vector<std::string>& args) const
+        -> std::string;
+    auto replaceMacros(const std::string& input) const -> std::string;
 };
 
 }  // namespace lithium
-#endif
+
+#endif  // LITHIUM_TASK_GENERATOR_HPP

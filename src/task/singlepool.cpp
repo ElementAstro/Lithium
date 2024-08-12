@@ -16,12 +16,8 @@ Description: Single thread pool for executing temporary tasks asynchronously.
 
 #include <cassert>
 #include <condition_variable>
-#include <deque>
-#include <future>
 #include <mutex>
-#include <optional>
 #include <thread>
-#include <vector>
 
 namespace lithium {
 class SingleThreadPoolPrivate {
@@ -61,8 +57,9 @@ void SingleThreadPoolPrivate::workerFunction() {
             return pendingFunction != nullptr || isThreadAboutToQuit;
         });
 
-        if (isThreadAboutToQuit)
+        if (isThreadAboutToQuit) {
             break;
+        }
 
         isFunctionAboutToQuit = false;
         runningFunction = std::move(pendingFunction);
@@ -79,19 +76,21 @@ void SingleThreadPoolPrivate::workerFunction() {
 }
 
 SingleThreadPool::SingleThreadPool()
-    : d_ptr(std::make_shared<SingleThreadPoolPrivate>()) {}
+    : d_ptr_(std::make_shared<SingleThreadPoolPrivate>()) {}
 
 SingleThreadPool::~SingleThreadPool() = default;
 
-bool SingleThreadPool::start(
-    const std::function<void(const std::atomic_bool&)>& functionToRun) {
-    if (!functionToRun)
+auto SingleThreadPool::start(
+    const std::function<void(const std::atomic_bool&)>& functionToRun) -> bool {
+    if (!functionToRun) {
         return false;
+    }
 
-    auto d = d_ptr;
+    auto d = d_ptr_;
     std::unique_lock lock(d->runLock);
-    if (d->runningFunction != nullptr)
+    if (d->runningFunction != nullptr) {
         return false;
+    }
 
     d->pendingFunction = functionToRun;
     d->isFunctionAboutToQuit = true;
@@ -108,28 +107,32 @@ bool SingleThreadPool::start(
 
 void SingleThreadPool::startDetach(
     const std::function<void(const std::atomic_bool&)>& functionToRun) {
-    if (!functionToRun)
+    if (!functionToRun) {
         return;
+    }
 
-    auto d = d_ptr;
+    auto d = d_ptr_;
     std::unique_lock lock(d->runLock);
-    if (d->runningFunction != nullptr)
+    if (d->runningFunction != nullptr) {
         return;
+    }
 
     d->pendingFunction = functionToRun;
     d->isFunctionAboutToQuit = true;
     d->acquireCondition.notify_one();
 }
 
-bool SingleThreadPool::tryStart(
-    const std::function<void(const std::atomic_bool&)>& functionToRun) {
-    if (!functionToRun)
+auto SingleThreadPool::tryStart(
+    const std::function<void(const std::atomic_bool&)>& functionToRun) -> bool {
+    if (!functionToRun) {
         return false;
+    }
 
-    auto d = d_ptr;
+    auto d = d_ptr_;
     std::unique_lock lock(d->runLock, std::try_to_lock);
-    if (!lock.owns_lock() || d->runningFunction != nullptr)
+    if (!lock.owns_lock() || d->runningFunction != nullptr) {
         return false;
+    }
 
     d->pendingFunction = functionToRun;
     d->isFunctionAboutToQuit = true;
@@ -149,7 +152,7 @@ void SingleThreadPool::tryStartDetach(
     if (!functionToRun)
         return;
 
-    auto d = d_ptr;
+    auto d = d_ptr_;
     std::unique_lock lock(d->runLock, std::try_to_lock);
     if (!lock.owns_lock() || d->runningFunction != nullptr)
         return;

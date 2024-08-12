@@ -51,7 +51,7 @@ public:
      *
      * @param callback The callback function to set.
      */
-    void SetExitCallback(Callback callback);
+    void setExitCallback(Callback callback);
 
     /**
      * @brief Sets the monitor function to be executed at specified intervals.
@@ -59,7 +59,7 @@ public:
      * @param callback The monitor function to set.
      * @param interval The interval at which the monitor function should run.
      */
-    void SetMonitorFunction(Callback callback,
+    void setMonitorFunction(Callback callback,
                             std::chrono::milliseconds interval);
 
     /**
@@ -68,7 +68,7 @@ public:
      * @param name The name of the process.
      * @return The PID of the process.
      */
-    pid_t GetPidByName(const std::string &name) const;
+    [[nodiscard]] auto getPidByName(const std::string &name) const -> pid_t;
 
     /**
      * @brief Starts monitoring the specified process by name.
@@ -76,12 +76,12 @@ public:
      * @param name The name of the process to monitor.
      * @return True if monitoring started successfully, false otherwise.
      */
-    bool Start(const std::string &name);
+    auto start(const std::string &name) -> bool;
 
     /**
      * @brief Stops monitoring the currently monitored process.
      */
-    void Stop();
+    void stop();
 
     /**
      * @brief Switches the target process to monitor.
@@ -89,20 +89,19 @@ public:
      * @param name The name of the process to switch to.
      * @return True if the process was successfully switched, false otherwise.
      */
-    bool Switch(const std::string &name);
+    auto Switch(const std::string &name) -> bool;
 
 private:
     /**
      * @brief The thread function for monitoring the process.
      */
-    void MonitorThread();
+    void monitorThread();
 
     /**
      * @brief The thread function for handling process exit.
      */
-    void ExitThread();
+    void exitThread();
 
-private:
     pid_t pid_;        ///< The PID of the currently monitored process.
     bool running_;     ///< Flag indicating if the monitoring is running.
     bool monitoring_;  ///< Flag indicating if a process is being monitored.

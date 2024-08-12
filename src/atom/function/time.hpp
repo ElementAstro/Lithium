@@ -13,13 +13,14 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include "atom/macro.hpp"
 
 namespace atom::meta {
-inline std::string getCompileTime() {
+ATOM_INLINE auto getCompileTime() -> std::string {
     std::string date = __DATE__;
     std::string time = __TIME__;
     std::istringstream dateStream(date);
-    std::tm tm = {};
+    std::tm tm{};
     dateStream >> std::get_time(&tm, "%b %d %Y");
     std::istringstream timeStream(time);
     timeStream >> std::get_time(&tm, "%H:%M:%S");

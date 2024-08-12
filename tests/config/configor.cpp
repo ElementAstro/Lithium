@@ -1,125 +1,173 @@
-#include "config/configor.cpp"
+#include "config/configor.hpp"
 #include <gtest/gtest.h>
+#include "atom/type/json.hpp"
+#include "macro.hpp"
 
+#include <fstream>
+using json = nlohmann::json;
+using namespace lithium;
 
 class ConfigManagerTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // 初始化 ConfigManager 实例
-        config_manager_ = ConfigManager::createShared();
+        config_manager_ = ConfigManager::createUnique();
+        config_manager_->clearConfig();
+
+        std::fstream file("config.json");
+        file << R"({"test":{"key":"file_value"}})";
+        file.close();
     }
 
-    void TearDown() override {
-        // 清理 ConfigManager 实例
-        config_manager_.reset();
-    }
-
-    std::shared_ptr<ConfigManager> config_manager_;
+    std::unique_ptr<ConfigManager> config_manager_;
 };
 
-TEST_F(ConfigManagerTest, SetValueAndGet) {
-    // 设置配置值
-    config_manager_->setValue("test/key1", "value1");
-    config_manager_->setValue("test/key2", 42);
+TEST_F(ConfigManagerTest, SetGetValue) {
+    json value = "test_value";
+    ASSERT_TRUE(config_manager_->setValue("test/key", value));
+    auto result = config_manager_->getValue("test/key");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), value);
+}
 
-    // 获取配置值并验证
-    auto value1 = config_manager_->getValue("test/key1");
-    EXPECT_TRUE(value1.has_value());
-    EXPECT_EQ(value1.value(), "value1");
+TEST_F(ConfigManagerTest, AppendValue) {
+    json initialValue = {{"key1", json::array({"initial_value1"})},
+                          {"key2", "initial_value2"}};
+    config_manager_->setValue("/", initialValue);
 
-    auto value2 = config_manager_->getValue("test/key2");
-    EXPECT_TRUE(value2.has_value());
-    EXPECT_EQ(value2.value(), 42);
+    json newValue = "new_value";
+    ASSERT_TRUE(config_manager_->appendValue("key1", newValue));
+
+    auto result1 = config_manager_->getValue("key1");
+    auto result2 = config_manager_->getValue("key2");
+
+    ASSERT_TRUE(result1.has_value());
+    EXPECT_TRUE(result1.value().is_array());
+    EXPECT_EQ(result1.value().size(), 2);
+    EXPECT_EQ(result1.value()[0], "initial_value1");
+    EXPECT_EQ(result1.value()[1], "new_value");
+
+    ASSERT_TRUE(result2.has_value());
+    EXPECT_EQ(result2.value(), "initial_value2");
+
+    // Test appending to a non-existent array key
+    ASSERT_TRUE(config_manager_->appendValue("key3", newValue));
+    auto result3 = config_manager_->getValue("key3");
+
+    ASSERT_TRUE(result3.has_value());
+    EXPECT_TRUE(result3.value().is_array());
+    EXPECT_EQ(result3.value().size(), 1);
+    EXPECT_EQ(result3.value()[0], "new_value");
+
+    // Test appending to a non-array key
+    ASSERT_FALSE(config_manager_->appendValue("key2", newValue));
 }
 
 TEST_F(ConfigManagerTest, DeleteValue) {
-    // 设置配置值
-    config_manager_->setValue("test/key1", "value1");
-
-    // 删除配置值并验证
-    EXPECT_TRUE(config_manager_->deleteValue("test/key1"));
-    EXPECT_FALSE(config_manager_->hasValue("test/key1"));
+    json value = "test_value";
+    config_manager_->setValue("test/key", value);
+    ASSERT_TRUE(config_manager_->deleteValue("test/key"));
+    auto result = config_manager_->getValue("test/key");
+    ASSERT_FALSE(result.has_value());
 }
 
-TEST_F(ConfigManagerTest, SaveAndLoadFromFile) {
-    // 设置配置值
-    config_manager_->setValue("test/key1", "value1");
-    config_manager_->setValue("test/key2", 42);
+TEST_F(ConfigManagerTest, HasValue) {
+    json value = "test_value";
+    config_manager_->setValue("test/key", value);
+    EXPECT_TRUE(config_manager_->hasValue("test/key"));
+    config_manager_->deleteValue("test/key");
+    EXPECT_FALSE(config_manager_->hasValue("test/key"));
+}
 
-    // 保存配置到文件
-    std::string file_path = "test_config.json";
-    EXPECT_TRUE(config_manager_->saveToFile(file_path));
+TEST_F(ConfigManagerTest, LoadFromFile) {
+    std::ofstream file("test_config.json");
+    file << R"({"test":{"key":"file_value"}})";
+    file.close();
 
-    // 创建新的 ConfigManager 实例并从文件加载配置
-    auto new_config_manager = ConfigManager::createShared();
-    EXPECT_TRUE(new_config_manager->loadFromFile(file_path));
+    ASSERT_TRUE(config_manager_->loadFromFile("test_config.json"));
+    auto result = config_manager_->getValue("test/key");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), "file_value");
 
-    // 验证新的实例中是否包含相同的配置值
-    EXPECT_TRUE(new_config_manager->hasValue("test/key1"));
-    EXPECT_TRUE(new_config_manager->hasValue("test/key2"));
-    EXPECT_EQ(new_config_manager->getValue("test/key1").value(), "value1");
-    EXPECT_EQ(new_config_manager->getValue("test/key2").value(), 42);
+    ATOM_UNREF_PARAM(std::remove("test_config.json"));
+}
+
+TEST_F(ConfigManagerTest, SaveToFile) {
+    json value = "test_value";
+    config_manager_->setValue("test/key", value);
+    ASSERT_TRUE(config_manager_->saveToFile("test_save.json"));
+
+    ConfigManager newManager;
+    ASSERT_TRUE(newManager.loadFromFile("test_save.json"));
+    auto result = newManager.getValue("test/key");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), value);
+
+    ATOM_UNUSED_RESULT(std::remove("test_save.json"));
+}
+
+TEST_F(ConfigManagerTest, LoadFromDir) {
+    fs::create_directory("test_dir");
+    std::ofstream file1("test_dir/config1.json");
+    file1 << R"({"config1":{"key1":"value1"}})";
+    file1.close();
+    std::ofstream file2("test_dir/config2.json");
+    file2 << R"({"config2":{"key2":"value2"}})";
+    file2.close();
+
+    ASSERT_TRUE(config_manager_->loadFromDir("test_dir"));
+    auto result1 = config_manager_->getValue("config1/key1");
+    auto result2 = config_manager_->getValue("config2/key2");
+
+    ASSERT_TRUE(result1.has_value());
+    EXPECT_EQ(result1.value(), "value1");
+    ASSERT_TRUE(result2.has_value());
+    EXPECT_EQ(result2.value(), "value2");
+
+    fs::remove_all("test_dir");
 }
 
 TEST_F(ConfigManagerTest, TidyConfig) {
-    // 设置配置值
-    config_manager_->setValue("test/key1", "value1");
-    config_manager_->setValue("test/key2", 42);
+    json value1 = "value1";
+    json value2 = "value2";
+    config_manager_->setValue("config1/key1", value1);
+    config_manager_->setValue("config2/key2", value2);
 
-    // 设置包含子对象的配置值
-    config_manager_->setValue("test/sub/key3", "value3");
-
-    // 整理配置
     config_manager_->tidyConfig();
 
-    // 验证整理后的配置
-    EXPECT_TRUE(config_manager_->hasValue("test"));
-    EXPECT_TRUE(config_manager_->hasValue("test/sub"));
-    EXPECT_TRUE(config_manager_->hasValue("test/key1"));
-    EXPECT_TRUE(config_manager_->hasValue("test/key2"));
-    EXPECT_TRUE(config_manager_->hasValue("test/sub/key3"));
+    auto result1 = config_manager_->getValue("config1/key1");
+    auto result2 = config_manager_->getValue("config2/key2");
+
+    ASSERT_TRUE(result1.has_value());
+    EXPECT_EQ(result1.value(), value1);
+    ASSERT_TRUE(result2.has_value());
+    EXPECT_EQ(result2.value(), value2);
 }
 
-// 测试异常情况：尝试获取不存在的配置键时返回空的 std::optional
-TEST_F(ConfigManagerTest, GetValueNonExistentKey) {
-    auto value = config_manager_->getValue("non_existent_key");
-    EXPECT_FALSE(value.has_value());
-}
-
-// 测试异常情况：尝试删除不存在的配置键时返回 false
-TEST_F(ConfigManagerTest, DeleteNonExistentKey) {
-    EXPECT_FALSE(config_manager_->deleteValue("non_existent_key"));
-}
-
-// 测试异常情况：尝试从无效路径加载配置文件时返回 false
-TEST_F(ConfigManagerTest, LoadFromInvalidFile) {
-    EXPECT_FALSE(config_manager_->loadFromFile("invalid_file_path.json"));
-}
-
-// 测试边界条件：当配置文件为空时加载成功但不包含任何配置项
-TEST_F(ConfigManagerTest, LoadEmptyConfigFile) {
-    // 创建一个空的配置文件
-    std::string file_path = "empty_config.json";
-    std::ofstream ofs(file_path);
-    ofs.close();
-
-    // 加载空的配置文件
-    EXPECT_FALSE(config_manager_->loadFromFile(file_path));
-
-    // 验证配置文件不包含任何配置项
-    EXPECT_FALSE(config_manager_->hasValue("a"));
-}
-
-// 测试边界条件：在没有配置键值对的情况下保存配置文件
-TEST_F(ConfigManagerTest, SaveEmptyConfigToFile) {
-    // 保存空的配置到文件
-    std::string file_path = "empty_config.json";
+TEST_F(ConfigManagerTest, MergeConfig) {
     config_manager_->clearConfig();
-    EXPECT_TRUE(config_manager_->saveToFile(file_path));
+    json initialValue = {{"key1", "initial_value1"},
+                         {"key2", "initial_value2"}};
+    config_manager_->setValue("/", initialValue);
 
-    // 加载保存的配置文件
-    EXPECT_FALSE(config_manager_->loadFromFile(file_path));
+    json newValue = {{"key2", "new_value2"}, {"key3", "new_value3"}};
+    config_manager_->mergeConfig(newValue);
 
-    // 验证配置文件不包含任何配置项
-    EXPECT_FALSE(config_manager_->hasValue("a"));
+    auto result1 = config_manager_->getValue("key1");
+    auto result2 = config_manager_->getValue("key2");
+    auto result3 = config_manager_->getValue("key3");
+
+    ASSERT_TRUE(result1.has_value());
+    EXPECT_EQ(result1.value(), "initial_value1");
+    ASSERT_TRUE(result2.has_value());
+    EXPECT_EQ(result2.value(), "new_value2");
+    ASSERT_TRUE(result3.has_value());
+    EXPECT_EQ(result3.value(), "new_value3");
+}
+
+TEST_F(ConfigManagerTest, ClearConfig) {
+    json value = "test_value";
+    config_manager_->setValue("test/key", value);
+    config_manager_->clearConfig();
+    auto result = config_manager_->getValue("test/key");
+    ASSERT_FALSE(result.has_value());
 }

@@ -1,98 +1,214 @@
+#include "atom/async/queue.hpp"
 #include <gtest/gtest.h>
 #include <thread>
-#include "atom/async/queue.hpp"
 
-// 测试 ThreadSafeQueue 的基本功能
-TEST(ThreadSafeQueueTest, BasicFunctionality)
-{
-    Atom::Async::ThreadSafeQueue<int> queue;
+TEST(ThreadSafeQueueTest, PutAndTake) {
+    atom::async::ThreadSafeQueue<int> queue;
 
-    // 测试 put 和 take
-    queue.put(1);
-    ASSERT_EQ(queue.size(), 1);
-    auto value = queue.take();
-    ASSERT_TRUE(value.has_value());
-    ASSERT_EQ(value.value(), 1);
-    ASSERT_EQ(queue.size(), 0);
-
-    // 测试空队列的 take
-    value = queue.take();
-    ASSERT_FALSE(value.has_value());
-
-    // 测试前后元素访问
-    queue.put(2);
-    queue.put(3);
-    ASSERT_EQ(queue.front().value(), 2);
-    ASSERT_EQ(queue.back().value(), 3);
-
-    // 测试清空队列
-    queue.clear();
-    ASSERT_TRUE(queue.empty());
-}
-
-// 测试等待操作
-TEST(ThreadSafeQueueTest, WaitForFunction)
-{
-    Atom::Async::ThreadSafeQueue<int> queue;
-
-    // 测试 waitFor
-    std::thread t([&]()
-                  {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        queue.put(1); });
-
-    auto value = queue.waitFor([](const std::queue<int> &q)
-                               { return !q.empty(); });
-    ASSERT_TRUE(value.has_value());
-    ASSERT_EQ(value.value(), 1);
-
-    t.join();
-}
-
-// 测试销毁队列
-TEST(ThreadSafeQueueTest, DestroyFunction)
-{
-    Atom::Async::ThreadSafeQueue<int> queue;
+    // Put elements into the queue
     queue.put(1);
     queue.put(2);
     queue.put(3);
 
-    auto result = queue.destroy();
-    ASSERT_EQ(result.size(), 3);
-    ASSERT_TRUE(queue.empty());
+    // Take elements from the queue
+    EXPECT_EQ(queue.take(), 1);
+    EXPECT_EQ(queue.take(), 2);
+    EXPECT_EQ(queue.take(), 3);
+    EXPECT_FALSE(queue.take());  // Queue should be empty now
 }
 
-// 测试emplace功能
-TEST(ThreadSafeQueueTest, EmplaceFunction)
-{
-    Atom::Async::ThreadSafeQueue<std::string> queue;
+TEST(ThreadSafeQueueTest, Destroy) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
 
-    queue.emplace("Hello", "World");
-    ASSERT_EQ(queue.size(), 1);
-    auto value = queue.take();
-    ASSERT_TRUE(value.has_value());
-    ASSERT_EQ(value.value(), "Hello");
+    auto destroyedQueue = queue.destroy();
+    EXPECT_EQ(destroyedQueue.size(), 3);
+    EXPECT_TRUE(queue.empty());  // Original queue should be empty now
 }
 
-// 测试等待队列为空
-TEST(ThreadSafeQueueTest, WaitForEmptyFunction)
-{
-    Atom::Async::ThreadSafeQueue<int> queue;
+TEST(ThreadSafeQueueTest, Size) {
+    atom::async::ThreadSafeQueue<int> queue;
+    EXPECT_EQ(queue.size(), 0);
 
-    std::thread t([&]()
-                  {
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+
+    EXPECT_EQ(queue.size(), 3);
+}
+
+TEST(ThreadSafeQueueTest, Empty) {
+    atom::async::ThreadSafeQueue<int> queue;
+    EXPECT_TRUE(queue.empty());
+
+    queue.put(1);
+    EXPECT_FALSE(queue.empty());
+}
+
+TEST(ThreadSafeQueueTest, FrontAndBack) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+
+    EXPECT_EQ(queue.front(), 1);
+    EXPECT_EQ(queue.back(), 3);
+}
+
+TEST(ThreadSafeQueueTest, Emplace) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.emplace(1);
+    queue.emplace(2);
+    queue.emplace(3);
+
+    EXPECT_EQ(queue.take(), 1);
+    EXPECT_EQ(queue.take(), 2);
+    EXPECT_EQ(queue.take(), 3);
+}
+
+TEST(ThreadSafeQueueTest, WaitAndTake) {
+    atom::async::ThreadSafeQueue<int> queue;
+    std::thread producer([&queue] {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        queue.put(1); });
+        queue.put(1);
+    });
+
+    EXPECT_EQ(queue.waitFor([](int x) { return x == 1; }), 1);
+    producer.join();
+}
+
+TEST(ThreadSafeQueueTest, WaitUntilEmpty) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+
+    queue.take();
+    queue.take();
 
     queue.waitUntilEmpty();
-
-    ASSERT_TRUE(queue.empty());
-
-    t.join();
+    EXPECT_TRUE(queue.empty());
 }
 
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+TEST(ThreadSafeQueueTest, ExtractIf) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+    queue.put(4);
+    queue.put(5);
+
+    auto extracted = queue.extractIf([](int x) { return x % 2 == 0; });
+
+    EXPECT_EQ(extracted.size(), 2);
+    EXPECT_TRUE(std::all_of(extracted.begin(), extracted.end(),
+                            [](int x) { return x % 2 == 0; }));
+
+    EXPECT_EQ(queue.size(), 3);
+    EXPECT_TRUE(std::all_of(queue.toVector().begin(), queue.toVector().end(),
+                            [](int x) { return x % 2 != 0; }));
+}
+
+TEST(ThreadSafeQueueTest, Sort) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(3);
+    queue.put(1);
+    queue.put(2);
+
+    queue.sort([](int a, int b) { return a < b; });
+
+    EXPECT_EQ(queue.take(), 1);
+    EXPECT_EQ(queue.take(), 2);
+    EXPECT_EQ(queue.take(), 3);
+}
+
+TEST(ThreadSafeQueueTest, Transform) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+
+    auto transformedQueue =
+        queue.transform<double>([](int x) -> double { return x * 2; });
+
+    EXPECT_EQ(transformedQueue->take(), 2);
+    EXPECT_EQ(transformedQueue->take(), 4);
+    EXPECT_EQ(transformedQueue->take(), 6);
+}
+
+TEST(ThreadSafeQueueTest, GroupBy) {
+    auto intQueue = std::make_shared<atom::async::ThreadSafeQueue<int>>();
+
+    // 添加一些元素
+    for (int i = 0; i <= 4; ++i) {
+        intQueue->put(i);
+    }
+    auto groupedQueues = intQueue->groupBy<std::string>(
+        [](const int& x) { return (x % 2 == 0) ? "even" : "odd"; });
+
+    EXPECT_EQ(groupedQueues.size(), 4);
+
+    EXPECT_EQ(groupedQueues[0].get(),
+              (std::vector{"even", "odd", "even", "odd", "even"}));
+}
+
+TEST(ThreadSafeQueueTest, ToVector) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+
+    auto vector = queue.toVector();
+
+    EXPECT_EQ(vector.size(), 3);
+    EXPECT_EQ(vector, std::vector<int>({1, 2, 3}));
+}
+
+TEST(ThreadSafeQueueTest, ForEach) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+    queue.put(2);
+    queue.put(3);
+
+    std::vector<int> results;
+    queue.forEach([&results](int x) { results.push_back(x * 2); });
+
+    EXPECT_EQ(results.size(), 3);
+    EXPECT_EQ(results, std::vector<int>({2, 4, 6}));
+}
+
+TEST(ThreadSafeQueueTest, TryTake) {
+    atom::async::ThreadSafeQueue<int> queue;
+    queue.put(1);
+
+    EXPECT_EQ(queue.tryTake(), 1);
+    EXPECT_FALSE(queue.tryTake());  // Queue should be empty now
+}
+
+TEST(ThreadSafeQueueTest, TakeFor) {
+    atom::async::ThreadSafeQueue<int> queue;
+
+    std::thread producer([&queue] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        queue.put(1);
+    });
+
+    EXPECT_EQ(queue.takeFor(std::chrono::milliseconds(200)), 1);
+    producer.join();
+}
+
+TEST(ThreadSafeQueueTest, TakeUntil) {
+    atom::async::ThreadSafeQueue<int> queue;
+
+    std::thread producer([&queue] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        queue.put(1);
+    });
+
+    auto timeoutTime =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+    EXPECT_EQ(queue.takeUntil(timeoutTime), 1);
+    producer.join();
 }

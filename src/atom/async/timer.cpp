@@ -13,6 +13,8 @@ Description: Timer class for C++
 **************************************************/
 
 #include "timer.hpp"
+#include <cstddef>
+#include "error/exception.hpp"
 
 namespace atom::async {
 TimerTask::TimerTask(std::function<void()> func, unsigned int delay,
@@ -25,19 +27,18 @@ TimerTask::TimerTask(std::function<void()> func, unsigned int delay,
         std::chrono::steady_clock::now() + std::chrono::milliseconds(m_delay);
 }
 
-bool TimerTask::operator<(const TimerTask &other) const {
+auto TimerTask::operator<(const TimerTask &other) const -> bool {
     if (m_priority != other.m_priority) {
         return m_priority > other.m_priority;
-    } else {
-        return m_nextExecutionTime > other.m_nextExecutionTime;
     }
+    return m_nextExecutionTime > other.m_nextExecutionTime;
 }
 
 void TimerTask::run() {
     try {
         m_func();
     } catch (const std::exception &e) {
-        std::throw_with_nested(std::runtime_error("Failed to run timer task"));
+        THROW_RUNTIME_ERROR("Failed to run timer task: ", e.what());
     }
     if (m_repeatCount > 0) {
         --m_repeatCount;
@@ -81,7 +82,7 @@ void Timer::stop() {
     m_cond.notify_all();
 }
 
-std::chrono::steady_clock::time_point Timer::now() const {
+auto Timer::now() const -> std::chrono::steady_clock::time_point {
     return std::chrono::steady_clock::now();
 }
 
@@ -118,7 +119,7 @@ void Timer::run() {
     }
 }
 
-int Timer::getTaskCount() const {
+auto Timer::getTaskCount() const -> size_t {
     std::unique_lock<std::mutex> lock(m_mutex);
     return m_taskQueue.size();
 }

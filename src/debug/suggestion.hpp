@@ -58,8 +58,9 @@ public:
      * MatchType::Prefix.
      * @return A vector of suggestions matching the input string.
      */
-    std::vector<std::string> suggest(std::string_view input,
-                                     MatchType matchType = MatchType::Prefix);
+    auto suggest(std::string_view input,
+                 MatchType matchType = MatchType::Prefix)
+        -> std::vector<std::string>;
 
 private:
     /**
@@ -79,8 +80,8 @@ private:
      * @param matchType The type of matching to be used (Prefix or Substring).
      * @return True if the item matches the input string, otherwise false.
      */
-    bool matches(const std::string& input, const std::string& item,
-                 MatchType matchType);
+    auto matches(const std::string& input, const std::string& item,
+                 MatchType matchType) -> bool;
 
     /**
      * @brief Calculates a score for matching items based on the input string.
@@ -92,7 +93,8 @@ private:
      * @param item The item from the dataset to be scored.
      * @return An integer representing the score of the match.
      */
-    int calculateScore(const std::string& input, const std::string& item);
+    auto calculateScore(const std::string& input,
+                        const std::string& item) -> int;
 
     std::unordered_map<std::string, std::string>
         index_; /**< An index for optimizing suggestions. */

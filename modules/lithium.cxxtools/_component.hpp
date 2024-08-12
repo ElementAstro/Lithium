@@ -21,9 +21,9 @@ Description: Some useful tools written in c++
 class ToolsComponent : public Component {
 public:
     explicit ToolsComponent(const std::string& name);
-    virtual ~ToolsComponent();
+    ~ToolsComponent() override;
 
-    bool initialize() override;
-    bool destroy() override;
+    auto initialize() -> bool override;
+    auto destroy() -> bool override;
 };
 #endif

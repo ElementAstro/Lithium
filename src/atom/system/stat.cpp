@@ -17,6 +17,8 @@ Description: Python like stat for Windows & Linux
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <chrono>
+#include "error/exception.hpp"
+#include "macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -24,22 +26,25 @@ Description: Python like stat for Windows & Linux
 #include <unistd.h>
 #endif
 
+#include "atom/utils/string.hpp"
+
 namespace atom::system {
 Stat::Stat(const fs::path& path) : path_(path) { update(); }
 
 void Stat::update() {
-    [[maybe_unused]] fs::file_status status = fs::status(path_, ec_);
+     fs::file_status status = fs::status(path_, ec_);
+     ATOM_UNUSED_RESULT(status)
     if (ec_) {
-        throw std::filesystem::filesystem_error("Failed to get file status",
+        THROW_FAIL_TO_OPEN_FILE("Failed to get file status",
                                                 path_, ec_);
     }
 }
 
-fs::file_type Stat::type() const { return fs::status(path_).type(); }
+auto Stat::type() const -> fs::file_type { return fs::status(path_).type(); }
 
-std::uintmax_t Stat::size() const { return fs::file_size(path_); }
+auto Stat::size() const -> std::uintmax_t { return fs::file_size(path_); }
 
-std::time_t Stat::atime() const {
+auto Stat::atime() const -> std::time_t {
     using namespace std::chrono;
     auto fileTime = fs::last_write_time(path_);
     auto duration = fileTime.time_since_epoch();
@@ -47,17 +52,18 @@ std::time_t Stat::atime() const {
     return system_clock::to_time_t(sysTime);
 }
 
-std::time_t Stat::mtime() const {
+auto Stat::mtime() const -> std::time_t {
     return std::chrono::system_clock::to_time_t(
         std::chrono::clock_cast<std::chrono::system_clock>(
             fs::last_write_time(path_)));
 }
 
-std::time_t Stat::ctime() const {
+auto Stat::ctime() const -> std::time_t {
 #ifdef _WIN32
     WIN32_FILE_ATTRIBUTE_DATA attr;
-    if (!GetFileAttributesEx(path_.string().c_str(), GetFileExInfoStandard,
-                             &attr)) {
+    if (GetFileAttributesExW(
+            atom::utils::stringToWString(path_.string()).c_str(),
+            GetFileExInfoStandard, &attr) == 0) {
         throw std::system_error(
             std::error_code(GetLastError(), std::system_category()),
             "Failed to get file attributes");
@@ -83,7 +89,7 @@ std::time_t Stat::ctime() const {
 #endif
 }
 
-int Stat::mode() const {
+auto Stat::mode() const -> int {
 #ifdef _WIN32
     return 0;
 #else
@@ -96,7 +102,7 @@ int Stat::mode() const {
 #endif
 }
 
-int Stat::uid() const {
+auto Stat::uid() const -> int {
 #ifdef _WIN32
     return 0;
 #else
@@ -109,7 +115,7 @@ int Stat::uid() const {
 #endif
 }
 
-int Stat::gid() const {
+auto Stat::gid() const -> int {
 #ifdef _WIN32
     return 0;
 #else
@@ -122,5 +128,5 @@ int Stat::gid() const {
 #endif
 }
 
-fs::path Stat::path() const { return path_; }
+auto Stat::path() const -> fs::path { return path_; }
 }  // namespace atom::system

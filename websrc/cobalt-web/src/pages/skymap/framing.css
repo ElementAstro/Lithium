@@ -1,7 +1,0 @@
-.transparent_paper {
-    background-color: transparent;
-}
-.framing-root {
-    width: 100vw;
-    height: calc(~"100vh - 32px");
-}

@@ -54,8 +54,9 @@ struct HuffmanNode {
  * @param frequencies A map of characters and their corresponding frequencies.
  * @return A shared pointer to the root of the Huffman tree.
  */
-[[nodiscard]] std::shared_ptr<HuffmanNode> createHuffmanTree(
-    const std::unordered_map<char, int>& frequencies);
+[[nodiscard]] auto createHuffmanTree(
+    const std::unordered_map<char, int>& frequencies)
+    -> std::shared_ptr<HuffmanNode>;
 
 /**
  * @brief Generates Huffman codes for each character from the Huffman tree.
@@ -84,9 +85,9 @@ void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
  * codes.
  * @return A string representing the compressed text.
  */
-[[nodiscard]] std::string compressText(
-    const std::string_view text,
-    const std::unordered_map<char, std::string>& huffmanCodes);
+[[nodiscard]] auto compressText(
+    std::string_view TEXT,
+    const std::unordered_map<char, std::string>& huffmanCodes) -> std::string;
 
 /**
  * @brief Decompresses Huffman encoded text back to its original form.
@@ -100,8 +101,8 @@ void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
  * @param root Pointer to the root of the Huffman tree.
  * @return The original decompressed text.
  */
-[[nodiscard]] std::string decompressText(const std::string_view compressedText,
-                                         const HuffmanNode* root);
+[[nodiscard]] auto decompressText(std::string_view COMPRESSED_TEXT,
+                                  const HuffmanNode* root) -> std::string;
 
 }  // namespace atom::algorithm
 

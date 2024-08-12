@@ -9,115 +9,88 @@
 #ifndef ATOM_META_PROXY_PARAMS_HPP
 #define ATOM_META_PROXY_PARAMS_HPP
 
-#if __cplusplus >= 202002L
-
+#include <algorithm>
 #include <any>
-#include <array>
-#include <concepts>
 #include <iterator>
+#include <optional>
 #include <ranges>
-#include <type_traits>
 #include <vector>
+
+#include "atom/error/exception.hpp"
 
 class FunctionParams {
 public:
-    explicit FunctionParams(const std::any& bv)
-        : m_begin(&bv), m_end(m_begin + 1) {}
+    explicit FunctionParams(const std::any& bv) : params_{bv} {}
+
     // Generalizing to accept any range of std::any
     template <std::ranges::input_range Range>
         requires std::same_as<std::ranges::range_value_t<Range>, std::any>
     explicit constexpr FunctionParams(const Range& range)
-        : m_begin(std::ranges::begin(range)), m_end(std::ranges::end(range)) {}
+        : params_(std::ranges::begin(range), std::ranges::end(range)) {}
 
     constexpr FunctionParams(std::initializer_list<std::any> ilist)
-        : m_begin(std::ranges::begin(ilist)), m_end(std::ranges::end(ilist)) {}
+        : params_(ilist) {}
 
-    [[nodiscard]] const std::any& operator[](std::size_t t_i) const {
-        auto it = m_begin;
-        std::advance(it, t_i);
-        return *it;
+    [[nodiscard]] auto operator[](std::size_t t_i) const -> const std::any& {
+        if (t_i >= params_.size()) {
+            THROW_OUT_OF_RANGE("Index out of range");
+        }
+        return params_.at(t_i);
     }
 
-    [[nodiscard]] auto begin() const noexcept { return m_begin; }
-    [[nodiscard]] auto end() const noexcept { return m_end; }
-    [[nodiscard]] const std::any& front() const noexcept { return *m_begin; }
-    [[nodiscard]] std::size_t size() const noexcept {
-        return std::distance(m_begin, m_end);
+    [[nodiscard]] auto begin() const noexcept { return params_.begin(); }
+    [[nodiscard]] auto end() const noexcept { return params_.end(); }
+    [[nodiscard]] auto front() const noexcept -> const std::any& {
+        return params_.front();
     }
-    [[nodiscard]] bool empty() const noexcept { return m_begin == m_end; }
-
-    [[nodiscard]] std::vector<std::any> to_vector() const {
-        return std::vector<std::any>(m_begin, m_end);
+    [[nodiscard]] auto size() const noexcept -> std::size_t {
+        return params_.size();
     }
-
-private:
-    std::ranges::iterator_t<const std::vector<std::any>> m_begin;
-    std::ranges::iterator_t<const std::vector<std::any>> m_end;
-};
-
-#else
-
-#include <any>
-#include <array>
-#include <vector>
-
-class FunctionParams {
-public:
-    constexpr FunctionParams(const std::any *const t_begin,
-                             const std::any *const t_end)
-        : m_begin(t_begin), m_end(t_end) {}
-
-    explicit FunctionParams(const std::any &bv)
-        : m_begin(&bv), m_end(m_begin + 1) {}
-
-    explicit FunctionParams(const std::vector<std::any> &vec)
-        : m_begin(vec.empty() ? nullptr : &vec.front()),
-          m_end(vec.empty() ? nullptr : &vec.front() + vec.size()) {}
-
-    template <size_t Size>
-    constexpr explicit FunctionParams(const std::array<std::any, Size> &a)
-        : m_begin(&a.front()), m_end(&a.front() + Size) {}
-
-    [[nodiscard]] constexpr const std::any &operator[](
-        const std::size_t t_i) const noexcept {
-        return m_begin[t_i];
+    [[nodiscard]] auto empty() const noexcept -> bool {
+        return params_.empty();
     }
 
-    [[nodiscard]] constexpr const std::any *begin() const noexcept {
-        return m_begin;
+    [[nodiscard]] auto toVector() const -> std::vector<std::any> {
+        return params_;
     }
 
-    [[nodiscard]] constexpr const std::any &front() const noexcept {
-        return *m_begin;
+    template <typename T>
+    [[nodiscard]] auto get(std::size_t index) const -> std::optional<T> {
+        if (index >= params_.size()) {
+            return std::nullopt;
+        }
+        try {
+            return std::any_cast<T>(params_[index]);
+        } catch (const std::bad_any_cast&) {
+            return std::nullopt;
+        }
     }
 
-    [[nodiscard]] constexpr const std::any *end() const noexcept {
-        return m_end;
+    [[nodiscard]] auto slice(std::size_t start,
+                             std::size_t end) const -> FunctionParams {
+        if (start > end || end > params_.size()) {
+            THROW_OUT_OF_RANGE("Invalid slice range");
+        }
+        return FunctionParams(std::vector<std::any>(params_.begin() + start,
+                                                    params_.begin() + end));
     }
 
-    [[nodiscard]] constexpr std::size_t size() const noexcept {
-        return std::size_t(m_end - m_begin);
+    template <typename Predicate>
+    [[nodiscard]] FunctionParams filter(Predicate pred) const {
+        std::vector<std::any> filtered;
+        std::ranges::copy_if(params_, std::back_inserter(filtered), pred);
+        return FunctionParams(filtered);
     }
 
-    [[nodiscard]] std::vector<std::any> to_vector() const {
-        return std::vector<std::any>{m_begin, m_end};
-    }
-
-    [[nodiscard]] constexpr bool empty() const noexcept {
-        return m_begin == m_end;
+    void set(std::size_t index, const std::any& value) {
+        if (index >= params_.size()) {
+            THROW_OUT_OF_RANGE("Index out of range");
+        }
+        params_[index] = value;
     }
 
 private:
-    const std::any *m_begin = nullptr;
-    const std::any *m_end = nullptr;
+    std::vector<std::any> params_;
 };
-
-// Constructor specialization for array of size 0
-template <>
-constexpr FunctionParams::FunctionParams(
-    const std::array<std::any, size_t{0}> & /* a */)
-    : m_begin(nullptr), m_end(nullptr) {}
-
-#endif
 
 #endif

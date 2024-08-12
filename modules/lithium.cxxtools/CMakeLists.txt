@@ -25,16 +25,11 @@ set(SOURCE_FILES
     src/json2ini.cpp
     src/json2xml.cpp
     src/xml2json.cpp
+    src/pci_generator.cpp
 
     _component.cpp
     _main.cpp
 )
-
-find_package(tomlplusplus)
-
-if (tomlplusplus_FOUND)
-    list(APPEND SOURCE_FILES src/toml2json.cpp src/json2toml.cpp)
-endif()
 
 set(${PROJECT_NAME}_LIBS
     atom-component
@@ -50,3 +45,5 @@ target_link_libraries(lithium.cxxtools ${${PROJECT_NAME}_LIBS})
 
 # Include directories
 target_include_directories(lithium.cxxtools PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_subdirectory(tests)

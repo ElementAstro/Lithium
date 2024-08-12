@@ -16,14 +16,12 @@ Description: Configor
 #define LITHIUM_CONFIG_CONFIGOR_HPP
 
 #include <filesystem>
-#include <mutex>
-#include <shared_mutex>
+#include <memory>
+#include <optional>
+#include <string>
+#include "atom/type/json_fwd.hpp"
+
 namespace fs = std::filesystem;
-
-#include "error/error_code.hpp"
-
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
 
 #define GetIntConfig(path)                  \
     GetPtr<ConfigManager>("lithium.config") \
@@ -62,139 +60,121 @@ using json = nlohmann::json;
 
 namespace lithium {
 class ConfigManagerImpl;
+/**
+ * @brief The ConfigManager class manages configuration data using JSON format.
+ *
+ * This class provides methods to manipulate configuration values, load from
+ * files or directories, save to a file, and perform various operations like
+ * merging configurations.
+ */
 class ConfigManager {
 public:
     /**
-     * @brief 构造函数
-     *
-     * Constructor.
+     * @brief Default constructor.
      */
     ConfigManager();
 
     /**
-     * @brief 析构函数
-     *
-     * Destructor.
+     * @brief Destructor.
      */
     ~ConfigManager();
 
-    // -------------------------------------------------------------------
-    // Common methods
-    // -------------------------------------------------------------------
-
     /**
-     * @brief 创建ConfigManager的共享指针，但是全局唯一
-     *
-     * Create a shared pointer of ConfigManager. But global only
+     * @brief Creates a shared pointer instance of ConfigManager.
+     * @return std::shared_ptr<ConfigManager> Shared pointer to ConfigManager
+     * instance.
      */
-    static std::shared_ptr<ConfigManager> createShared();
-
-    static std::unique_ptr<ConfigManager> createUnique();
-
-    // -------------------------------------------------------------------
-    // Config methods
-    // -------------------------------------------------------------------
+    static auto createShared() -> std::shared_ptr<ConfigManager>;
 
     /**
-     * @brief 获取一个配置项的值
-     *
-     * Get the value of a configuration item.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @return json 配置项对应的值，如果键不存在则返回 nullptr
+     * @brief Creates a unique pointer instance of ConfigManager.
+     * @return std::unique_ptr<ConfigManager> Unique pointer to ConfigManager
+     * instance.
      */
-    [[nodiscard("config value should not be ignored!")]] std::optional<json>
-    getValue(const std::string& key_path) const;
+    static auto createUnique() -> std::unique_ptr<ConfigManager>;
 
     /**
-     * @brief 添加或更新一个配置项
-     *
-     * Add or update a configuration item.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @param value 配置项的值，使用 JSON 格式进行表示
-     * @return bool 成功返回 true，失败返回 false
+     * @brief Retrieves the value associated with the given key path.
+     * @param key_path The path to the configuration value.
+     * @return std::optional<nlohmann::json> The optional JSON value if found.
      */
-    bool setValue(const std::string& key_path, const json& value);
+    [[nodiscard]] auto getValue(const std::string& key_path) const
+        -> std::optional<nlohmann::json>;
+
     /**
-     * @brief 删除一个配置项
-     *
-     * Delete a configuration item.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
+     * @brief Sets the value for the specified key path.
+     * @param key_path The path to set the configuration value.
+     * @param value The JSON value to set.
+     * @return bool True if the value was successfully set, false otherwise.
      */
+    auto setValue(const std::string& key_path,
+                  const nlohmann::json& value) -> bool;
 
-    bool deleteValue(const std::string& key_path);
+    auto appendValue(const std::string& key_path, const nlohmann::json& value) -> bool;
 
     /**
-     * @brief 判断一个配置项是否存在
-     *
-     * Determine if a configuration item exists.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @return bool 存在返回 true，不存在返回 false
+     * @brief Deletes the value associated with the given key path.
+     * @param key_path The path to the configuration value to delete.
+     * @return bool True if the value was successfully deleted, false otherwise.
      */
-    [[nodiscard("status of the value should not be ignored")]] bool hasValue(
-        const std::string& key_path) const;
+    auto deleteValue(const std::string& key_path) -> bool;
 
     /**
-     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
-     *
-     * Load JSON configuration from the specified file and merge with the
-     * existing configuration.
-     *
-     * @param path 配置文件路径
+     * @brief Checks if a value exists for the given key path.
+     * @param key_path The path to check.
+     * @return bool True if a value exists for the key path, false otherwise.
      */
-    bool loadFromFile(const fs::path& path);
+    [[nodiscard]] auto hasValue(const std::string& key_path) const -> bool;
 
     /**
-     * @brief 加载指定目录下的所有JSON配置文件
-     *
-     * Load all JSON configuration files in the specified directory.
-     *
-     * @param dir_path 配置文件所在目录的路径
+     * @brief Loads configuration data from a file.
+     * @param path The path to the file containing configuration data.
+     * @return bool True if the file was successfully loaded, false otherwise.
      */
-    bool loadFromDir(const fs::path& dir_path, bool recursive = false);
+    auto loadFromFile(const fs::path& path) -> bool;
 
     /**
-     * @brief 将当前配置保存到指定文件
-     *
-     * Save the current configuration to the specified file.
-     *
-     * @param file_path 目标文件路径
+     * @brief Loads configuration data from a directory.
+     * @param dir_path The path to the directory containing configuration files.
+     * @param recursive Flag indicating whether to recursively load from
+     * subdirectories.
+     * @return bool True if the directory was successfully loaded, false
+     * otherwise.
      */
-    bool saveToFile(const fs::path& file_path) const;
+    auto loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
 
     /**
-     * @brief 清理配置项
-     *
-     * Clean up configuration items.
+     * @brief Saves the current configuration to a file.
+     * @param file_path The path to save the configuration file.
+     * @return bool True if the configuration was successfully saved, false
+     * otherwise.
+     */
+    [[nodiscard]] auto saveToFile(const fs::path& file_path) const -> bool;
+
+    /**
+     * @brief Cleans up the configuration by removing unused entries or
+     * optimizing data.
      */
     void tidyConfig();
 
     /**
-     * @brief 清除所有配置（测试用）
-     *
-     * Clear all of the configurations, only used for test
+     * @brief Clears all configuration data.
      */
     void clearConfig();
 
-private:
-    std::unique_ptr<ConfigManagerImpl> m_impl;
-
     /**
-     * @brief 将 JSON 配置合并到当前配置中
-     *
-     * Merge JSON configuration to the current configuration.
-     *
-     * @param j JSON 配置
+     * @brief Merges the current configuration with the provided JSON data.
+     * @param src The JSON object to merge into the current configuration.
      */
-    void mergeConfig(const json& j);
+    void mergeConfig(const nlohmann::json& src);
+
+private:
+    std::unique_ptr<ConfigManagerImpl>
+        m_impl_;  ///< Implementation-specific pointer.
+
+    void mergeConfig(const nlohmann::json& src, nlohmann::json& target);
 };
+
 }  // namespace lithium
 
 #endif

@@ -15,25 +15,18 @@ Description: Simple random number generator
 #include "random.hpp"
 
 namespace atom::utils {
-std::mt19937 createRandomGenerator() {
-    std::random_device rd;
-    std::seed_seq seed{rd(), rd(), rd(), rd()};
-    return std::mt19937(seed);
-}
-
-std::string generateRandomString(int length) {
-    const std::string characters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    std::random_device rd;
-    std::mt19937 generator = createRandomGenerator();
-    std::uniform_int_distribution<int> distribution(0, characters.size() - 1);
-
-    std::string randomString;
-    randomString.reserve(length);
-
-    for (int i = 0; i < length; ++i) {
-        randomString.push_back(characters[distribution(generator)]);
+auto generateRandomString(int length) -> std::string {
+    if (length <= 0) {
+        THROW_INVALID_ARGUMENT("Length must be a positive integer.");
     }
+    const std::string CHARACTERS =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    Random<std::mt19937, std::uniform_int_distribution<int>> rng(
+        0, static_cast<int>(CHARACTERS.size() - 1));
+
+    std::string randomString(length, '\0');
+    std::generate(randomString.begin(), randomString.end(),
+                  [&]() { return CHARACTERS[rng()]; });
 
     return randomString;
 }

@@ -26,7 +26,7 @@ namespace atom::utils {
  * @param str The string to check.
  * @return true if the string contains uppercase characters, otherwise false.
  */
-[[nodiscard]] bool hasUppercase(std::string_view str);
+[[nodiscard]] auto hasUppercase(std::string_view str) -> bool;
 
 /**
  * @brief Converts the given string to snake_case format.
@@ -34,7 +34,7 @@ namespace atom::utils {
  * @param str The string to convert.
  * @return The string converted to snake_case.
  */
-[[nodiscard]] std::string toUnderscore(std::string_view str);
+[[nodiscard]] auto toUnderscore(std::string_view str) -> std::string;
 
 /**
  * @brief Converts the given string to camelCase format.
@@ -42,7 +42,7 @@ namespace atom::utils {
  * @param str The string to convert.
  * @return The string converted to camelCase.
  */
-[[nodiscard]] std::string toCamelCase(std::string_view str);
+[[nodiscard]] auto toCamelCase(std::string_view str) -> std::string;
 
 /**
  * @brief Encodes the given string using URL encoding.
@@ -50,7 +50,7 @@ namespace atom::utils {
  * @param str The string to encode.
  * @return The URL encoded string.
  */
-[[nodiscard]] std::string urlEncode(std::string_view str);
+[[nodiscard]] auto urlEncode(std::string_view str) -> std::string;
 
 /**
  * @brief Decodes the given URL encoded string.
@@ -58,7 +58,7 @@ namespace atom::utils {
  * @param str The URL encoded string to decode.
  * @return The decoded string.
  */
-[[nodiscard]] std::string urlDecode(std::string_view str);
+[[nodiscard]] auto urlDecode(std::string_view str) -> std::string;
 
 /**
  * @brief Checks if the given string starts with the specified prefix.
@@ -67,7 +67,8 @@ namespace atom::utils {
  * @param prefix The prefix to search for.
  * @return true if the string starts with the prefix, otherwise false.
  */
-[[nodiscard]] bool startsWith(std::string_view str, std::string_view prefix);
+[[nodiscard]] auto startsWith(std::string_view str,
+                              std::string_view prefix) -> bool;
 
 /**
  * @brief Checks if the given string ends with the specified suffix.
@@ -76,7 +77,8 @@ namespace atom::utils {
  * @param suffix The suffix to search for.
  * @return true if the string ends with the suffix, otherwise false.
  */
-[[nodiscard]] bool endsWith(std::string_view str, std::string_view suffix);
+[[nodiscard]] auto endsWith(std::string_view str,
+                            std::string_view suffix) -> bool;
 
 /**
  * @brief 将字符串分割为多个字符串。
@@ -84,9 +86,8 @@ namespace atom::utils {
  * @param delimiter 分隔符。
  * @return 分割后的字符串数组。
  */
-[[nodiscard(
-    "the result of splitString is not used")]] std::vector<std::string_view>
-splitString(const std::string& str, char delimiter);
+[[nodiscard("the result of splitString is not used")]] auto splitString(
+    const std::string& str, char delimiter) -> std::vector<std::string>;
 
 /**
  * @brief Concatenates an array of strings into a single string with a specified
@@ -96,9 +97,9 @@ splitString(const std::string& str, char delimiter);
  * @param delimiter The delimiter to use for concatenation.
  * @return The concatenated string.
  */
-[[nodiscard("the result of joinStrings is not used")]] std::string joinStrings(
+[[nodiscard("the result of joinStrings is not used")]] auto joinStrings(
     const std::vector<std::string_view>& strings,
-    const std::string_view& delimiter);
+    const std::string_view& delimiter) -> std::string;
 
 /**
  * @brief Replaces all occurrences of a substring with another substring in a
@@ -109,9 +110,9 @@ splitString(const std::string& str, char delimiter);
  * @param newStr The substring to replace with.
  * @return The text with replacements made.
  */
-[[nodiscard("the result of replaceString is not used")]] std::string
-replaceString(std::string_view text, std::string_view oldStr,
-              std::string_view newStr);
+[[nodiscard("the result of replaceString is not used")]] auto replaceString(
+    std::string_view text, std::string_view oldStr,
+    std::string_view newStr) -> std::string;
 
 /**
  * @brief Replaces multiple substrings with their corresponding replacements in
@@ -122,10 +123,10 @@ replaceString(std::string_view text, std::string_view oldStr,
  * substring to replace and its replacement.
  * @return The text with replacements made.
  */
-[[nodiscard("the result of replaceStrings is not used")]] std::string
-replaceStrings(std::string_view text,
-               const std::vector<std::pair<std::string_view, std::string_view>>&
-                   replacements);
+[[nodiscard("the result of replaceStrings is not used")]] auto replaceStrings(
+    std::string_view text,
+    const std::vector<std::pair<std::string_view, std::string_view>>&
+        replacements) -> std::string;
 
 /**
  * @brief Converts a vector of string_view to a vector of string.
@@ -134,7 +135,8 @@ replaceStrings(std::string_view text,
  * @return The converted vector of string.
  */
 [[nodiscard("the result of SVVtoSV is not used")]]
-std::vector<std::string> SVVtoSV(const std::vector<std::string_view>& svv);
+auto SVVtoSV(const std::vector<std::string_view>& svv)
+    -> std::vector<std::string>;
 
 /**
  * @brief Explodes a string_view into a vector of string_view.
@@ -144,7 +146,7 @@ std::vector<std::string> SVVtoSV(const std::vector<std::string_view>& svv);
  * @return The exploded vector of string_view.
  */
 [[nodiscard("the result of explode is not used")]]
-std::vector<std::string> explode(std::string_view text, char symbol);
+auto explode(std::string_view text, char symbol) -> std::vector<std::string>;
 
 /**
  * @brief Trims a string_view.
@@ -154,7 +156,26 @@ std::vector<std::string> explode(std::string_view text, char symbol);
  * @return The trimmed string_view.
  */
 [[nodiscard("the result of trim is not used")]]
-std::string trim(std::string_view line, std::string_view symbols = " \n\r\t");
+auto trim(std::string_view line,
+          std::string_view symbols = " \n\r\t") -> std::string;
+
+/**
+ * @brief Converts a u8string to a wstring.
+ *
+ * @param u8str The u8string to convert.
+ * @return The converted wstring.
+ */
+[[nodiscard("the result of stringToWString is not used")]]
+auto stringToWString(const std::string& str) -> std::wstring;
+
+/**
+ * @brief Converts a wstring to a u8string.
+ *
+ * @param wstr The wstring to convert.
+ * @return The converted u8string.
+ */
+[[nodiscard("the result of wstringToString is not used")]]
+auto wstringToString(const std::wstring& wstr) -> std::string;
 }  // namespace atom::utils
 
 #endif

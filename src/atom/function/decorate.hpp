@@ -10,45 +10,62 @@
 #define ATOM_META_DECORATE_HPP
 
 #include <chrono>
+#include <concepts>
 #include <exception>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "func_traits.hpp"
+#include "func_traits.hpp"  // Ensure this is implemented properly
+#include "macro.hpp"
 
 namespace atom::meta {
+
+// Concept for checking if a type is callable, adjusted for better utility
+template <typename F, typename... Args>
+concept Callable = requires(F&& func, Args&&... args) {
+    {
+        std::invoke(std::forward<F>(func), std::forward<Args>(args)...)
+    } -> std::same_as<typename FunctionTraits<std::decay_t<F>>::return_type>;
+};
+
 template <typename Func>
 class Switchable {
 public:
     using Traits = FunctionTraits<Func>;
     using R = typename Traits::return_type;
-    using Args = typename Traits::argument_types;
+    using TupleArgs = typename Traits::argument_types;
 
-    Switchable(Func f) : f(f) {}
+    explicit Switchable(Func func) : f_(std::move(func)) {}
 
     template <typename F>
-    void switch_to(F new_f) {
-        f = new_f;
+        requires Callable<F, typename std::tuple_element_t<0, TupleArgs>,
+                          typename std::tuple_element_t<1, TupleArgs>>
+    void switchTo(F&& new_f) {
+        f_ = std::forward<F>(new_f);
     }
 
     template <std::size_t... Is>
-    auto call_impl(std::tuple<Args...> &args,
-                   std::index_sequence<Is...>) const -> R {
-        return std::apply(
-            f, std::tuple_cat(args, std::make_index_sequence<sizeof...(Is)>{}));
+    auto callImpl(const TupleArgs& args,
+                  std::index_sequence<Is...> /*unused*/) const -> R {
+        return std::invoke(f_, std::get<Is>(args)...);
     }
 
-    auto operator()(Args... args) const -> R {
-        auto tuple_args = std::make_tuple(std::forward<Args>(args)...);
-        return call_impl(tuple_args,
-                         std::make_index_sequence<sizeof...(args)>{});
+    template <typename... ArgsT>
+    auto operator()(ArgsT&&... args) const -> R {
+        static_assert(
+            std::is_same_v<std::tuple<std::decay_t<ArgsT>...>, TupleArgs>,
+            "Argument types do not match the function signature");
+        auto tupleArgs = std::forward_as_tuple(std::forward<ArgsT>(args)...);
+        return callImpl(tupleArgs,
+                        std::make_index_sequence<sizeof...(ArgsT)>{});
     }
 
 private:
-    Func f;
+    std::function<Func> f_;
 };
 
 template <typename FuncType>
@@ -58,66 +75,72 @@ template <typename R, typename... Args>
 struct decorator<R(Args...)> {
     using FuncType = std::function<R(Args...)>;
     using CallbackType =
-        typename std::conditional<std::is_void<R>::value, std::function<void()>,
-                                  std::function<void(R)>>::type;
-
+        std::conditional_t<std::is_void_v<R>, std::function<void()>,
+                           std::function<void(R)>>;
     FuncType func;
-    std::function<void()> before = nullptr;
-    CallbackType callback = nullptr;
-    std::function<void(long long)> after = nullptr;
 
-    decorator(FuncType f) : func(f) {}
+private:
+    std::function<void()> before_;
+    CallbackType callback_;
+    std::function<void(std::chrono::microseconds)> after_;
+
+public:
+    explicit decorator(FuncType func) : func(std::move(func)) {}
 
     template <typename Before, typename Callback = CallbackType,
-              typename After = std::function<void(long long)>>
-    decorator<FuncType> with_hooks(
-        Before &&b, Callback &&c = CallbackType(),
-        After &&a = [](long long) {}) const {
-        decorator<FuncType> copy(std::move(func));
-        copy.before = std::forward<Before>(b);
-        copy.callback = std::forward<Callback>(c);
-        copy.after = std::forward<After>(a);
+              typename After = std::function<void(std::chrono::microseconds)>>
+    auto withHooks(
+        Before&& before, Callback&& callback = CallbackType(),
+        After&& after = [](auto) {}) const -> decorator<R(Args...)> {
+        decorator<R(Args...)> copy(func);
+        copy.before_ = std::forward<Before>(before);
+        copy.callback_ = std::forward<Callback>(callback);
+        copy.after_ = std::forward<After>(after);
         return copy;
     }
 
     template <std::size_t... Is>
-    auto call_impl(std::tuple<Args...> &args,
-                   std::index_sequence<Is...>) const {
-        if (before)
-            before();
+    auto callImpl(std::tuple<Args...>& args,
+                  std::index_sequence<Is...> /*unused*/) const {
+        if (before_) {
+            before_();
+        }
         auto start = std::chrono::high_resolution_clock::now();
+
         if constexpr (std::is_void_v<R>) {
-            std::apply(func, args);
-            if (callback)
-                callback();
+            std::invoke(func, std::get<Is>(args)...);
+            if (callback_) {
+                callback_();
+            }
         } else {
-            auto result = std::apply(func, args);
-            if (callback)
-                callback(result);
+            auto result = std::invoke(func, std::get<Is>(args)...);
+            if (callback_) {
+                callback_(result);
+            }
             auto end = std::chrono::high_resolution_clock::now();
-            if (after)
-                after(std::chrono::duration_cast<std::chrono::microseconds>(
-                          end - start)
-                          .count());
+            if (after_) {
+                after_(std::chrono::duration_cast<std::chrono::microseconds>(
+                    end - start));
+            }
             return result;
         }
+
         auto end = std::chrono::high_resolution_clock::now();
-        if (after)
-            after(std::chrono::duration_cast<std::chrono::microseconds>(end -
-                                                                        start)
-                      .count());
+        if (after_) {
+            after_(std::chrono::duration_cast<std::chrono::microseconds>(
+                end - start));
+        }
     }
 
     auto operator()(Args... args) const {
-        auto tuple_args = std::make_tuple(std::forward<Args>(args)...);
-        return call_impl(tuple_args,
-                         std::make_index_sequence<sizeof...(args)>{});
+        auto tupleArgs = std::make_tuple(std::forward<Args>(args)...);
+        return callImpl(tupleArgs, std::make_index_sequence<sizeof...(Args)>{});
     }
-};
+} ATOM_ALIGNAS(128);
 
 template <typename F>
-decorator<F> make_decorator(F f) {
-    return decorator<F>(f);
+auto makeDecorator(F&& func) {
+    return decorator<std::remove_reference_t<F>>(std::forward<F>(func));
 }
 
 template <typename FuncType>
@@ -126,61 +149,71 @@ struct LoopDecorator : public decorator<FuncType> {
     using Base::Base;
 
     template <typename... TArgs>
-    auto operator()(int loopCount,
-                    TArgs &&...args) const -> decltype(this->func(args...)) {
-        decltype(this->func(args...)) result;
-        for (int i = 0; i < loopCount; ++i) {
-            result = Base::operator()(std::forward<TArgs>(args)...);
-        }
-        return result;
-    }
+    auto operator()(int loopCount, TArgs&&... args) const {
+        using ReturnType = decltype(this->func(args...));
+        std::optional<ReturnType> result;
 
-    template <typename T, typename... TArgs>
-    auto operator()(T &obj, int loopCount, TArgs &&...args) const {
         for (int i = 0; i < loopCount; ++i) {
-            std::invoke(this->func, obj, std::forward<TArgs>(args)...);
+            if constexpr (std::is_void_v<ReturnType>) {
+                Base::operator()(std::forward<TArgs>(args)...);
+            } else {
+                result = Base::operator()(std::forward<TArgs>(args)...);
+            }
+        }
+
+        if constexpr (!std::is_void_v<ReturnType>) {
+            return *result;
         }
     }
 };
 
 template <typename FuncType>
-LoopDecorator<FuncType> make_loop_decorator(FuncType f) {
-    return LoopDecorator<FuncType>(f);
+auto makeLoopDecorator(FuncType&& f) {
+    return LoopDecorator<std::remove_reference_t<FuncType>>(
+        std::forward<FuncType>(f));
 }
 
 template <typename FuncType>
 struct ConditionCheckDecorator : public decorator<FuncType> {
     using Base = decorator<FuncType>;
-    using Base::Base;  // Inherit constructor
+    using Base::Base;
 
     template <typename ConditionFunc, typename... TArgs>
-    auto operator()(ConditionFunc condition,
-                    TArgs &&...args) const -> decltype(this->func(args...)) {
+    auto operator()(ConditionFunc&& condition, TArgs&&... args) const {
+        using ReturnType = decltype(this->func(args...));
+
         if (condition()) {
             return Base::operator()(std::forward<TArgs>(args)...);
-        } else {
-            // 处理不满足条件时的逻辑
-            return decltype(this->func(args...))();
+        }
+        if constexpr (!std::is_void_v<ReturnType>) {
+            return ReturnType{};
         }
     }
-};
+} __attribute__((aligned(1)));
 
 template <typename FuncType>
-ConditionCheckDecorator<FuncType> make_condition_check_decorator(FuncType f) {
-    return ConditionCheckDecorator<FuncType>(f);
+auto makeConditionCheckDecorator(FuncType&& f) {
+    return ConditionCheckDecorator<std::remove_reference_t<FuncType>>(
+        std::forward<FuncType>(f));
 }
 
-struct DecoratorError : public std::exception {
-    std::string message;
-    explicit DecoratorError(const std::string &msg) : message(msg) {}
-    const char *what() const noexcept override { return message.c_str(); }
+class DecoratorError : public std::exception {
+    std::string message_;
+
+public:
+    explicit DecoratorError(std::string msg) : message_(std::move(msg)) {}
+    [[nodiscard]] auto what() const noexcept -> const char* override {
+        return message_.c_str();
+    }
 };
 
 template <typename R, typename... Args>
 class BaseDecorator {
 public:
     using FuncType = std::function<R(Args...)>;
-    virtual R operator()(FuncType func, Args &&...args) = 0;
+    virtual auto operator()(FuncType func,
+                            Args... args) -> R = 0;  // Changed from Args&&...
+    virtual ~BaseDecorator() = default;
 };
 
 template <typename R, typename... Args>
@@ -188,23 +221,29 @@ class DecorateStepper {
     using FuncType = std::function<R(Args...)>;
     using DecoratorPtr = std::unique_ptr<BaseDecorator<R, Args...>>;
 
-    std::vector<DecoratorPtr> decorators;
-    FuncType baseFunction;
+    std::vector<DecoratorPtr> decorators_;
+    FuncType baseFunction_;
 
 public:
-    explicit DecorateStepper(FuncType func) : baseFunction(std::move(func)) {}
+    explicit DecorateStepper(FuncType func) : baseFunction_(std::move(func)) {}
 
     template <typename Decorator, typename... DArgs>
-    void addDecorator(DArgs &&...args) {
-        decorators.emplace_back(
+    void addDecorator(DArgs&&... args) {
+        decorators_.emplace_back(
             std::make_unique<Decorator>(std::forward<DArgs>(args)...));
     }
 
-    R execute(Args... args) {
-        try {
-            FuncType currentFunction = baseFunction;
+    void addDecorator(DecoratorPtr decorator) {
+        decorators_.push_back(std::move(decorator));
+    }
 
-            for (auto &decorator : decorators) {
+    auto execute(Args... args) -> R {
+        try {
+            FuncType currentFunction = baseFunction_;
+
+            for (auto it = decorators_.rbegin(); it != decorators_.rend();
+                 ++it) {
+                auto& decorator = *it;
                 currentFunction = [&,
                                    nextFunction = std::move(currentFunction)](
                                       Args... innerArgs) -> R {
@@ -214,11 +253,25 @@ public:
             }
 
             return currentFunction(std::forward<Args>(args)...);
-        } catch (const DecoratorError &e) {
-            return R();
+        } catch (const DecoratorError& e) {
+            // Handle decorator error
+            throw;  // Rethrow for now or handle as needed
         }
     }
 };
+
+// Helper function: Create DecorateStepper
+template <typename Func>
+auto makeDecorateStepper(Func&& func) {
+    using Traits = FunctionTraits<std::remove_reference_t<Func>>;
+    using ReturnType = typename Traits::return_type;
+    using ArgumentTuple = typename Traits::argument_types;
+
+    return DecorateStepper<ReturnType, std::tuple_element_t<0, ArgumentTuple>,
+                           std::tuple_element_t<1, ArgumentTuple>>(
+        std::forward<Func>(func));
+}
+
 }  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_DECORATE_HPP

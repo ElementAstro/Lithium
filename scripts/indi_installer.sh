@@ -19,7 +19,7 @@ apt-get install -y git cmake libcfitsio-dev libcfitsio8 zlib1g-dev libgsl-dev li
 
 # 克隆INDI库
 echo -e "${BLUE}正在克隆INDI库...${NC}"
-git clone https://github.com/indilib/indi.git
+git clone https://github.com/indilib/indi
 
 # 进入INDI目录
 cd indi

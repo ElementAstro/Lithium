@@ -17,12 +17,7 @@ Description: Argument Container Library for C++
 
 #include <any>
 #include <optional>
-#include <stdexcept>
-#include <string>
 #include <string_view>
-#include <type_traits>
-#include <unordered_map>
-#include <vector>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -63,7 +58,7 @@ public:
      */
     template <typename T>
     void set(std::string_view key, T &&value) {
-        m_data[key] = std::forward<T>(value);
+        m_data_[key] = std::forward<T>(value);
     }
 
     /**
@@ -77,8 +72,8 @@ public:
      * @note If the key does not exist, an exception will be thrown.
      */
     template <typename T>
-    T get(std::string_view key) const {
-        return std::any_cast<T>(m_data.at(key));
+    auto get(std::string_view key) const -> T {
+        return std::any_cast<T>(m_data_.at(key));
     }
 
     /**
@@ -93,9 +88,9 @@ public:
      * @return Value.
      */
     template <typename T>
-    T get_or(std::string_view key, T &&default_value) const {
-        if (auto it = m_data.find(key); it != m_data.end()) {
-            return std::any_cast<T>(it->second);
+    auto getOr(std::string_view key, T &&default_value) const -> T {
+        if (auto data = m_data_.find(key); data != m_data_.end()) {
+            return std::any_cast<T>(data->second);
         }
         return std::forward<T>(default_value);
     }
@@ -110,9 +105,9 @@ public:
      * @return Value.
      */
     template <typename T>
-    std::optional<T> get_optional(std::string_view key) const {
-        if (auto it = m_data.find(key); it != m_data.end()) {
-            return std::any_cast<T>(it->second);
+    auto getOptional(std::string_view key) const -> std::optional<T> {
+        if (auto data = m_data_.find(key); data != m_data_.end()) {
+            return std::any_cast<T>(data->second);
         }
         return std::nullopt;
     }
@@ -125,8 +120,8 @@ public:
      * @return 如果键存在,则返回true；否则返回false。
      * @return If the key exists, return true; otherwise return false.
      */
-    bool contains(std::string_view key) const noexcept {
-        if (auto it = m_data.find(key); it != m_data.end()) {
+    auto contains(std::string_view key) const noexcept -> bool {
+        if (auto data = m_data_.find(key); data != m_data_.end()) {
             return true;
         }
         return false;
@@ -138,20 +133,20 @@ public:
      * @param key 键。
      * @param key Key.
      */
-    void remove(std::string_view key) { m_data.erase(key); }
+    void remove(std::string_view key) { m_data_.erase(key); }
 
     /**
      * @brief 清空容器。
      * @brief Clear the container.
      */
-    void clear() noexcept { m_data.clear(); }
+    void clear() noexcept { m_data_.clear(); }
     /**
      * @brief 获取容器中键值对的数量。
      * @brief Get the number of key-value pairs in the container.
      * @return 键值对的数量。
      * @return The number of key-value pairs.
      */
-    size_t size() const noexcept { return m_data.size(); }
+    auto size() const noexcept -> size_t { return m_data_.size(); }
 
     /**
      * @brief 检查容器是否为空。
@@ -159,7 +154,7 @@ public:
      * @return 如果容器为空,则返回true；否则返回false。
      * @return If the container is empty, return true; otherwise return false.
      */
-    bool empty() const noexcept { return m_data.empty(); }
+    auto empty() const noexcept -> bool { return m_data_.empty(); }
 
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string_view, std::any> data()
@@ -167,7 +162,7 @@ public:
     std::unordered_map<std::string_view, std::any> data()
 #endif
         const noexcept {
-        return m_data;
+        return m_data_;
     }
 
     /**
@@ -181,8 +176,8 @@ public:
      * @note If the key does not exist, a new key-value pair will be inserted.
      */
     template <typename T>
-    T &operator[](std::string_view key) {
-        return std::any_cast<T &>(m_data[key]);
+    auto operator[](std::string_view key) -> T & {
+        return std::any_cast<T &>(m_data_[key]);
     }
 
     /**
@@ -196,8 +191,8 @@ public:
      * @note If the key does not exist, an exception will be thrown.
      */
     template <typename T>
-    const T &operator[](std::string_view key) const {
-        return std::any_cast<const T &>(m_data.at(key));
+    auto operator[](std::string_view key) const -> const T & {
+        return std::any_cast<const T &>(m_data_.at(key));
     }
 
     /**
@@ -210,7 +205,7 @@ public:
      * @note 如果键不存在,则会插入一个新的键值对。
      * @note If the key does not exist, a new key-value pair will be inserted.
      */
-    std::any &operator[](std::string_view key) { return m_data[key]; }
+    auto operator[](std::string_view key) -> std::any & { return m_data_[key]; }
 
     /**
      * @brief 获取指定键对应的值。
@@ -222,15 +217,15 @@ public:
      * @note 如果键不存在,则会抛出异常。
      * @note If the key does not exist, an exception will be thrown.
      */
-    const std::any &operator[](std::string_view key) const {
-        return m_data.at(key);
+    auto operator[](std::string_view key) const -> const std::any & {
+        return m_data_.at(key);
     }
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> m_data;
+    emhash8::HashMap<std::string, std::any> m_data_;
 #else
-    std::unordered_map<std::string_view, std::any> m_data;
+    std::unordered_map<std::string_view, std::any> m_data_;
 #endif
 };
 

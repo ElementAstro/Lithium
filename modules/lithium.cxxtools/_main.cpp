@@ -15,10 +15,11 @@ Description: Main Entry
 #include "_component.hpp"
 
 #include "atom/type/json.hpp"
+#include "macro.hpp"
 using json = nlohmann::json;
 
-extern "C" {
-std::shared_ptr<Component> getInstance([[maybe_unused]] const json &params) {
+ATOM_C {
+auto getInstance(ATOM_UNUSED const json &params) -> std::shared_ptr<Component> {
     if (params.contains("name") && params["name"].is_string()) {
         return std::make_shared<ToolsComponent>(
             params["name"].get<std::string>());

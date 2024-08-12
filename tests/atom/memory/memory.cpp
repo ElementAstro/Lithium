@@ -1,7 +1,5 @@
 #include "atom/memory/memory.hpp"
 #include <gtest/gtest.h>
-
-
 // Test structure to allocate using MemoryPool
 struct TestStruct {
     int a;
@@ -26,6 +24,9 @@ TEST(MemoryPoolTest, AllocateAndDeallocate) {
     EXPECT_EQ(ptr->a, 42);
     EXPECT_EQ(ptr->b, 3.14);
 
+    // Destruct the object manually since we used placement new
+    ptr->~TestStruct();
+
     // Deallocate the memory
     pool.deallocate(ptr, 1);
 }
@@ -49,12 +50,17 @@ TEST(MemoryPoolTest, AllocateMultiple) {
         EXPECT_EQ(ptr[i].b, i * 1.1);
     }
 
+    // Destruct the objects manually since we used placement new
+    for (size_t i = 0; i < numObjects; ++i) {
+        (ptr + i)->~TestStruct();
+    }
+
     // Deallocate the memory
     pool.deallocate(ptr, numObjects);
 }
 
 TEST(MemoryPoolTest, AllocateExceedingBlockSize) {
-    const size_t largeSize = 4096;
+    const size_t largeSize = 4096 / sizeof(TestStruct) + 1;
     MemoryPool<TestStruct> pool;
 
     // Allocate memory exceeding the block size
@@ -66,6 +72,9 @@ TEST(MemoryPoolTest, AllocateExceedingBlockSize) {
     EXPECT_EQ(ptr->a, 123);
     EXPECT_EQ(ptr->b, 4.56);
 
+    // Destruct the object manually since we used placement new
+    ptr->~TestStruct();
+
     // Deallocate the memory
     pool.deallocate(ptr, largeSize);
 }
@@ -76,6 +85,9 @@ TEST(MemoryPoolTest, ReuseMemory) {
     // Allocate memory for one TestStruct
     TestStruct* ptr1 = pool.allocate(1);
     ASSERT_NE(ptr1, nullptr);
+
+    // Destruct the object manually since we used placement new
+    ptr1->~TestStruct();
 
     // Deallocate the memory
     pool.deallocate(ptr1, 1);
@@ -89,6 +101,9 @@ TEST(MemoryPoolTest, ReuseMemory) {
     new (ptr2) TestStruct(78, 9.10);
     EXPECT_EQ(ptr2->a, 78);
     EXPECT_EQ(ptr2->b, 9.10);
+
+    // Destruct the object manually since we used placement new
+    ptr2->~TestStruct();
 
     // Deallocate the memory
     pool.deallocate(ptr2, 1);

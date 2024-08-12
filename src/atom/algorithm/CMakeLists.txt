@@ -13,25 +13,22 @@ project(atom-algorithm C CXX)
 set(${PROJECT_NAME}_SOURCES
     algorithm.cpp
     base.cpp
+    bignumber.cpp
     convolve.cpp
-    fbase.cpp
     fnmatch.cpp
     fraction.cpp
     huffman.cpp
     math.cpp
     md5.cpp
     mhash.cpp
-    pid.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
     algorithm.hpp
-    algorithm.inl
     base.hpp
-    calculator.hpp
+    bignumber.hpp
     convolve.hpp
-    fbase.hpp
     fnmatch.hpp
     fraction.hpp
     hash.hpp
@@ -39,7 +36,6 @@ set(${PROJECT_NAME}_HEADERS
     math.hpp
     md5.hpp
     mhash.hpp
-    pid.hpp
 )
 
 # Build Object Library

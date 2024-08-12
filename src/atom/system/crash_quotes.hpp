@@ -16,7 +16,9 @@ Description: Quote manager for crash report.
 #define ATOM_SYSTEM_CRASH_QUOTES_HPP
 
 #include <string>
+#include <utility>
 #include <vector>
+#include "macro.hpp"
 
 namespace atom::system {
 /**
@@ -30,25 +32,26 @@ public:
      * @param text The text of the quote.
      * @param author The author of the quote.
      */
-    explicit Quote(const std::string &text, const std::string &author);
+    explicit Quote(std::string text, std::string author)
+        : text_(std::move(text)), author_(std::move(author)) {}
 
     /**
      * @brief Gets the text of the quote.
      *
      * @return The text of the quote.
      */
-    const std::string &getText() const;
+    ATOM_NODISCARD auto getText() const -> std::string { return text_; }
 
     /**
      * @brief Gets the author of the quote.
      *
      * @return The author of the quote.
      */
-    const std::string &getAuthor() const;
+    ATOM_NODISCARD auto getAuthor() const -> std::string { return author_; }
 
 private:
-    std::string text;
-    std::string author;
+    std::string text_;
+    std::string author_;
 };
 
 /**
@@ -87,19 +90,9 @@ public:
      */
     void clearQuotes();
 
-    /**
-     * @brief Loads quotes from a file into the collection.
-     *
-     * @param filename The name of the file to load quotes from.
-     */
-    void loadQuotesFromFile(const std::string &filename);
+    void loadQuotesFromJson(const std::string &filename);
 
-    /**
-     * @brief Saves quotes in the collection to a file.
-     *
-     * @param filename The name of the file to save quotes to.
-     */
-    void saveQuotesToFile(const std::string &filename) const;
+    void saveQuotesToJson(const std::string &filename) const;
 
     /**
      * @brief Searches for quotes containing a keyword.
@@ -107,7 +100,8 @@ public:
      * @param keyword The keyword to search for.
      * @return A vector of quotes containing the keyword.
      */
-    std::vector<Quote> searchQuotes(const std::string &keyword) const;
+    ATOM_NODISCARD auto searchQuotes(const std::string &keyword) const
+        -> std::vector<Quote>;
 
     /**
      * @brief Filters quotes by author.
@@ -115,17 +109,18 @@ public:
      * @param author The name of the author to filter by.
      * @return A vector of quotes by the specified author.
      */
-    std::vector<Quote> filterQuotesByAuthor(const std::string &author) const;
+    ATOM_NODISCARD auto filterQuotesByAuthor(const std::string &author) const
+        -> std::vector<Quote>;
 
     /**
      * @brief Gets a random quote from the collection.
      *
      * @return A random quote.
      */
-    std::string getRandomQuote() const;
+    ATOM_NODISCARD auto getRandomQuote() const -> std::string;
 
 private:
-    std::vector<Quote> quotes;
+    std::vector<Quote> quotes_;
 };
 }  // namespace atom::system
 

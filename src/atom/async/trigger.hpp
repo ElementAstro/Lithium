@@ -99,8 +99,8 @@ public:
      * @return A future object that can be used to track the completion of the
      * asynchronous trigger.
      */
-    std::future<void> scheduleAsyncTrigger(const std::string &event,
-                                           const ParamType &param);
+    auto scheduleAsyncTrigger(const std::string &event,
+                              const ParamType &param) -> std::future<void>;
 
     /**
      * @brief Cancel the scheduled triggering of a specific event.
@@ -115,21 +115,112 @@ public:
     void cancelAllTriggers();
 
 private:
-    std::mutex m_mutex; /**< Mutex used to synchronize access to the callback
+    std::mutex m_mutex_; /**< Mutex used to synchronize access to the callback
                            data structure. */
 
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string,
                      std::vector<std::pair<CallbackPriority, Callback>>>
-        m_callbacks; /**< Hash map to store registered callbacks for events. */
+        m_callbacks_; /**< Hash map to store registered callbacks for events. */
 #else
     std::unordered_map<std::string,
                        std::vector<std::pair<CallbackPriority, Callback>>>
-        m_callbacks; /**< Hash map to store registered callbacks for events. */
+        m_callbacks_; /**< Hash map to store registered callbacks for events. */
 #endif
 };
-}  // namespace atom::async
 
-#include "trigger.inl"
+template <typename ParamType>
+void Trigger<ParamType>::registerCallback(const std::string &event,
+                                          const Callback &callback,
+                                          CallbackPriority priority) {
+    std::lock_guard lock(m_mutex_);
+    auto &callbacks = m_callbacks_[event];
+    auto pos = std::find_if(
+        callbacks.begin(), callbacks.end(),
+        [&](const std::pair<CallbackPriority, Callback> &cb) {
+            return cb.second.target_type() == callback.target_type() &&
+                   cb.second.template target<void(ParamType)>() ==
+                       callback.template target<void(ParamType)>();
+        });
+    if (pos != callbacks.end()) {
+        pos->first = priority;
+    } else {
+        callbacks.emplace_back(priority, callback);
+    }
+}
+
+template <typename ParamType>
+void Trigger<ParamType>::unregisterCallback(const std::string &event,
+                                            const Callback &callback) {
+    std::lock_guard lock(m_mutex_);
+    auto &callbacks = m_callbacks_[event];
+    callbacks.erase(
+        std::remove_if(
+            callbacks.begin(), callbacks.end(),
+            [&](const std::pair<CallbackPriority, Callback> &cb) {
+                return cb.second.target_type() == callback.target_type() &&
+                       cb.second.template target<void(ParamType)>() ==
+                           callback.template target<void(ParamType)>();
+            }),
+        callbacks.end());
+}
+
+template <typename ParamType>
+void Trigger<ParamType>::trigger(const std::string &event,
+                                 const ParamType &param) {
+    std::lock_guard lock(m_mutex_);
+    auto &callbacks = m_callbacks_[event];
+    std::sort(callbacks.begin(), callbacks.end(),
+              [](const std::pair<CallbackPriority, Callback> &cb1,
+                 const std::pair<CallbackPriority, Callback> &cb2) {
+                  return static_cast<int>(cb1.first) >
+                         static_cast<int>(cb2.first);
+              });
+    for (auto &callback : callbacks) {
+        try {
+            callback.second(param);
+        } catch (std::exception &e) {
+        }
+    }
+}
+
+template <typename ParamType>
+void Trigger<ParamType>::scheduleTrigger(const std::string &event,
+                                         const ParamType &param,
+                                         std::chrono::milliseconds delay) {
+    std::thread([this, event, param, delay]() {
+        std::this_thread::sleep_for(delay);
+        trigger(event, param);
+    }).detach();
+}
+
+template <typename ParamType>
+auto Trigger<ParamType>::scheduleAsyncTrigger(
+    const std::string &event, const ParamType &param) -> std::future<void> {
+    auto promise = std::make_shared<std::promise<void>>();
+    auto future = promise->get_future();
+    std::thread([this, event, param, promise]() mutable {
+        try {
+            trigger(event, param);
+            promise->set_value();
+        } catch (...) {
+            promise->set_exception(std::current_exception());
+        }
+    }).detach();
+    return future;
+}
+
+template <typename ParamType>
+void Trigger<ParamType>::cancelTrigger(const std::string &event) {
+    std::lock_guard lock(m_mutex_);
+    m_callbacks_.erase(event);
+}
+
+template <typename ParamType>
+void Trigger<ParamType>::cancelAllTriggers() {
+    std::lock_guard lock(m_mutex_);
+    m_callbacks_.clear();
+}
+}  // namespace atom::async
 
 #endif

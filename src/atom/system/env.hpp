@@ -15,11 +15,12 @@ Description: Environment variable management
 #ifndef ATOM_UTILS_ENV_HPP
 #define ATOM_UTILS_ENV_HPP
 
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <memory>
+#include "macro.hpp"
 
 namespace atom::utils {
 /**
@@ -32,41 +33,36 @@ public:
      * @param argc 命令行参数数量。
      * @param argv 命令行参数数组。
      */
-    explicit Env(int argc, char **argv);
+    explicit Env(int argc, char** argv);
 
     /**
      * @brief 构造函数，初始化环境变量信息。
      * @param argc 命令行参数数量。
      * @param argv 命令行参数数组。
      */
-    static std::shared_ptr<Env> createShared(int argc, char **argv);
+    static auto createShared(int argc, char** argv) -> std::shared_ptr<Env>;
 
-    /**
-     * @brief 构造函数，初始化环境变量信息。
-     * @param argc 命令行参数数量。
-     * @param argv 命令行参数数组。
-     */
-    static std::unique_ptr<Env> createUnique(int argc, char **argv);
+    static auto Environ() -> std::unordered_map<std::string, std::string>;
 
     /**
      * @brief 添加一个键值对到环境变量中。
      * @param key 键名。
      * @param val 键值。
      */
-    void add(const std::string &key, const std::string &val);
+    void add(const std::string& key, const std::string& val);
 
     /**
      * @brief 判断环境变量中是否存在指定的键名。
      * @param key 键名。
      * @return 如果存在则返回 true，否则返回 false。
      */
-    bool has(const std::string &key);
+    bool has(const std::string& key);
 
     /**
      * @brief 从环境变量中删除指定的键值对。
      * @param key 键名。
      */
-    void del(const std::string &key);
+    void del(const std::string& key);
 
     /**
      * @brief 获取指定键名的键值，如果不存在则返回默认值。
@@ -74,21 +70,21 @@ public:
      * @param default_value 默认值。
      * @return 键值或默认值。
      */
-    [[nodiscard]] std::string get(const std::string &key,
-                                  const std::string &default_value);
+    ATOM_NODISCARD auto get(const std::string& key,
+                                   const std::string& default_value = "") -> std::string;
 
     /**
      * @brief 添加一个命令行参数和描述到帮助信息列表中。
      * @param key 参数名。
      * @param desc 参数描述。
      */
-    void addHelp(const std::string &key, const std::string &desc);
+    void addHelp(const std::string& key, const std::string& desc);
 
     /**
      * @brief 从帮助信息列表中删除指定的参数信息。
      * @param key 参数名。
      */
-    void removeHelp(const std::string &key);
+    void removeHelp(const std::string& key);
 
     /**
      * @brief 打印程序的帮助信息。包含所有已添加的命令行参数和描述。
@@ -101,7 +97,7 @@ public:
      * @param val 键值。
      * @return 如果设置成功则返回 true，否则返回 false。
      */
-    bool setEnv(const std::string &key, const std::string &val);
+    auto setEnv(const std::string& key, const std::string& val) -> bool;
 
     /**
      * @brief 获取指定键名的环境变量值，如果不存在则返回默认值。
@@ -109,29 +105,30 @@ public:
      * @param default_value 默认值。
      * @return 键值或默认值。
      */
-    [[nodiscard]] std::string getEnv(const std::string &key,
-                                     const std::string &default_value);
+    ATOM_NODISCARD auto getEnv(const std::string& key,
+                               const std::string& default_value = "") -> std::string;
 
     /**
      * @brief 获取指定路径的绝对路径。
      * @param path 路径。
      * @return 绝对路径。
      */
-    [[nodiscard]] std::string getAbsolutePath(const std::string &path) const;
+    ATOM_NODISCARD auto getAbsolutePath(const std::string& path) const
+        -> std::string;
 
     /**
      * @brief 获取工作目录下指定路径的绝对路径。
      * @param path 路径。
      * @return 绝对路径。
      */
-    [[nodiscard]] std::string getAbsoluteWorkPath(
-        const std::string &path) const;
+    ATOM_NODISCARD auto getAbsoluteWorkPath(const std::string& path) const
+        -> std::string;
 
     /**
      * @brief 获取配置文件的路径。默认情况下，配置文件与程序在同一目录下。
      * @return 配置文件路径。
      */
-    [[nodiscard]] std::string getConfigPath();
+    ATOM_NODISCARD auto getConfigPath() -> std::string;
 
 private:
     std::string m_exe;      ///< 可执行文件的全路径。

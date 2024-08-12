@@ -15,6 +15,7 @@ Description: Indestructible
 #ifndef ATOM_TYPE_INDESTRUCTIBLE_HPP
 #define ATOM_TYPE_INDESTRUCTIBLE_HPP
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -38,7 +39,8 @@ struct Indestructible {
      */
     template <typename... Args>
         requires std::is_constructible_v<T, Args...>
-    constexpr explicit Indestructible(std::in_place_t, Args&&... args)
+    constexpr explicit Indestructible(std::in_place_t /*unused*/,
+                                      Args&&... args)
         : object(std::forward<Args>(args)...) {}
 
     /**
@@ -99,7 +101,7 @@ struct Indestructible {
      *
      * @param other The Indestructible object to move from.
      */
-    constexpr Indestructible(Indestructible&& other)
+    constexpr Indestructible(Indestructible&& other) noexcept
         requires(!std::is_trivially_move_constructible_v<T>)
         : object(std::move(other.object)) {}
 
@@ -158,7 +160,7 @@ struct Indestructible {
      * @param other The Indestructible object to move assign from.
      * @return Reference to the assigned Indestructible object.
      */
-    constexpr Indestructible& operator=(Indestructible&& other)
+    constexpr auto operator=(Indestructible&& other) noexcept -> Indestructible&
         requires(!std::is_trivially_move_assignable_v<T>)
     {
         if (this != &other) {
@@ -194,6 +196,48 @@ struct Indestructible {
      * @return Const rvalue reference to the stored object.
      */
     constexpr const T&& get() const&& { return std::move(object); }
+
+    /**
+     * @brief Returns a pointer to the stored object.
+     *
+     * @return Pointer to the stored object.
+     */
+    constexpr T* operator->() { return &object; }
+
+    /**
+     * @brief Returns a const pointer to the stored object.
+     *
+     * @return Const pointer to the stored object.
+     */
+    constexpr const T* operator->() const { return &object; }
+
+    /**
+     * @brief Returns a reference to the stored object.
+     *
+     * @return Reference to the stored object.
+     */
+    constexpr operator T&() & { return object; }
+
+    /**
+     * @brief Returns a const reference to the stored object.
+     *
+     * @return Const reference to the stored object.
+     */
+    constexpr operator const T&() const& { return object; }
+
+    /**
+     * @brief Returns an rvalue reference to the stored object.
+     *
+     * @return Rvalue reference to the stored object.
+     */
+    constexpr operator T&&() && { return std::move(object); }
+
+    /**
+     * @brief Returns a const rvalue reference to the stored object.
+     *
+     * @return Const rvalue reference to the stored object.
+     */
+    constexpr operator const T&&() const&& { return std::move(object); }
 };
 
 #endif  // ATOM_TYPE_INDESTRUCTIBLE_HPP

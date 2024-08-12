@@ -14,63 +14,67 @@ Description: Task container class.
 
 #include "container.hpp"
 
+#include <mutex>
+
 #include "atom/log/loguru.hpp"
+#include "macro.hpp"
 
 namespace lithium {
-std::shared_ptr<TaskContainer> TaskContainer::createShared() {
+auto TaskContainer::createShared() -> std::shared_ptr<TaskContainer> {
     return std::make_shared<TaskContainer>();
 }
 
-void TaskContainer::addTask(const std::shared_ptr<SimpleTask> &task) {
+void TaskContainer::addTask(const std::shared_ptr<Task> &task) {
     if (!task) {
         LOG_F(ERROR, "TaskContainer::addTask - Task is null.");
         return;
     }
-    std::lock_guard lock(mutex);
-    tasks[task->getName()] = task;
+    std::unique_lock lock(mtx_);
+    tasks_[task->getName()] = task;
 }
 
-std::optional<std::shared_ptr<SimpleTask>> TaskContainer::getTask(
-    const std::string &name) {
-    std::lock_guard lock(mutex);
-    auto it = tasks.find(name);
-    if (it != tasks.end()) {
+auto TaskContainer::getTask(const std::string &name)
+    -> std::optional<std::shared_ptr<Task>> {
+    std::shared_lock lock(mtx_);
+    auto it = tasks_.find(name);
+    if (it != tasks_.end()) {
         return it->second;
     }
     LOG_F(ERROR, "TaskContainer::getTask - Task with name {} not found.", name);
     return std::nullopt;
 }
 
-bool TaskContainer::removeTask(const std::string &name) {
-    std::lock_guard lock(mutex);
-    return tasks.erase(name) > 0;
+auto TaskContainer::removeTask(const std::string &name) -> bool {
+    std::unique_lock lock(mtx_);
+    return tasks_.erase(name) > 0;
 }
 
-std::vector<std::shared_ptr<SimpleTask>> TaskContainer::getAllTasks() {
-    std::lock_guard lock(mutex);
-    std::vector<std::shared_ptr<SimpleTask>> result;
-    for (const auto &[_, task] : tasks) {
+auto TaskContainer::getAllTasks() -> std::vector<std::shared_ptr<Task>> {
+    std::shared_lock lock(mtx_);
+    std::vector<std::shared_ptr<Task>> result;
+    result.reserve(tasks_.size());
+    for (const auto &[_, task] : tasks_) {
         result.push_back(task);
     }
     return result;
 }
 
-size_t TaskContainer::getTaskCount() {
-    std::lock_guard lock(mutex);
-    return tasks.size();
+auto TaskContainer::getTaskCount() -> size_t {
+    std::shared_lock lock(mtx_);
+    return tasks_.size();
 }
 
 void TaskContainer::clearTasks() {
-    std::lock_guard lock(mutex);
-    tasks.clear();
+    std::unique_lock lock(mtx_);
+    tasks_.clear();
 }
 
-std::vector<std::shared_ptr<SimpleTask>> TaskContainer::findTasks(int priority,
-                                                                  bool status) {
-    std::lock_guard lock(mutex);
-    std::vector<std::shared_ptr<SimpleTask>> result;
-    for (const auto &[key, task] : tasks) {
-        if (task->getPriority() == priority && task->getStatus() == status) {
+auto TaskContainer::findTasks(ATOM_UNUSED int priority, Task::Status status)
+    -> std::vector<std::shared_ptr<Task>> {
+    std::shared_lock lock(mtx_);
+    std::vector<std::shared_ptr<Task>> result;
+    for (const auto &[key, task] : tasks_) {
+        if (task->getStatus() == status) {
             result.push_back(task);
         }
     }
@@ -78,43 +82,90 @@ std::vector<std::shared_ptr<SimpleTask>> TaskContainer::findTasks(int priority,
 }
 
 void TaskContainer::sortTasks(
-    const std::function<bool(const std::shared_ptr<SimpleTask> &,
-                             const std::shared_ptr<SimpleTask> &)> &cmp) {
-    std::lock_guard lock(mutex);
-    std::vector<std::shared_ptr<SimpleTask>> vec;
-    for (const auto &[_, task] : tasks) {
+    const std::function<bool(const std::shared_ptr<Task> &,
+                             const std::shared_ptr<Task> &)> &cmp) {
+    std::unique_lock lock(mtx_);
+    std::vector<std::shared_ptr<Task>> vec;
+    vec.reserve(tasks_.size());
+    for (const auto &[_, task] : tasks_) {
         vec.push_back(task);
     }
     std::sort(vec.begin(), vec.end(), cmp);
-    tasks.clear();
+    tasks_.clear();
     for (const auto &task : vec) {
-        tasks[task->getName()] = task;
+        tasks_[task->getName()] = task;
     }
 }
 
 void TaskContainer::batchAddTasks(
-    const std::vector<std::shared_ptr<SimpleTask>> &tasksToAdd) {
-    std::lock_guard lock(mutex);
-    for (const auto &task : tasksToAdd) {
+    const std::vector<std::shared_ptr<Task>> &tasks_ToAdd) {
+    std::unique_lock lock(mtx_);
+    for (const auto &task : tasks_ToAdd) {
         if (task) {
-            tasks[task->getName()] = task;
+            tasks_[task->getName()] = task;
         }
     }
 }
 
 void TaskContainer::batchRemoveTasks(
     const std::vector<std::string> &taskNamesToRemove) {
-    std::lock_guard lock(mutex);
+    std::unique_lock lock(mtx_);
     for (const auto &name : taskNamesToRemove) {
-        tasks.erase(name);
+        tasks_.erase(name);
     }
 }
 
 void TaskContainer::batchModifyTasks(
-    const std::function<void(std::shared_ptr<SimpleTask> &)> &modifyFunc) {
-    std::lock_guard lock(mutex);
-    for (auto &[_, task] : tasks) {
+    const std::function<void(std::shared_ptr<Task> &)> &modifyFunc) {
+    std::unique_lock lock(mtx_);
+    for (auto &[_, task] : tasks_) {
         modifyFunc(task);
+    }
+}
+
+auto TaskContainer::addOrUpdateTaskParams(const std::string &name,
+                                          const json &params) -> bool {
+    std::unique_lock lock(mtx_);
+    auto [it, inserted] = taskParams_.try_emplace(name, params);
+    if (!inserted) {
+        it->second = params;
+    }
+    return inserted;
+}
+
+bool TaskContainer::insertTaskParams(const std::string &name,
+                                     const json &params, const int &position) {
+    std::unique_lock lock(mtx_);
+    if (taskParams_.find(name) != taskParams_.end()) {
+        return false;
+    }
+    if (static_cast<unsigned long long>(position) > taskParams_.size()) {
+        return false;
+    }
+    std::vector<std::pair<std::string, json>> temp(taskParams_.begin(),
+                                                   taskParams_.end());
+    temp.insert(temp.begin() + position, {name, params});
+    taskParams_.clear();
+    for (const auto &task : temp) {
+        taskParams_[task.first] = task.second;
+    }
+    return true;
+}
+
+std::optional<json> TaskContainer::getTaskParams(
+    const std::string &name) const {
+    std::shared_lock lock(mtx_);
+    auto it = taskParams_.find(name);
+    if (it != taskParams_.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+void TaskContainer::listTaskParams() const {
+    std::shared_lock lock(mtx_);
+    for (const auto &[name, params] : taskParams_) {
+        LOG_F(INFO, "Task name: {}", name);
     }
 }
 }  // namespace lithium

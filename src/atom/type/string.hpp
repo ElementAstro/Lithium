@@ -15,7 +15,6 @@ Description: A super enhanced string class.
 #ifndef ATOM_EXPERIMENT_STRING_HPP
 #define ATOM_EXPERIMENT_STRING_HPP
 
-#include <algorithm>
 #include <cstdarg>
 #include <string>
 #include <string_view>
@@ -65,135 +64,136 @@ public:
      * @brief Copy assignment.
      * @param other - other String.
      */
-    String &operator=(const String &other) = default;
+    auto operator=(const String &other) -> String & = default;
 
     /**
      * @brief Move assignment.
      * @param other - other String.
      */
-    String &operator=(String &&other) noexcept = default;
+    auto operator=(String &&other) noexcept -> String & = default;
 
     /**
      * @brief Equality.
      * @param other - other String.
      */
-    bool operator==(const String &other) const;
+    auto operator==(const String &other) const -> bool;
 
     /**
      * @brief Inequality.
      * @param other - other String.
      */
-    bool operator!=(const String &other) const;
+    auto operator!=(const String &other) const -> bool;
 
     /**
      * @brief Check if the String is empty.
      */
-    [[nodiscard]] bool empty() const;
+    [[nodiscard]] auto empty() const -> bool;
 
     /**
      * @brief Less than.
      * @param other - other String.
      */
-    bool operator<(const String &other) const;
+    auto operator<(const String &other) const -> bool;
 
     /**
      * @brief Greater than.
      * @param other - other String.
      */
-    bool operator>(const String &other) const;
+    auto operator>(const String &other) const -> bool;
 
     /**
      * @brief Less than or equal.
      * @param other - other String.
      */
-    bool operator<=(const String &other) const;
+    auto operator<=(const String &other) const -> bool;
 
     /**
      * @brief Greater than or equal.
      * @param other - other String.
      */
-    bool operator>=(const String &other) const;
+    auto operator>=(const String &other) const -> bool;
 
     /**
      * @brief Concatenation.
      * @param other - other String.
      */
-    String &operator+=(const String &other);
+    auto operator+=(const String &other) -> String &;
 
     /**
      * @brief Concatenation.
      * @param str - C-style string.
      */
-    String &operator+=(const char *str);
+    auto operator+=(const char *str) -> String &;
 
     /**
      * @brief Concatenation.
      * @param c - char.
      */
-    String &operator+=(char c);
+    auto operator+=(char c) -> String &;
 
     /**
      * @brief Get C-style string.
      */
-    [[nodiscard]] const char *c_str() const;
+    [[nodiscard]] auto cStr() const -> const char *;
 
     /**
      * @brief Get length.
      */
-    [[nodiscard]] size_t length() const;
+    [[nodiscard]] auto length() const -> size_t;
 
     /**
      * @brief Get substring.
      * @param pos - start position.
      * @param count - length.
      */
-    [[nodiscard]] String substr(size_t pos,
-                                size_t count = std::string::npos) const;
+    [[nodiscard]] auto substr(size_t pos,
+                              size_t count = std::string::npos) const -> String;
 
     /**
      * @brief Find.
      * @param str - string to find.
      * @param pos - start position.
      */
-    [[nodiscard]] size_t find(const String &str, size_t pos = 0) const;
+    [[nodiscard]] auto find(const String &str, size_t pos = 0) const -> size_t;
 
     /**
      * @brief Replace.
      * @param oldStr - old string.
      * @param newStr - new string.
      */
-    bool replace(const String &oldStr, const String &newStr);
+    auto replace(const String &oldStr, const String &newStr) -> bool;
 
     /**
      * @brief Replace all.
      * @param oldStr - old string.
      * @param newStr - new string.
      */
-    size_t replace_all(const String &oldStr, const String &newStr);
+    auto replaceAll(const String &oldStr, const String &newStr) -> size_t;
 
     /**
      * @brief To uppercase.
      */
-    [[nodiscard]] String to_upper() const;
+    [[nodiscard]] auto toUpper() const -> String;
 
     /**
      * @brief To lowercase.
      */
-    [[nodiscard]] String to_lower() const;
+    [[nodiscard]] auto toLower() const -> String;
 
     /**
      * @brief Split.
      * @param delimiter - delimiter.
      */
-    [[nodiscard]] std::vector<String> split(const String &delimiter) const;
+    [[nodiscard]] auto split(const String &delimiter) const
+        -> std::vector<String>;
 
     /**
      * @brief Join.
      * @param strings - strings.
      * @param separator - separator.
      */
-    static String join(const std::vector<String> &strings,
-                       const String &separator);
+    static auto join(const std::vector<String> &strings,
+                     const String &separator) -> String;
 
     /**
      * @brief Insert char.
@@ -211,25 +211,25 @@ public:
     /**
      * @brief Reverse.
      */
-    [[nodiscard]] String reverse() const;
+    [[nodiscard]] auto reverse() const -> String;
 
     /**
      * @brief Equals ignore case.
      * @param other - other String.
      */
-    [[nodiscard]] bool equals_ignore_case(const String &other) const;
+    [[nodiscard]] auto equalsIgnoreCase(const String &other) const -> bool;
 
     /**
      * @brief Starts with.
      * @param prefix - prefix.
      */
-    [[nodiscard]] bool starts_with(const String &prefix) const;
+    [[nodiscard]] auto startsWith(const String &prefix) const -> bool;
 
     /**
      * @brief Ends with.
      * @param suffix - suffix.
      */
-    [[nodiscard]] bool ends_with(const String &suffix) const;
+    [[nodiscard]] auto endsWith(const String &suffix) const -> bool;
 
     /**
      * @brief Trim.
@@ -256,19 +256,19 @@ public:
         int size =
             std::snprintf(nullptr, 0, format, std::forward<Args>(args)...);
         String result;
-        result.m_data.resize(size + 1);
-        std::snprintf(result.m_data.data(), size + 1, format,
+        result.m_data_.resize(size + 1);
+        std::snprintf(result.m_data_.data(), size + 1, format,
                       std::forward<Args>(args)...);
-        result.m_data.pop_back();
+        result.m_data_.pop_back();
         return result;
     }
 
-    static constexpr size_t npos = std::string::npos;
+    static constexpr size_t NPOS = std::string::npos;
 
-    [[nodiscard]] std::string data() const;
+    [[nodiscard]] auto data() const -> std::string;
 
 private:
-    std::string m_data;
+    std::string m_data_;
 };
 
 /**
@@ -277,7 +277,7 @@ private:
  * @param rhs - right operand.
  * @return - result.
  */
-String operator+(const String &lhs, const String &rhs);
+auto operator+(const String &lhs, const String &rhs) -> String;
 
 /**
  * @brief Output stream operator.
@@ -285,20 +285,12 @@ String operator+(const String &lhs, const String &rhs);
  * @param str - string.
  * @return - output stream.
  */
-std::ostream &operator<<(std::ostream &os, const String &str);
-
-/**
- * @brief Less than operator.
- * @param lhs - left operand.
- * @param rhs - right operand.
- * @return - result.
- */
-bool operator<(const String &lhs, const String &rhs);
+auto operator<<(std::ostream &os, const String &str) -> std::ostream &;
 
 namespace std {
 template <>
 struct hash<String> {
-    size_t operator()(const String &str) const {
+    auto operator()(const String &str) const -> size_t {
         return std::hash<std::string>()(str.data());
     }
 };

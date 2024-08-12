@@ -17,6 +17,8 @@ Description: Test Script
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
+#include <iostream>
+
 int main(int argc, char* argv[]) {
     auto config = std::make_shared<ConfigComponent>("lithium.config");
     json test_value = {{"key", "value"}};

@@ -1,8 +1,20 @@
-#ifndef LITHIUM_CXXTOOLS_JSON2XML_HPP
-#define LITHIUM_CXXTOOLS_JSON2XML_HPP
+/*
+ * json2xml.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
 
-#include <string>
+#ifndef JSON2XML_HPP
+#define JSON2XML_HPP
 
-bool json_to_xml(const std::string& json_file, const std::string& xml_file);
+#include <string_view>
 
-#endif
+namespace lithium::cxxtools {
+namespace detail {
+auto convertJsonToXml(std::string_view jsonFilePath,
+                      std::string_view xmlFilePath) -> bool;
+}  // namespace detail
+auto jsonToXml(std::string_view json_file, std::string_view xml_file) -> bool;
+}  // namespace lithium::cxxtools
+
+#endif  // JSON2XML_HPP

@@ -13,9 +13,9 @@ directories and taking action upon changes.
 
 **************************************************/
 
+#include <functional>
 #include <memory>  // For std::unique_ptr
 #include <string>
-
 
 namespace lithium {
 class LicenseProtectorImpl;  // 前向声明实现类 Forward declaration of the
@@ -43,35 +43,42 @@ public:
     /**
      * @brief 构造函数。Constructor.
      *
-     * @param path 要监控的文件或目录的路径。Path to the file or directory to
-     * monitor.
+     * @param path 要监控的文件或目录的路径。Path to the file or directory to be
+     * monitored.
      */
     explicit LicenseProtector(const std::string &path);
 
     /**
-     * @brief 析构函数。Responsible for cleaning up resources. Destructor.
+     * @brief 析构函数。Destructor.
      */
     ~LicenseProtector();
 
-    // 禁止拷贝构造和赋值操作。Disable copy construction and assignment.
-    LicenseProtector(const LicenseProtector &) = delete;
-    LicenseProtector &operator=(const LicenseProtector &) = delete;
-
     /**
-     * @brief 开始监控文件或目录的变化。Start monitoring changes to the file or
+     * @brief 开始监控文件或目录的变化。Starts monitoring changes to the file or
      * directory.
      */
     void startMonitoring();
 
     /**
-     * @brief 停止监控文件或目录的变化。Stop monitoring changes to the file or
+     * @brief 停止监控文件或目录的变化。Stops monitoring changes to the file or
      * directory.
      */
     void stopMonitoring();
 
+    /**
+     * @brief 设置删除事件处理函数。Sets the handler function for delete events.
+     */
+    void setDeleteHandler(std::function<void()> handler);
+
+    /**
+     * @brief 设置修改事件处理函数。Sets the handler function for modify events.
+     */
+    void setModifyHandler(std::function<void()> handler);
+
 private:
     std::unique_ptr<LicenseProtectorImpl>
-        pImpl;  ///< 指向具体实现的指针。Pointer to the implementation.
+        pImpl_;  ///< 使用Pimpl模式的具体实现。Concrete implementation using
+                 ///< Pimpl idiom.
 };
 
 }  // namespace lithium

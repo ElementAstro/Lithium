@@ -16,13 +16,13 @@ Description: Simple random number generator
 #define ATOM_UTILS_RANDOM_HPP
 
 #include <algorithm>
-#include <concepts>
 #include <iterator>
 #include <random>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "atom/error/exception.hpp"
 
 namespace atom::utils {
 /**
@@ -34,10 +34,8 @@ namespace atom::utils {
  * @tparam Distribution A type of distribution (e.g.,
  * std::uniform_int_distribution).
  */
-template <std::uniform_random_bit_generator Engine, typename Distribution>
-class Random : public Distribution {
-    using BaseT = Distribution;  ///< Base type alias for the distribution.
-
+template <typename Engine, typename Distribution>
+class Random {
 public:
     using EngineType = Engine;  ///< Public type alias for the engine.
     using DistributionType =
@@ -50,7 +48,8 @@ public:
                                                 ///< distribution.
 
 private:
-    EngineType engine_;  ///< Instance of the engine.
+    EngineType engine_;              ///< Instance of the engine.
+    DistributionType distribution_;  ///< Instance of the distribution.
 
 public:
     /**
@@ -61,7 +60,12 @@ public:
      * @param max The maximum value of the distribution.
      */
     Random(ResultType min, ResultType max)
-        : BaseT(min, max), engine_(std::random_device{}()) {}
+        : engine_(std::random_device{}()), distribution_(min, max) {
+        if (min > max) {
+            THROW_INVALID_ARGUMENT(
+                "Minimum value must be less than or equal to maximum value.");
+        }
+    }
 
     /**
      * @brief Constructs a Random object with a seed and distribution
@@ -71,9 +75,9 @@ public:
      * @param args Arguments to initialize the distribution.
      */
     template <typename Seed, typename... Args>
-    Random(Seed&& seed, Args&&... args)
-        : BaseT(std::forward<Args>(args)...),
-          engine_(std::forward<Seed>(seed)) {}
+    explicit Random(Seed&& seed, Args&&... args)
+        : engine_(std::forward<Seed>(seed)),
+          distribution_(std::forward<Args>(args)...) {}
 
     /**
      * @brief Re-seeds the engine.
@@ -91,7 +95,7 @@ public:
      *
      * @return A randomly generated value.
      */
-    ResultType operator()() { return BaseT::operator()(engine_); }
+    auto operator()() -> ResultType { return distribution_(engine_); }
 
     /**
      * @brief Generates a random value using the underlying distribution and
@@ -100,8 +104,8 @@ public:
      * @param parm Parameters for the distribution.
      * @return A randomly generated value.
      */
-    ResultType operator()(const ParamType& parm) {
-        return BaseT::operator()(engine_, parm);
+    auto operator()(const ParamType& parm) -> ResultType {
+        return distribution_(engine_, parm);
     }
 
     /**
@@ -121,7 +125,7 @@ public:
      * @param count The number of values to generate.
      * @return A vector containing randomly generated values.
      */
-    std::vector<ResultType> vector(size_t count) {
+    auto vector(size_t count) -> std::vector<ResultType> {
         std::vector<ResultType> vec;
         vec.reserve(count);
         std::generate_n(std::back_inserter(vec), count,
@@ -134,17 +138,25 @@ public:
      *
      * @param parm The new parameters for the distribution.
      */
-    void param(const ParamType& parm) { BaseT::param(parm); }
+    void param(const ParamType& parm) { distribution_.param(parm); }
 
     /**
      * @brief Accessor for the underlying engine.
      *
      * @return A reference to the engine.
      */
-    EngineType& engine() { return engine_; }
+    auto engine() -> EngineType& { return engine_; }
+
+    /**
+     * @brief Accessor for the underlying distribution.
+     *
+     * @return A reference to the distribution.
+     */
+    auto distribution() -> DistributionType& { return distribution_; }
 };
 
-[[nodiscard]] std::string generateRandomString(int length);
+[[nodiscard]] auto generateRandomString(int length) -> std::string;
+
 }  // namespace atom::utils
 
 #endif

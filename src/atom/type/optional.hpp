@@ -15,7 +15,6 @@ Description: A simple implementation of optional. Using modern C++ features.
 #ifndef ATOM_TYPE_OPTIONAL_HPP
 #define ATOM_TYPE_OPTIONAL_HPP
 
-#include <iostream>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -34,23 +33,23 @@ private:
     /// Storage for the managed object, aligned to T's alignment requirements.
     using StorageType =
         typename std::aligned_storage<sizeof(T), alignof(T)>::type;
-    StorageType storage;
-    bool hasValue;
+    StorageType storage_;
+    bool hasValue_;
 
 public:
     /**
      * @brief Default constructor. Constructs an empty Optional.
      */
-    Optional() noexcept : hasValue(false) {}
+    Optional() noexcept : hasValue_(false) {}
 
     /**
      * @brief Constructs an Optional with a value.
      *
      * @param value The value to store in the Optional.
      */
-    Optional(const T &value) {
-        new (&storage) T(value);
-        hasValue = true;
+    explicit Optional(const T &value) {
+        new (&storage_) T(value);
+        hasValue_ = true;
     }
 
     /**
@@ -60,9 +59,10 @@ public:
      *
      * @note This constructor is noexcept if T's move constructor is noexcept.
      */
-    Optional(T &&value) noexcept(std::is_nothrow_move_constructible<T>::value) {
-        new (&storage) T(std::move(value));
-        hasValue = true;
+    explicit Optional(T &&value) noexcept(
+        std::is_nothrow_move_constructible<T>::value) {
+        new (&storage_) T(std::move(value));
+        hasValue_ = true;
     }
 
     /**
@@ -71,11 +71,11 @@ public:
      * @param other The other Optional to copy from.
      */
     Optional(const Optional &other) {
-        if (other.hasValue) {
-            new (&storage) T(other.value());
-            hasValue = true;
+        if (other.hasValue_) {
+            new (&storage_) T(other.value());
+            hasValue_ = true;
         } else {
-            hasValue = false;
+            hasValue_ = false;
         }
     }
 
@@ -88,11 +88,11 @@ public:
      */
     Optional(Optional &&other) noexcept(
         std::is_nothrow_move_constructible<T>::value) {
-        if (other.hasValue) {
-            new (&storage) T(std::move(other.value()));
-            hasValue = true;
+        if (other.hasValue_) {
+            new (&storage_) T(std::move(other.value()));
+            hasValue_ = true;
         } else {
-            hasValue = false;
+            hasValue_ = false;
         }
     }
 
@@ -110,11 +110,11 @@ public:
     Optional &operator=(const Optional &other) {
         if (this != &other) {
             reset();
-            if (other.hasValue) {
-                new (&storage) T(other.value());
-                hasValue = true;
+            if (other.hasValue_) {
+                new (&storage_) T(other.value());
+                hasValue_ = true;
             } else {
-                hasValue = false;
+                hasValue_ = false;
             }
         }
         return *this;
@@ -133,11 +133,11 @@ public:
         std::is_nothrow_move_assignable<T>::value) {
         if (this != &other) {
             reset();
-            if (other.hasValue) {
-                new (&storage) T(std::move(other.value()));
-                hasValue = true;
+            if (other.hasValue_) {
+                new (&storage_) T(std::move(other.value()));
+                hasValue_ = true;
             } else {
-                hasValue = false;
+                hasValue_ = false;
             }
         }
         return *this;
@@ -152,8 +152,8 @@ public:
     template <typename... Args>
     void emplace(Args &&...args) {
         reset();
-        new (&storage) T(std::forward<Args>(args)...);
-        hasValue = true;
+        new (&storage_) T(std::forward<Args>(args)...);
+        hasValue_ = true;
     }
 
     /**
@@ -164,10 +164,10 @@ public:
      * @throws std::runtime_error if the Optional has no value.
      */
     T *operator->() {
-        if (!hasValue) {
+        if (!hasValue_) {
             throw std::runtime_error("Optional has no value");
         }
-        return reinterpret_cast<T *>(&storage);
+        return reinterpret_cast<T *>(&storage_);
     }
 
     /**
@@ -178,10 +178,10 @@ public:
      * @throws std::runtime_error if the Optional has no value.
      */
     const T *operator->() const {
-        if (!hasValue) {
+        if (!hasValue_) {
             throw std::runtime_error("Optional has no value");
         }
-        return reinterpret_cast<const T *>(&storage);
+        return reinterpret_cast<const T *>(&storage_);
     }
 
     /**
@@ -192,10 +192,10 @@ public:
      * @throws std::runtime_error if the Optional has no value.
      */
     T &operator*() {
-        if (!hasValue) {
+        if (!hasValue_) {
             throw std::runtime_error("Optional has no value");
         }
-        return *reinterpret_cast<T *>(&storage);
+        return *reinterpret_cast<T *>(&storage_);
     }
 
     /**
@@ -206,19 +206,19 @@ public:
      * @throws std::runtime_error if the Optional has no value.
      */
     const T &operator*() const {
-        if (!hasValue) {
+        if (!hasValue_) {
             throw std::runtime_error("Optional has no value");
         }
-        return *reinterpret_cast<const T *>(&storage);
+        return *reinterpret_cast<const T *>(&storage_);
     }
 
     /**
      * @brief Destroys the contained value if it exists.
      */
     void reset() noexcept {
-        if (hasValue) {
-            reinterpret_cast<T *>(&storage)->~T();
-            hasValue = false;
+        if (hasValue_) {
+            reinterpret_cast<T *>(&storage_)->~T();
+            hasValue_ = false;
         }
     }
 
@@ -230,10 +230,10 @@ public:
      * @throws std::runtime_error if the Optional has no value.
      */
     T &value() {
-        if (!hasValue) {
+        if (!hasValue_) {
             throw std::runtime_error("Optional has no value");
         }
-        return *reinterpret_cast<T *>(&storage);
+        return *reinterpret_cast<T *>(&storage_);
     }
 
     /**
@@ -244,10 +244,10 @@ public:
      * @throws std::runtime_error if the Optional has no value.
      */
     const T &value() const {
-        if (!hasValue) {
+        if (!hasValue_) {
             throw std::runtime_error("Optional has no value");
         }
-        return *reinterpret_cast<const T *>(&storage);
+        return *reinterpret_cast<const T *>(&storage_);
     }
 
     /**
@@ -255,7 +255,7 @@ public:
      *
      * @return true if the Optional contains a value, false otherwise.
      */
-    explicit operator bool() const noexcept { return hasValue; }
+    explicit operator bool() const noexcept { return hasValue_; }
 
     /**
      * @brief Equality operator.
@@ -264,10 +264,10 @@ public:
      * @return true if both Optionals are equal, false otherwise.
      */
     bool operator==(const Optional &other) const {
-        if (hasValue != other.hasValue) {
+        if (hasValue_ != other.hasValue_) {
             return false;
         }
-        if (hasValue) {
+        if (hasValue_) {
             return value() == other.value();
         }
         return true;
@@ -288,8 +288,8 @@ public:
      * @param defaultValue The value to return if the Optional has no value.
      * @return The contained value or the default value.
      */
-    T value_or(const T &defaultValue) const {
-        return hasValue ? value() : defaultValue;
+    auto valueOr(const T &defaultValue) const -> T {
+        return hasValue_ ? value() : defaultValue;
     }
 
 #if __cplusplus >= 201703L
@@ -302,9 +302,9 @@ public:
      * @return The contained value or the default value.
      */
     template <typename U>
-    T value_or(U &&defaultValue) const {
-        return hasValue ? value()
-                        : static_cast<T>(std::forward<U>(defaultValue));
+    auto valueOr(U &&defaultValue) const -> T {
+        return hasValue_ ? value()
+                         : static_cast<T>(std::forward<U>(defaultValue));
     }
 
     /**
@@ -319,11 +319,10 @@ public:
     template <typename F>
     auto map(F &&f) const -> Optional<decltype(f(value()))> {
         using ReturnType = decltype(f(value()));
-        if (hasValue) {
+        if (hasValue_) {
             return Optional<ReturnType>(f(value()));
-        } else {
-            return Optional<ReturnType>();
         }
+        return Optional<ReturnType>();
     }
 #endif
 
@@ -337,13 +336,12 @@ public:
      * @return The result of the function or an empty Optional.
      */
     template <typename F>
-    auto and_then(F &&f) const -> decltype(f(value())) {
+    auto andThen(F &&f) const -> decltype(f(value())) {
         using ReturnType = decltype(f(value()));
-        if (hasValue) {
+        if (hasValue_) {
             return f(value());
-        } else {
-            return ReturnType();
         }
+        return ReturnType();
     }
 #endif
 };

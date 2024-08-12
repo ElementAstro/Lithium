@@ -14,15 +14,14 @@ Description: Implementation of murmur3 hash and quick hash
 
 #include "mhash.hpp"
 
-#include <algorithm>
-#include <bit>
 #include <charconv>
 #include <cstdlib>
 #include <cstring>
-#include <iomanip>
-#include <span>
-#include <sstream>
-#include <stdexcept>
+#include <limits>
+#include <random>
+
+#include "atom/error/exception.hpp"
+#include "atom/utils/random.hpp"
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -30,125 +29,157 @@ Description: Implementation of murmur3 hash and quick hash
 #include <openssl/sha.h>
 
 namespace atom::algorithm {
-uint32_t fmix32(uint32_t h) noexcept {
-    h ^= h >> 16;
-    h *= 0x85ebca6b;
-    h ^= h >> 13;
-    h *= 0xc2b2ae35;
-    h ^= h >> 16;
-    return h;
-}
-
-uint32_t ROTL(uint32_t x, int8_t r) noexcept {
-    return (x << r) | (x >> (32 - r));
-}
-
-uint32_t murmur3Hash(std::string_view data, uint32_t seed) noexcept {
-    uint32_t hash = seed;
-    const uint32_t seed1 = 0xcc9e2d51;
-    const uint32_t seed2 = 0x1b873593;
-
-    // Process 4-byte chunks
-    const uint32_t *blocks = reinterpret_cast<const uint32_t *>(data.data());
-    size_t nblocks = data.size() / 4;
-    for (size_t i = 0; i < nblocks; i++) {
-        uint32_t k = blocks[i];
-        k *= seed1;
-        k = ROTL(k, 15);
-        k *= seed2;
-
-        hash ^= k;
-        hash = ROTL(hash, 13);
-        hash = hash * 5 + 0xe6546b64;
-    }
-
-    // Handle the tail
-    const uint8_t *tail =
-        reinterpret_cast<const uint8_t *>(data.data() + nblocks * 4);
-    uint32_t tail_val = 0;
-    switch (data.size() & 3) {
-        case 3:
-            tail_val |= tail[2] << 16;
-            [[fallthrough]];
-        case 2:
-            tail_val |= tail[1] << 8;
-            [[fallthrough]];
-        case 1:
-            tail_val |= tail[0];
-            tail_val *= seed1;
-            tail_val = ROTL(tail_val, 15);
-            tail_val *= seed2;
-            hash ^= tail_val;
-    }
-
-    return fmix32(hash ^ static_cast<uint32_t>(data.size()));
-}
-
-uint64_t murmur3Hash64(std::string_view str, uint32_t seed, uint32_t seed2) {
-    return (static_cast<uint64_t>(murmur3Hash(str, seed)) << 32) |
-           murmur3Hash(str, seed2);
-}
-
-void hexstringFromData(const void *data, size_t len, char *output) {
-    const unsigned char *buf = static_cast<const unsigned char *>(data);
-    std::span<const unsigned char> bytes(buf, len);
-    std::ostringstream stream;
-
-    // Use iomanip to format output
-    stream << std::hex << std::setfill('0');
-    for (unsigned char byte : bytes) {
-        stream << std::setw(2) << static_cast<int>(byte);
-    }
-
-    std::string hexstr = stream.str();
-    std::copy(hexstr.begin(), hexstr.end(), output);
-    output[hexstr.size()] = '\0';  // Null-terminate the output string
-}
-
-std::string hexstringFromData(const std::string &data) {
-    if (data.empty()) {
-        return {};
-    }
-
-    std::string result;
-    result.reserve(data.size() * 2);
-
-    for (unsigned char c : data) {
-        char buf[3];  // buffer for two hex chars and null terminator
-        std::to_chars_result conv_result =
-            std::to_chars(buf, buf + sizeof(buf), c, 16);
-
-        if (conv_result.ec == std::errc{}) {
-            if (buf[1] == '\0') {
-                result += '0';  // pad single digit hex numbers
+namespace {
+#if USE_OPENCL
+const char* minhashKernelSource = R"CLC(
+__kernel void minhash_kernel(__global const size_t* hashes, __global size_t* signature, __global const size_t* a_values, __global const size_t* b_values, const size_t p, const size_t num_hashes, const size_t num_elements) {
+    int gid = get_global_id(0);
+    if (gid < num_hashes) {
+        size_t min_hash = SIZE_MAX;
+        size_t a = a_values[gid];
+        size_t b = b_values[gid];
+        for (size_t i = 0; i < num_elements; ++i) {
+            size_t h = (a * hashes[i] + b) % p;
+            if (h < min_hash) {
+                min_hash = h;
             }
-            result.append(buf, conv_result.ptr);
+        }
+        signature[gid] = min_hash;
+    }
+}
+)CLC";
+#endif
+}  // anonymous namespace
+
+MinHash::MinHash(size_t num_hashes)
+#if USE_OPENCL
+    : opencl_available_(false)
+#endif
+{
+    hash_functions_.reserve(num_hashes);
+    for (size_t i = 0; i < num_hashes; ++i) {
+        hash_functions_.emplace_back(generateHashFunction());
+    }
+#if USE_OPENCL
+    initializeOpenCL();
+#endif
+}
+
+MinHash::~MinHash() {
+#if USE_OPENCL
+    cleanupOpenCL();
+#endif
+}
+
+#if USE_OPENCL
+void MinHash::initializeOpenCL() {
+    cl_int err;
+    cl_platform_id platform;
+    cl_device_id device;
+
+    err = clGetPlatformIDs(1, &platform, nullptr);
+    if (err != CL_SUCCESS) {
+        return;
+    }
+
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
+    if (err != CL_SUCCESS) {
+        return;
+    }
+
+    context_ = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &err);
+    if (err != CL_SUCCESS) {
+        return;
+    }
+
+    queue_ = clCreateCommandQueue(context_, device, 0, &err);
+    if (err != CL_SUCCESS) {
+        return;
+    }
+
+    program_ = clCreateProgramWithSource(context_, 1, &minhashKernelSource,
+                                         nullptr, &err);
+    if (err != CL_SUCCESS) {
+        return;
+    }
+
+    err = clBuildProgram(program_, 1, &device, nullptr, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+        return;
+    }
+
+    minhash_kernel_ = clCreateKernel(program_, "minhash_kernel", &err);
+    if (err == CL_SUCCESS) {
+        opencl_available_ = true;
+    }
+}
+
+void MinHash::cleanupOpenCL() {
+    if (opencl_available_) {
+        clReleaseKernel(minhash_kernel_);
+        clReleaseProgram(program_);
+        clReleaseCommandQueue(queue_);
+        clReleaseContext(context_);
+    }
+}
+#endif
+
+auto MinHash::generateHashFunction() -> HashFunction {
+    utils::Random<std::mt19937, std::uniform_int_distribution<>> rand(
+        0, std::numeric_limits<int>::max());
+
+    size_t a = rand();
+    size_t b = rand();
+    size_t p = std::numeric_limits<size_t>::max();
+
+    return [a, b, p](size_t x) -> size_t { return (a * x + b) % p; };
+}
+
+auto MinHash::jaccardIndex(const std::vector<size_t>& sig1,
+                           const std::vector<size_t>& sig2) -> double {
+    size_t equalCount = 0;
+
+    for (size_t i = 0; i < sig1.size(); ++i) {
+        if (sig1[i] == sig2[i]) {
+            ++equalCount;
         }
     }
 
-    return result;
+    return static_cast<double>(equalCount) / sig1.size();
 }
 
-std::string dataFromHexstring(const std::string &hexstring) {
-    if (hexstring.size() % 2 != 0) {
-        throw std::invalid_argument("Hex string length must be even");
+auto hexstringFromData(const std::string& data) -> std::string {
+    const char* hexChars = "0123456789ABCDEF";
+    std::string output;
+    output.reserve(data.size() * 2);  // Reserve space for the hex string
+
+    for (unsigned char byte : data) {
+        output.push_back(hexChars[(byte >> 4) & 0x0F]);
+        output.push_back(hexChars[byte & 0x0F]);
+    }
+
+    return output;
+}
+
+auto dataFromHexstring(const std::string& data) -> std::string {
+    if (data.size() % 2 != 0) {
+        THROW_INVALID_ARGUMENT("Hex string length must be even");
     }
 
     std::string result;
-    result.resize(hexstring.size() / 2);
+    result.resize(data.size() / 2);
 
-    size_t output_index = 0;
-    for (size_t i = 0; i < hexstring.size(); i += 2) {
+    size_t outputIndex = 0;
+    for (size_t i = 0; i < data.size(); i += 2) {
         int byte = 0;
-        auto [ptr, ec] = std::from_chars(hexstring.data() + i,
-                                         hexstring.data() + i + 2, byte, 16);
+        auto [ptr, ec] =
+            std::from_chars(data.data() + i, data.data() + i + 2, byte, 16);
 
-        if (ec == std::errc::invalid_argument ||
-            ptr != hexstring.data() + i + 2) {
-            throw std::invalid_argument("Invalid hex character");
+        if (ec == std::errc::invalid_argument || ptr != data.data() + i + 2) {
+            THROW_INVALID_ARGUMENT("Invalid hex character");
         }
 
-        result[output_index++] = static_cast<char>(byte);
+        result[outputIndex++] = static_cast<char>(byte);
     }
 
     return result;

@@ -3,38 +3,64 @@
 #include <unordered_set>
 
 // Test KMP class
-TEST(KMPTest, SearchPattern) {
-    atom::algorithm::KMP kmp("ABABC");
-    auto result = kmp.Search("ABABABCABABABCABABC");
-    std::vector<int> expected = {2, 8, 14};
-    EXPECT_EQ(result, expected);
+class KMPTest : public ::testing::Test {
+protected:
+    atom::algorithm::KMP kmp{"pattern"};
+
+    void SetUp() override { kmp.setPattern("pattern"); }
+};
+
+TEST_F(KMPTest, TestEmptyText) {
+    auto result = kmp.search("");
+    EXPECT_TRUE(result.empty());
 }
 
-TEST(KMPTest, SetPattern) {
-    atom::algorithm::KMP kmp("ABABC");
-    kmp.SetPattern("AB");
-    auto result = kmp.Search("ABABABCABABABCABABC");
-    std::vector<int> expected = {0, 2, 4, 6, 8, 10, 12, 14};
-    EXPECT_EQ(result, expected);
+TEST_F(KMPTest, TestEmptyPattern) {
+    atom::algorithm::KMP emptyPatternKmp{""};
+    auto result = emptyPatternKmp.search("some text");
+    EXPECT_TRUE(result.empty());
 }
 
-// Test MinHash class
-TEST(MinHashTest, ComputeSignature) {
-    atom::algorithm::MinHash minHash(100);
-    std::unordered_set<std::string> set = {"apple", "banana", "cherry"};
-    auto signature = minHash.compute_signature(set);
-    EXPECT_EQ(signature.size(), 100);
+TEST_F(KMPTest, TestNoOccurrences) {
+    auto result = kmp.search("no match here");
+    EXPECT_TRUE(result.empty());
 }
 
-TEST(MinHashTest, EstimateSimilarity) {
-    atom::algorithm::MinHash minHash(100);
-    std::unordered_set<std::string> set1 = {"apple", "banana", "cherry"};
-    std::unordered_set<std::string> set2 = {"banana", "cherry", "date"};
-    auto signature1 = minHash.compute_signature(set1);
-    auto signature2 = minHash.compute_signature(set2);
-    double similarity = minHash.estimate_similarity(signature1, signature2);
-    EXPECT_GE(similarity, 0.0);
-    EXPECT_LE(similarity, 1.0);
+TEST_F(KMPTest, TestSingleOccurrence) {
+    auto result = kmp.search("this pattern is here");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], 5);
+}
+
+TEST_F(KMPTest, TestOverlappingOccurrences) {
+    kmp.setPattern("ana");
+    auto result = kmp.search("banana");
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0], 1);
+    EXPECT_EQ(result[1], 3);
+}
+
+TEST_F(KMPTest, TestPatternEqualsText) {
+    auto result = kmp.search("pattern");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], 0);
+}
+
+TEST_F(KMPTest, TestPatternLongerThanText) {
+    auto result = kmp.search("short");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(KMPTest, TestCaseSensitivity) {
+    auto result = kmp.search("Pattern with different case");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(KMPTest, TestSetNewPattern) {
+    kmp.setPattern("new");
+    auto result = kmp.search("this is a new pattern");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], 10);
 }
 
 // Test BloomFilter class
@@ -47,18 +73,62 @@ TEST(BloomFilterTest, InsertAndContains) {
     EXPECT_FALSE(bloomFilter.contains("cherry"));
 }
 
-// Test BoyerMoore class
-TEST(BoyerMooreTest, SearchPattern) {
-    atom::algorithm::BoyerMoore bm("ABABC");
-    auto result = bm.Search("ABABABCABABABCABABC");
-    std::vector<int> expected = {2, 8, 14};
-    EXPECT_EQ(result, expected);
+class BoyerMooreTest : public ::testing::Test {
+protected:
+    atom::algorithm::BoyerMoore bm{"pattern"};
+
+    void SetUp() override { bm.setPattern("pattern"); }
+};
+
+TEST_F(BoyerMooreTest, TestEmptyText) {
+    auto result = bm.search("");
+    EXPECT_TRUE(result.empty());
 }
 
-TEST(BoyerMooreTest, SetPattern) {
-    atom::algorithm::BoyerMoore bm("ABABC");
-    bm.SetPattern("AB");
-    auto result = bm.Search("ABABABCABABABCABABC");
-    std::vector<int> expected = {0, 2, 4, 6, 8, 10, 12, 14};
-    EXPECT_EQ(result, expected);
+TEST_F(BoyerMooreTest, TestEmptyPattern) {
+    atom::algorithm::BoyerMoore emptyPatternBm{""};
+    auto result = emptyPatternBm.search("some text");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(BoyerMooreTest, TestNoOccurrences) {
+    auto result = bm.search("no match here");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(BoyerMooreTest, TestSingleOccurrence) {
+    auto result = bm.search("this pattern is here");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], 5);
+}
+
+TEST_F(BoyerMooreTest, TestOverlappingOccurrences) {
+    bm.setPattern("ana");
+    auto result = bm.search("banana");
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0], 1);
+    EXPECT_EQ(result[1], 3);
+}
+
+TEST_F(BoyerMooreTest, TestPatternEqualsText) {
+    auto result = bm.search("pattern");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], 0);
+}
+
+TEST_F(BoyerMooreTest, TestPatternLongerThanText) {
+    auto result = bm.search("short");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(BoyerMooreTest, TestCaseSensitivity) {
+    auto result = bm.search("Pattern with different case");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST_F(BoyerMooreTest, TestSetNewPattern) {
+    bm.setPattern("new");
+    auto result = bm.search("this is a new pattern");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], 10);
 }

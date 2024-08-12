@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Can-Chat</title>
+
+    <style>
+
+        .peer_style_new {
+            background-color: #00AA00 !important;
+            height: 0 !important;
+            margin: 0 3px !important;
+        }
+
+        .peer_style_0 {background-color: #FFEBEE;}
+        .peer_style_1 {background-color: #FCE4EC;}
+        .peer_style_2 {background-color: #F3E5F5;}
+        .peer_style_3 {background-color: #EDE7F6;}
+        .peer_style_4 {background-color: #E8EAF6;}
+        .peer_style_5 {background-color: #E3F2FD;}
+        .peer_style_6 {background-color: #E1F5FE;}
+        .peer_style_7 {background-color: #E0F2F1;}
+        .peer_style_8 {background-color: #E8F5E9;}
+        .peer_style_9 {background-color: #F1F8E9;}
+        .peer_style_10 {background-color: #F9FBE7;}
+        .peer_style_11 {background-color: #FFFDE7;}
+        .peer_style_12 {background-color: #FFF8E1;}
+        .peer_style_13 {background-color: #FFF3E0;}
+        .peer_style_14 {background-color: #FBE9E7;}
+        .peer_style_15 {background-color: #EFEBE9;}
+        .peer_style_16 {background-color: #FAFAFA;}
+        .peer_style_17 {background-color: #ECEFF1;}
+
+    </style>
+
+    <style>
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            margin: 0px 0px 0px 0px;
+            height: 100%;
+        }
+
+        #chat_container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #424242;
+        }
+
+        #chat_status {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 254px;
+            height: 35px;
+            overflow: hidden;
+            padding: 0;
+            box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.2);
+        }
+
+        #chat_history {
+            position: absolute;
+            bottom: 158px;
+            top: 35px;
+            left:0;
+            right: 254px;
+            overflow: auto;
+            padding: 0 0 50px;
+        }
+
+        #chat_input_container {
+            position: absolute;
+            bottom:20px;
+            left:20px;
+            right: 274px;
+            height: 140px;
+            border-radius: 1px;
+        }
+
+        #chat_whos_typing {
+            position: absolute;
+            bottom: 160px;
+            left: 22px;
+            right: 276px;
+            overflow: hidden;
+        }
+
+        #chat_participants {
+            position: absolute;
+            bottom: 0px;
+            top: 0;
+            right: 0;
+            width: 250px;
+            overflow: auto;
+            padding: 2px;
+            background-color: #212121;
+        }
+
+        form {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            right: 100px;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        #ta-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            padding: 2px;
+            border-radius: 1px;
+        }
+
+        #ta-div {
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            bottom: 2px;
+            right: 2px;
+            padding: 2px 5px 2px 5px;
+            border-radius: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        form textarea {
+            margin: 0;
+            padding: 0;
+            border: none;
+            overflow: auto;
+            outline: none;
+            -webkit-box-shadow: none;
+            -moz-box-shadow: none;
+            box-shadow: none;
+            resize: none;
+            height: 100%;
+            width: 100%;
+            font-size: 14px;
+            border-radius: 1px;
+            font-family: monospace;
+            background-color: rgba(0, 0, 0, 0);
+            color: white;
+        }
+
+        .message-container {
+            text-align: left;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message-div {
+            padding: 0;
+            margin: 0;
+        }
+
+        .message-bulb {
+            padding: 3px 20px 3px 21px;
+        }
+
+        .message-div-system {
+            padding: 3px 20px 3px 21px;
+            margin: 0;
+        }
+
+        .message-author {
+            margin: 0 0 5px 21px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .message-text {
+            margin: 0;
+            text-align: left;
+            color: white;
+            white-space: pre-wrap;       /* Since CSS 2.1 */
+            white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+            white-space: -pre-wrap;      /* Opera 4-6 */
+            white-space: -o-pre-wrap;    /* Opera 7 */
+            word-wrap: break-word;       /* Internet Explorer 5.5+ */
+        }
+
+        .message-div-files {
+            padding: 0 20px;
+            margin: 10px 0 0;
+        }
+
+        .message-div-file {
+            display: inline-block;
+            padding: 0 0 7px;
+            margin: 0 10px 10px 0;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .message-div-files a {
+            display: block;
+            text-align: left;
+            margin: 0 0 7px 0;
+            padding: 5px 10px 5px 10px;
+            text-decoration: none;
+            text-align: center;
+            background-color: #448AFF;
+            color: white;
+            font-family: Arial, Helvetica, sans-serif;
+            border-radius: 1px;
+        }
+
+        .message-div-files a:hover {
+            background-color: #2979FF;
+        }
+
+        .file-info-size {
+            margin: 0 10px;
+            font-family: monospace;
+            color: white;
+        }
+
+        .participant {
+            display: block;
+            overflow: hidden;
+            margin: 3px 20px;
+            border-radius: 1px;
+            padding: 0 5px 0 20px;
+            font-size: 14px;
+            font-family: monospace;
+            height: 30px;
+            transition-timing-function: ease-out;
+            transition: 0.5s;
+        }
+
+        .participant span {
+            line-height: 30px;
+            vertical-align: middle;
+        }
+
+        .participant_deleted {
+            background-color: #FF0000 !important;
+            height: 0 !important;
+            margin: 0 3px !important;
+            opacity: 0.5;
+        }
+
+        .participant_n {
+            margin: 3px 0 5px 0;
+            padding: 5px 20px 5px 20px;
+            font-size: 14px;
+            font-family: monospace;
+            color: #666666;
+        }
+
+        #chat_container hr {
+            border: 1px solid #F5F5F5;
+            width: 30px;
+            color: red;
+        }
+
+        #emoji {
+            position: absolute;
+            overflow: hidden;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            height: 34px;
+            padding: 2px 5px 2px 5px;
+            border-radius: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #emoji p {
+            display: table-cell;
+            font-size: 24px;
+            border-radius: 1px;
+            padding: 0 3px 0 3px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #emoji p:hover {
+            color: rgba(255, 255, 255, 1);
+        }
+
+        #emoji p:active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        #file_share_div {
+            position: absolute;
+            overflow: hidden;
+            right: 0px;
+            top: 40px;
+            width: 100px;
+            height: 100px;
+        }
+
+        #file_share_button_overlay {
+            position: absolute;
+            border: none;
+            outline: none;
+            padding: 15px 0;
+            display: inline-block;
+            cursor: pointer;
+            right: 0px;
+            height: 96px;
+            width: 98px;
+            margin: 2px;
+            font-size: 14px;
+            border-radius: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #file_share_button_overlay:hover {
+            color: rgba(255, 255, 255, 1);
+        }
+
+        #file_share_button_overlay:active {
+            color: rgba(255, 255, 255, 1);
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        #file_share_button {
+            display: none;
+        }
+
+        #send_button {
+            display: none;
+        }
+
+        .typing_peer {
+            display: inline-block;
+            font-family: monospace;
+            font-size: 12px;
+            color: white;
+            padding: 2px 5px;
+            margin: 0 3px 3px 0;
+            background-color: rgba(255, 255, 255, 0.05);
+            transition: 0.25s;
+        }
+
+        .typing_peer_removed {
+            font-size: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        #status_connection {
+            position: absolute;
+            left: 20px;
+            top: 12px;
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .status_online {
+            color: #00FF00;
+            text-shadow: 0 0 2px #00FF00;
+            opacity: 0.5;
+        }
+
+        .status_offline {
+            color: #FF0000;
+            text-shadow: 0 0 2px #FF0000;
+            opacity: 1;
+        }
+
+        @media (max-device-width : 560px) {
+
+            #chat_status {
+                right: 0;
+                height: 70px;
+                box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.2);
+            }
+
+            #chat_history {
+                bottom: 258px;
+                top: 74px;
+                right: 254px;
+            }
+
+            #chat_input_container {
+                position: absolute;
+                bottom:20px;
+                left:20px;
+                right: 20px;
+                height: 280px;
+                border-radius: 1px;
+            }
+
+            #chat_whos_typing {
+                bottom: 258px;
+            }
+
+            #chat_participants {
+                position: absolute;
+                bottom: 278px;
+                top: 90px;
+                right: 0;
+                width: 250px;
+                overflow: auto;
+                padding: 2px;
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+
+            #emoji {
+                display: none;
+            }
+
+            form textarea {
+                font-size: 24px;
+            }
+
+            .message-container {
+                font-size: 28px;
+            }
+
+            .message-text {
+                white-space: pre;
+            }
+
+            .participant_n {
+                font-size: 18px;
+                padding: 5px 10px;
+                color: #888888;
+            }
+
+            .participant {
+                padding: 0 5px 0 10px;
+                font-size: 18px;
+                margin: 3px 10px;
+            }
+
+            #emoji p {
+                font-size: 24px;
+            }
+
+            form {
+                right: 150px;
+            }
+
+            #file_share_div {
+                top: 192px;
+                width: 150px;
+                height: 86px;
+            }
+
+            #file_share_button_overlay {
+                height: 86px;
+                width: 148px;
+                font-size: 24px;
+            }
+
+            #send_button {
+                display: block;
+                position: absolute;
+                border: none;
+                outline: none;
+                padding: 15px 0;
+                cursor: pointer;
+                right: 0px;
+                width: 148px;
+                height: 150px;
+                top: 40px;
+                margin: 2px;
+                font-size: 24px;
+                border-radius: 1px;
+                background-color: rgba(255, 255, 255, 0.1);
+                color: rgba(255, 255, 255, 0.7);
+            }
+
+            #send_button:hover {
+                color: rgba(255, 255, 255, 1);
+            }
+
+            #send_button:active {
+                color: rgba(255, 255, 255, 1);
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+
+            .typing_peer {
+                font-size: 18px;
+            }
+
+            #status_connection {
+                left: 20px;
+                top: 24px;
+                font-size: 24px;
+            }
+
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div id="chat_container">
+
+        <div id="chat_status">
+            <p id="status_connection" class="status_online">online</p>
+        </div>
+
+        <div id="chat_history"></div>
+
+        <div id="chat_whos_typing"></div>
+
+        <div id="chat_participants"></div>
+
+        <div id="chat_input_container">
+            <div id="emoji">
+                <p>&#128513;</p>
+                <p>&#128521;</p>
+                <p>&#128528;</p>
+                <p>&#128532;</p>
+                <p>&#128534;</p>
+                <p>&#128536;</p>
+                <p>&#128139;</p>
+                <p>&#128175;</p>
+                <p>&#128077;</p>
+                <p>&#128078;</p>
+                <p>&#9757;</p>
+                <p>&#8986;</p>
+                <p>&#9749;</p>
+                <p>&#128064;</p>
+                <p>&#128066;</p>
+                <p>&#128068;</p>
+                <p>&#128181;</p>
+                <p>&#128179;</p>
+                <p>&#128176;</p>
+            </div>
+            <div id="file_share_div" >
+                <input id="file_share_button_overlay" type="submit" value="Share Files" onclick="document.getElementById('file_share_button').click();">
+                <input id="file_share_button" type="file" multiple onchange="handleFiles(this.files)" value="Share Files">
+            </div>
+            <input id="send_button" type="submit" value="Send" onclick="document.forms.publish.onsubmit();">
+            <form name="publish" autocomplete="off">
+                <div id="ta-container">
+                    <div id="ta-div">
+                        <textarea class="input-text"
+                                  placeholder="Type a message"
+                                  name="message"
+                                  id="chat_input"
+                                  maxlength="4096"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+</body>
+
+    <script src="/room/%%%ROOM_ID%%%/chat.js"></script>
+
+</html>

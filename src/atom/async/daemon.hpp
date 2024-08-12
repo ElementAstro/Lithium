@@ -19,14 +19,11 @@ Description: Daemon process implementation
 #include <cstring>
 #include <ctime>
 #include <functional>
-#include <mutex>
 #include <string>
-#include <thread>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <signal.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -39,14 +36,14 @@ public:
     /**
      * @brief Default constructor.
      */
-    DaemonGuard() {}
+    DaemonGuard() = default;
 
     /**
      * @brief Converts process information to a string.
      *
      * @return The process information as a string.
      */
-    std::string ToString() const;
+    [[nodiscard]] auto toString() const -> std::string;
 
     /**
      * @brief Starts a child process to execute the actual task.
@@ -57,8 +54,9 @@ public:
      * process.
      * @return The return value of the main callback function.
      */
-    int RealStart(int argc, char **argv,
-                  std::function<int(int argc, char **argv)> mainCb);
+    auto realStart(int argc, char **argv,
+                   const std::function<int(int argc, char **argv)> &mainCb)
+        -> int;
 
     /**
      * @brief Starts a child process to execute the actual task.
@@ -69,8 +67,9 @@ public:
      * process.
      * @return The return value of the main callback function.
      */
-    int RealDaemon(int argc, char **argv,
-                   std::function<int(int argc, char **argv)> mainCb);
+    auto realDaemon(int argc, char **argv,
+                    const std::function<int(int argc, char **argv)> &mainCb)
+        -> int;
 
     /**
      * @brief Starts the process. If a daemon process needs to be created, it
@@ -82,9 +81,9 @@ public:
      * @param isDaemon Determines if a daemon process should be created.
      * @return The return value of the main callback function.
      */
-    int StartDaemon(int argc, char **argv,
-                    std::function<int(int argc, char **argv)> mainCb,
-                    bool isDaemon);
+    auto startDaemon(int argc, char **argv,
+                     const std::function<int(int argc, char **argv)> &mainCb,
+                     bool isDaemon) -> int;
 
 private:
 #ifdef _WIN32
@@ -104,19 +103,19 @@ private:
  *
  * @param signum The signal number.
  */
-void SignalHandler(int signum);
+void signalHandler(int signum);
 
 /**
  * @brief Writes the process ID to a file.
  */
-void WritePidFile();
+void writePidFile();
 
 /**
  * @brief Checks if the process ID file exists.
  *
  * @return True if the process ID file exists, false otherwise.
  */
-bool CheckPidFile();
+auto checkPidFile() -> bool;
 
 }  // namespace atom::async
 

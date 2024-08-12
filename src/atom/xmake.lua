@@ -1,94 +1,66 @@
--- xmake.lua for Atom
--- This project is licensed under the terms of the GPL3 license.
---
--- Project Name: Atom
--- Description: Atom Library for all of the Element Astro Project
--- Author: Max Qian
--- License: GPL3
-
-add_rules("mode.debug", "mode.release")
-
 set_project("atom")
 set_version("1.0.0")
-set_license("GPL3")
+set_xmakever("2.5.1")
 
-option("atom_build_python", {description = "Build Atom with Python support", default = false})
+-- Python Support
+option("build_python")
+    set_default(false)
+    set_showmenu(true)
+option_end()
 
-if has_config("atom_build_python") then
-    add_requires("python 3.x", {kind = "binary"})
-    add_requires("pybind11")
-end
+-- Subdirectories
+includes("algorithm", "async", "components", "connection", "error", "function", "io", "log", "search", "sysinfo", "system", "type", "utils", "web")
 
-add_subdirs("algorithm", "async", "components", "connection", "driver", "event", "experiment", "io", "log", "server", "search", "system", "task", "type", "utils", "web")
-
-if not has_config("HAS_STD_FORMAT") then
-    add_requires("fmt")
-end
-
--- Sources
-local sources = {
-    "error/error_stack.cpp",
-    "log/logger.cpp",
-    "log/global_logger.cpp",
-    "log/syslog.cpp"
-}
-
--- Headers
-local headers = {
-    "error/error_code.hpp",
-    "error/error_stack.hpp",
-    "log/logger.hpp",
-    "log/global_logger.hpp",
-    "log/syslog.hpp"
-}
-
--- Private Headers
-local private_headers = {
-}
-
--- Dependencies
-local dependencies = {
+-- Define libraries
+local atom_packages = {
     "loguru",
-    "cpp_httplib",
-    "libzippp",
+    "cpp-httplib",
+    "libzippp"
+}
+
+local atom_libs = {
+    "atom-function",
+    "atom-algorithm",
     "atom-async",
     "atom-task",
     "atom-io",
-    "atom-driver",
-    "atom-event",
-    "atom-experiment",
     "atom-component",
     "atom-type",
     "atom-utils",
     "atom-search",
     "atom-web",
-    "atom-system",
-    "atom-server"
+    "atom-system"
 }
 
--- Build Object Library
-target("atom-object")
+-- Object Library
+target("atom_object")
     set_kind("object")
-    add_files(headers, {public = true})
-    add_files(sources, private_headers, {public = false})
-    add_defines("HAVE_LIBNOVA")
-    add_packages(dependencies)
-
+    add_files("log/logger.cpp", "log/syslog.cpp")
+    add_headerfiles("log/logger.hpp", "log/syslog.hpp")
+    add_deps(table.unpack(atom_libs))
+    add_packages(table.unpack(atom_packages))
     if is_plat("windows") then
         add_syslinks("setupapi", "wsock32", "ws2_32", "shlwapi", "iphlpapi")
     end
+target_end()
 
--- Build Static Library
+-- Static Library
 target("atom")
     set_kind("static")
-    add_deps("atom-object")
-    add_packages(dependencies)
-    add_includedirs(".", {public = true})
-
-    set_targetdir("$(buildir)/lib")
-    set_objectdir("$(buildir)/obj")
-
-    after_build(function (target)
-        os.cp("$(buildir)/lib", "$(projectdir)/lib")
-        os.cp("$(projectdir)/*.hpp", "$(projectdir)/include")
+    add_deps("atom_object")
+    add_packages(table.unpack(atom_libs))
+    set_version("1.0.0", {build = "%Y%m%d%H%M"})
+    on_install(function (target)
+        os.cp(target:targetfile(), path.join(target:installdir(), "lib"))
     end)
+target_end()
+
+-- Python Support
+if has_config("build_python") then
+    add_requires("python", "pybind11")
+    target("atom_python")
+        set_kind("shared")
+        add_files("python_binding.cpp")
+        add_packages("python", "pybind11")
+    target_end()
+end

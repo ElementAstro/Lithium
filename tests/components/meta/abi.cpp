@@ -6,17 +6,17 @@ using namespace atom::meta;
 // Helper functions for testing
 template <typename T>
 void test_demangle_type(const std::string& expected) {
-    EXPECT_EQ(DemangleHelper::DemangleType<T>(), expected);
+    EXPECT_EQ(DemangleHelper::demangleType<T>(), expected);
 }
 
 template <typename T>
 void test_demangle_instance(const T& instance, const std::string& expected) {
-    EXPECT_EQ(DemangleHelper::DemangleType(instance), expected);
+    EXPECT_EQ(DemangleHelper::demangleType(instance), expected);
 }
 
 void test_demangle(const std::string_view& mangled_name,
                    const std::string& expected) {
-    EXPECT_EQ(DemangleHelper::Demangle(mangled_name), expected);
+    EXPECT_EQ(DemangleHelper::demangle(mangled_name), expected);
 }
 
 void test_demangle_with_location(const std::string_view& mangled_name,
@@ -24,12 +24,12 @@ void test_demangle_with_location(const std::string_view& mangled_name,
                                  const std::source_location& location) {
     std::string full_expected = expected + " (" + location.file_name() + ":" +
                                 std::to_string(location.line()) + ")";
-    EXPECT_EQ(DemangleHelper::Demangle(mangled_name, location), full_expected);
+    EXPECT_EQ(DemangleHelper::demangle(mangled_name, location), full_expected);
 }
 
 void test_demangle_many(const std::vector<std::string_view>& mangled_names,
                         const std::vector<std::string>& expected) {
-    EXPECT_EQ(DemangleHelper::DemangleMany(mangled_names), expected);
+    EXPECT_EQ(DemangleHelper::demangleMany(mangled_names), expected);
 }
 
 void test_demangle_many_with_location(
@@ -41,7 +41,7 @@ void test_demangle_many_with_location(
         full_expected.push_back(name + " (" + location.file_name() + ":" +
                                 std::to_string(location.line()) + ")");
     }
-    EXPECT_EQ(DemangleHelper::DemangleMany(mangled_names, location),
+    EXPECT_EQ(DemangleHelper::demangleMany(mangled_names, location),
               full_expected);
 }
 
@@ -78,10 +78,11 @@ TEST(DemangleHelperTest, DemangleWithLocationTest) {
     auto location = std::source_location::current();
     test_demangle_with_location(typeid(int).name(), "int", location);
     test_demangle_with_location(typeid(double).name(), "double", location);
-    test_demangle_with_location(typeid(std::string).name(),
-                                "std::__cxx11::basic_string<char, "
-                                "std::char_traits<char>, std::allocator<char> >",
-                                location);
+    test_demangle_with_location(
+        typeid(std::string).name(),
+        "std::__cxx11::basic_string<char, "
+        "std::char_traits<char>, std::allocator<char> >",
+        location);
 }
 
 TEST(DemangleHelperTest, DemangleManyTest) {

@@ -4,7 +4,6 @@
 set_project("Atom-Search")
 set_version("1.0.0")
 set_description("Search Engine for Element Astro Project")
-set_licenses("GPL-3.0")
 
 -- Specify the C++ Languages
 set_languages("c++17")
@@ -22,13 +21,3 @@ target("Atom-Search")
     add_packages("loguru")
     add_links("pthread")
     add_includedirs(".")
-
--- Install Rules
-after_install("install_headers")
-after_install("install_libraries")
-
--- Install Headers
-install_headers("*.hpp", "$(projectdir)/include/$(projectname)")
-
--- Install Libraries
-install_libraries("$(targetdir)/*.a", "$(projectdir)/lib")

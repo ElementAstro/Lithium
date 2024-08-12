@@ -13,7 +13,7 @@
 #include <sstream>
 #endif
 
-GlobalSharedPtrManager &GlobalSharedPtrManager::getInstance() {
+auto GlobalSharedPtrManager::getInstance() -> GlobalSharedPtrManager & {
     static GlobalSharedPtrManager instance;
     return instance;
 }
@@ -44,7 +44,7 @@ void GlobalSharedPtrManager::clearAll() {
     sharedPtrMap.clear();
 }
 
-size_t GlobalSharedPtrManager::size() const {
+auto GlobalSharedPtrManager::size() const -> size_t {
     std::shared_lock lock(mtx);
     return sharedPtrMap.size();
 }

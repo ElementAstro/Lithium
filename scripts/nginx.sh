@@ -1,9 +1,37 @@
 #!/bin/bash
 
-# Define colors
+# Nginx 管理脚本
+# 用途: 安装、启动、停止、重载、检查Nginx配置，并显示Nginx状态
+#
+# 使用方法:
+# ./nginx_manager.sh [start|stop|reload|check|status|help]
+#
+# 参数说明:
+#   start    - 启动Nginx
+#   stop     - 停止Nginx
+#   reload   - 重载Nginx配置
+#   check    - 检查Nginx配置语法
+#   status   - 显示Nginx运行状态
+#   help     - 显示此帮助信息
+#
+# 脚本功能:
+# 1. 自动检测并安装Nginx（支持Debian和Red Hat系统）
+# 2. 启动、停止和重载Nginx服务
+# 3. 检查Nginx配置文件的语法
+# 4. 显示Nginx的当前运行状态
+#
+# 示例:
+# ./nginx_manager.sh start
+# ./nginx_manager.sh stop
+# ./nginx_manager.sh reload
+# ./nginx_manager.sh check
+# ./nginx_manager.sh status
+# ./nginx_manager.sh help
+
+# Define colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-NC='\033[0m'
+NC='\033[0m'  # No Color
 
 # Define Nginx paths
 NGINX_PATH="/etc/nginx"
@@ -14,17 +42,25 @@ NGINX_BINARY="/usr/sbin/nginx"
 install_nginx() {
     if ! command -v nginx &>/dev/null; then
         echo "Installing Nginx..."
-        # Add installation commands according to the package manager used (apt, yum, etc.)
-        # Example for apt:
-        sudo apt-get update
-        sudo apt-get install nginx -y
+        if [ -f /etc/debian_version ]; then
+            # Debian-based system (e.g., Ubuntu)
+            sudo apt-get update
+            sudo apt-get install nginx -y
+        elif [ -f /etc/redhat-release ]; then
+            # Red Hat-based system (e.g., CentOS)
+            sudo yum update
+            sudo yum install nginx -y
+        else
+            echo -e "${RED}Unsupported platform. Please install Nginx manually.${NC}"
+            exit 1
+        fi
     fi
 }
 
 # Function: Start Nginx
 start_nginx() {
     if [ -f "$NGINX_BINARY" ]; then
-        $NGINX_BINARY
+        sudo $NGINX_BINARY
         echo -e "${GREEN}Nginx has been started${NC}"
     else
         echo -e "${RED}Nginx binary not found${NC}"
@@ -34,7 +70,7 @@ start_nginx() {
 # Function: Stop Nginx
 stop_nginx() {
     if [ -f "$NGINX_BINARY" ]; then
-        $NGINX_BINARY -s stop
+        sudo $NGINX_BINARY -s stop
         echo -e "${GREEN}Nginx has been stopped${NC}"
     else
         echo -e "${RED}Nginx binary not found${NC}"
@@ -44,7 +80,7 @@ stop_nginx() {
 # Function: Reload Nginx configuration
 reload_nginx() {
     if [ -f "$NGINX_BINARY" ]; then
-        $NGINX_BINARY -s reload
+        sudo $NGINX_BINARY -s reload
         echo -e "${GREEN}Nginx configuration has been reloaded${NC}"
     else
         echo -e "${RED}Nginx binary not found${NC}"
@@ -54,19 +90,29 @@ reload_nginx() {
 # Function: Check Nginx configuration syntax
 check_config() {
     if [ -f "$NGINX_CONF" ]; then
-        $NGINX_BINARY -t -c "$NGINX_CONF"
+        sudo $NGINX_BINARY -t -c "$NGINX_CONF"
     else
         echo -e "${RED}Nginx configuration file not found${NC}"
     fi
 }
 
+# Function: Show Nginx status
+status_nginx() {
+    if pgrep nginx &>/dev/null; then
+        echo -e "${GREEN}Nginx is running${NC}"
+    else
+        echo -e "${RED}Nginx is not running${NC}"
+    fi
+}
+
 # Function: Show help message
 show_help() {
-    echo "Usage: $0 [start|stop|reload|check|help]"
+    echo "Usage: $0 [start|stop|reload|check|status|help]"
     echo "  start    Start Nginx"
     echo "  stop     Stop Nginx"
     echo "  reload   Reload Nginx configuration"
     echo "  check    Check Nginx configuration syntax"
+    echo "  status   Show Nginx status"
     echo "  help     Show help message"
 }
 
@@ -93,6 +139,9 @@ main() {
             ;;
         check)
             check_config
+            ;;
+        status)
+            status_nginx
             ;;
         *)
             echo -e "${RED}Invalid command${NC}"

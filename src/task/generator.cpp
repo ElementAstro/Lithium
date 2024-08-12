@@ -13,165 +13,193 @@ Description: Task Generator
 **************************************************/
 
 #include "generator.hpp"
+#include "task.hpp"
 
-#include "atom/io/io.hpp"
+#include <algorithm>
+#include <regex>
+#include <string>
+#include <vector>
+
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
 
-#include "atom/function/global_ptr.hpp"
+#include "atom/type/json.hpp"
 
-#include <fstream>
-#include <future>
+using json = nlohmann::json;
+using namespace std::literals;
 
 namespace lithium {
 TaskGenerator::TaskGenerator() {
+    addMacro("uppercase", [](const std::vector<std::string>& args) {
+        std::string result = args[0];
+        std::ranges::transform(result, result.begin(), ::toupper);
+        return result;
+    });
+    addMacro("concat", [](const std::vector<std::string>& args) {
+        return std::accumulate(args.begin(), args.end(), std::string{});
+    });
+    addMacro("if", [](const std::vector<std::string>& args) {
+        if (args.size() < 3) {
+            THROW_INVALID_ARGUMENT("if macro requires 3 arguments");
+        }
+        return args[0] == "true" ? args[1] : args[2];
+    });
+    addMacro("length", [](const std::vector<std::string>& args) {
+        if (args.size() != 1) {
+            THROW_INVALID_ARGUMENT("length macro requires 1 argument");
+        }
+        return std::to_string(args[0].length());
+    });
+    addMacro("equals", [](const std::vector<std::string>& args) {
+        if (args.size() != 2) {
+            THROW_INVALID_ARGUMENT("equals macro requires 2 arguments");
+        }
+        return args[0] == args[1] ? "true" : "false";
+    });
+    addMacro("tolower", [](const std::vector<std::string>& args) {
+        std::string result = args[0];
+        std::ranges::transform(result, result.begin(), ::tolower);
+        return result;
+    });
+    addMacro("repeat", [](const std::vector<std::string>& args) {
+        if (args.size() != 2) {
+            THROW_INVALID_ARGUMENT("repeat macro requires 2 arguments");
+        }
+        std::string result;
+        int times = std::stoi(args[1]);
+        for (int i = 0; i < times; ++i) {
+            result += args[0];
+        }
+        return result;
+    });
 }
 
-std::shared_ptr<TaskGenerator> TaskGenerator::createShared() {
+auto TaskGenerator::createShared() -> std::shared_ptr<TaskGenerator> {
     return std::make_shared<TaskGenerator>();
 }
 
-bool TaskGenerator::loadMacros(const std::string &macroFileName) {
-    try {
-        if (!atom::io::isFileExists(macroFileName)) {
-            LOG_F(ERROR, "Macro file not found: {}", macroFileName);
-            return false;
-        }
-
-        json macros;
-        std::ifstream file(macroFileName);
-        if (!file) {
-            LOG_F(ERROR, "Failed to open macro file: {}", macroFileName);
-            return false;
-        }
-        file >> macros;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to parse file {}, error: {}", macroFileName,
-              e.what());
-        return false;
-    }
-
-    return true;
+void TaskGenerator::addMacro(const std::string& name, MacroValue value) {
+    macros_[name] = std::move(value);
 }
 
-bool TaskGenerator::loadMacrosFromFolder(const std::string &folderPath) {
-    if (!atom::io::isFolderExists(folderPath)) {
-        LOG_F(ERROR, "Invalid folder path: {}", folderPath);
-        return false;
-    }
-
-    std::vector<std::future<void>> futures;
-    for (const auto &entry : fs::directory_iterator(folderPath)) {
-        futures.push_back(std::async(std::launch::async,
-                                     &TaskGenerator::processMacroFile, this,
-                                     entry.path().string()));
-    }
-
-    for (auto &fut : futures) {
-        fut.wait();
-    }
-
-    return true;
-}
-
-bool TaskGenerator::addMacro(const std::string &name,
-                             const std::string &content) {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    m_MacroMap[name] = content;
-    return true;
-}
-
-bool TaskGenerator::deleteMacro(const std::string &name) {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    return (m_MacroMap.erase(name) > 0);
-}
-
-std::optional<std::string> TaskGenerator::getMacroContent(
-    const std::string &name) {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    const auto it = m_MacroMap.find(name);
-    if (it != m_MacroMap.end()) {
-        return it->second;
-    } else {
-        LOG_F(ERROR, "Macro with name {} not found.", name);
-        return std::nullopt;
-    }
-}
-
-void TaskGenerator::processMacroFile(const std::string &sfilePath) {
-    if (!atom::io::isFileExists(sfilePath)) {
-        LOG_F(ERROR, "Macro file not found: {}", sfilePath);
-        return;
-    }
-    fs::path filePath = sfilePath;
-    if (fs::is_regular_file(filePath) && filePath.extension() == ".json") {
-        std::ifstream file(filePath);
-        if (!file) {
-            LOG_F(ERROR, "Failed to open macro file: {}", filePath.string());
-            return;
-        }
-
-        json jsonMacro;
-        file >> jsonMacro;
-
-        if (jsonMacro.is_object()) {
-            std::lock_guard<std::mutex> lock(m_Mutex);
-            for (const auto &[name, content] : jsonMacro.items()) {
-                if (content.is_string()) {
-                    m_MacroMap[name] = content.get<std::string>();
-                }
+void TaskGenerator::processJson(json& j) const {
+    for (const auto& [key, value] : j.items()) {
+        if (value.is_string()) {
+            std::string newValue = replaceMacros(value.get<std::string>());
+            while (newValue != value.get<std::string>()) {
+                value = newValue;
+                newValue = replaceMacros(value);
             }
-        } else {
-            LOG_F(ERROR, "Invalid macro file format: {}", filePath.string());
+            value = newValue;
+        } else if (value.is_object() || value.is_array()) {
+            processJson(value);
         }
     }
 }
 
-bool TaskGenerator::generateTasks(const std::string &jsonFileName) {
-    json jsonTasks;
-    if (!parseJsonFile(jsonFileName, jsonTasks)) {
-        return false;
+auto TaskGenerator::evaluateMacro(const std::string& name,
+                                  const std::vector<std::string>& args) const
+    -> std::string {
+    if (auto it = macros_.find(name); it != macros_.end()) {
+        if (std::holds_alternative<std::string>(it->second)) {
+            return std::get<std::string>(it->second);
+        }
+        if (std::holds_alternative<json>(it->second)) {
+            return std::get<json>(it->second).dump();
+        }
+        if (std::holds_alternative<
+                std::function<json(const std::vector<std::string>&)>>(
+                it->second)) {
+            return std::get<
+                       std::function<json(const std::vector<std::string>&)>>(
+                       it->second)(args)
+                .dump();
+        }
     }
-
-    // 从 DeviceManager 和 PluginManager
-    // 获取任务（仅提供接口，需要实现该部分逻辑）
-
-    // 将解析得到的任务添加到 TaskManager 中
-    // 将任务清单保存为 JSON 格式
-    std::string outputJsonFileName = jsonFileName + ".json";
-    saveTasksToJson(outputJsonFileName, jsonTasks);
-
-    return true;
+    THROW_INVALID_ARGUMENT("Undefined macro: " + name);
 }
 
-bool TaskGenerator::parseJsonFile(const std::string &jsonFileName,
-                                  json &jsonTasks) {
-    try {
-        std::ifstream file(jsonFileName);
-        if (!file) {
-            LOG_F(ERROR, "Failed to open JSON file: {}", jsonFileName);
-            return false;
+auto TaskGenerator::replaceMacros(const std::string& input) const
+    -> std::string {
+    static const std::regex MACRO_PATTERN(
+        R"(\$\{([^\{\}]+(?:\([^\{\}]*\))*)\})");
+    std::string result = input;
+    std::smatch match;
+
+    while (std::regex_search(result, match, MACRO_PATTERN)) {
+        std::string macroCall = match[1].str();
+        auto pos = macroCall.find('(');
+        std::string macroName =
+            (pos == std::string::npos) ? macroCall : macroCall.substr(0, pos);
+        std::vector<std::string> args;
+
+        if (pos != std::string::npos) {
+            std::string argsStr =
+                macroCall.substr(pos + 1, macroCall.length() - pos - 2);
+            static const std::regex ARG_PATTERN(R"(([^,]+))");
+            std::sregex_token_iterator iter(argsStr.begin(), argsStr.end(),
+                                            ARG_PATTERN);
+            std::sregex_token_iterator end;
+            for (; iter != end; ++iter) {
+                args.push_back(atom::utils::trim(replaceMacros(iter->str())));
+            }
         }
-        file >> jsonTasks;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error while parsing JSON file: {}", e.what());
-        return false;
+
+        std::string replacement = evaluateMacro(macroName, args);
+        result.replace(match.position(0), match.length(0), replacement);
     }
 
-    return true;
+    return result;
 }
 
-void TaskGenerator::saveTasksToJson(const std::string &jsonFileName,
-                                    const json &jsonTasks) {
-    try {
-        std::ofstream jsonFile(jsonFileName);
-        if (!jsonFile) {
-            LOG_F(ERROR, "Failed to open JSON file: {}", jsonFileName);
-            return;
+void TaskGenerator::processJsonWithJsonMacros(json& j) {
+    for (const auto& [key, value] : j.items()) {
+        if (value.is_string()) {
+            std::string newValue = replaceMacros(value.get<std::string>());
+            while (newValue != value.get<std::string>()) {
+                value = newValue;
+                newValue = replaceMacros(value);
+            }
+            value = newValue;
+        } else if (value.is_object() || value.is_array()) {
+            processJsonWithJsonMacros(value);
         }
-        jsonFile << jsonTasks.dump(4);  // 使用四个空格缩进
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error while saving JSON file: {}", e.what());
-        return;
+    }
+
+    static const std::regex MACRO_PATTERN(
+        R"(\$\{([^\{\}]+(?:\([^\{\}]*\))*)\})");
+    for (const auto& [key, value] : j.items()) {
+        if (value.is_string()) {
+            std::string strValue = value.get<std::string>();
+            std::smatch match;
+            if (std::regex_search(strValue, match, MACRO_PATTERN)) {
+                std::string macroCall = match[1].str();
+                auto pos = macroCall.find('(');
+                std::string macroName = (pos == std::string::npos)
+                                            ? macroCall
+                                            : macroCall.substr(0, pos);
+                std::vector<std::string> args;
+
+                if (pos != std::string::npos) {
+                    std::string argsStr =
+                        macroCall.substr(pos + 1, macroCall.length() - pos - 2);
+                    static const std::regex ARG_PATTERN(R"(([^,]+))");
+                    std::sregex_token_iterator iter(argsStr.begin(),
+                                                    argsStr.end(), ARG_PATTERN);
+                    std::sregex_token_iterator end;
+                    for (; iter != end; ++iter) {
+                        args.push_back(
+                            atom::utils::trim(replaceMacros(iter->str())));
+                    }
+                }
+
+                json replacement = evaluateMacro(macroName, args);
+                value = replacement;
+            }
+        } else if (value.is_object() || value.is_array()) {
+            processJsonWithJsonMacros(value);
+        }
     }
 }
 }  // namespace lithium

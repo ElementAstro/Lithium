@@ -258,13 +258,5 @@ bool checkAndKillProgramOnPort(int port) {
     return success;
 }
 
-bool isIPv4Format(const std::string &str) {
-    std::regex urlRegex("\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{2}");
-    return std::regex_match(str, urlRegex);
-}
 
-bool isIPv6Format(const std::string &str) {
-    std::regex ipv6Regex("^(([0-9A-Fa-f]{1,4}):){7}([0-9A-Fa-f]{1,4})$");
-    return std::regex_match(str, ipv6Regex);
-}
 }  // namespace atom::web

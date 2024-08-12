@@ -16,15 +16,15 @@ Description: ThreadLocal
 #define ATOM_ASYNC_THREADLOCAL_HPP
 
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include "type/noncopyable.hpp"
 
 template <typename T>
-class ThreadLocal {
+class ThreadLocal : public NonCopyable {
 public:
     using InitializerFn = std::function<T()>;
 
@@ -33,13 +33,10 @@ public:
     explicit ThreadLocal(InitializerFn initializer)
         : initializer_(std::move(initializer)) {}
 
-    ThreadLocal(const ThreadLocal&) = delete;
-    ThreadLocal& operator=(const ThreadLocal&) = delete;
-
     ThreadLocal(ThreadLocal&&) = default;
-    ThreadLocal& operator=(ThreadLocal&&) = default;
+    auto operator=(ThreadLocal&&) -> ThreadLocal& = default;
 
-    T& get() {
+    auto get() -> T& {
         auto tid = std::this_thread::get_id();
         std::unique_lock<std::mutex> lock(mutex_);
         auto [it, inserted] = values_.try_emplace(tid);
@@ -51,11 +48,11 @@ public:
         return it->second.value();
     }
 
-    T* operator->() { return &get(); }
-    const T* operator->() const { return &get(); }
+    auto operator->() -> T* { return &get(); }
+    auto operator->() const -> const T* { return &get(); }
 
-    T& operator*() { return get(); }
-    const T& operator*() const { return get(); }
+    auto operator*() -> T& { return get(); }
+    auto operator*() const -> const T& { return get(); }
 
     void reset(T value = T()) {
         auto tid = std::this_thread::get_id();
@@ -63,14 +60,14 @@ public:
         values_[tid] = std::make_optional(std::move(value));
     }
 
-    bool has_value() const {
+    auto hasValue() const -> bool {
         auto tid = std::this_thread::get_id();
         std::lock_guard lock(mutex_);
         auto it = values_.find(tid);
         return it != values_.end() && it->second.has_value();
     }
 
-    T* get_pointer() {
+    auto getPointer() -> T* {
         auto tid = std::this_thread::get_id();
         std::lock_guard lock(mutex_);
         auto it = values_.find(tid);
@@ -79,7 +76,7 @@ public:
                    : nullptr;
     }
 
-    const T* get_pointer() const {
+    auto getPointer() const -> const T* {
         auto tid = std::this_thread::get_id();
         std::lock_guard lock(mutex_);
         auto it = values_.find(tid);
@@ -89,7 +86,7 @@ public:
     }
 
     template <typename Func>
-    void for_each(Func&& func) {
+    void forEach(Func&& func) {
         std::lock_guard lock(mutex_);
         for (auto& [tid, value_opt] : values_) {
             if (value_opt.has_value()) {

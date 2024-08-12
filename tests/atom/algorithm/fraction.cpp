@@ -65,15 +65,15 @@ TEST(FractionTest, Conversion) {
 
 TEST(FractionTest, ToString) {
     atom::algorithm::Fraction f1(1, 2);
-    EXPECT_EQ(f1.to_string(), "1/2");
+    EXPECT_EQ(f1.toString(), "1/2");
 
     atom::algorithm::Fraction f2(-3, 4);
-    EXPECT_EQ(f2.to_string(), "-3/4");
+    EXPECT_EQ(f2.toString(), "-3/4");
 }
 
 TEST(FractionTest, ToDouble) {
     atom::algorithm::Fraction f1(1, 2);
-    EXPECT_DOUBLE_EQ(f1.to_double(), 0.5);
+    EXPECT_DOUBLE_EQ(f1.toDouble(), 0.5);
 }
 
 TEST(FractionTest, IOStream) {

@@ -36,7 +36,6 @@ set(${PROJECT_NAME}_LIBS
     loguru
     atom-component
     atom-io
-    libzippp
     ${ZLIB_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
 )

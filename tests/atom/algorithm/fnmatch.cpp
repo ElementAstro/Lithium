@@ -1,62 +1,76 @@
 #include "atom/algorithm/fnmatch.hpp"
 #include <gtest/gtest.h>
 
-// Test for fnmatch
-TEST(FnmatchTest, BasicMatch) {
-    EXPECT_TRUE(atom::algorithm::fnmatch("foo*", "foobar"));
-    EXPECT_FALSE(atom::algorithm::fnmatch("bar*", "foobar"));
+using namespace atom::algorithm;
+
+TEST(FnmatchTest, SimplePatternMatch) {
+    EXPECT_TRUE(fnmatch("foo*", "foobar"));
+    EXPECT_FALSE(fnmatch("bar*", "foobar"));
 }
 
-TEST(FnmatchTest, MatchWithFlags) {
-    int flags = 0;  // Add appropriate flag values
-    EXPECT_TRUE(atom::algorithm::fnmatch("foo*", "foobar", flags));
-    EXPECT_FALSE(atom::algorithm::fnmatch("bar*", "foobar", flags));
+TEST(FnmatchTest, QuestionMarkPattern) {
+    EXPECT_TRUE(fnmatch("foo?", "fooz"));
+    EXPECT_FALSE(fnmatch("foo?", "foobar"));
 }
 
-// Test for filter with single pattern
-TEST(FilterTest, SinglePatternMatch) {
-    std::vector<std::string> names = {"foo", "bar", "foobar", "foobaz"};
-    EXPECT_TRUE(atom::algorithm::filter(names, "foo*"));
-    EXPECT_FALSE(atom::algorithm::filter(names, "baz*"));
+TEST(FnmatchTest, CharacterClassPattern) {
+    EXPECT_TRUE(fnmatch("foo[ab]", "fooa"));
+    EXPECT_FALSE(fnmatch("foo[ab]", "fooc"));
 }
 
-TEST(FilterTest, SinglePatternMatchWithFlags) {
-    std::vector<std::string> names = {"foo", "bar", "foobar", "foobaz"};
-    int flags = 0;  // Add appropriate flag values
-    EXPECT_TRUE(atom::algorithm::filter(names, "foo*", flags));
-    EXPECT_FALSE(atom::algorithm::filter(names, "baz*", flags));
+TEST(FnmatchTest, CharacterClassPatternWithRange) {
+    EXPECT_TRUE(fnmatch("foo[a-c]", "foob"));
+    EXPECT_FALSE(fnmatch("foo[a-c]", "fooe"));
 }
 
-// Test for filter with multiple patterns
-TEST(FilterTest, MultiplePatternMatch) {
-    std::vector<std::string> names = {"foo", "bar", "foobar", "foobaz"};
-    std::vector<std::string> patterns = {"foo*", "bar*"};
-    auto result = atom::algorithm::filter(names, patterns);
-    std::vector<std::string> expected = {"foo", "bar", "foobar", "foobaz"};
-    EXPECT_EQ(result, expected);
+TEST(FnmatchTest, FilterSinglePattern) {
+    std::vector<std::string> names = {"foo", "bar", "baz"};
+    EXPECT_TRUE(filter(names, "ba*"));
+    EXPECT_FALSE(filter(names, "qux*"));
 }
 
-TEST(FilterTest, MultiplePatternMatchWithFlags) {
-    std::vector<std::string> names = {"foo", "bar", "foobar", "foobaz"};
-    std::vector<std::string> patterns = {"foo*", "baz*"};
-    int flags = 0;  // Add appropriate flag values
-    auto result = atom::algorithm::filter(names, patterns, flags);
-    std::vector<std::string> expected = {"foo", "foobar", "foobaz"};
-    EXPECT_EQ(result, expected);
+TEST(FnmatchTest, FilterMultiplePatterns) {
+    std::vector<std::string> names = {"foo", "bar", "baz"};
+    std::vector<std::string> patterns = {"fo*", "ba*"};
+    auto result = filter(names, patterns);
+    EXPECT_EQ(result.size(), 3);
+    EXPECT_EQ(result[0], "foo");
+    EXPECT_EQ(result[1], "bar");
+    EXPECT_EQ(result[2], "baz");
 }
 
-// Test for translate
-TEST(TranslateTest, BasicTranslation) {
+TEST(TranslateTest, SimpleTranslation) {
     std::string pattern = "foo*";
     std::string result;
-    EXPECT_TRUE(atom::algorithm::translate(pattern, result));
-    EXPECT_EQ(result, "foo.*");  // Expected translated pattern
+    EXPECT_TRUE(translate(pattern, result));
+    EXPECT_EQ(result, "foo.*");
+}
+
+TEST(TranslateTest, QuestionMarkTranslation) {
+    std::string pattern = "foo?";
+    std::string result;
+    EXPECT_TRUE(translate(pattern, result));
+    EXPECT_EQ(result, "foo.");
+}
+
+TEST(TranslateTest, CharacterClassTranslation) {
+    std::string pattern = "foo[ab]";
+    std::string result;
+    EXPECT_TRUE(translate(pattern, result));
+    EXPECT_EQ(result, "foo[ab]");
+}
+
+TEST(TranslateTest, CharacterClassWithRangeTranslation) {
+    std::string pattern = "foo[a-c]";
+    std::string result;
+    EXPECT_TRUE(translate(pattern, result));
+    EXPECT_EQ(result, "foo[a-c]");
 }
 
 TEST(TranslateTest, TranslationWithFlags) {
     std::string pattern = "foo*";
     std::string result;
-    int flags = 0;  // Add appropriate flag values
-    EXPECT_TRUE(atom::algorithm::translate(pattern, result, flags));
-    EXPECT_EQ(result, "foo*");  // Expected translated pattern
+    int flags = 0;
+    EXPECT_TRUE(translate(pattern, result, flags));
+    EXPECT_EQ(result, "foo.*");
 }

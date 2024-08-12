@@ -27,18 +27,18 @@ public:
     SingleThreadPool();
     ~SingleThreadPool();
 
-    bool start(
-        const std::function<void(const std::atomic_bool&)>& functionToRun);
+    auto start(
+        const std::function<void(const std::atomic_bool&)>& functionToRun) -> bool;
     void startDetach(
         const std::function<void(const std::atomic_bool&)>& functionToRun);
-    bool tryStart(
-        const std::function<void(const std::atomic_bool&)>& functionToRun);
+    auto tryStart(
+        const std::function<void(const std::atomic_bool&)>& functionToRun) -> bool;
     void tryStartDetach(
         const std::function<void(const std::atomic_bool&)>& functionToRun);
     void quit();
 
 private:
-    std::shared_ptr<SingleThreadPoolPrivate> d_ptr;
+    std::shared_ptr<SingleThreadPoolPrivate> d_ptr_;
 };
 }  // namespace lithium
 

@@ -12,20 +12,27 @@ Description: Main Entry
 
 **************************************************/
 
-#include "lithiumapp.hpp"
+#include "LithiumApp.hpp"
 
 #include "preload.hpp"
 
-#include "atom/log/loguru.hpp"
 #include "atom/function/global_ptr.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
 
 // TODO: This is for debug only, please remove it in production
+#if !IN_PRODUCTION
 #define ENABLE_TERMINAL 1
+#endif
 #if ENABLE_TERMINAL
 #include "debug/terminal.hpp"
 using namespace lithium::debug;
+#endif
+
+// In release mode, we will disable the debugger
+#if IN_PRODUCTION
+#include "atom/system/nodebugger.hpp"
 #endif
 
 #include "server/App.hpp"
@@ -39,7 +46,9 @@ using namespace lithium::debug;
 #include <signal.h>
 #endif
 
-#include "argparse/argparse.hpp"
+#include "atom/utils/argsview.hpp"
+
+using namespace std::literals;
 
 /**
  * @brief setup log file
@@ -51,10 +60,10 @@ void setupLogFile() {
         std::filesystem::create_directory(logsFolder);
     }
     auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    std::tm *local_time = std::localtime(&now_time_t);
+    auto nowTimeT = std::chrono::system_clock::to_time_t(now);
+    std::tm *localTime = std::localtime(&nowTimeT);
     char filename[100];
-    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", local_time);
+    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", localTime);
     std::filesystem::path logFilePath = logsFolder / filename;
     loguru::add_file(logFilePath.string().c_str(), loguru::Append,
                      loguru::Verbosity_MAX);
@@ -71,7 +80,10 @@ void setupLogFile() {
  * @param argv arguments
  * @return 0 on success
  */
-int main(int argc, char *argv[]) {
+auto main(int argc, char *argv[]) -> int {
+#if ENABLE_CPPTRACE
+    cpptrace::init();
+#endif
     // NOTE: gettext is not supported yet, it will cause compilation error on
     // Mingw64
     /* Add gettext */
@@ -88,45 +100,44 @@ int main(int argc, char *argv[]) {
     loguru::init(argc, argv);
 
     /* Parse arguments */
-    argparse::ArgumentParser program("Lithium Server");
+    atom::utils::ArgumentParser program("Lithium Server"s);
 
     // NOTE: The command arguments' priority is higher than the config file
-    program.add_argument("-P", "--port")
-        .help("port the server running on")
-        .default_value(8000);
-    program.add_argument("-H", "--host")
-        .help("host the server running on")
-        .default_value("0.0.0.0");
-    program.add_argument("-C", "--config")
-        .help("path to the config file")
-        .default_value("config.json");
-    program.add_argument("-M", "--module-path")
-        .help("path to the modules directory")
-        .default_value("./modules");
-    program.add_argument("-W", "--web-panel")
-        .help("web panel")
-        .default_value(true);
-    program.add_argument("-D", "--debug")
-        .help("debug mode")
-        .default_value(false);
-    program.add_argument("-L", "--log-file").help("path to log file");
+    program.addArgument("port", atom::utils::ArgumentParser::ArgType::INTEGER,
+                        false, 8000, "Port of the server", {"p"});
+    program.addArgument("host", atom::utils::ArgumentParser::ArgType::STRING,
+                        false, "0.0.0.0"s, "Host of the server", {"h"});
+    program.addArgument("config", atom::utils::ArgumentParser::ArgType::STRING,
+                        false, "config.json"s, "Path to the config file",
+                        {"c"});
+    program.addArgument("module-path",
+                        atom::utils::ArgumentParser::ArgType::STRING, false,
+                        "modules"s, "Path to the modules directory", {"m"});
+    program.addArgument("web-panel",
+                        atom::utils::ArgumentParser::ArgType::BOOLEAN, false,
+                        true, "Enable web panel", {"w"});
+    program.addArgument("debug", atom::utils::ArgumentParser::ArgType::BOOLEAN,
+                        false, false, "Enable debug mode", {"d"});
+    program.addArgument("log-file",
+                        atom::utils::ArgumentParser::ArgType::STRING, false,
+                        ""s, "Path to the log file", {"l"});
 
-    program.add_description("Lithium Command Line Interface:");
-    program.add_epilog("End.");
+    program.addDescription("Lithium Command Line Interface:");
+    program.addEpilog("End.");
 
-    program.parse_args(argc, argv);
+    program.parse(argc, argv);
 
-    lithium::InitLithiumApp(argc, argv);
+    lithium::initLithiumApp(argc, argv);
     // Create shared instance
-    lithium::MyApp = lithium::LithiumApp::createShared();
+    lithium::myApp = lithium::LithiumApp::createShared();
     // Parse arguments
     try {
-        auto cmd_host = program.get<std::string>("--host");
-        auto cmd_port = program.get<int>("--port");
-        auto cmd_config_path = program.get<std::string>("--config");
-        auto cmd_module_path = program.get<std::string>("--module-path");
-        auto cmd_web_panel = program.get<bool>("--web-panel");
-        auto cmd_debug = program.get<bool>("--debug");
+        auto cmdHost = program.get<std::string>("host");
+        auto cmdPort = program.get<int>("port");
+        auto cmdConfigPath = program.get<std::string>("config");
+        auto cmdModulePath = program.get<std::string>("module-path");
+        auto cmdWebPanel = program.get<bool>("web-panel");
+        auto cmdDebug = program.get<bool>("debug");
 
         // TODO: We need a new way to handle command line arguments.
         // Maybe we will generate a json object or a map and then given to the
@@ -186,8 +197,9 @@ int main(int argc, char *argv[]) {
     }
 
     ConsoleTerminal terminal;
+    globalConsoleTerminal = &terminal;
     terminal.run();
-    runServer();
+    lithium::runServer({argc, const_cast<const char **>(argv)});
 
     return 0;
 }

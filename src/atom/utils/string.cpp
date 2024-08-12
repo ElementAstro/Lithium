@@ -15,38 +15,47 @@ Description: Some useful string functions
 #include "string.hpp"
 
 #include <algorithm>
+#include <codecvt>
 #include <iomanip>
+#include <locale>
 #include <sstream>
+#include <string>
 
 #include <charconv>
 #include "atom/error/exception.hpp"
 
 namespace atom::utils {
-bool hasUppercase(std::string_view str) {
+auto hasUppercase(std::string_view str) -> bool {
     return std::any_of(str.begin(), str.end(),
                        [](unsigned char ch) { return std::isupper(ch); });
 }
 
-std::string toUnderscore(std::string_view str) {
+auto toUnderscore(std::string_view str) -> std::string {
     std::string result;
     result.reserve(str.size() +
                    std::count_if(str.begin(), str.end(), [](unsigned char ch) {
                        return std::isupper(ch);
                    }));
 
+    bool firstChar = true;
+
     for (char ch : str) {
-        if (std::isupper(ch)) {
-            result.push_back('_');
-            result.push_back(std::tolower(ch));
+        if (std::isupper(static_cast<unsigned char>(ch))) {
+            if (!firstChar) {
+                result.push_back('_');
+            }
+            result.push_back(std::tolower(static_cast<unsigned char>(ch)));
+            firstChar = false;
         } else {
             result.push_back(ch);
+            firstChar = false;
         }
     }
 
     return result;
 }
 
-std::string toCamelCase(std::string_view str) {
+auto toCamelCase(std::string_view str) -> std::string {
     std::string result;
     result.reserve(str.size());
 
@@ -65,40 +74,44 @@ std::string toCamelCase(std::string_view str) {
     return result;
 }
 
-std::string urlEncode(std::string_view str) {
+auto urlEncode(std::string_view str) -> std::string {
     std::ostringstream escaped;
     escaped.fill('0');
     escaped << std::hex;
 
     for (auto c : str) {
-        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+        if ((std::isalnum(static_cast<unsigned char>(c)) != 0) || c == '-' ||
+            c == '_' || c == '.' || c == '~') {
             escaped << c;
         } else if (c == ' ') {
             escaped << '+';
         } else {
             escaped << '%' << std::setw(2)
-                    << static_cast<int>(static_cast<unsigned char>(c));
+                    << static_cast<int>(
+                           static_cast<unsigned char>(c));  // 编码其他字符
         }
     }
 
     return escaped.str();
 }
 
-std::string urlDecode(std::string_view str) {
+auto urlDecode(std::string_view str) -> std::string {
     std::string result;
     result.reserve(str.size());
 
     for (size_t i = 0; i < str.size(); ++i) {
         if (str[i] == '%') {
             if (i + 2 >= str.size()) {
-                throw std::invalid_argument("urlDecode failed");
+                throw std::invalid_argument(
+                    "urlDecode failed: incomplete escape sequence");
             }
 
             int value;
             if (auto [p, ec] =
                     std::from_chars(&str[i + 1], &str[i + 3], value, 16);
                 ec != std::errc()) {
-                throw std::invalid_argument("urlDecode failed");
+                throw std::invalid_argument(
+                    "urlDecode failed: invalid escape sequence");
             }
 
             result.push_back(static_cast<char>(value));
@@ -113,35 +126,36 @@ std::string urlDecode(std::string_view str) {
     return result;
 }
 
-bool startsWith(std::string_view str, std::string_view prefix) {
+auto startsWith(std::string_view str, std::string_view prefix) -> bool {
     return str.size() >= prefix.size() &&
            str.substr(0, prefix.size()) == prefix;
 }
 
-bool endsWith(std::string_view str, std::string_view suffix) {
+auto endsWith(std::string_view str, std::string_view suffix) -> bool {
     return str.size() >= suffix.size() &&
            str.substr(str.size() - suffix.size()) == suffix;
 }
 
-std::vector<std::string_view> splitString(const std::string &str,
-                                          char delimiter) {
-    std::vector<std::string_view> tokens;
+auto splitString(const std::string &str,
+                 char delimiter) -> std::vector<std::string> {
+    std::vector<std::string> tokens;
     auto start = str.begin();
     auto end = str.end();
 
     while (start != end) {
         auto next = std::find(start, end, delimiter);
         tokens.emplace_back(str.substr(start - str.begin(), next - start));
-        if (next == end)
+        if (next == end) {
             break;
+        }
         start = next + 1;
     }
 
     return tokens;
 }
 
-std::string joinStrings(const std::vector<std::string_view> &strings,
-                        const std::string_view &delimiter) {
+auto joinStrings(const std::vector<std::string_view> &strings,
+                 const std::string_view &delimiter) -> std::string {
     std::ostringstream oss;
     bool first = true;
 
@@ -156,8 +170,8 @@ std::string joinStrings(const std::vector<std::string_view> &strings,
     return oss.str();
 }
 
-std::string replaceString(std::string_view text, std::string_view oldStr,
-                          std::string_view newStr) {
+auto replaceString(std::string_view text, std::string_view oldStr,
+                   std::string_view newStr) -> std::string {
     std::string result = text.data();
     size_t pos = 0;
     while ((pos = result.find(std::string(oldStr), pos)) != std::string::npos) {
@@ -167,10 +181,10 @@ std::string replaceString(std::string_view text, std::string_view oldStr,
     return result;
 }
 
-std::string replaceStrings(
+auto replaceStrings(
     std::string_view text,
     const std::vector<std::pair<std::string_view, std::string_view>>
-        &replacements) {
+        &replacements) -> std::string {
     std::string result(text);
     for (const auto &[oldStr, newStr] : replacements) {
         result = replaceString(result, oldStr, newStr);
@@ -178,20 +192,22 @@ std::string replaceStrings(
     return result;
 }
 
-std::vector<std::string> SVVtoSV(const std::vector<std::string_view> &svv) {
+auto SVVtoSV(const std::vector<std::string_view> &svv)
+    -> std::vector<std::string> {
     return std::vector<std::string>(svv.begin(), svv.end());
 }
 
-std::vector<std::string> explode(std::string_view text, char symbol) {
+auto explode(std::string_view text, char symbol) -> std::vector<std::string> {
     std::vector<std::string> lines;
-    auto start = text.begin();
-    auto end = text.end();
+    const auto *start = text.begin();
+    const auto *end = text.end();
 
     while (start != end) {
-        auto pos = std::find(start, end, symbol);
+        const auto *pos = std::find(start, end, symbol);
         lines.emplace_back(start, pos);
-        if (pos == end)
+        if (pos == end) {
             break;
+        }
         start = std::next(pos);
     }
 
@@ -199,18 +215,31 @@ std::vector<std::string> explode(std::string_view text, char symbol) {
 }
 
 std::string trim(std::string_view line, std::string_view symbols) {
-    auto first = std::find_if(line.begin(), line.end(), [&symbols](char c) {
-        return symbols.find(c) == std::string_view::npos;
-    });
+    const auto *first =
+        std::find_if(line.begin(), line.end(), [&symbols](char c) {
+            return symbols.find(c) == std::string_view::npos;
+        });
 
-    if (first == line.end())
+    if (first == line.end()) {
         return "";
+    }
 
-    auto last = std::find_if(line.rbegin(), line.rend(), [&symbols](char c) {
-                    return symbols.find(c) == std::string_view::npos;
-                }).base();
+    const auto *last =
+        std::find_if(line.rbegin(), line.rend(), [&symbols](char c) {
+            return symbols.find(c) == std::string_view::npos;
+        }).base();
 
     return std::string(first, last);
+}
+
+auto stringToWString(const std::string &str) -> std::wstring {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.from_bytes(str);
+}
+
+auto wstringToString(const std::wstring &wstr) -> std::string {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+    return myconv.to_bytes(wstr);
 }
 
 }  // namespace atom::utils

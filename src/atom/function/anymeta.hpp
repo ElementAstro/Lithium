@@ -11,6 +11,7 @@
 
 #include "any.hpp"
 #include "atom/error/exception.hpp"
+#include "macro.hpp"
 #include "type_info.hpp"
 
 namespace atom::meta {
@@ -25,44 +26,46 @@ public:
     struct Property {
         GetterFunction getter;
         SetterFunction setter;
-    };
+    } ATOM_ALIGNAS(64);
 
 private:
-    std::unordered_map<std::string, MethodFunction> m_methods;
-    std::unordered_map<std::string, Property> m_properties;
-    std::vector<ConstructorFunction> m_constructors;
+    std::unordered_map<std::string, MethodFunction> m_methods_;
+    std::unordered_map<std::string, Property> m_properties_;
+    std::vector<ConstructorFunction> m_constructors_;
 
 public:
-    void add_method(const std::string& name, MethodFunction method) {
-        m_methods[name] = std::move(method);
+    void addMethod(const std::string& name, MethodFunction method) {
+        m_methods_[name] = std::move(method);
     }
 
-    void add_property(const std::string& name, GetterFunction getter,
-                      SetterFunction setter) {
-        m_properties[name] = {std::move(getter), std::move(setter)};
+    void addProperty(const std::string& name, GetterFunction getter,
+                     SetterFunction setter) {
+        m_properties_[name] = {std::move(getter), std::move(setter)};
     }
 
-    void add_constructor(ConstructorFunction constructor) {
-        m_constructors.push_back(std::move(constructor));
+    void addConstructor(ConstructorFunction constructor) {
+        m_constructors_.push_back(std::move(constructor));
     }
 
-    std::optional<MethodFunction> get_method(const std::string& name) const {
-        if (auto it = m_methods.find(name); it != m_methods.end()) {
+    auto getMethod(const std::string& name) const
+        -> std::optional<MethodFunction> {
+        if (auto it = m_methods_.find(name); it != m_methods_.end()) {
             return it->second;
         }
         return std::nullopt;
     }
 
-    std::optional<Property> get_property(const std::string& name) const {
-        if (auto it = m_properties.find(name); it != m_properties.end()) {
+    auto getProperty(const std::string& name) const -> std::optional<Property> {
+        if (auto it = m_properties_.find(name); it != m_properties_.end()) {
             return it->second;
         }
         return std::nullopt;
     }
 
-    std::optional<ConstructorFunction> get_constructor(size_t index = 0) const {
-        if (index < m_constructors.size()) {
-            return m_constructors[index];
+    auto getConstructor(size_t index = 0) const
+        -> std::optional<ConstructorFunction> {
+        if (index < m_constructors_.size()) {
+            return m_constructors_[index];
         }
         return std::nullopt;
     }
@@ -70,24 +73,25 @@ public:
 
 class TypeRegistry {
 private:
-    std::unordered_map<std::string, TypeMetadata> m_registry;
-    mutable std::shared_mutex m_mutex;
+    std::unordered_map<std::string, TypeMetadata> m_registry_;
+    mutable std::shared_mutex m_mutex_;
 
 public:
-    static TypeRegistry& instance() {
+    static auto instance() -> TypeRegistry& {
         static TypeRegistry registry;
         return registry;
     }
 
-    void register_type(const std::string& name, TypeMetadata metadata) {
-        std::unique_lock lock(m_mutex);
-        m_registry[name] = std::move(metadata);
+    void registerType(const std::string& name, TypeMetadata metadata) {
+        std::unique_lock lock(m_mutex_);
+        m_registry_[name] = std::move(metadata);
     }
 
-    std::optional<TypeMetadata> get_metadata(const std::string& name) const {
-        std::shared_lock lock(m_mutex);
-        auto it = m_registry.find(name);
-        if (it != m_registry.end()) {
+    auto getMetadata(const std::string& name) const
+        -> std::optional<TypeMetadata> {
+        std::shared_lock lock(m_mutex_);
+        auto it = m_registry_.find(name);
+        if (it != m_registry_.end()) {
             return it->second;
         }
         return std::nullopt;
@@ -95,12 +99,12 @@ public:
 };
 
 // Helper function to call methods dynamically
-inline BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
-                              std::vector<BoxedValue> args) {
+inline auto callMethod(BoxedValue& obj, const std::string& method_name,
+                       std::vector<BoxedValue> args) -> BoxedValue {
     auto metadata =
-        TypeRegistry::instance().get_metadata(obj.get_type_info().name());
+        TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
     if (metadata) {
-        auto method = metadata->get_method(method_name);
+        auto method = metadata->getMethod(method_name);
         if (method) {
             args.insert(args.begin(), obj);
             return (*method)(args);
@@ -110,12 +114,12 @@ inline BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
 }
 
 // Helper function to get/set properties dynamically
-inline BoxedValue get_property(BoxedValue& obj,
-                               const std::string& property_name) {
+inline auto getProperty(BoxedValue& obj,
+                        const std::string& property_name) -> BoxedValue {
     auto metadata =
-        TypeRegistry::instance().get_metadata(obj.get_type_info().name());
+        TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
     if (metadata) {
-        auto property = metadata->get_property(property_name);
+        auto property = metadata->getProperty(property_name);
         if (property) {
             return property->getter(obj);
         }
@@ -123,12 +127,12 @@ inline BoxedValue get_property(BoxedValue& obj,
     THROW_NOT_FOUND("Property not found");
 }
 
-inline void set_property(BoxedValue& obj, const std::string& property_name,
-                         const BoxedValue& value) {
+inline void setProperty(BoxedValue& obj, const std::string& property_name,
+                        const BoxedValue& value) {
     auto metadata =
-        TypeRegistry::instance().get_metadata(obj.get_type_info().name());
+        TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
     if (metadata) {
-        auto property = metadata->get_property(property_name);
+        auto property = metadata->getProperty(property_name);
         if (property) {
             property->setter(obj, value);
             return;

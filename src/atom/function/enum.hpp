@@ -9,200 +9,225 @@
 #ifndef ATOM_META_ENUM_HPP
 #define ATOM_META_ENUM_HPP
 
-#include "raw_name.hpp"
-
-#ifdef ATOM_META_CPP_20_SUPPORT
+#include <algorithm>
 #include <array>
+#include <optional>
+#include <string_view>
+#include <type_traits>
 
-#define ENUM_SEARCH_RANGE 32
-namespace atom::meta {
+// EnumTraits 模板结构体需要为每个枚举类型特化。
 template <typename T>
-struct type_info;
+struct EnumTraits;
 
-namespace details {
-template <typename T, std::ptrdiff_t N = 0>
-consteval std::ptrdiff_t search_possible_enum_start() {
-    if constexpr (!raw_name_of_enum<static_cast<T>(N)>().empty()) {
-        return N;
-    } else if constexpr (std::is_signed_v<std::underlying_type_t<T>>) {
-        if constexpr (!raw_name_of_enum<static_cast<T>(-N)>().empty()) {
-            return -N;
-        } else {
-            return search_possible_enum_start<T, N + 1>();
-        }
-    } else {
-        return search_possible_enum_start<T, N + 1>();
-    }
-}
-
-template <typename T, auto N = search_possible_enum_start<T>()>
-consteval std::ptrdiff_t search_possible_continuous_enum_max() {
-    constexpr auto is_end = []<std::size_t... Is>(std::index_sequence<Is...>) {
-        return (raw_name_of_enum<static_cast<T>(N + Is)>().empty() && ...);
-    }(std::make_index_sequence<8>{});
-
-    if constexpr (is_end) {
-        return N - 1;
-    } else {
-        return search_possible_continuous_enum_max<T, N + 1>();
-    }
-}
-}  // namespace details
-
+// 辅助函数：从编译器生成的函数签名中提取枚举名称
 template <typename T>
-    requires std::is_enum_v<T>
-consteval std::ptrdiff_t enum_start() {
-    if constexpr (requires { type_info<T>::start; }) {
-        return type_info<T>::start;
-    } else {
-        return details::search_possible_enum_start<T>();
-    }
-}
+constexpr std::string_view extract_enum_name(const char* func_sig) {
+    std::string_view name(func_sig);
 
-template <typename T>
-    requires std::is_enum_v<T>
-consteval std::ptrdiff_t enum_max() {
-    if constexpr (requires { type_info<T>::max; }) {
-        return type_info<T>::max;
-    } else {
-        return details::search_possible_continuous_enum_max<T>();
-    }
-}
+    auto prefixPos = name.find("= ") + 2;
+    auto suffixPos = name.rfind(']');
 
-template <typename T>
-consteval bool is_bit_field_enum() {
-    if constexpr (requires { type_info<T>::bit; }) {
-        return type_info<T>::bit;
-    } else {
-        return false;
-    }
-}
-
-namespace details {
-template <typename T>
-constexpr auto search_possible_bit_field_enum_length() {
-    constexpr auto max = sizeof(T) * 8;
-    std::size_t result = !raw_name_of_enum<static_cast<T>(0)>().empty();
-    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-        ((raw_name_of_enum<static_cast<T>(1 << Is)>().empty() ? (void)0
-                                                              : ++result),
-         ...);
-    }(std::make_index_sequence<max>{});
-    return result;
-}
-
-template <typename T, std::size_t length>
-constexpr void split_initialize(auto&& f) {
-    constexpr auto group_num = length / 64;
-    constexpr auto rest = length % 64;
-
-    []<std::size_t... Is>(std::index_sequence<Is...>, auto&& f) {
-        (
-            []<std::size_t I, std::size_t... Js>(std::index_sequence<Js...>,
-                                                 auto&& f) {
-                (f.template operator()<I * 64 + Js>(), ...);
-            }.template operator()<Is>(std::make_index_sequence<64>{}, f),
-            ...);
-    }(std::make_index_sequence<group_num>{}, f);
-
-    []<std::size_t... Is>(std::index_sequence<Is...>, auto&& f) {
-        (f.template operator()<group_num * 64 + Is>(), ...);
-    }(std::make_index_sequence<rest>{}, f);
-}
-
-template <typename T>
-constexpr auto enum_names_of_impl() {
-    if constexpr (!is_bit_field_enum<T>()) {
-        constexpr auto start = enum_start<T>();
-        constexpr auto max = enum_max<T>();
-        constexpr auto length = max - start + 1;
-        std::array<std::string_view, length> names{};
-        split_initialize<T, length>([&]<std::size_t I>() {
-            names[I] = raw_name_of_enum<static_cast<T>(start + I)>();
-        });
-        return names;
-    } else {
-        constexpr auto length = search_possible_bit_field_enum_length<T>();
-        std::array<std::string_view, length> names{};
-        constexpr auto has_zero =
-            !raw_name_of_enum<static_cast<T>(0)>().empty();
-        if constexpr (has_zero) {
-            names[0] = raw_name_of_enum<static_cast<T>(0)>();
-            split_initialize<T, length - 1>([&]<std::size_t I>() {
-                names[I + 1] = raw_name_of_enum<static_cast<T>(1 << I)>();
-            });
-        } else {
-            split_initialize<T, length>([&]<std::size_t I>() {
-                names[I] = raw_name_of_enum<static_cast<T>(1 << I)>();
-            });
-        }
-        return names;
-    }
-}
-
-template <typename T>
-struct enum_names_storage {
-    constexpr static auto storage = enum_names_of_impl<T>();
-    constexpr static auto& names = storage;
-};
-
-template <typename T, std::ptrdiff_t N>
-    requires std::is_enum_v<T>
-struct Field {
-    constexpr static std::string_view name() {
-        return raw_name_of_enum<static_cast<T>(N)>();
+    if (prefixPos == std::string_view::npos ||
+        suffixPos == std::string_view::npos) {
+        prefixPos = name.find_last_of(' ') + 1;
+        suffixPos = name.rfind("::");
     }
 
-    using type = T;
-
-    constexpr static std::ptrdiff_t value() { return N; }
-
-    constexpr static std::string_view type_name() { return raw_name_of<T>(); }
-};
-
-template <typename T>
-    requires std::is_enum_v<T>
-constexpr void foreach (auto&& f) {
-    if constexpr (!is_bit_field_enum<T>()) {
-        constexpr auto start = search_possible_enum_start<T>();
-        constexpr auto max = search_possible_continuous_enum_max<T>();
-        constexpr auto length = max - start + 1;
-
-        split_initialize<T, length>(
-            [&]<std::size_t I>() { f(Field<T, start + I>{}); });
-    } else {
-        constexpr auto length = search_possible_bit_field_enum_length<T>();
-        constexpr auto has_zero =
-            !raw_name_of_enum<static_cast<T>(0)>().empty();
-        if constexpr (has_zero) {
-            f(Field<T, 0>{});
-            split_initialize<T, length - 1>(
-                [&]<std::size_t I>() { f(Field<T, 1 << I>{}); });
-        } else {
-            split_initialize<T, length>(
-                [&]<std::size_t I>() { f(Field<T, 1 << I>{}); });
-        }
-    }
+    return name.substr(prefixPos, suffixPos - prefixPos);
 }
 
-}  // namespace details
-
-using details::foreach;
-
-template <typename T>
-    requires std::is_enum_v<T>
-constexpr auto& enum_names_of() {
-    return details::enum_names_storage<T>::names;
-}
-
-template <typename T>
-    requires std::is_enum_v<T>
-constexpr auto& raw_name_of_enum(T value) {
-    constexpr auto start = enum_start<T>();
-    return details::enum_names_storage<T>::names
-        [static_cast<std::size_t>(value) - static_cast<std::size_t>(start)];
-}
-
-}  // namespace atom::meta
+// 生成枚举值的字符串名称
+template <typename T, T Value>
+constexpr std::string_view enum_name() noexcept {
+#if defined(__clang__) || defined(__GNUC__)
+    return extract_enum_name<T>(__PRETTY_FUNCTION__);
+#elif defined(_MSC_VER)
+    return extract_enum_name<T>(__FUNCSIG__);
+#else
+    return {};
 #endif
+}
+
+// 枚举值转字符串
+template <typename T>
+constexpr auto enum_name(T value) noexcept -> std::string_view {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    constexpr auto NAMES = EnumTraits<T>::names;
+
+    for (size_t i = 0; i < VALUES.size(); ++i) {
+        if (VALUES[i] == value) {
+            return NAMES[i];
+        }
+    }
+    return {};
+}
+
+// 字符串转枚举值
+template <typename T>
+constexpr auto enum_cast(std::string_view name) noexcept -> std::optional<T> {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    constexpr auto NAMES = EnumTraits<T>::names;
+
+    for (size_t i = 0; i < NAMES.size(); ++i) {
+        if (NAMES[i] == name) {
+            return VALUES[i];
+        }
+    }
+    return std::nullopt;
+}
+
+// 枚举值转整数
+template <typename T>
+constexpr auto enum_to_integer(T value) noexcept {
+    return static_cast<std::underlying_type_t<T>>(value);
+}
+
+// 整数转枚举值
+template <typename T>
+constexpr auto integer_to_enum(std::underlying_type_t<T> value) noexcept
+    -> std::optional<T> {
+    constexpr auto VALUES = EnumTraits<T>::values;
+
+    for (const auto& val : VALUES) {
+        if (enum_to_integer(val) == value) {
+            return val;
+        }
+    }
+    return std::nullopt;
+}
+
+// 检查枚举值是否有效
+template <typename T>
+constexpr auto enum_contains(T value) noexcept -> bool {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    for (const auto& val : VALUES) {
+        if (val == value) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 获取所有枚举值和名称
+template <typename T>
+constexpr auto enum_entries() noexcept {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    constexpr auto NAMES = EnumTraits<T>::names;
+    std::array<std::pair<T, std::string_view>, VALUES.size()> entries{};
+
+    for (size_t i = 0; i < VALUES.size(); ++i) {
+        entries[i] = {VALUES[i], NAMES[i]};
+    }
+
+    return entries;
+}
+
+// 支持标志枚举（位运算）
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator|(T lhs, T rhs) noexcept -> T {
+    using UT = std::underlying_type_t<T>;
+    return static_cast<T>(static_cast<UT>(lhs) | static_cast<UT>(rhs));
+}
+
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator|=(T& lhs, T rhs) noexcept -> T& {
+    return lhs = lhs | rhs;
+}
+
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator&(T lhs, T rhs) noexcept -> T {
+    using UT = std::underlying_type_t<T>;
+    return static_cast<T>(static_cast<UT>(lhs) & static_cast<UT>(rhs));
+}
+
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator&=(T& lhs, T rhs) noexcept -> T& {
+    return lhs = lhs & rhs;
+}
+
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator^(T lhs, T rhs) noexcept -> T {
+    using UT = std::underlying_type_t<T>;
+    return static_cast<T>(static_cast<UT>(lhs) ^ static_cast<UT>(rhs));
+}
+
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator^=(T& lhs, T rhs) noexcept -> T& {
+    return lhs = lhs ^ rhs;
+}
+
+template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
+constexpr auto operator~(T rhs) noexcept -> T {
+    using UT = std::underlying_type_t<T>;
+    return static_cast<T>(~static_cast<UT>(rhs));
+}
+
+// 获取枚举的默认值
+template <typename T>
+constexpr auto enum_default() noexcept -> T {
+    return EnumTraits<T>::values[0];
+}
+
+// 根据名字排序枚举值
+template <typename T>
+constexpr auto enum_sorted_by_name() noexcept {
+    auto entries = enum_entries<T>();
+    std::sort(entries.begin(), entries.end(),
+              [](const auto& a, const auto& b) { return a.second < b.second; });
+    return entries;
+}
+
+// 根据整数值排序枚举值
+template <typename T>
+constexpr auto enum_sorted_by_value() noexcept {
+    auto entries = enum_entries<T>();
+    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+        return enum_to_integer(a.first) < enum_to_integer(b.first);
+    });
+    return entries;
+}
+
+// 模糊匹配字符串并转换为枚举值
+template <typename T>
+auto enum_cast_fuzzy(std::string_view name) -> std::optional<T> {
+    constexpr auto names = EnumTraits<T>::names;
+
+    for (size_t i = 0; i < names.size(); ++i) {
+        if (names[i].find(name) != std::string_view::npos) {
+            return EnumTraits<T>::values[i];
+        }
+    }
+    return std::nullopt;
+}
+
+// 检查整数值是否在枚举范围内
+template <typename T>
+constexpr auto integer_in_enum_range(std::underlying_type_t<T> value) noexcept
+    -> bool {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    return std::any_of(VALUES.begin(), VALUES.end(),
+                       [value](T e) { return enum_to_integer(e) == value; });
+}
+
+// 添加枚举别名支持
+template <typename T>
+struct EnumAliasTraits {
+    static constexpr std::array<std::string_view, 0> ALIASES = {};
+};
+
+template <typename T>
+constexpr auto enum_cast_with_alias(std::string_view name) noexcept
+    -> std::optional<T> {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    constexpr auto NAMES = EnumTraits<T>::names;
+    constexpr auto ALIASES = EnumAliasTraits<T>::aliases;
+
+    for (size_t i = 0; i < NAMES.size(); ++i) {
+        if (NAMES[i] == name || (i < ALIASES.size() && ALIASES[i] == name)) {
+            return VALUES[i];
+        }
+    }
+    return std::nullopt;
+}
+
 #endif  // ATOM_META_ENUM_HPP

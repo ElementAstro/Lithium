@@ -16,49 +16,52 @@ Description: Simple implementation of AES encryption
 #define ATOM_UTILS_AES_HPP
 
 #include <string>
+#include <vector>
 
 namespace atom::utils {
 /**
- * @brief 使用AES算法对输入的明文进行加密。
+ * @brief Encrypts the input plaintext using the AES algorithm.
  *
- * @param plaintext 明文数据
- * @param key 加密密钥
- * @return 加密后的密文数据
+ * @param plaintext The plaintext data to be encrypted
+ * @param key The encryption key
+ * @return The encrypted ciphertext
  */
-[[nodiscard]] std::string encryptAES(std::string_view plaintext,
-                                     std::string_view key);
+[[nodiscard]] auto encryptAES(std::string_view plaintext, std::string_view key,
+                              std::vector<unsigned char> &iv,
+                              std::vector<unsigned char> &tag) -> std::string;
 
 /**
- * @brief 使用AES算法对输入的密文进行解密。
+ * @brief Decrypts the input ciphertext using the AES algorithm.
  *
- * @param ciphertext 密文数据
- * @param key 解密密钥
- * @return 解密后的明文数据
+ * @param ciphertext The ciphertext data to be decrypted
+ * @param key The decryption key
+ * @return The decrypted plaintext
  */
-[[nodiscard]] std::string decryptAES(std::string_view ciphertext,
-                                     std::string_view key);
+[[nodiscard]] auto decryptAES(std::string_view ciphertext, std::string_view key,
+                              std::vector<unsigned char> &iv,
+                              std::vector<unsigned char> &tag) -> std::string;
 
 /**
- * @brief 使用Zlib库对输入的数据进行压缩。
+ * @brief Compresses the input data using the Zlib library.
  *
- * @param data 待压缩的数据
- * @return 压缩后的数据
+ * @param data The data to be compressed
+ * @return The compressed data
  */
 [[nodiscard]] std::string compress(std::string_view data);
 
 /**
- * @brief 使用Zlib库对输入的数据进行解压。
+ * @brief Decompresses the input data using the Zlib library.
  *
- * @param data 待解压的数据
- * @return 解压后的数据
+ * @param data The data to be decompressed
+ * @return The decompressed data
  */
 [[nodiscard]] std::string decompress(std::string_view data);
 
 /**
- * @brief 计算文件的SHA-256哈希值。
+ * @brief Calculates the SHA-256 hash of a file.
  *
- * @param filename 文件名
- * @return 文件的SHA-256哈希值
+ * @param filename The name of the file
+ * @return The SHA-256 hash of the file
  */
 [[nodiscard]] std::string calculateSha256(std::string_view filename);
 }  // namespace atom::utils

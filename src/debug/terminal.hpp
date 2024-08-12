@@ -10,11 +10,10 @@
 #define LITHIUM_DEBUG_TERMINAL_HPP
 
 #include <any>
-#include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
+#include "macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -27,37 +26,51 @@
 
 namespace lithium::debug {
 class SuggestionEngine;  // Forwards declaration
+class CommandChecker;
+class CommandHistory;
+
 class ConsoleTerminal {
 public:
     ConsoleTerminal();
     ~ConsoleTerminal();
 
-    [[nodiscard]] std::vector<std::string> getRegisteredCommands() const;
-    void callCommand(std::string_view name,
-                                      const std::vector<std::any>& args);
+    ATOM_NODISCARD auto getRegisteredCommands() const
+        -> std::vector<std::string>;
+    void callCommand(std::string_view name, const std::vector<std::any>& args);
     void run();
 
 protected:
-    void helpCommand(const std::vector<std::string>& args);
+    void helpCommand() const;
+    void printHistory() const;
 
 private:
     void printHeader();
-    void clearConsole();
 
-    std::vector<std::any> parseArguments(const std::string& input);
+    auto processToken(const std::string& token) -> std::any;
+
+    auto parseArguments(const std::string& input) -> std::vector<std::any>;
+
+    static auto commandCompletion(const char* text, int start, int end) -> char**;
+    static auto commandGenerator(const char* text, int state) -> char*;
 
     static constexpr int MAX_HISTORY_SIZE = 100;
 
-    std::shared_ptr<SuggestionEngine> suggestionEngine;
+    std::shared_ptr<SuggestionEngine> suggestionEngine_;
 
-    std::shared_ptr<Component> component;
+    std::shared_ptr<CommandChecker> commandChecker_;
+
+    std::shared_ptr<CommandHistory> commandHistory_;
+
+    std::shared_ptr<Component> component_;
 
 #ifdef _WIN32
-    HANDLE hConsole;
+    HANDLE hConsole_;
 #else
-    struct termios orig_termios;
+    struct termios orig_termios_;
 #endif
 };
+
+extern ConsoleTerminal* globalConsoleTerminal;
 
 }  // namespace lithium::debug
 

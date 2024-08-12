@@ -70,7 +70,7 @@ endif()
 # --- add loguru target
 # ----------------------------------------------------------
 
-add_library(loguru loguru.cpp) # allow BUILD_SHARED_LIBS to decide STATIC/SHARED
+add_library(loguru SHARED loguru.cpp) # allow BUILD_SHARED_LIBS to decide STATIC/SHARED
 
 if (NOT PROJECT_IS_TOP_LEVEL)
   add_library(${_namespace}::loguru ALIAS loguru)

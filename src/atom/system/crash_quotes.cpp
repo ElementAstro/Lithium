@@ -1,5 +1,5 @@
 /*
- * crash_quotes.cpp
+ * crash_quotes_.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -19,74 +19,77 @@ Description: Quote manager for crash report.
 #include <random>
 
 #include "atom/error/exception.hpp"
+#include "atom/type/json.hpp"
+#include "atom/utils/random.hpp"
+using json = nlohmann::json;
 
 namespace atom::system {
-
-Quote::Quote(const std::string &text, const std::string &author)
-    : text(text), author(author) {}
-
-const std::string &Quote::getText() const { return text; }
-
-const std::string &Quote::getAuthor() const { return author; }
-
-void QuoteManager::addQuote(const Quote &quote) { quotes.push_back(quote); }
+void QuoteManager::addQuote(const Quote &quote) { quotes_.push_back(quote); }
 
 void QuoteManager::removeQuote(const Quote &quote) {
-    if (quotes.empty()) {
-        return;
+    auto it =
+        std::find_if(quotes_.begin(), quotes_.end(), [&quote](const Quote &q) {
+            return q.getText() == quote.getText() &&
+                   q.getAuthor() == quote.getAuthor();
+        });
+    if (it != quotes_.end()) {
+        quotes_.erase(it);
     }
 }
 
 #ifdef DEBUG
 void QuoteManager::displayQuotes() const {
-    for (const auto &quote : quotes) {
+    for (const auto &quote : quotes_) {
         std::cout << quote.getText() << " - " << quote.getAuthor() << std::endl;
     }
 }
 #endif
 
 void QuoteManager::shuffleQuotes() {
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(quotes.begin(), quotes.end(), g);
+    atom::utils::Random<std::mt19937, std::uniform_int_distribution<>> random(
+        std::random_device{}());
+    std::shuffle(quotes_.begin(), quotes_.end(), random.engine());
 }
 
-void QuoteManager::clearQuotes() { quotes.clear(); }
+void QuoteManager::clearQuotes() { quotes_.clear(); }
 
-void QuoteManager::loadQuotesFromFile(const std::string &filename) {
+void QuoteManager::loadQuotesFromJson(const std::string &filename) {
     std::ifstream file(filename);
+    if (!file.is_open()) {
+        return;
+    }
     try {
-        if (file.is_open()) {
-            std::string line;
-            while (std::getline(file, line)) {
-                auto delimiterPos = line.find(" - ");
-                if (delimiterPos != std::string::npos) {
-                    std::string quoteText = line.substr(0, delimiterPos);
-                    std::string quoteAuthor = line.substr(delimiterPos + 3);
-                    addQuote(Quote(quoteText, quoteAuthor));
-                }
+        json data = json::parse(file);
+        for (const auto &quote : data) {
+            std::string quoteText = quote["text"];
+            std::string quoteAuthor = quote["author"];
+            if (!quoteText.empty() && !quoteAuthor.empty()) {
+                addQuote(Quote(quoteText, quoteAuthor));
             }
-            file.close();
         }
-    } catch (const std::exception &e) {
-        THROW_EXCEPTION("QuoteManager::loadQuotesFromFile", e.what());
+    } catch (const nlohmann::json::parse_error &e) {
+        THROW_UNLAWFUL_OPERATION("Error parsing JSON file: " +
+                                 std::string(e.what()));
     }
 }
 
-void QuoteManager::saveQuotesToFile(const std::string &filename) const {
+void QuoteManager::saveQuotesToJson(const std::string &filename) const {
     std::ofstream file(filename);
     if (file.is_open()) {
-        for (const auto &quote : quotes) {
-            file << quote.getText() << " " << quote.getAuthor() << std::endl;
+        json data;
+        for (const auto &quote : quotes_) {
+            data.push_back(
+                {{"text", quote.getText()}, {"author", quote.getAuthor()}});
         }
-        file.close();
+        file << data.dump(4);
     }
+    file.close();
 }
 
-std::vector<Quote> QuoteManager::searchQuotes(
-    const std::string &keyword) const {
+auto QuoteManager::searchQuotes(const std::string &keyword) const
+    -> std::vector<Quote> {
     std::vector<Quote> results;
-    for (const auto &quote : quotes) {
+    for (const auto &quote : quotes_) {
         if (quote.getText().find(keyword) != std::string::npos) {
             results.push_back(quote);
         }
@@ -94,10 +97,10 @@ std::vector<Quote> QuoteManager::searchQuotes(
     return results;
 }
 
-std::vector<Quote> QuoteManager::filterQuotesByAuthor(
-    const std::string &author) const {
+auto QuoteManager::filterQuotesByAuthor(const std::string &author) const
+    -> std::vector<Quote> {
     std::vector<Quote> results;
-    for (const auto &quote : quotes) {
+    for (const auto &quote : quotes_) {
         if (quote.getAuthor() == author) {
             results.push_back(quote);
         }
@@ -105,53 +108,13 @@ std::vector<Quote> QuoteManager::filterQuotesByAuthor(
     return results;
 }
 
-std::string QuoteManager::getRandomQuote() const {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, quotes.size() - 1);
-    return quotes[dis(gen)].getText() + " - " + quotes[dis(gen)].getAuthor();
+auto QuoteManager::getRandomQuote() const -> std::string {
+    if (quotes_.empty()) {
+        return "";
+    }
+    int quoteId =
+        utils::Random<std::mt19937, std::uniform_int_distribution<int>>(
+            0, quotes_.size() - 1)();
+    return quotes_[quoteId].getText() + " - " + quotes_[quoteId].getAuthor();
 }
 }  // namespace atom::system
-
-/*
-int main()
-{
-    QuoteManager quoteManager;
-
-    // 添加名言
-    quoteManager.addQuote(Quote("Be yourself; everyone else is already taken.",
-"Oscar Wilde")); quoteManager.addQuote(Quote("In the end, it's not the years in
-your life that count. It's the life in your years.", "Abraham Lincoln"));
-    quoteManager.addQuote(Quote("The only way to do great work is to love what
-you do.", "Steve Jobs"));
-
-    // 显示所有名言
-    std::cout << "All Quotes:" << std::endl;
-    quoteManager.displayQuotes();
-
-    // 按关键词搜索名言
-    std::cout << "\nQuotes containing 'love':" << std::endl;
-    auto loveQuotes = quoteManager.searchQuotes("love");
-    for (const auto &quote : loveQuotes)
-    {
-        std::cout << quote.getText() << " - " << quote.getAuthor() << std::endl;
-    }
-
-    // 按作者过滤名言
-    std::cout << "\nQuotes by Steve Jobs:" << std::endl;
-    auto jobsQuotes = quoteManager.filterQuotesByAuthor("Steve Jobs");
-    for (const auto &quote : jobsQuotes)
-    {
-        std::cout << quote.getText() << " - " << quote.getAuthor() << std::endl;
-    }
-
-    std::cout << "\nRandom Quote:" << std::endl;
-    std::cout << quoteManager.getRandomQuote() << std::endl;
-
-    // 保存名言到文件
-    quoteManager.saveQuotesToFile("updated_quotes.txt");
-
-    return 0;
-}
-
-*/

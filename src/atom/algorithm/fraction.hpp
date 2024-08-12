@@ -42,7 +42,6 @@ public:
     int numerator;   /**< The numerator of the fraction. */
     int denominator; /**< The denominator of the fraction. */
 
-public:
     /**
      * @brief Constructs a new Fraction object with the given numerator and
      * denominator.
@@ -56,56 +55,56 @@ public:
      * @param other The fraction to add.
      * @return Reference to the modified fraction.
      */
-    Fraction& operator+=(const Fraction& other);
+    auto operator+=(const Fraction& other) -> Fraction&;
 
     /**
      * @brief Subtracts another fraction from this fraction.
      * @param other The fraction to subtract.
      * @return Reference to the modified fraction.
      */
-    Fraction& operator-=(const Fraction& other);
+    auto operator-=(const Fraction& other) -> Fraction&;
 
     /**
      * @brief Multiplies this fraction by another fraction.
      * @param other The fraction to multiply by.
      * @return Reference to the modified fraction.
      */
-    Fraction& operator*=(const Fraction& other);
+    auto operator*=(const Fraction& other) -> Fraction&;
 
     /**
      * @brief Divides this fraction by another fraction.
      * @param other The fraction to divide by.
      * @return Reference to the modified fraction.
      */
-    Fraction& operator/=(const Fraction& other);
+    auto operator/=(const Fraction& other) -> Fraction&;
 
     /**
      * @brief Adds another fraction to this fraction.
      * @param other The fraction to add.
      * @return The result of addition.
      */
-    Fraction operator+(const Fraction& other) const;
+    auto operator+(const Fraction& other) const -> Fraction;
 
     /**
      * @brief Subtracts another fraction from this fraction.
      * @param other The fraction to subtract.
      * @return The result of subtraction.
      */
-    Fraction operator-(const Fraction& other) const;
+    auto operator-(const Fraction& other) const -> Fraction;
 
     /**
      * @brief Multiplies this fraction by another fraction.
      * @param other The fraction to multiply by.
      * @return The result of multiplication.
      */
-    Fraction operator*(const Fraction& other) const;
+    auto operator*(const Fraction& other) const -> Fraction;
 
     /**
      * @brief Divides this fraction by another fraction.
      * @param other The fraction to divide by.
      * @return The result of division.
      */
-    Fraction operator/(const Fraction& other) const;
+    auto operator/(const Fraction& other) const -> Fraction;
 
 #if __cplusplus >= 202002L
     /**
@@ -114,13 +113,14 @@ public:
      * @return An integer indicating the comparison result.
      */
     auto operator<=>(const Fraction& other) const {
-        double diff = this->to_double() - other.to_double();
-        if (diff > 0)
+        double diff = this->toDouble() - other.toDouble();
+        if (diff > 0) {
             return std::strong_ordering::greater;
-        else if (diff < 0)
+        }
+        if (diff < 0) {
             return std::strong_ordering::less;
-        else
-            return std::strong_ordering::equal;
+        }
+        return std::strong_ordering::equal;
     }
 #endif
 
@@ -129,7 +129,7 @@ public:
      * @param other The fraction to compare with.
      * @return True if fractions are equal, false otherwise.
      */
-    bool operator==(const Fraction& other) const;
+    auto operator==(const Fraction& other) const -> bool;
 
     /**
      * @brief Converts the fraction to a double value.
@@ -153,13 +153,13 @@ public:
      * @brief Converts the fraction to a string representation.
      * @return The string representation of the fraction.
      */
-    std::string to_string() const;
+    [[nodiscard]] auto toString() const -> std::string;
 
     /**
      * @brief Converts the fraction to a double value.
      * @return The fraction as a double.
      */
-    double to_double() const;
+    [[nodiscard]] auto toDouble() const -> double;
 
     /**
      * @brief Outputs the fraction to the output stream.
@@ -167,7 +167,8 @@ public:
      * @param f The fraction to output.
      * @return Reference to the output stream.
      */
-    friend std::ostream& operator<<(std::ostream& os, const Fraction& f);
+    friend auto operator<<(std::ostream& os,
+                           const Fraction& f) -> std::ostream&;
 
     /**
      * @brief Inputs the fraction from the input stream.
@@ -175,7 +176,7 @@ public:
      * @param f The fraction to input.
      * @return Reference to the input stream.
      */
-    friend std::istream& operator>>(std::istream& is, Fraction& f);
+    friend auto operator>>(std::istream& is, Fraction& f) -> std::istream&;
 };
 
 }  // namespace atom::algorithm

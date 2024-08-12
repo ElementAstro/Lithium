@@ -12,14 +12,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Add source files
 set(SOURCE_FILES
-    src/battery.cpp
-    src/cpu.cpp
-    src/disk.cpp
-    src/gpu.cpp
-    src/memory.cpp
-    src/os.cpp
-    src/wifi.cpp
-
     _component.cpp
     _main.cpp
 )

@@ -4,22 +4,16 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-1-4
-
-Description: A sandbox for alone componnents, such as executables.
-
-**************************************************/
-
 #include "sandbox.hpp"
 
-#include "atom/utils/convert.hpp"
-
 #ifdef _WIN32
+// clang-format off
 #include <windows.h>
 #include <psapi.h>
+// clang-format on
 #else
+#include <fcntl.h>
+#include <seccomp.h>
 #include <sys/ptrace.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -28,8 +22,69 @@ Description: A sandbox for alone componnents, such as executables.
 #endif
 
 namespace lithium {
-bool Sandbox::setTimeLimit(int timeLimitMs) {
-    m_timeLimit = timeLimitMs;
+
+class SandboxImpl {
+public:
+    int mTimeLimit{0};
+    long mMemoryLimit{0};
+    std::string mRootDirectory;
+    int mUserId{0};
+    std::string mProgramPath;
+    std::vector<std::string> mProgramArgs;
+    int mTimeUsed{0};
+    long mMemoryUsed{0};
+
+    auto setTimeLimit(int timeLimitMs) -> bool;
+    auto setMemoryLimit(long memoryLimitKb) -> bool;
+    auto setRootDirectory(const std::string& rootDirectory) -> bool;
+    auto setUserId(int userId) -> bool;
+    auto setProgramPath(const std::string& programPath) -> bool;
+    auto setProgramArgs(const std::vector<std::string>& programArgs) -> bool;
+    auto run() -> bool;
+
+#ifdef _WIN32
+    auto setWindowsLimits(PROCESS_INFORMATION& processInfo) const -> bool;
+#else
+    bool setUnixLimits();
+    bool applySeccomp();
+#endif
+};
+
+Sandbox::Sandbox() : pimpl(std::make_unique<SandboxImpl>()) {}
+
+Sandbox::~Sandbox() = default;
+
+auto Sandbox::setTimeLimit(int timeLimitMs) -> bool {
+    return pimpl->setTimeLimit(timeLimitMs);
+}
+
+auto Sandbox::setMemoryLimit(long memoryLimitKb) -> bool {
+    return pimpl->setMemoryLimit(memoryLimitKb);
+}
+
+auto Sandbox::setRootDirectory(const std::string& rootDirectory) -> bool {
+    return pimpl->setRootDirectory(rootDirectory);
+}
+
+auto Sandbox::setUserId(int userId) -> bool { return pimpl->setUserId(userId); }
+
+auto Sandbox::setProgramPath(const std::string& programPath) -> bool {
+    return pimpl->setProgramPath(programPath);
+}
+
+auto Sandbox::setProgramArgs(const std::vector<std::string>& programArgs)
+    -> bool {
+    return pimpl->setProgramArgs(programArgs);
+}
+
+auto Sandbox::run() -> bool { return pimpl->run(); }
+
+auto Sandbox::getTimeUsed() const -> int { return pimpl->mTimeUsed; }
+
+auto Sandbox::getMemoryUsed() const -> long { return pimpl->mMemoryUsed; }
+
+auto SandboxImpl::setTimeLimit(int timeLimitMs) -> bool {
+    mTimeLimit = timeLimitMs;
 #ifndef _WIN32
     rlimit limit{.rlim_cur = static_cast<rlim_t>(timeLimitMs) / 1000,
                  .rlim_max = static_cast<rlim_t>(timeLimitMs) / 1000};
@@ -38,8 +93,8 @@ bool Sandbox::setTimeLimit(int timeLimitMs) {
     return true;
 }
 
-bool Sandbox::setMemoryLimit(long memoryLimitKb) {
-    m_memoryLimit = memoryLimitKb;
+auto SandboxImpl::setMemoryLimit(long memoryLimitKb) -> bool {
+    mMemoryLimit = memoryLimitKb;
 #ifndef _WIN32
     rlimit limit{.rlim_cur = static_cast<rlim_t>(memoryLimitKb) * 1024,
                  .rlim_max = static_cast<rlim_t>(memoryLimitKb) * 1024};
@@ -48,107 +103,179 @@ bool Sandbox::setMemoryLimit(long memoryLimitKb) {
     return true;
 }
 
-bool Sandbox::setRootDirectory(const std::string& rootDirectory) {
-    m_rootDirectory = rootDirectory;
+auto SandboxImpl::setRootDirectory(const std::string& rootDirectory) -> bool {
+    mRootDirectory = rootDirectory;
 #ifndef _WIN32
     return (chdir(rootDirectory.c_str()) == 0) &&
            (chroot(rootDirectory.c_str()) == 0);
 #endif
-    return false;
+    return true;
 }
 
-bool Sandbox::setUserId(int userId) {
-    m_userId = userId;
+auto SandboxImpl::setUserId(int userId) -> bool {
+    mUserId = userId;
 #ifndef _WIN32
     return (setuid(userId) == 0) && (setgid(userId) == 0);
 #endif
-    return false;
-}
-
-bool Sandbox::setProgramPath(const std::string& programPath) {
-    m_programPath = programPath;
     return true;
 }
 
-bool Sandbox::setProgramArgs(const std::vector<std::string>& programArgs) {
-    m_programArgs = programArgs;
+auto SandboxImpl::setProgramPath(const std::string& programPath) -> bool {
+    mProgramPath = programPath;
     return true;
 }
 
-bool Sandbox::run() {
+auto SandboxImpl::setProgramArgs(const std::vector<std::string>& programArgs)
+    -> bool {
+    mProgramArgs = programArgs;
+    return true;
+}
+
+#ifdef _WIN32
+auto SandboxImpl::setWindowsLimits(PROCESS_INFORMATION& processInfo) const
+    -> bool {
+    const HANDLE PROCESS_HANDLE = processInfo.hProcess;
+
+    if (mTimeLimit > 0) {
+        SetProcessAffinityMask(PROCESS_HANDLE,
+                               static_cast<DWORD_PTR>(mTimeLimit));
+    }
+
+    if (mMemoryLimit > 0) {
+        SetProcessWorkingSetSize(PROCESS_HANDLE,
+                                 static_cast<SIZE_T>(mMemoryLimit),
+                                 static_cast<SIZE_T>(mMemoryLimit));
+    }
+
+    return true;
+}
+#else
+auto SandboxImpl::setUnixLimits() -> bool {
+    if (mTimeLimit > 0) {
+        rlimit limit{.rlim_cur = static_cast<rlim_t>(mTimeLimit) / 1000,
+                     .rlim_max = static_cast<rlim_t>(mTimeLimit) / 1000};
+        if (setrlimit(RLIMIT_CPU, &limit) != 0) {
+            return false;
+        }
+    }
+
+    if (mMemoryLimit > 0) {
+        rlimit limit{.rlim_cur = static_cast<rlim_t>(mMemoryLimit) * 1024,
+                     .rlim_max = static_cast<rlim_t>(mMemoryLimit) * 1024};
+        if (setrlimit(RLIMIT_AS, &limit) != 0) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+auto SandboxImpl::applySeccomp() -> bool {
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);  // Default action: kill
+    if (ctx == nullptr) {
+        return false;
+    }
+
+    // Allow necessary syscalls
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit_group), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(brk), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(munmap), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
+                     SCMP_A1(SCMP_CMP_MASKED_EQ, O_WRONLY, O_WRONLY));
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(close), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+
+    // Load the filter
+    if (seccomp_load(ctx) != 0) {
+        seccomp_release(ctx);
+        return false;
+    }
+
+    seccomp_release(ctx);
+    return true;
+}
+#endif
+
+auto SandboxImpl::run() -> bool {
 #ifdef _WIN32
     STARTUPINFO startupInfo{};
     startupInfo.cb = sizeof(startupInfo);
     PROCESS_INFORMATION processInfo{};
 
-    std::string commandLine = m_programPath;
-    for (const auto& arg : m_programArgs) {
+    std::string commandLine = mProgramPath;
+    for (const auto& arg : mProgramArgs) {
         commandLine += ' ' + arg;
     }
 
-    if (!CreateProcess(nullptr, commandLine.data(),
-                       nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr,
-                       nullptr, &startupInfo, &processInfo)) {
+    if (!CreateProcess(nullptr, commandLine.data(), nullptr, nullptr, FALSE,
+                       CREATE_SUSPENDED, nullptr, nullptr, &startupInfo,
+                       &processInfo)) {
         return false;
     }
 
-    const HANDLE processHandle = processInfo.hProcess;
-
-    if (m_timeLimit > 0) {
-        SetProcessAffinityMask(processHandle,
-                               static_cast<DWORD_PTR>(m_timeLimit));
-    }
-
-    if (m_memoryLimit > 0) {
-        SetProcessWorkingSetSize(processHandle,
-                                 static_cast<SIZE_T>(m_memoryLimit),
-                                 static_cast<SIZE_T>(m_memoryLimit));
+    if (!setWindowsLimits(processInfo)) {
+        return;
     }
 
     ResumeThread(processInfo.hThread);
-    WaitForSingleObject(processHandle, INFINITE);
+    WaitForSingleObject(processInfo.hProcess, INFINITE);
 
     DWORD exitCode = 0;
-    GetExitCodeProcess(processHandle, &exitCode);
+    GetExitCodeProcess(processInfo.hProcess, &exitCode);
 
     PROCESS_MEMORY_COUNTERS memoryCounters{};
-    GetProcessMemoryInfo(processHandle, &memoryCounters,
+    GetProcessMemoryInfo(processInfo.hProcess, &memoryCounters,
                          sizeof(memoryCounters));
 
-    m_timeUsed = GetTickCount();
-    m_memoryUsed = static_cast<long>(memoryCounters.WorkingSetSize / 1024);
+    mTimeUsed = GetTickCount();
+    mMemoryUsed = static_cast<long>(memoryCounters.WorkingSetSize / 1024);
 
-    CloseHandle(processHandle);
+    CloseHandle(processInfo.hProcess);
     CloseHandle(processInfo.hThread);
 
     return exitCode == 0;
 #else
-    const pid_t pid = fork();
-    if (pid < 0) {
+    const pid_t PID = fork();
+    if (PID < 0) {
         return false;
-    } else if (pid == 0) {
+    }
+    if (PID == 0) {
         ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
 
         std::vector<char*> args;
-        args.reserve(m_programArgs.size() + 2);
-        args.emplace_back(m_programPath.data());
-        for (const auto& arg : m_programArgs) {
+        args.reserve(mProgramArgs.size() + 2);
+        args.emplace_back(mProgramPath.data());
+        for (const auto& arg : mProgramArgs) {
             args.emplace_back(const_cast<char*>(arg.c_str()));
         }
         args.emplace_back(nullptr);
 
-        execvp(m_programPath.c_str(), args.data());
+        if (!setUnixLimits()) {
+            exit(1);
+        }
+
+        if (!applySeccomp()) {
+            exit(1);
+        }
+
+        execvp(mProgramPath.c_str(), args.data());
         exit(0);
     } else {
         int status = 0;
         rusage usage{};
-        while (wait4(pid, &status, 0, &usage) != pid)
+        while (wait4(PID, &status, 0, &usage) != PID) {
             ;
-        m_timeUsed = static_cast<int>(usage.ru_utime.tv_sec * 1000 +
-                                      usage.ru_utime.tv_usec / 1000);
-        m_memoryUsed = static_cast<long>(usage.ru_maxrss);
+        }
+        mTimeUsed = static_cast<int>(usage.ru_utime.tv_sec * 1000 +
+                                     usage.ru_utime.tv_usec / 1000);
+        mMemoryUsed = static_cast<long>(usage.ru_maxrss);
         return WIFEXITED(status) && WEXITSTATUS(status) == 0;
     }
 #endif
 }
+
 }  // namespace lithium

@@ -23,10 +23,10 @@ using namespace std;
 // Message
 Message::Message(Type t, const string &name, const string &target,
                  const string &origin)
-    : type_(t), name_(name), target_(target), origin_(origin) {
+    : type_(t), target_(target), origin_(origin), name_(name) {
     timestamp_ = atom::utils::getChinaTimestampString();
-    atom::utils::UUIDGenerator generator;
-    uuid_ = generator.generateUUID();
+    atom::utils::UUID generator;
+    uuid_ = generator.toString();
 }
 
 Message::Type Message::fromInt(const int &t) {

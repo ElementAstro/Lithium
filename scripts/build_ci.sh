@@ -1,68 +1,122 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
 echo "Checking system environment..."
 
-# Check if the script is run with sudo
-if [[ $EUID -ne 0 ]]; then
+# 检查是否以 sudo 运行脚本
+if [ "$(id -u)" -ne 0 ]; then
     echo "This script must be run with sudo."
     exit 1
 fi
 
-# Check if the system is Debian-based
-if ! command -v apt-get &> /dev/null; then
-    echo "This script only supports Debian-based systems."
+# 检查系统包管理器
+if command -v apt-get > /dev/null; then
+    PKG_MANAGER="apt-get"
+    PKG_INSTALL="$PKG_MANAGER install -y"
+    PKG_UPDATE="$PKG_MANAGER update"
+    PKG_UPGRADE="$PKG_MANAGER upgrade -y"
+    PKG_REMOVE="$PKG_MANAGER autoremove -y"
+    PKG_CLEAN="$PKG_MANAGER clean"
+    DEPENDENCIES="libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libopencv-dev build-essential software-properties-common uuid-dev"
+elif command -v yum > /dev/null; then
+    PKG_MANAGER="yum"
+    PKG_INSTALL="$PKG_MANAGER install -y"
+    PKG_UPDATE="$PKG_MANAGER update -y"
+    PKG_UPGRADE="$PKG_MANAGER upgrade -y"
+    PKG_REMOVE="$PKG_MANAGER autoremove -y"
+    PKG_CLEAN="$PKG_MANAGER clean all"
+    DEPENDENCIES="cfitsio-devel zlib-devel openssl-devel libzip-devel nova-devel fmt-devel opencv-devel make automake gcc gcc-c++ kernel-devel uuid-devel"
+else
+    echo "This script only supports Debian-based or RedHat-based systems."
     exit 1
 fi
 
-# Check if gcc and g++ are installed
-if ! command -v gcc &> /dev/null || ! command -v g++ &> /dev/null; then
+# 更新系统包
+echo "Updating system packages..."
+$PKG_UPDATE
+$PKG_UPGRADE
+
+# 安装或更新 gcc 和 g++
+if ! command -v gcc > /dev/null || ! command -v g++ > /dev/null; then
     echo "gcc and g++ are not installed. Installing..."
-    apt-get install -y gcc g++
+    $PKG_INSTALL gcc g++
 else
     echo "gcc and g++ are already installed."
 fi
 
-# Check if g++ version is at least 10
-gpp_version=$(g++ --version | grep -oP '(?<=g\+\+ )[0-9]+')
+# 检查 g++ 版本是否至少为 10
+gpp_version=$(g++ -dumpversion | cut -f1 -d.)
 if [ "$gpp_version" -lt "10" ]; then
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-    sudo apt-get install gcc-13 g++-13 -y
+    if [ "$PKG_MANAGER" = "apt-get" ]; then
+        echo "Installing gcc-13 and g++-13..."
+        add-apt-repository ppa:ubuntu-toolchain-r/test -y
+        $PKG_UPDATE
+        $PKG_INSTALL gcc-13 g++-13
+        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+    elif [ "$PKG_MANAGER" = "yum" ]; then
+        echo "Installing devtoolset-10..."
+        $PKG_INSTALL centos-release-scl
+        $PKG_INSTALL devtoolset-10
+        source /opt/rh/devtoolset-10/enable
+    fi
 fi
 
-# Check if CMake is installed
-if ! command -v cmake &> /dev/null; then
+# 安装或更新 CMake
+if ! command -v cmake > /dev/null; then
     echo "CMake is not installed. Installing..."
-    apt-get install -y cmake
+    $PKG_INSTALL cmake
 else
     echo "CMake is already installed."
 fi
 
-# Check if CMake version is at least 3.20
-cmake_version=$(cmake --version | grep -oP '(?<=version )([0-9]+\.[0-9]+)')
-if [ "$(printf "%s\n" "3.20" "$cmake_version" | sort -V | head -n1)" != "3.20" ]; then
+# 检查 CMake 版本是否至少为 3.20
+cmake_version=$(cmake --version | awk -F " " '/version/ {print $3}')
+if [ "$(printf '%s\n' "3.20" "$cmake_version" | sort -V | head -n1)" != "3.20" ]; then
+    echo "Updating CMake to version 3.28..."
     wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
     tar -zxvf cmake-3.28.0-rc5.tar.gz
     cd cmake-3.28.0-rc5
-    ./bootstrap && make && sudo make install
+    ./bootstrap && make -j$(nproc) && make install
     cd ..
+    rm -rf cmake-3.28.0-rc5 cmake-3.28.0-rc5.tar.gz
 fi
 
-echo "Updating system packages..."
-apt-get update
-apt-get upgrade -y
-
+# 安装依赖项
 echo "Installing dependencies..."
-apt-get install -y libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev
+$PKG_INSTALL $DEPENDENCIES
 
-echo "Checking installed dependencies..."
-for lib in cfitsio zlib ssl zip nova fmt; do
-    if ! ldconfig -p | grep -q "lib$lib"; then
-        echo "lib$lib is not properly installed. Please check the installation manually."
-    else
-        echo "lib$lib is properly installed."
-    fi
-done
+# 其他检查和优化选项
+echo "Performing additional checks and optimizations..."
+
+# 检查 make 是否安装
+if ! command -v make > /dev/null; then
+    echo "make is not installed. Installing..."
+    $PKG_INSTALL make
+fi
+
+# 检查 git 是否安装
+if ! command -v git > /dev/null; then
+    echo "git is not installed. Installing..."
+    $PKG_INSTALL git
+fi
+
+# 检查 curl 是否安装
+if ! command -v curl > /dev/null; then
+    echo "curl is not installed. Installing..."
+    $PKG_INSTALL curl
+fi
+
+# 检查 wget 是否安装
+if ! command -v wget > /dev/null; then
+    echo "wget is not installed. Installing..."
+    $PKG_INSTALL wget
+fi
+
+# 清理不必要的包和缓存
+echo "Cleaning up unnecessary packages and cache..."
+$PKG_REMOVE
+$PKG_CLEAN
 
 echo "Build environment setup completed."

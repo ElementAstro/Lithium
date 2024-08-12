@@ -131,7 +131,9 @@
 #define _WIN32_WINNT 0x0502
 #endif
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -434,9 +436,15 @@ void syslog_flush(void* /*user_data*/) {}
 Text::~Text() { free(_str); }
 
 #if LOGURU_USE_FMTLIB
+#if __cplusplus >= 202002L
+Text vtextprintf(const char* format, std::format_args args) {
+    return Text(STRDUP(std::vformat(format, args).c_str()));
+}
+#else
 Text vtextprintf(const char* format, fmt::format_args args) {
     return Text(STRDUP(fmt::vformat(format, args).c_str()));
 }
+#endif
 #else
 LOGURU_PRINTF_LIKE(1, 0)
 static Text vtextprintf(const char* format, va_list vlist) {
@@ -1535,6 +1543,21 @@ void log_to_everywhere(int stack_trace_skip, Verbosity verbosity,
 }
 
 #if LOGURU_USE_FMTLIB
+#if __cplusplus >= 202002L
+void vlog(Verbosity verbosity, const char* file, unsigned line,
+          const char* format, std::format_args args) {
+    auto formatted = std::vformat(format, args);
+    log_to_everywhere(1, verbosity, file, line, "", formatted.c_str());
+}
+
+void raw_vlog(Verbosity verbosity, const char* file, unsigned line,
+              const char* format, std::format_args args) {
+    auto formatted = std::vformat(format, args);
+    auto message =
+        Message{verbosity, file, line, "", "", "", formatted.c_str()};
+    log_message(1, message, false, true);
+}
+#else
 void vlog(Verbosity verbosity, const char* file, unsigned line,
           const char* format, fmt::format_args args) {
     auto formatted = fmt::vformat(format, args);
@@ -1548,6 +1571,7 @@ void raw_vlog(Verbosity verbosity, const char* file, unsigned line,
         Message{verbosity, file, line, "", "", "", formatted.c_str()};
     log_message(1, message, false, true);
 }
+#endif
 #else
 void log(Verbosity verbosity, const char* file, unsigned line,
          const char* format, ...) {
@@ -1655,6 +1679,16 @@ void LogScopeRAII::Init(const char* format, va_list vlist) {
 }
 
 #if LOGURU_USE_FMTLIB
+#if __cplusplus >= 202002L
+void vlog_and_abort(int stack_trace_skip, const char* expr, const char* file,
+                    unsigned line, const char* format, std::format_args args) {
+    auto formatted = std::vformat(format, args);
+    log_to_everywhere(stack_trace_skip + 1, Verbosity_FATAL, file, line, expr,
+                      formatted.c_str());
+    std::abort();  // log_to_everywhere already does this, but this makes the
+                   // analyzer happy.
+}
+#else
 void vlog_and_abort(int stack_trace_skip, const char* expr, const char* file,
                     unsigned line, const char* format, fmt::format_args args) {
     auto formatted = fmt::vformat(format, args);
@@ -1663,6 +1697,7 @@ void vlog_and_abort(int stack_trace_skip, const char* expr, const char* file,
     abort();  // log_to_everywhere already does this, but this makes the
               // analyzer happy.
 }
+#endif
 #else
 void log_and_abort(int stack_trace_skip, const char* expr, const char* file,
                    unsigned line, const char* format, ...) {

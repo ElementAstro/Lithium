@@ -1,17 +1,3 @@
-/*
- * utf.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2024-4-3
-
-Description: Some useful functions about utf string
-
-**************************************************/
-
 #include "utf.hpp"
 
 #include <algorithm>
@@ -21,117 +7,102 @@ Description: Some useful functions about utf string
 #include <locale>
 #include <vector>
 
+#include "atom/error/exception.hpp"
+
 namespace atom::utils {
+
 std::string toUTF8(std::wstring_view wstr) {
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__)
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-    return convert.to_bytes((char16_t*)wstr.data(),
-                            (char16_t*)wstr.data() + wstr.size());
-#elif defined(unix) || defined(__unix) || defined(__unix__) || \
-    defined(__APPLE__)
-    std::wstring_convert<std::codecvt_utf8<wchar_t> > convert;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
     return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
-#elif defined(_WIN32) || defined(_WIN64)
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > convert;
-    return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
-#endif
 }
 
 std::wstring fromUTF8(std::string_view str) {
-#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__)
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-    auto tmp = convert.from_bytes(str.data(), str.data() + str.size());
-    return std::wstring(tmp.data(), tmp.data() + tmp.size());
-#elif defined(unix) || defined(__unix) || defined(__unix__) || \
-    defined(__APPLE__)
-    std::wstring_convert<std::codecvt_utf8<wchar_t> > convert;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
     return convert.from_bytes(str.data(), str.data() + str.size());
-#elif defined(_WIN32) || defined(_WIN64)
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > convert;
-    return convert.from_bytes(str.data(), str.data() + str.size());
-#endif
 }
 
 std::u16string UTF8toUTF16(std::string_view str) {
-#if defined(_MSC_VER)
-    std::wstring_convert<std::codecvt_utf8_utf16<uint16_t>, uint16_t> convert;
-    auto tmp = convert.from_bytes(str.data(), str.data() + str.size());
-    return std::u16string(tmp.data(), tmp.data() + tmp.size());
-#else
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
     return convert.from_bytes(str.data(), str.data() + str.size());
-#endif
 }
 
 std::u32string UTF8toUTF32(std::string_view str) {
-#if defined(_MSC_VER)
-    std::wstring_convert<std::codecvt_utf8<uint32_t>, uint32_t> convert;
-    auto tmp = convert.from_bytes(str.data(), str.data() + str.size());
-    return std::u32string(tmp.data(), tmp.data() + tmp.size());
-#else
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert;
     return convert.from_bytes(str.data(), str.data() + str.size());
-#endif
 }
 
 std::string UTF16toUTF8(std::u16string_view str) {
-#if defined(_MSC_VER)
-    std::wstring_convert<std::codecvt_utf8_utf16<uint16_t>, uint16_t> convert;
-    return convert.to_bytes((uint16_t*)str.data(),
-                            (uint16_t*)str.data() + str.size());
-#else
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
     return convert.to_bytes(str.data(), str.data() + str.size());
-#endif
+}
+
+bool is_high_surrogate(char16_t c) { return (c & 0xFC00) == 0xD800; }
+
+bool is_low_surrogate(char16_t c) { return (c & 0xFC00) == 0xDC00; }
+
+char32_t surrogate_to_codepoint(char16_t high, char16_t low) {
+    return ((high - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
 }
 
 std::u32string UTF16toUTF32(std::u16string_view str) {
-    std::string bytes;
-    bytes.reserve(str.size() * 2);
-
-    for (const char16_t ch : str) {
-        bytes.push_back((uint8_t)(ch / 256));
-        bytes.push_back((uint8_t)(ch % 256));
+    std::u32string result;
+    auto it = str.begin();
+    while (it != str.end()) {
+        char16_t code_unit = *it++;
+        if (is_high_surrogate(code_unit)) {
+            if (it == str.end() || !is_low_surrogate(*it)) {
+                THROW_INVALID_ARGUMENT(
+                    "Invalid UTF-16 string: incomplete surrogate pair");
+            }
+            char32_t code_point = surrogate_to_codepoint(code_unit, *it++);
+            result.push_back(code_point);
+        } else if (is_low_surrogate(code_unit)) {
+            THROW_INVALID_ARGUMENT(
+                "Invalid UTF-16 string: unexpected low surrogate");
+        } else {
+            result.push_back(static_cast<char32_t>(code_unit));
+        }
     }
-
-#if defined(_MSC_VER)
-    std::wstring_convert<std::codecvt_utf16<uint32_t>, uint32_t> convert;
-    auto tmp = convert.from_bytes(bytes);
-    return std::u32string(tmp.data(), tmp.data() + tmp.size());
-#else
-    std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t> convert;
-    return convert.from_bytes(bytes);
-#endif
+    return result;
 }
 
 std::string UTF32toUTF8(std::u32string_view str) {
-#if defined(_MSC_VER)
-    std::wstring_convert<std::codecvt_utf8<uint32_t>, uint32_t> convert;
-    return convert.to_bytes((uint32_t*)str.data(),
-                            (uint32_t*)str.data() + str.size());
-#else
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert;
     return convert.to_bytes(str.data(), str.data() + str.size());
-#endif
 }
 
 std::u16string UTF32toUTF16(std::u32string_view str) {
-#if defined(_MSC_VER)
-    std::wstring_convert<std::codecvt_utf16<uint32_t>, uint32_t> convert;
-    std::string bytes = convert.to_bytes((uint32_t*)str.data(),
-                                         (uint32_t*)str.data() + str.size());
-#else
     std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t> convert;
-    std::string bytes = convert.to_bytes(str.data(), str.data() + str.size());
-#endif
-
+    std::string bytes = convert.to_bytes(
+        reinterpret_cast<const char32_t *>(str.data()),
+        reinterpret_cast<const char32_t *>(str.data() + str.size()));
     std::u16string result;
-    result.reserve(bytes.size() / 2);
-
-    for (size_t i = 0; i < bytes.size(); i += 2)
-        result.push_back(
-            (char16_t)((uint8_t)(bytes[i]) * 256 + (uint8_t)(bytes[i + 1])));
-
+    for (size_t i = 0; i < bytes.size(); i += 2) {
+        char16_t codepoint = (uint8_t)bytes[i] << 8 | (uint8_t)bytes[i + 1];
+        result.push_back(codepoint);
+    }
     return result;
 }
+
+bool isValidUTF8(std::string_view str) {
+    int continuation_bytes = 0;
+    for (unsigned char c : str) {
+        if (continuation_bytes == 0) {
+            if ((c >> 5) == 0x6)
+                continuation_bytes = 1;
+            else if ((c >> 4) == 0xe)
+                continuation_bytes = 2;
+            else if ((c >> 3) == 0x1e)
+                continuation_bytes = 3;
+            else if (c >> 7)
+                return false;
+        } else {
+            if ((c >> 6) != 0x2)
+                return false;
+            --continuation_bytes;
+        }
+    }
+    return continuation_bytes == 0;
+}
+
 }  // namespace atom::utils

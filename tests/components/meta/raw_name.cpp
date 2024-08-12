@@ -35,7 +35,6 @@ TEST(RawNameTest, RawNameOfEnumTest) {
 }
 
 TEST(RawNameTest, RawNameMember) {
-    TestStruct testStruct;
     std::cout << raw_name_of_member<&TestStruct::member>() << std::endl;
     EXPECT_EQ(raw_name_of_member<&TestStruct::member>(), "member");
 }

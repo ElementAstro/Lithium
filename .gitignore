@@ -49,3 +49,8 @@ test
 *.xml
 
 .xmake
+.cache
+
+cmake-build-debug/
+
+.venv/

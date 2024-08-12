@@ -21,9 +21,11 @@ Description: UDP Client Class
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
+#include <mstcpip.h>
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -45,14 +47,22 @@ public:
         if (socket_ < 0) {
             THROW_RUNTIME_ERROR("Socket creation failed");
         }
+#ifdef __linux__
+        epoll_fd_ = epoll_create1(0);
+        if (epoll_fd_ == -1) {
+            THROW_RUNTIME_ERROR("Epoll creation failed");
+        }
+#endif
     }
 
     ~Impl() {
+        stopReceiving();
 #ifdef _WIN32
         closesocket(socket_);
         WSACleanup();
 #else
         close(socket_);
+        close(epoll_fd_);
 #endif
     }
 
@@ -98,11 +108,30 @@ public:
         size_t size, std::string& remoteHost, int& remotePort,
         std::chrono::milliseconds timeout = std::chrono::milliseconds::zero()) {
         if (timeout > std::chrono::milliseconds::zero()) {
-            struct timeval tv;
-            tv.tv_sec = timeout.count() / 1000;
-            tv.tv_usec = (timeout.count() % 1000) * 1000;
+#ifdef _WIN32
+            DWORD timeout_ms = static_cast<DWORD>(timeout.count());
             setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO,
-                       reinterpret_cast<const char*>(&tv), sizeof(tv));
+                       reinterpret_cast<const char*>(&timeout_ms),
+                       sizeof(timeout_ms));
+#else
+            struct epoll_event event;
+            event.events = EPOLLIN;
+            event.data.fd = socket_;
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_, &event) == -1) {
+                errorMessage_ = "Epoll control failed";
+                return {};
+            }
+
+            struct epoll_event events[1];
+            int nfds = epoll_wait(epoll_fd_, events, 1, timeout.count());
+            if (nfds == 0) {
+                errorMessage_ = "Receive timeout";
+                return {};
+            } else if (nfds == -1) {
+                errorMessage_ = "Epoll wait failed";
+                return {};
+            }
+#endif
         }
 
         std::vector<char> data(size);
@@ -135,7 +164,7 @@ public:
 
     void startReceiving(size_t bufferSize) {
         stopReceiving();
-        receivingThread_ = std::thread(&Impl::receivingLoop, this, bufferSize);
+        receivingThread_ = std::jthread(&Impl::receivingLoop, this, bufferSize);
     }
 
     void stopReceiving() {
@@ -163,14 +192,15 @@ private:
     SOCKET socket_;
 #else
     int socket_;
+    int epoll_fd_;
 #endif
     std::string errorMessage_;
 
     OnDataReceivedCallback onDataReceivedCallback_;
     OnErrorCallback onErrorCallback_;
 
-    std::thread receivingThread_;
-    bool receivingStopped_ = false;
+    std::jthread receivingThread_;
+    std::atomic<bool> receivingStopped_ = false;
 };
 
 UdpClient::UdpClient() : impl_(std::make_unique<Impl>()) {}

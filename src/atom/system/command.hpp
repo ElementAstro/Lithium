@@ -16,25 +16,12 @@ Description: Simple wrapper for executing commands.
 #define ATOM_SYSTEM_COMMAND_HPP
 
 #include <functional>
-#include <map>
 #include <string>
+#include <unordered_map>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/types.h>
-#endif
+#include "macro.hpp"
 
 namespace atom::system {
-#ifdef _WIN32
-struct ProcessHandle {
-    HANDLE handle;
-};
-#else
-struct ProcessHandle {
-    pid_t pid;
-};
-#endif
 
 /**
  * @brief Execute a command and return the command output as a string.
@@ -47,10 +34,31 @@ struct ProcessHandle {
  * @note The function throws a std::runtime_error if the command fails to
  * execute.
  */
-[[nodiscard]] std::string executeCommand(
+ATOM_NODISCARD auto executeCommand(
     const std::string &command, bool openTerminal = false,
-    std::function<void(const std::string &)> processLine =
-        [](const std::string &) {});
+    const std::function<void(const std::string &)> &processLine =
+        [](const std::string &) {}) -> std::string;
+
+/**
+ * @brief Execute a command and return the command output as a string.
+ *
+ * @param command The command to execute.
+ * @param openTerminal Whether to open a terminal window for the command.
+ * @param processLine A callback function to process each line of output.
+ * @param status The exit status of the command.
+ * @param terminateCondition A callback function to determine whether to
+ * terminate the command execution.
+ * @return The output of the command as a string.
+ *
+ * @note The function throws a std::runtime_error if the command fails to
+ * execute.
+ */
+auto executeCommandStream(
+    const std::string &command, bool openTerminal,
+    const std::function<void(const std::string &)> &processLine, int &status,
+    const std::function<bool()> &terminateCondition = [] {
+        return false;
+    }) -> std::string;
 
 /**
  * @brief Execute a list of commands.
@@ -63,25 +71,18 @@ struct ProcessHandle {
 void executeCommands(const std::vector<std::string> &commands);
 
 /**
- * @brief Execute a command and return the process handle.
+ * @brief Kill a process by its name.
  *
- * @param command The command to execute.
- * @return The handle of the process.
- *
- * @note The function throws a std::runtime_error if the command fails to
- * execute.
+ * @param processName The name of the process to kill.
  */
-[[nodiscard]] ProcessHandle executeCommand(const std::string &command);
+void killProcessByName(const std::string &processName, int signal);
 
 /**
- * @brief Kill a process.
+ * @brief Kill a process by its PID.
  *
- * @param handle The handle of the process to kill.
- *
- * @note The function throws a std::runtime_error if the command fails to
- * execute.
+ * @param pid The PID of the process to kill.
  */
-void killProcess(const ProcessHandle &handle);
+void killProcessByPID(int pid, int signal);
 
 /**
  * @brief Execute a command with environment variables and return the command
@@ -94,9 +95,9 @@ void killProcess(const ProcessHandle &handle);
  * @note The function throws a std::runtime_error if the command fails to
  * execute.
  */
-[[nodiscard]] std::string executeCommandWithEnv(
+ATOM_NODISCARD auto executeCommandWithEnv(
     const std::string &command,
-    const std::map<std::string, std::string> &envVars);
+    const std::unordered_map<std::string, std::string> &envVars) -> std::string;
 
 /**
  * @brief Execute a command and return the command output along with the exit
@@ -109,8 +110,20 @@ void killProcess(const ProcessHandle &handle);
  * @note The function throws a std::runtime_error if the command fails to
  * execute.
  */
-[[nodiscard]] std::pair<std::string, int> executeCommandWithStatus(
-    const std::string &command);
+ATOM_NODISCARD auto executeCommandWithStatus(const std::string &command)
+    -> std::pair<std::string, int>;
+
+/**
+ * @brief Execute a command and return a boolean indicating whether the command
+ * was successful.
+ *
+ * @param command The command to execute.
+ * @return A boolean indicating whether the command was successful.
+ *
+ * @note The function throws a std::runtime_error if the command fails to
+ * execute.
+ */
+ATOM_NODISCARD auto executeCommandSimple(const std::string &command) -> bool;
 }  // namespace atom::system
 
 #endif

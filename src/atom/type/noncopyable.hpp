@@ -18,12 +18,13 @@ Description: A simple implementation of noncopyable.
 class NonCopyable {
 public:
     NonCopyable() = default;
+    virtual ~NonCopyable() = default;
 
-    NonCopyable(const NonCopyable &) = delete;
-    NonCopyable &operator=(const NonCopyable &) = delete;
+    NonCopyable(const NonCopyable&) = delete;
+    auto operator=(const NonCopyable&) -> NonCopyable& = delete;
 
-    NonCopyable(NonCopyable &&) = delete;
-    NonCopyable &operator=(NonCopyable &&) = delete;
+    NonCopyable(NonCopyable&&) = delete;
+    auto operator=(NonCopyable&&) -> NonCopyable& = delete;
 };
 
 #endif

@@ -12,15 +12,16 @@ Description: A static vector
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_STATIC_VECTOR_HPP
-#define ATOM_EXPERIMENT_STATIC_VECTOR_HPP
+#ifndef ATOM_TYPE_STATIC_VECTOR_HPP
+#define ATOM_TYPE_STATIC_VECTOR_HPP
 
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <stdexcept>
-#include <type_traits>
 #include <utility>
+
+#include "error/exception.hpp"
+#include "macro.hpp"
 
 template <typename T, std::size_t Capacity>
 class StaticVector {
@@ -37,168 +38,196 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    constexpr StaticVector() noexcept = default;
+    ATOM_CONSTEXPR StaticVector() ATOM_NOEXCEPT = default;
 
-    constexpr StaticVector(std::initializer_list<T> init) noexcept {
+    ATOM_CONSTEXPR StaticVector(std::initializer_list<T> init) ATOM_NOEXCEPT {
         assert(init.size() <= Capacity);
         std::copy(init.begin(), init.end(), begin());
-        m_size = init.size();
+        m_size_ = init.size();
     }
 
-    constexpr void push_back(const T& value) noexcept {
-        assert(m_size < Capacity);
-        m_data[m_size++] = value;
+    ATOM_CONSTEXPR void pushBack(const T& value) ATOM_NOEXCEPT {
+        assert(m_size_ < Capacity);
+        m_data_[m_size_++] = value;
     }
 
-    constexpr void push_back(T&& value) noexcept {
-        assert(m_size < Capacity);
-        m_data[m_size++] = std::move(value);
+    ATOM_CONSTEXPR void pushBack(T&& value) ATOM_NOEXCEPT {
+        assert(m_size_ < Capacity);
+        m_data_[m_size_++] = std::move(value);
     }
 
     template <typename... Args>
-    constexpr reference emplace_back(Args&&... args) noexcept {
-        assert(m_size < Capacity);
-        return m_data[m_size++] = T(std::forward<Args>(args)...);
+    ATOM_CONSTEXPR auto emplaceBack(Args&&... args) ATOM_NOEXCEPT -> reference {
+        assert(m_size_ < Capacity);
+        return m_data_[m_size_++] = T(std::forward<Args>(args)...);
     }
 
-    constexpr void pop_back() noexcept {
-        assert(m_size > 0);
-        --m_size;
+    ATOM_CONSTEXPR void popBack() ATOM_NOEXCEPT {
+        assert(m_size_ > 0);
+        --m_size_;
     }
 
-    constexpr void clear() noexcept { m_size = 0; }
+    ATOM_CONSTEXPR void clear() ATOM_NOEXCEPT { m_size_ = 0; }
 
-    [[nodiscard]] constexpr bool empty() const noexcept { return m_size == 0; }
+    ATOM_NODISCARD ATOM_CONSTEXPR auto empty() const ATOM_NOEXCEPT -> bool {
+        return m_size_ == 0;
+    }
 
-    [[nodiscard]] constexpr size_type size() const noexcept { return m_size; }
+    ATOM_NODISCARD ATOM_CONSTEXPR auto size() const ATOM_NOEXCEPT -> size_type {
+        return m_size_;
+    }
 
-    [[nodiscard]] constexpr size_type capacity() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto capacity() const ATOM_NOEXCEPT
+        -> size_type {
         return Capacity;
     }
 
-    [[nodiscard]] constexpr reference operator[](size_type index) noexcept {
-        assert(index < m_size);
-        return m_data[index];
+    ATOM_NODISCARD ATOM_CONSTEXPR auto operator[](size_type index)
+        ATOM_NOEXCEPT->reference {
+        assert(index < m_size_);
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr const_reference operator[](
-        size_type index) const noexcept {
-        assert(index < m_size);
-        return m_data[index];
+    ATOM_NODISCARD ATOM_CONSTEXPR auto operator[](size_type index) const
+        ATOM_NOEXCEPT->const_reference {
+        assert(index < m_size_);
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr reference at(size_type index) {
-        if (index >= m_size) {
-            throw std::out_of_range("StaticVector::at");
+    ATOM_NODISCARD ATOM_CONSTEXPR auto at(size_type index) -> reference {
+        if (index >= m_size_) {
+            THROW_OUT_OF_RANGE("StaticVector::at");
         }
-        return m_data[index];
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr const_reference at(size_type index) const {
-        if (index >= m_size) {
-            throw std::out_of_range("StaticVector::at");
+    ATOM_NODISCARD ATOM_CONSTEXPR auto at(size_type index) const
+        -> const_reference {
+        if (index >= m_size_) {
+            THROW_OUT_OF_RANGE("StaticVector::at");
         }
-        return m_data[index];
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr reference front() noexcept {
-        assert(m_size > 0);
-        return m_data[0];
+    ATOM_NODISCARD ATOM_CONSTEXPR auto front() ATOM_NOEXCEPT -> reference {
+        assert(m_size_ > 0);
+        return m_data_[0];
     }
 
-    [[nodiscard]] constexpr const_reference front() const noexcept {
-        assert(m_size > 0);
-        return m_data[0];
+    ATOM_NODISCARD ATOM_CONSTEXPR auto front() const ATOM_NOEXCEPT
+        -> const_reference {
+        assert(m_size_ > 0);
+        return m_data_[0];
     }
 
-    [[nodiscard]] constexpr reference back() noexcept {
-        assert(m_size > 0);
-        return m_data[m_size - 1];
+    ATOM_NODISCARD ATOM_CONSTEXPR auto back() ATOM_NOEXCEPT -> reference {
+        assert(m_size_ > 0);
+        return m_data_[m_size_ - 1];
     }
 
-    [[nodiscard]] constexpr const_reference back() const noexcept {
-        assert(m_size > 0);
-        return m_data[m_size - 1];
+    ATOM_NODISCARD ATOM_CONSTEXPR auto back() const ATOM_NOEXCEPT
+        -> const_reference {
+        assert(m_size_ > 0);
+        return m_data_[m_size_ - 1];
     }
 
-    [[nodiscard]] constexpr pointer data() noexcept { return m_data.data(); }
-
-    [[nodiscard]] constexpr const_pointer data() const noexcept {
-        return m_data.data();
+    ATOM_NODISCARD ATOM_CONSTEXPR auto data() ATOM_NOEXCEPT -> pointer {
+        return m_data_.data();
     }
 
-    [[nodiscard]] constexpr iterator begin() noexcept { return data(); }
+    ATOM_NODISCARD ATOM_CONSTEXPR auto data() const ATOM_NOEXCEPT
+        -> const_pointer {
+        return m_data_.data();
+    }
 
-    [[nodiscard]] constexpr const_iterator begin() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto begin() ATOM_NOEXCEPT -> iterator {
         return data();
     }
 
-    [[nodiscard]] constexpr const_iterator cbegin() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto begin() const ATOM_NOEXCEPT
+        -> const_iterator {
+        return data();
+    }
+
+    ATOM_NODISCARD ATOM_CONSTEXPR auto cbegin() const ATOM_NOEXCEPT
+        -> const_iterator {
         return begin();
     }
 
-    [[nodiscard]] constexpr iterator end() noexcept { return data() + m_size; }
-
-    [[nodiscard]] constexpr const_iterator end() const noexcept {
-        return data() + m_size;
+    ATOM_NODISCARD ATOM_CONSTEXPR auto end() ATOM_NOEXCEPT -> iterator {
+        return data() + m_size_;
     }
 
-    [[nodiscard]] constexpr const_iterator cend() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto end() const ATOM_NOEXCEPT
+        -> const_iterator {
+        return data() + m_size_;
+    }
+
+    ATOM_NODISCARD ATOM_CONSTEXPR auto cend() const ATOM_NOEXCEPT
+        -> const_iterator {
         return end();
     }
 
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto rbegin()
+        ATOM_NOEXCEPT -> reverse_iterator {
         return reverse_iterator(end());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto rbegin() const ATOM_NOEXCEPT
+        -> const_reverse_iterator {
         return const_reverse_iterator(end());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto crbegin() const ATOM_NOEXCEPT
+        -> const_reverse_iterator {
         return rbegin();
     }
 
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto rend()
+        ATOM_NOEXCEPT -> reverse_iterator {
         return reverse_iterator(begin());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto rend() const ATOM_NOEXCEPT
+        -> const_reverse_iterator {
         return const_reverse_iterator(begin());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto crend() const ATOM_NOEXCEPT
+        -> const_reverse_iterator {
         return rend();
     }
 
-    constexpr void swap(StaticVector& other) noexcept {
+    ATOM_CONSTEXPR void swap(StaticVector& other) ATOM_NOEXCEPT {
         using std::swap;
-        swap(m_data, other.m_data);
-        swap(m_size, other.m_size);
+        swap(m_data_, other.m_data_);
+        swap(m_size_, other.m_size_);
     }
 
 private:
-    std::array<T, Capacity> m_data{};
-    size_type m_size{0};
+    std::array<T, Capacity> m_data_{};
+    size_type m_size_{0};
 };
 
 template <typename T, std::size_t Capacity>
-constexpr bool operator==(const StaticVector<T, Capacity>& lhs,
-                          const StaticVector<T, Capacity>& rhs) noexcept {
+ATOM_CONSTEXPR auto operator==(const StaticVector<T, Capacity>& lhs,
+                               const StaticVector<T, Capacity>& rhs)
+    ATOM_NOEXCEPT->bool {
     return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <typename T, std::size_t Capacity>
-constexpr auto operator<=>(const StaticVector<T, Capacity>& lhs,
-                           const StaticVector<T, Capacity>& rhs) noexcept {
+ATOM_CONSTEXPR auto operator<=>(const StaticVector<T, Capacity>& lhs,
+                                const StaticVector<T, Capacity>& rhs)
+    ATOM_NOEXCEPT {
     return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(),
                                                   rhs.begin(), rhs.end());
 }
 
 template <typename T, std::size_t Capacity>
-constexpr void swap(StaticVector<T, Capacity>& lhs,
-                    StaticVector<T, Capacity>& rhs) noexcept {
+ATOM_CONSTEXPR void swap(StaticVector<T, Capacity>& lhs,
+                         StaticVector<T, Capacity>& rhs) ATOM_NOEXCEPT {
     lhs.swap(rhs);
 }
 
-#endif  // ATOM_EXPERIMENT_STATIC_VECTOR_HPP
+#endif  // ATOM_TYPE_STATIC_VECTOR_HPP

@@ -28,13 +28,13 @@ Description: Smart Switch just like javascript
 
 #include "atom/error/exception.hpp"
 #include "atom/type/noncopyable.hpp"
+#include "macro.hpp"
 
 namespace atom::utils {
 /**
  * @brief A class for implementing a switch statement with string cases,
  * enhanced with C++17/20 features.
  *
- * @tparam DefaultFunc The function type for handling the default case.
  * @tparam Args The types of additional arguments to pass to the functions.
  */
 template <typename... Args>
@@ -48,7 +48,7 @@ public:
     // Register a case with the given string and function
     void registerCase(const std::string &str, Func func) {
         if (cases_.find(str) != cases_.end()) {
-            throw Error::ObjectAlreadyExist("Case already registered");
+            THROW_OBJ_ALREADY_EXIST("Case already registered");
         }
         cases_[str] = std::move(func);  // Use move semantics for efficiency
     }
@@ -60,7 +60,7 @@ public:
     void clearCases() { cases_.clear(); }
 
     // Match the given string against the registered cases
-    bool match(const std::string &str, Args... args) {
+    auto match(const std::string &str, Args... args) -> bool {
         auto iter = cases_.find(str);
         if (iter != cases_.end()) {
             std::invoke(iter->second, args...);
@@ -80,7 +80,7 @@ public:
     void setDefault(DefaultFunc func) { defaultFunc_ = std::move(func); }
 
     // Get a vector of all registered cases
-    std::vector<std::string> getCases() const {
+    ATOM_NODISCARD auto getCases() const -> std::vector<std::string> {
         std::vector<std::string> caseList;
         for (const auto &[key, value] :
              cases_) {  // Use structured bindings for clarity
@@ -93,7 +93,7 @@ public:
     template <typename T,
               typename = std::enable_if_t<std::is_invocable_v<T, Args...>>>
     void registerCase(const std::string &str, T &&func) {
-        registerCase(str, std::forward<T>(func));
+        registerCase(str, Func(std::forward<T>(func)));
     }
 
     // C++20 designated initializers for easier case registration

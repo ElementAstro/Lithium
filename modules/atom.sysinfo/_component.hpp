@@ -21,7 +21,7 @@ Description: A collector for system information, not the same as atom.system
 class SysInfoComponent : public Component {
 public:
     explicit SysInfoComponent(const std::string& name);
-    virtual ~SysInfoComponent();
+     ~SysInfoComponent() override;
 
     bool initialize() override;
     bool destroy() override;

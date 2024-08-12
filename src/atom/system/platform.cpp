@@ -16,7 +16,20 @@ Description: A platform information collection.
 
 #if defined(_WIN32)
 #include <windows.h>
-std::string getWindowsVersion() {
+#elif defined(__linux__)
+#if __has_include(<X11/Xlib.h>)
+#include <X11/Xlib.h>
+#endif
+#elif defined(__APPLE__)
+#include <CoreServices/CoreServices.h>
+#include <TargetConditionals.h>
+#elif defined(__ANDROID__)
+#include <android/api-level.h>
+#endif
+
+namespace atom::system {
+#ifdef _WIN32
+auto getWindowsVersion() -> std::string {
     OSVERSIONINFOEX osvi;
     ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
@@ -47,27 +60,49 @@ std::string getWindowsVersion() {
 }
 #endif
 
-#if defined(_WIN32)
-#include <Windows.h>
-#elif defined(__linux__)
-#include <X11/Xlib.h>
-#elif defined(__APPLE__)
-#include <CoreServices/CoreServices.h>
-#endif
-
-bool hasGUI() {
+auto hasGUI() -> bool {
 #if defined(_WIN32)
     return GetSystemMetrics(SM_CXSCREEN) > 0;
+#elif defined(__APPLE__)
+
+#if TARGET_OS_MAC == 1
+    return true;
+#elif TARGET_OS_IPHONE == 1
+    return true;
+#else
+    return false;
+#endif
+#elif defined(__ANDROID__)
+
+    return __ANDROID_API__ >= 24;
 #elif defined(__linux__)
+#if defined(HAVE_X11)
     Display *display = XOpenDisplay(NULL);
     if (display != NULL) {
         XCloseDisplay(display);
         return true;
     }
+#endif
+#if defined(HAVE_WAYLAND)
+    struct wl_display *display = wl_display_connect(NULL);
+    if (display != NULL) {
+        wl_display_disconnect(display);
+        return true;
+    }
+#endif
     return false;
-#elif defined(__APPLE__)
-    return true;  // macOS 系统默认支持 GUI
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || \
+    defined(__DragonFly__)
+#if defined(HAVE_X11)
+    Display *display = XOpenDisplay(NULL);
+    if (display != NULL) {
+        XCloseDisplay(display);
+        return true;
+    }
+#endif
+    return false;
 #else
     return false;
 #endif
 }
+}  // namespace atom::system

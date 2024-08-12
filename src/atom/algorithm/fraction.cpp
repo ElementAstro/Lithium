@@ -1,9 +1,10 @@
 #include "fraction.hpp"
 
 #include <cmath>
-#include <compare>
 #include <numeric>
 #include <sstream>
+
+#include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
 
@@ -21,35 +22,35 @@ void Fraction::reduce() {
 
 Fraction::Fraction(int n, int d) : numerator(n), denominator(d) {
     if (denominator == 0) {
-        throw std::invalid_argument("Denominator cannot be zero.");
+        THROW_INVALID_ARGUMENT("Denominator cannot be zero.");
     }
     reduce();
 }
 
-Fraction &Fraction::operator+=(const Fraction &other) {
+auto Fraction::operator+=(const Fraction &other) -> Fraction & {
     numerator = numerator * other.denominator + other.numerator * denominator;
     denominator *= other.denominator;
     reduce();
     return *this;
 }
 
-Fraction &Fraction::operator-=(const Fraction &other) {
+auto Fraction::operator-=(const Fraction &other) -> Fraction & {
     numerator = numerator * other.denominator - other.numerator * denominator;
     denominator *= other.denominator;
     reduce();
     return *this;
 }
 
-Fraction &Fraction::operator*=(const Fraction &other) {
+auto Fraction::operator*=(const Fraction &other) -> Fraction & {
     numerator *= other.numerator;
     denominator *= other.denominator;
     reduce();
     return *this;
 }
 
-Fraction &Fraction::operator/=(const Fraction &other) {
+auto Fraction::operator/=(const Fraction &other) -> Fraction & {
     if (other.numerator == 0) {
-        throw std::invalid_argument("Division by zero.");
+        THROW_INVALID_ARGUMENT("Division by zero.");
     }
     numerator *= other.denominator;
     denominator *= other.numerator;
@@ -57,57 +58,57 @@ Fraction &Fraction::operator/=(const Fraction &other) {
     return *this;
 }
 
-Fraction Fraction::operator+(const Fraction &other) const {
+auto Fraction::operator+(const Fraction &other) const -> Fraction {
     Fraction result = *this;
     result += other;
     return result;
 }
 
-Fraction Fraction::operator-(const Fraction &other) const {
+auto Fraction::operator-(const Fraction &other) const -> Fraction {
     Fraction result = *this;
     result -= other;
     return result;
 }
 
-Fraction Fraction::operator*(const Fraction &other) const {
+auto Fraction::operator*(const Fraction &other) const -> Fraction {
     Fraction result = *this;
     result *= other;
     return result;
 }
 
-Fraction Fraction::operator/(const Fraction &other) const {
+auto Fraction::operator/(const Fraction &other) const -> Fraction {
     Fraction result = *this;
     result /= other;
     return result;
 }
 
-bool Fraction::operator==(const Fraction &other) const {
+auto Fraction::operator==(const Fraction &other) const -> bool {
     return (numerator == other.numerator) && (denominator == other.denominator);
 }
 
-Fraction::operator double() const { return to_double(); }
+Fraction::operator double() const { return toDouble(); }
 
-Fraction::operator float() const { return static_cast<float>(to_double()); }
+Fraction::operator float() const { return static_cast<float>(toDouble()); }
 
 Fraction::operator int() const { return numerator / denominator; }
 
-std::string Fraction::to_string() const {
+auto Fraction::toString() const -> std::string {
     if (denominator == 1) {
         return std::to_string(numerator);
     }
     return std::to_string(numerator) + "/" + std::to_string(denominator);
 }
 
-double Fraction::to_double() const {
+auto Fraction::toDouble() const -> double {
     return static_cast<double>(numerator) / denominator;
 }
 
-std::ostream &operator<<(std::ostream &os, const Fraction &f) {
-    os << f.to_string();
+auto operator<<(std::ostream &os, const Fraction &f) -> std::ostream & {
+    os << f.toString();
     return os;
 }
 
-std::istream &operator>>(std::istream &is, Fraction &f) {
+auto operator>>(std::istream &is, Fraction &f) -> std::istream & {
     std::string input;
     is >> input;
     std::istringstream iss(input);

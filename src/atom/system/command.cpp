@@ -18,85 +18,106 @@ Description: Simple wrapper for executing commands.
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <future>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
+
 #ifdef _WIN32
 #define SETENV(name, value) SetEnvironmentVariableA(name, value)
-#define UNSETENV(name) SetEnvironmentVariableA(name, NULL)
+#define UNSETENV(name) SetEnvironmentVariableA(name, nullptr)
+// clang-format off
+#include <windows.h>
 #include <conio.h>
+#include <tlhelp32.h>
+// clang-format on
 #else
 #include <sys/wait.h>
 #include <unistd.h>
 #include <csignal>
-#include <cstdio>
-#include <cstring>
 #define SETENV(name, value) setenv(name, value, 1)
 #define UNSETENV(name) unsetenv(name)
 #endif
 
+#include "macro.hpp"
+
 #include "atom/error/exception.hpp"
+#include "atom/system/process.hpp"
+#include "atom/utils/convert.hpp"
+#include "atom/utils/to_string.hpp"
 
 namespace atom::system {
-std::string executeCommand(
-    const std::string &command, bool openTerminal,
-    std::function<void(const std::string &)> processLine) {
+
+std::mutex envMutex;
+
+auto executeCommandInternal(
+    const std::string &command, [[maybe_unused]] bool openTerminal,
+    const std::function<void(const std::string &)> &processLine, int &status,
+    const std::string &username = "", const std::string &domain = "",
+    const std::string &password = "") -> std::string {
     if (command.empty()) {
+        status = -1;
         return "";
     }
 
     auto pipeDeleter = [](FILE *pipe) {
-        if (pipe)
+        if (pipe != nullptr) {
             pclose(pipe);
+        }
     };
 
     std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
 
+    if (!username.empty() && !domain.empty() && !password.empty()) {
+        if (!_CreateProcessAsUser(command, username, domain, password)) {
+            THROW_RUNTIME_ERROR("Error: failed to run command '" + command +
+                                "' as user.");
+        }
+        status = 0;
+        return "";
+    }
+
 #ifdef _WIN32
     if (openTerminal) {
-        // 在Windows下打开终端界面
-        STARTUPINFO startupInfo{};
+        STARTUPINFOW startupInfo{};
         PROCESS_INFORMATION processInfo{};
-        if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL,
-                          FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
+        if (CreateProcessW(nullptr, atom::utils::StringToLPWSTR(command),
+                           nullptr, nullptr, FALSE, 0, nullptr, nullptr,
+                           &startupInfo, &processInfo) != 0) {
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);
+            status = 0;
             return "";  // 因为终端界面会在新进程中执行，无法获得输出，所以这里返回空字符串。
-        } else {
-            THROW_RUNTIME_ERROR("Error: failed to run command '" + command +
-                                "'.");
         }
-    } else {
-        // 不打开终端界面时，使用_popen执行命令
-        pipe.reset(_popen(command.c_str(), "r"));
+        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
+                                     command + "'.");
     }
+    pipe.reset(_popen(command.c_str(), "r"));
 #else  // 非Windows平台
     pipe.reset(popen(command.c_str(), "r"));
 #endif
 
     if (!pipe) {
-        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
+        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
+                                     command + "'.");
     }
 
-    std::array<char, 4096> buffer{};
+    constexpr std::size_t BUFFER_SIZE = 4096;
+    std::array<char, BUFFER_SIZE> buffer{};
     std::ostringstream output;
 
-    bool interrupted = false;  // 标记是否收到中断信号
-
-    auto start = std::chrono::steady_clock::now();  // 记录开始时间
+    bool interrupted = false;
 
 #ifdef _WIN32
-    // Windows下无法捕获中断信号，因此只能在循环中检查键盘输入来模拟中断
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr &&
            !interrupted) {
         output << buffer.data();
 
-        if (_kbhit()) {
+        if (_kbhit() != 0) {
             int key = _getch();
-            if (key == 3)  // 检查Ctrl+C中断信号
-            {
+            if (key == 3) {
                 interrupted = true;
             }
         }
@@ -105,178 +126,275 @@ std::string executeCommand(
             processLine(buffer.data());
         }
     }
-#else  // 非Windows平台
-
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr &&
-           !interrupted) {
-        std::string line = buffer.data();
-        output << line;
-        if (processLine) {
-            processLine(line);
+#else
+    while (!interrupted) {
+#pragma unroll
+        for (int i = 0; i < 4; ++i) {
+            if (fgets(buffer.data(), buffer.size(), pipe.get()) == nullptr) {
+                break;
+            }
+            std::string line = buffer.data();
+            output << line;
+            if (processLine) {
+                processLine(line);
+            }
         }
     }
+#endif
+
+#ifdef _WIN32
+    status = 0;
+#else
+    status = WEXITSTATUS(pclose(pipe.get()));
 #endif
 
     return output.str();
 }
 
+auto executeCommandStream(
+    const std::string &command, [[maybe_unused]] bool openTerminal,
+    const std::function<void(const std::string &)> &processLine, int &status,
+    const std::function<bool()> &terminateCondition) -> std::string {
+    if (command.empty()) {
+        status = -1;
+        return "";
+    }
+
+    auto pipeDeleter = [](FILE *pipe) {
+        if (pipe != nullptr) {
+            pclose(pipe);
+        }
+    };
+
+    std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
+
+#ifdef _WIN32
+    if (openTerminal) {
+        STARTUPINFO startupInfo{};
+        PROCESS_INFORMATION processInfo{};
+        ZeroMemory(&startupInfo, sizeof(startupInfo));
+        startupInfo.cb = sizeof(startupInfo);
+        ZeroMemory(&processInfo, sizeof(processInfo));
+
+        if (CreateProcess(nullptr, const_cast<LPSTR>(command.c_str()), nullptr,
+                          nullptr, FALSE, CREATE_NEW_CONSOLE, nullptr, nullptr,
+                          &startupInfo, &processInfo)) {
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            CloseHandle(processInfo.hProcess);
+            CloseHandle(processInfo.hThread);
+            status = 0;
+            return "";  // Since terminal window will execute in new process, we
+                        // can't get output here.
+        }
+        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
+                                     command + "'.");
+    }
+    pipe.reset(_popen(command.c_str(), "r"));
+#else
+    pipe.reset(popen(command.c_str(), "r"));
+#endif
+
+    if (!pipe) {
+        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
+                                     command + "'.");
+    }
+
+    constexpr std::size_t BUFFER_SIZE = 4096;
+    std::array<char, BUFFER_SIZE> buffer{};
+    std::ostringstream output;
+
+    std::promise<void> exitSignal;
+    std::future<void> futureObj = exitSignal.get_future();
+    std::atomic<bool> stopReading{false};
+
+    std::thread readerThread(
+        [&pipe, &buffer, &output, &processLine, &futureObj, &stopReading]() {
+#pragma GCC unroll 4
+            while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+                if (stopReading) {
+                    break;
+                }
+
+                std::string line = buffer.data();
+                output << line;
+                if (processLine) {
+                    processLine(line);
+                }
+
+                if (futureObj.wait_for(std::chrono::milliseconds(1)) !=
+                    std::future_status::timeout) {
+                    break;
+                }
+            }
+        });
+
+    // Monitor for termination condition
+    while (!terminateCondition()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    stopReading = true;
+    exitSignal.set_value();
+
+    if (readerThread.joinable()) {
+        readerThread.join();
+    }
+
+#ifdef _WIN32
+    status = _pclose(pipe.release());
+#else
+    status =
+        WEXITSTATUS(pclose(pipe.release()));  // Release ownership to ensure the
+                                              // pipe is closed correctly
+#endif
+
+    return output.str();
+}
+
+auto executeCommand(const std::string &command, bool openTerminal,
+                    const std::function<void(const std::string &)> &processLine)
+    -> std::string {
+    int status = 0;
+    return executeCommandInternal(command, openTerminal, processLine, status);
+}
+
+auto executeCommandWithStatus(const std::string &command)
+    -> std::pair<std::string, int> {
+    int status = 0;
+    std::string output =
+        executeCommandInternal(command, false, nullptr, status);
+    return {output, status};
+}
+
 void executeCommands(const std::vector<std::string> &commands) {
     std::vector<std::thread> threads;
+    std::vector<std::string> errors;
 
     for (const auto &command : commands) {
-        threads.emplace_back([command]() {
-#ifdef _WIN32
-            STARTUPINFO startupInfo{};
-            PROCESS_INFORMATION processInfo{};
-            if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL,
-                              NULL, FALSE, 0, NULL, NULL, &startupInfo,
-                              &processInfo)) {
-                WaitForSingleObject(processInfo.hProcess, INFINITE);
-                CloseHandle(processInfo.hProcess);
-                CloseHandle(processInfo.hThread);
+        threads.emplace_back([&command, &errors]() {
+            try {
+                int status = 0;
+                std::string output = executeCommand(command, false, nullptr);
+                if (status != 0) {
+                    THROW_RUNTIME_ERROR("Error executing command: " + command);
+                }
+            } catch (const std::runtime_error &e) {
+                errors.emplace_back(e.what());
             }
-#else  // 非Windows平台
-            int status = system(command.c_str());
-            if (!WIFEXITED(status) || !(WEXITSTATUS(status) == 0)) {
-                THROW_RUNTIME_ERROR("Error executing command: " + command);
-            }
-#endif
         });
     }
+
     for (auto &thread : threads) {
         thread.join();
     }
+
+    if (!errors.empty()) {
+        THROW_INVALID_ARGUMENT("One or more commands failed." +
+                               atom::utils::toString(errors));
+    }
 }
 
-ProcessHandle executeCommand(const std::string &command) {
-    ProcessHandle handle;
-
-#ifdef _WIN32
-    STARTUPINFO startupInfo{};
-    PROCESS_INFORMATION processInfo{};
-    if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL,
-                      FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
-        CloseHandle(processInfo.hThread);
-        handle.handle = processInfo.hProcess;
-    } else {
-        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
-    }
-#else  // 非Windows平台
-    pid_t pid = fork();
-    if (pid == -1) {
-        THROW_RUNTIME_ERROR("Error: failed to fork process for command '" +
-                            command + "'.");
-    } else if (pid == 0) {
-        // 子进程
-        execl("/bin/sh", "sh", "-c", command.c_str(), NULL);
-        _exit(EXIT_FAILURE);
-    } else {
-        handle.pid = pid;
-    }
-#endif
-
-    return handle;
-}
-
-void killProcess(const ProcessHandle &handle) {
-#ifdef _WIN32
-    if (!handle.handle)
-#else
-    if (!handle.pid)
-#endif
-    {
-        return;
-    }
-#ifdef _WIN32
-    TerminateProcess(handle.handle, 0);
-    CloseHandle(handle.handle);
-#else
-    int status;
-    if (kill(handle.pid, SIGKILL) == -1) {
-        THROW_RUNTIME_ERROR("Error: failed to kill process with PID " +
-                            std::to_string(handle.pid) + ".");
-    } else {
-        waitpid(handle.pid, &status, 0);
-    }
-#endif
-}
-
-std::string executeCommandWithEnv(
-    const std::string &command,
-    const std::map<std::string, std::string> &envVars) {
+auto executeCommandWithEnv(const std::string &command,
+                           const std::unordered_map<std::string, std::string>
+                               &envVars) -> std::string {
     if (command.empty()) {
         return "";
     }
-    // 保存当前环境变量的状态
-    std::map<std::string, std::string> oldEnvVars;
-    for (const auto &var : envVars) {
-        char *oldValue = std::getenv(var.first.c_str());
-        if (oldValue) {
-            oldEnvVars[var.first] = oldValue;
+
+    std::unordered_map<std::string, std::string> oldEnvVars;
+
+    {
+        // Lock the mutex to ensure thread safety
+        std::lock_guard lock(envMutex);
+
+        for (const auto &var : envVars) {
+            char *oldValue = std::getenv(var.first.c_str());
+            if (oldValue != nullptr) {
+                oldEnvVars[var.first] = std::string(oldValue);
+            }
+            SETENV(var.first.c_str(), var.second.c_str());
         }
-#if defined(_WIN32) || defined(_WIN64)
-        SETENV(var.first.c_str(), var.second.c_str());
-#else
-        SETENV(var.first.c_str(), var.second.c_str());
-#endif
     }
 
-    // 执行命令
     auto result = executeCommand(command, false);
 
-    // 清理：恢复环境变量到之前的状态
-    for (const auto &var : envVars) {
-        if (oldEnvVars.find(var.first) != oldEnvVars.end()) {
-            // 恢复旧值
-            SETENV(var.first.c_str(), oldEnvVars[var.first].c_str());
-        } else {
-            // 如果之前不存在，则删除
-            UNSETENV(var.first.c_str());
+    {
+        // Lock the mutex to ensure thread safety
+        std::lock_guard lock(envMutex);
+
+        for (const auto &var : envVars) {
+            if (oldEnvVars.find(var.first) != oldEnvVars.end()) {
+                SETENV(var.first.c_str(), oldEnvVars[var.first].c_str());
+            } else {
+                UNSETENV(var.first.c_str());
+            }
         }
     }
 
     return result;
 }
 
-std::pair<std::string, int> executeCommandWithStatus(
-    const std::string &command) {
-    if (command.empty()) {
-        return {"", -1};
-    }
-    std::array<char, 4096> buffer{};
-    std::ostringstream output;
-
-#ifdef _WIN32
-    // Windows implementation using _popen and _pclose
-    std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(command.c_str(), "r"),
-                                                   _pclose);
-#else
-    // Linux implementation using popen and pclose
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"),
-                                                  pclose);
-#endif
-
-    if (!pipe) {
-        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
-    }
-
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        output << buffer.data();
-    }
-
-    int status = -1;
-#ifdef _WIN32
-    // Windows exit code retrieval
-    if (pipe) {
-        status = 0;
-    }
-#else
-    // Linux exit code retrieval
-    if (pipe) {
-        status = WEXITSTATUS(pclose(pipe.get()));
-    }
-#endif
-
-    return {output.str(), status};
+auto executeCommandSimple(const std::string &command) -> bool {
+    return executeCommandWithStatus(command).second == 0;
 }
+
+void killProcessByName(const std::string &processName, ATOM_UNUSED int signal) {
+#ifdef _WIN32
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) {
+        THROW_SYSTEM_COLLAPSE("Error: unable to create toolhelp snapshot.");
+    }
+
+    PROCESSENTRY32W entry;
+    entry.dwSize = sizeof(PROCESSENTRY32);
+
+    if (Process32FirstW(snap, &entry) == 0) {
+        CloseHandle(snap);
+        THROW_SYSTEM_COLLAPSE("Error: unable to get the first process.");
+    }
+
+    do {
+        if (strcmp(atom::utils::WCharArrayToString(entry.szExeFile).c_str(),
+                   processName.c_str()) == 0) {
+            HANDLE hProcess =
+                OpenProcess(PROCESS_TERMINATE, 0, entry.th32ProcessID);
+            if (hProcess != nullptr) {
+                TerminateProcess(hProcess, 0);
+                CloseHandle(hProcess);
+            }
+        }
+    } while (Process32NextW(snap, &entry) != 0);
+
+    CloseHandle(snap);
+#else
+    std::string command =
+        "pkill -" + std::to_string(signal) + " -f " + processName;
+    int result = std::system(command.c_str());
+    if (result != 0) {
+        THROW_SYSTEM_COLLAPSE("Error: failed to kill process with name " +
+                              processName);
+    }
+#endif
+}
+
+void killProcessByPID(int pid, ATOM_UNUSED int signal) {
+#ifdef _WIN32
+    HANDLE hProcess =
+        OpenProcess(PROCESS_TERMINATE, 0, static_cast<DWORD>(pid));
+    if (hProcess == nullptr) {
+        THROW_SYSTEM_COLLAPSE("Error: unable to open process with PID " +
+                              std::to_string(pid));
+    }
+    TerminateProcess(hProcess, 0);
+    CloseHandle(hProcess);
+#else
+    if (kill(pid, signal) == -1) {
+        THROW_SYSTEM_COLLAPSE("Error: failed to kill process with PID " +
+                              std::to_string(pid));
+    }
+    int status;
+    waitpid(pid, &status, 0);
+
+#endif
+}
+
 }  // namespace atom::system

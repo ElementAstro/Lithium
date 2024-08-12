@@ -25,7 +25,7 @@ namespace atom::type {
 class ShortString {
 private:
     static constexpr size_t MAX_LENGTH = 15;  ///< Maximum length of the string
-    std::string str;                          ///< The underlying string
+    std::string str_;                         ///< The underlying string
 
 public:
     /**
@@ -49,7 +49,7 @@ public:
      * @brief Constructs a ShortString object from a C-string.
      * @param s The input C-string.
      */
-    ShortString(const char* s);
+    explicit ShortString(const char* s);
 
     /**
      * @brief Copy constructor.
@@ -68,35 +68,35 @@ public:
      * @param other The ShortString object to copy assign from.
      * @return Reference to the assigned ShortString object.
      */
-    ShortString& operator=(const ShortString& other) = default;
+    auto operator=(const ShortString& other) -> ShortString& = default;
 
     /**
      * @brief Move assignment operator.
      * @param other The ShortString object to move assign from.
      * @return Reference to the assigned ShortString object.
      */
-    ShortString& operator=(ShortString&& other) noexcept = default;
+    auto operator=(ShortString&& other) noexcept -> ShortString& = default;
 
     /**
      * @brief Assignment operator for std::string.
      * @param s The input string.
      * @return Reference to the assigned ShortString object.
      */
-    ShortString& operator=(const std::string& s);
+    auto operator=(const std::string& s) -> ShortString&;
 
     /**
      * @brief Assignment operator for C-string.
      * @param s The input C-string.
      * @return Reference to the assigned ShortString object.
      */
-    ShortString& operator=(const char* s);
+    auto operator=(const char* s) -> ShortString&;
 
     /**
      * @brief Assignment operator for std::string_view.
      * @param s The input string view.
      * @return Reference to the assigned ShortString object.
      */
-    ShortString& operator=(std::string_view s);
+    auto operator=(std::string_view s) -> ShortString&;
 
     /**
      * @brief Overloaded stream insertion operator.
@@ -104,42 +104,45 @@ public:
      * @param ss The ShortString object to insert into the stream.
      * @return Reference to the output stream.
      */
-    friend std::ostream& operator<<(std::ostream& os, const ShortString& ss);
+    friend auto operator<<(std::ostream& os,
+                           const ShortString& ss) -> std::ostream&;
 
     /**
      * @brief Concatenates two ShortString objects.
      * @param other The ShortString object to concatenate with.
      * @return A new ShortString object containing the concatenated string.
      */
-    ShortString operator+(const ShortString& other) const;
+    auto operator+(const ShortString& other) const -> ShortString;
 
     /**
      * @brief Appends another ShortString object to the current one.
      * @param other The ShortString object to append.
      * @return Reference to the modified ShortString object.
      */
-    ShortString& operator+=(const ShortString& other);
+    auto operator+=(const ShortString& other) -> ShortString&;
 
     /**
      * @brief Appends a std::string_view to the current ShortString object.
      * @param other The string view to append.
      * @return Reference to the modified ShortString object.
      */
-    ShortString& operator+=(std::string_view other);
+    auto operator+=(std::string_view other) -> ShortString&;
 
     /**
      * @brief Equality comparison operator.
      * @param other The ShortString object to compare with.
      * @return True if both strings are equal, false otherwise.
      */
-    [[nodiscard]] bool operator==(const ShortString& other) const noexcept;
+    [[nodiscard]] auto operator==(const ShortString& other) const noexcept
+        -> bool;
 
     /**
      * @brief Inequality comparison operator.
      * @param other The ShortString object to compare with.
      * @return True if both strings are not equal, false otherwise.
      */
-    [[nodiscard]] bool operator!=(const ShortString& other) const noexcept;
+    [[nodiscard]] auto operator!=(const ShortString& other) const noexcept
+        -> bool;
 
     /**
      * @brief Less than comparison operator.
@@ -147,7 +150,8 @@ public:
      * @return True if the current string is less than the other string, false
      * otherwise.
      */
-    [[nodiscard]] bool operator<(const ShortString& other) const noexcept;
+    [[nodiscard]] auto operator<(const ShortString& other) const noexcept
+        -> bool;
 
     /**
      * @brief Greater than comparison operator.
@@ -155,7 +159,8 @@ public:
      * @return True if the current string is greater than the other string,
      * false otherwise.
      */
-    [[nodiscard]] bool operator>(const ShortString& other) const noexcept;
+    [[nodiscard]] auto operator>(const ShortString& other) const noexcept
+        -> bool;
 
     /**
      * @brief Less than or equal to comparison operator.
@@ -163,7 +168,8 @@ public:
      * @return True if the current string is less than or equal to the other
      * string, false otherwise.
      */
-    [[nodiscard]] bool operator<=(const ShortString& other) const noexcept;
+    [[nodiscard]] auto operator<=(const ShortString& other) const noexcept
+        -> bool;
 
     /**
      * @brief Greater than or equal to comparison operator.
@@ -171,27 +177,28 @@ public:
      * @return True if the current string is greater than or equal to the other
      * string, false otherwise.
      */
-    [[nodiscard]] bool operator>=(const ShortString& other) const noexcept;
+    [[nodiscard]] auto operator>=(const ShortString& other) const noexcept
+        -> bool;
 
     /**
      * @brief Accesses a character in the ShortString object.
      * @param index The index of the character to access.
      * @return Reference to the accessed character.
      */
-    [[nodiscard]] char& operator[](size_t index) noexcept;
+    [[nodiscard]] auto operator[](size_t index) noexcept -> char&;
 
     /**
      * @brief Accesses a character in the ShortString object (const version).
      * @param index The index of the character to access.
      * @return Reference to the accessed character.
      */
-    [[nodiscard]] const char& operator[](size_t index) const noexcept;
+    [[nodiscard]] auto operator[](size_t index) const noexcept -> const char&;
 
     /**
      * @brief Gets the length of the ShortString object.
      * @return The length of the string.
      */
-    [[nodiscard]] size_t length() const noexcept;
+    [[nodiscard]] auto length() const noexcept -> size_t;
 
     /**
      * @brief Returns a substring of the ShortString object.
@@ -200,7 +207,8 @@ public:
      * all characters from pos to the end.
      * @return A new ShortString object containing the substring.
      */
-    ShortString substr(size_t pos = 0, size_t count = std::string::npos) const;
+    [[nodiscard]] auto substr(
+        size_t pos = 0, size_t count = std::string::npos) const -> ShortString;
 
     /**
      * @brief Clears the ShortString object, setting it to an empty string.

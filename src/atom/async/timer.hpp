@@ -17,14 +17,12 @@ Description: Timer class for C++
 
 #include <chrono>
 #include <condition_variable>
-#include <exception>
+#include <cstddef>
 #include <functional>
 #include <future>
-#include <map>
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <vector>
 
 namespace atom::async {
 /**
@@ -41,8 +39,8 @@ public:
      * for infinite repetition.
      * @param priority The priority of the task.
      */
-    explicit TimerTask(std::function<void()> func, unsigned int delay, int repeatCount,
-              int priority);
+    explicit TimerTask(std::function<void()> func, unsigned int delay,
+                       int repeatCount, int priority);
 
     /**
      * @brief Comparison operator for comparing two TimerTask objects based on
@@ -52,7 +50,7 @@ public:
      * @return True if this task's next execution time is earlier than the other
      * task's next execution time.
      */
-    bool operator<(const TimerTask &other) const;
+    auto operator<(const TimerTask &other) const -> bool;
 
     /**
      * @brief Executes the task's associated function.
@@ -64,7 +62,7 @@ public:
      *
      * @return The steady clock time point representing the next execution time.
      */
-    std::chrono::steady_clock::time_point getNextExecutionTime() const;
+    auto getNextExecutionTime() const -> std::chrono::steady_clock::time_point;
 
     std::function<void()> m_func;  ///< The function to be executed.
     unsigned int m_delay;          ///< The delay before the first execution.
@@ -100,8 +98,9 @@ public:
      * @return A future representing the result of the function execution.
      */
     template <typename Function, typename... Args>
-    [[nodiscard]] std::future<typename std::result_of<Function(Args...)>::type>
-    setTimeout(Function &&func, unsigned int delay, Args &&...args);
+    [[nodiscard]] auto setTimeout(Function &&func, unsigned int delay,
+                                  Args &&...args)
+        -> std::future<typename std::result_of<Function(Args...)>::type>;
 
     /**
      * @brief Schedules a task to be executed repeatedly at a specified
@@ -120,7 +119,7 @@ public:
     void setInterval(Function &&func, unsigned int interval, int repeatCount,
                      int priority, Args &&...args);
 
-    [[nodiscard]] std::chrono::steady_clock::time_point now() const;
+    [[nodiscard]] auto now() const -> std::chrono::steady_clock::time_point;
 
     /**
      * @brief Cancels all scheduled tasks.
@@ -151,7 +150,7 @@ public:
     template <typename Function>
     void setCallback(Function &&func);
 
-    [[nodiscard]] int getTaskCount() const;
+    [[nodiscard]] auto getTaskCount() const -> size_t;
 
 private:
     /**
@@ -167,16 +166,15 @@ private:
      * @return A future representing the result of the function execution.
      */
     template <typename Function, typename... Args>
-    std::future<typename std::result_of<Function(Args...)>::type> addTask(
-        Function &&func, unsigned int delay, int repeatCount, int priority,
-        Args &&...args);
+    auto addTask(Function &&func, unsigned int delay, int repeatCount,
+                 int priority, Args &&...args)
+        -> std::future<typename std::result_of<Function(Args...)>::type>;
 
     /**
      * @brief Main execution loop for processing and running tasks.
      */
     void run();
 
-private:
 #if _cplusplus >= 202203L
     std::jthread
         m_thread;  ///< The thread for running the timer loop (C++20 or later).
@@ -195,8 +193,8 @@ private:
 };
 
 template <typename Function, typename... Args>
-std::future<typename std::result_of<Function(Args...)>::type> Timer::setTimeout(
-    Function &&func, unsigned int delay, Args &&...args) {
+auto Timer::setTimeout(Function &&func, unsigned int delay, Args &&...args)
+    -> std::future<typename std::result_of<Function(Args...)>::type> {
     using ReturnType = typename std::result_of<Function(Args...)>::type;
     auto task = std::make_shared<std::packaged_task<ReturnType()>>(
         std::bind(std::forward<Function>(func), std::forward<Args>(args)...));

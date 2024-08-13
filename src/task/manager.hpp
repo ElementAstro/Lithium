@@ -1,3 +1,23 @@
+/**
+ * @file task_interpreter.hpp
+ * @brief Task Interpreter for managing and executing scripts.
+ *
+ * This file defines the `TaskInterpreter` class, which is responsible for
+ * loading, managing, and executing tasks represented as JSON scripts. The
+ * `TaskInterpreter` class provides functionality to register functions and
+ * exception handlers, set and retrieve variables, and control script execution
+ * flow (e.g., pause, resume, stop). It supports various script operations such
+ * as parsing labels, executing steps, handling exceptions, and evaluating
+ * expressions.
+ *
+ * The class also supports asynchronous operations and event handling, making it
+ * suitable for dynamic and complex scripting environments.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ */
+
 #ifndef LITHIUM_TASK_INTERPRETER_HPP
 #define LITHIUM_TASK_INTERPRETER_HPP
 
@@ -36,7 +56,8 @@ public:
         const std::string& name,
         std::function<void(const std::exception&)> handler);
 
-    void setVariable(const std::string& name, const json& value, VariableType type);
+    void setVariable(const std::string& name, const json& value,
+                     VariableType type);
     [[nodiscard]] auto getVariable(const std::string& name) const -> json;
 
     void parseLabels(const json& script);
@@ -72,6 +93,8 @@ private:
     void executeReturn(const json& step, size_t& idx);
     void executeBreak(const json& step, size_t& idx);
     void executeContinue(const json& step, size_t& idx);
+
+    void executeMessage(const json& step);
 
     auto evaluate(const json& value) -> json;
     void handleException(const std::string& scriptName,

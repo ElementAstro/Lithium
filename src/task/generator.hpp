@@ -1,16 +1,13 @@
-/*
- * generator.hpp
+/**
+ * @file generator.hpp
+ * @brief Task Generator
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file contains the definition and implementation of a task generator.
+ *
+ * @date 2023-07-21
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-7-21
-
-Description: Task Generator
-
-**************************************************/
 
 #ifndef LITHIUM_TASK_GENERATOR_HPP
 #define LITHIUM_TASK_GENERATOR_HPP
@@ -25,9 +22,9 @@ Description: Task Generator
 using json = nlohmann::json;
 
 namespace lithium {
-using MacroValue = std::variant<
-    std::string,
-    std::function<std::string(const std::vector<std::string>&)>>;
+using MacroValue =
+    std::variant<std::string,
+                 std::function<std::string(const std::vector<std::string>&)>>;
 
 class TaskGenerator {
 public:

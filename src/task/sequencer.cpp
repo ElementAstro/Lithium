@@ -1,3 +1,26 @@
+/**
+ * @file sequencer.cpp
+ * @brief Definition of classes for managing and executing task sequences.
+ *
+ * This file defines the `Target` and `ExposureSequence` classes for managing
+ * and executing sequences of tasks. The `Target` class represents a unit that
+ * can hold and execute tasks with a configurable delay and priority. The
+ * `ExposureSequence` class manages a collection of `Target` objects and
+ * coordinates their execution, allowing for task sequences to be executed in
+ * parallel or serially with options for pausing, resuming, and stopping.
+ *
+ * Key features:
+ * - `Target` class: Manages individual tasks, delay after execution, and
+ *   priority. Supports enabling/disabling and task execution.
+ * - `ExposureSequence` class: Manages multiple `Target` instances, supports
+ *   adding, removing, and modifying targets, and coordinates their execution
+ *   in a controlled manner.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ */
+
 #include "sequencer.hpp"
 #include "task.hpp"
 

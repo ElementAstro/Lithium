@@ -1,16 +1,14 @@
-/*
- * container.cpp
+/**
+ * @file container.cpp
+ * @brief Task container class.
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file contains the definition of the task container class, which is used
+ * for managing tasks within the application.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-4-3
-
-Description: Task container class.
-
-**************************************************/
 
 #include "container.hpp"
 

@@ -1,16 +1,13 @@
-/*
- * generator.cpp
+/**
+ * @file generator.cpp
+ * @brief Task Generator
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file contains the definition and implementation of a task generator.
+ *
+ * @date 2023-07-21
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-7-21
-
-Description: Task Generator
-
-**************************************************/
 
 #include "generator.hpp"
 

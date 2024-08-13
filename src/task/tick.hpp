@@ -1,16 +1,16 @@
-/*
- * tick.hpp
+/**
+ * @file tick.hpp
+ * @brief Tick scheduler similar to Minecraft's.
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file defines a tick scheduler that operates similarly to the tick
+ * system used in Minecraft. The scheduler manages time-based updates or
+ * events that occur at regular intervals, facilitating the execution of
+ * tasks or processes in a periodic manner.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-4-3
-
-Description: Tick Sheduler, just like Minecraft's
-
-**************************************************/
 
 #ifndef LITHIUM_TASK_TICK_HPP
 #define LITHIUM_TASK_TICK_HPP

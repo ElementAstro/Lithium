@@ -1,7 +1,28 @@
+/**
+ * @file task_interpreter.cpp
+ * @brief Task Interpreter for managing and executing scripts.
+ *
+ * This file defines the `TaskInterpreter` class, which is responsible for
+ * loading, managing, and executing tasks represented as JSON scripts. The
+ * `TaskInterpreter` class provides functionality to register functions and
+ * exception handlers, set and retrieve variables, and control script execution
+ * flow (e.g., pause, resume, stop). It supports various script operations such
+ * as parsing labels, executing steps, handling exceptions, and evaluating
+ * expressions.
+ *
+ * The class also supports asynchronous operations and event handling, making it
+ * suitable for dynamic and complex scripting environments.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ */
+
 #include "manager.hpp"
 #include "generator.hpp"
 // #include "pool.hpp"
 #include "task.hpp"
+#include "eval.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -23,11 +44,14 @@
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
+#include "task/loader.hpp"
+
+#define ENABLE_DEBUG 1
 
 using namespace std::literals;
 using json = nlohmann::json;
 
-std::ostream& operator<<(std::ostream& os, const std::error_code& ec) {
+auto operator<<(std::ostream& os, const std::error_code& ec) -> std::ostream& {
     os << "Error Code: " << ec.value() << ", Category: " << ec.category().name()
        << ", Message: " << ec.message();
     return os;
@@ -84,6 +108,13 @@ TaskInterpreter::TaskInterpreter()
     } else {
         THROW_RUNTIME_ERROR("Failed to create task pool.");
     }
+    if (auto ptr = GetPtrOrCreate<TaskGenerator>("lithium.task.generator", [] {
+            return std::make_shared<TaskGenerator>();
+        })) {
+        impl_->taskGenerator_ = ptr;
+    } else {
+        THROW_RUNTIME_ERROR("Failed to create task generator.");
+    }
 }
 
 TaskInterpreter::~TaskInterpreter() {
@@ -98,6 +129,7 @@ auto TaskInterpreter::createShared() -> std::shared_ptr<TaskInterpreter> {
 }
 
 void TaskInterpreter::loadScript(const std::string& name, const json& script) {
+    LOG_F(INFO, "Loading script: {} with {}", name, script.dump());
     std::unique_lock lock(impl_->mtx_);
     impl_->scripts_[name] = script;
     lock.unlock();
@@ -190,6 +222,7 @@ auto TaskInterpreter::getVariable(const std::string& name) const -> json {
 
 void TaskInterpreter::parseLabels(const json& script) {
     std::unique_lock lock(impl_->mtx_);
+    LOG_F(INFO, "Parsing labels...");
     for (size_t i = 0; i < script.size(); ++i) {
         if (script[i].contains("label")) {
             impl_->labels_[script[i]["label"]] = i;
@@ -246,9 +279,13 @@ void TaskInterpreter::stop() {
     }
 }
 
-void TaskInterpreter::pause() { impl_->pauseRequested_ = true; }
+void TaskInterpreter::pause() {
+    LOG_F(INFO, "Pausing task interpreter...");
+    impl_->pauseRequested_ = true;
+}
 
 void TaskInterpreter::resume() {
+    LOG_F(INFO, "Resuming task interpreter...");
     impl_->pauseRequested_ = false;
     impl_->cv_.notify_all();
 }
@@ -304,6 +341,8 @@ auto TaskInterpreter::executeStep(const json& step, size_t& idx,
             executeBreak(step, idx);
         } else if (type == "continue") {
             executeContinue(step, idx);
+        } else if (type == "message") {
+            executeMessage(step);
         } else {
             LOG_F(ERROR, "Unknown step type: {}", type);
             return false;
@@ -342,18 +381,54 @@ auto TaskInterpreter::executeLoop(const json& step, size_t& idx,
 }
 
 void TaskInterpreter::executeGoto(const json& step, size_t& idx,
-                                  const json& /*script*/) {
-    std::string label = step["label"];
-    if (impl_->labels_.find(label) != impl_->labels_.end()) {
-        idx = impl_->labels_[label] -
-              1;  // Adjust for subsequent increment in the loop
-    } else {
-        THROW_RUNTIME_ERROR("Label '" + label + "' not found.");
+                                  const json& script) {
+    static const int MAX_GOTO_DEPTH = 100;  // 设置最大跳转深度
+    static std::unordered_map<std::string, int>
+        gotoDepthCounter;  // 跳转深度计数器
+    static std::unordered_map<std::string, size_t> labelCache;  // 标签位置缓存
+
+    // 标签字段验证
+    if (!step.contains("label") || !step["label"].is_string()) {
+        THROW_INVALID_ARGUMENT("Goto step is missing a valid 'label' field.");
     }
+
+    // 获取标签和当前上下文
+    std::string label = step["label"];
+    std::string currentContext =
+        script.contains("context") ? script["context"].get<std::string>() : "";
+    std::string fullLabel =
+        currentContext.empty() ? label : currentContext + "::" + label;
+
+    // 检查缓存
+    if (labelCache.find(fullLabel) != labelCache.end()) {
+        idx = labelCache[fullLabel];
+        gotoDepthCounter[fullLabel]++;
+        if (gotoDepthCounter[fullLabel] > MAX_GOTO_DEPTH) {
+            THROW_RUNTIME_ERROR("Exceeded maximum GOTO depth for label '" +
+                                fullLabel + "'. Possible infinite loop.");
+        }
+        return;
+    }
+
+    // 查找标签并验证存在性
+    if (impl_->labels_.find(fullLabel) == impl_->labels_.end()) {
+        THROW_RUNTIME_ERROR("Label '" + fullLabel +
+                            "' not found in the script.");
+    }
+
+    // 更新索引并缓存结果
+    idx = impl_->labels_.at(fullLabel);
+    labelCache[fullLabel] = idx;
+
+    // 更新跳转深度计数器
+    gotoDepthCounter[fullLabel] = 1;
 }
 
 void TaskInterpreter::executeSwitch(const json& step, size_t& idx,
                                     const json& script) {
+    if (!step.contains("variable")) {
+        THROW_MISSING_ARGUMENT("Missing 'variable' parameter.");
+    }
     std::string variable = step["variable"];
     json value = evaluate(impl_->variables_[variable]);
 
@@ -379,8 +454,15 @@ void TaskInterpreter::executeSwitch(const json& step, size_t& idx,
 }
 
 void TaskInterpreter::executeDelay(const json& step) {
-    int milliseconds = evaluate(step["milliseconds"]).get<int>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+    if (!step.contains("milliseconds")) {
+        THROW_MISSING_ARGUMENT("Missing 'milliseconds' parameter.");
+    }
+    if (!step["milliseconds"].is_number()) {
+        THROW_INVALID_ARGUMENT("'milliseconds' must be a number.");
+    }
+    auto milliseconds =
+        std::chrono::milliseconds(evaluate(step["milliseconds"]).get<int>());
+    std::this_thread::sleep_for(milliseconds);
 }
 
 void TaskInterpreter::executeParallel(const json& step,
@@ -411,7 +493,13 @@ void TaskInterpreter::executeCall(const json& step) {
 
         // 评估参数的值
         for (const auto& [key, value] : params.items()) {
-            params[key] = evaluate(value);
+            params[key] = evaluate(value)[1];
+#if ENABLE_DEBUG
+            std::cout << "Pure value: " << key << " = " << value.dump()
+                      << std::endl;
+            std::cout << "Evaluated parameter: " << key << " = "
+                      << params[key].dump() << std::endl;
+#endif
         }
 
         // 获取目标变量名（可选）
@@ -434,7 +522,8 @@ void TaskInterpreter::executeCall(const json& step) {
         // 如果指定了目标变量名，则将返回值存储到该变量中
         if (!targetVariable.empty()) {
             std::unique_lock ulock(impl_->mtx_);
-            impl_->variables_[targetVariable] = returnValue;
+            impl_->variables_[targetVariable] = {determineType(returnValue),
+                                                 returnValue};
         }
     } catch (const std::system_error& e) {
         LOG_F(ERROR, "Error during step execution: {} with code: {}", e.what(),
@@ -455,8 +544,12 @@ void TaskInterpreter::executeNestedScript(const json& step) {
 void TaskInterpreter::executeAssign(const json& step) {
     std::string variable = step["variable"];
     json value = evaluate(step["value"]);
+#if ENABLE_DEBUG
+    std::cout << "Assigning value: " << value.dump()
+              << " to variable: " << variable << std::endl;
+#endif
     std::unique_lock lock(impl_->mtx_);
-    impl_->variables_[variable] = value;
+    impl_->variables_[variable] = {determineType(value), value};
 }
 
 void TaskInterpreter::executeImport(const json& step) {
@@ -484,10 +577,10 @@ void TaskInterpreter::executePrint(const json& step) {
 }
 
 void TaskInterpreter::executeAsync(const json& step) {
-    std::jthread([this, step]() {
+    impl_->threadPool_->enqueueDetach([this, step]() {
         size_t idx = 0;
         executeStep(step, idx, step);
-    }).detach();
+    });
 }
 
 void TaskInterpreter::executeTryCatch(const json& step, size_t& idx,
@@ -544,6 +637,11 @@ void TaskInterpreter::executeSteps(const json& steps, size_t& idx,
     }
 }
 
+void TaskInterpreter::executeMessage(const json& step) {
+    std::string message = evaluate(step["label"]).get<std::string>();
+    std::cout << message << std::endl;
+}
+
 auto TaskInterpreter::evaluate(const json& value) -> json {
     if (value.is_string() &&
         impl_->variables_.contains(value.get<std::string>())) {
@@ -551,58 +649,70 @@ auto TaskInterpreter::evaluate(const json& value) -> json {
         return impl_->variables_.at(value.get<std::string>());
     }
 
+    if (value.is_number() || value.is_boolean()) {
+        return value;
+    }
+
     if (value.is_object()) {
-        if (value.contains("$eq")) {  // 等于比较
+        if (value.contains("$")) {  // similar to python's eval()
+
+        } else if (value.contains("$eq")) {  // 等于比较
             auto operands = value["$eq"];
             if (operands.is_array() && operands.size() == 2) {
                 auto left = evaluate(operands[0]);
                 auto right = evaluate(operands[1]);
-                if (determineType(left) != determineType(right)) {
+#if ENABLE_DEBUG
+                std::cout << "Left type: " << left.type_name()
+                          << ", Right type: " << right.type_name() << std::endl;
+                std::cout << "Evaluating equality comparison: " << left.dump()
+                          << " == " << right.dump() << std::endl;
+#endif
+                if (determineType(left[1]) != determineType(right)) {
                     THROW_RUNTIME_ERROR(
                         "Type mismatch in equality comparison: " +
                         value.dump());
                 }
-                return left == right;
+                return left[1] == right;
             }
         } else if (value.contains("$gt")) {  // 大于比较
             auto operands = value["$gt"];
             if (operands.is_array() && operands.size() == 2) {
                 auto left = evaluate(operands[0]);
                 auto right = evaluate(operands[1]);
-                return left > right;
+                return left[1] > right;
             }
         } else if (value.contains("$lt")) {  // 小于比较
             auto operands = value["$lt"];
             if (operands.is_array() && operands.size() == 2) {
                 auto left = evaluate(operands[0]);
                 auto right = evaluate(operands[1]);
-                return left < right;
+                return left[1] < right;
             }
         } else if (value.contains("$add")) {  // 加法运算
             auto operands = value["$add"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
+                auto left = evaluate(operands[0])[1].get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 return left + right;
             }
         } else if (value.contains("$sub")) {  // 减法运算
             auto operands = value["$sub"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
+                auto left = evaluate(operands[0])[1].get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 return left - right;
             }
         } else if (value.contains("$mul")) {  // 乘法运算
             auto operands = value["$mul"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
+                auto left = evaluate(operands[0])[1].get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 return left * right;
             }
         } else if (value.contains("$div")) {  // 除法运算
             auto operands = value["$div"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
+                auto left = evaluate(operands[0])[1].get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 if (right == 0) {
                     THROW_RUNTIME_ERROR("Division by zero");
@@ -642,6 +752,7 @@ void TaskInterpreter::handleException(const std::string& scriptName,
     } else {
         LOG_F(ERROR, "Unhandled exception in script '{}': {}", scriptName,
               e.what());
+        std::rethrow_if_nested(e);
     }
 }
 

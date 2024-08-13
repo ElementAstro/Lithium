@@ -1,16 +1,16 @@
-/*
- * pool.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/**
+ * @file pool.cpp
+ * @brief Specialized task pool for managing tasks.
+ * 
+ * This file defines a specialized task pool designed to efficiently manage
+ * and execute tasks. The pool provides mechanisms for task scheduling, 
+ * execution, and resource management, optimizing task processing based on
+ * specific criteria or requirements.
+ * 
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-4-3
-
-Description: Specialized task pool
-
-**************************************************/
 
 #include "pool.hpp"
 

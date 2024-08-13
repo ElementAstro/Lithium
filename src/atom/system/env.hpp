@@ -71,7 +71,8 @@ public:
      * @return 键值或默认值。
      */
     ATOM_NODISCARD auto get(const std::string& key,
-                                   const std::string& default_value = "") -> std::string;
+                            const std::string& default_value = "")
+        -> std::string;
 
     /**
      * @brief 添加一个命令行参数和描述到帮助信息列表中。
@@ -106,7 +107,8 @@ public:
      * @return 键值或默认值。
      */
     ATOM_NODISCARD auto getEnv(const std::string& key,
-                               const std::string& default_value = "") -> std::string;
+                               const std::string& default_value = "")
+        -> std::string;
 
     /**
      * @brief 获取指定路径的绝对路径。
@@ -129,6 +131,39 @@ public:
      * @return 配置文件路径。
      */
     ATOM_NODISCARD auto getConfigPath() -> std::string;
+
+    /**
+     * @brief 设置环境变量。
+     * @param name 变量名。
+     * @param value 变量值。
+     * @param overwrite 是否覆盖已存在的变量。
+     */
+    static void setVariable(const std::string& name, const std::string& value,
+                            bool overwrite = true);
+
+    /**
+     * @brief 获取环境变量。
+     * @param name 变量名。
+     * @return 变量值。
+     */
+    static auto getVariable(const std::string& name) -> std::string;
+
+    /**
+     * @brief 删除环境变量。
+     * @param name 变量名。
+     */
+    static void unsetVariable(const std::string& name);
+
+    /**
+     * @brief 列出所有环境变量。
+     * @return 环境变量列表。
+     */
+    static auto listVariables() -> std::vector<std::string>;
+
+    /**
+     * @brief 打印所有环境变量。
+     */
+    static void printAllVariables();
 
 private:
     std::string m_exe;      ///< 可执行文件的全路径。

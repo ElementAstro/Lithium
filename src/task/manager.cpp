@@ -1,6 +1,6 @@
 #include "manager.hpp"
 #include "generator.hpp"
-#include "pool.hpp"
+// #include "pool.hpp"
 #include "task.hpp"
 
 #include <atomic>
@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "atom/async/pool.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
@@ -37,16 +38,16 @@ namespace lithium {
 auto determineType(const json& value) -> VariableType {
     if (value.is_number_integer()) {
         return VariableType::INTEGER;
-}
+    }
     if (value.is_string()) {
         return VariableType::STRING;
-}
+    }
     if (value.is_boolean()) {
         return VariableType::BOOLEAN;
-}
+    }
     if (value.is_object() || value.is_array()) {
         return VariableType::JSON;
-}
+    }
     return VariableType::UNKNOWN;
 }
 
@@ -69,15 +70,17 @@ public:
     std::queue<std::pair<std::string, json>> eventQueue_;
 
     std::shared_ptr<TaskGenerator> taskGenerator_;
-    std::shared_ptr<TaskPool> taskPool_;
+    // std::shared_ptr<TaskPool> taskPool_;
+    std::shared_ptr<atom::async::ThreadPool<>> threadPool_;
 };
 
 TaskInterpreter::TaskInterpreter()
     : impl_(std::make_unique<TaskInterpreterImpl>()) {
-    if (auto ptr = GetPtrOrCreate<TaskPool>(
-            "lithium.task.pool", [] { return std::make_shared<TaskPool>(); });
+    if (auto ptr = GetPtrOrCreate<atom::async::ThreadPool<>>(
+            "lithium.task.pool",
+            [] { return std::make_shared<atom::async::ThreadPool<>>(); });
         ptr) {
-        impl_->taskPool_ = ptr;
+        impl_->threadPool_ = ptr;
     } else {
         THROW_RUNTIME_ERROR("Failed to create task pool.");
     }
@@ -153,20 +156,23 @@ void TaskInterpreter::registerExceptionHandler(
     impl_->exceptionHandlers_[name] = std::move(handler);
 }
 
-void TaskInterpreter::setVariable(const std::string& name, const json& value, VariableType type) {
+void TaskInterpreter::setVariable(const std::string& name, const json& value,
+                                  VariableType type) {
     std::unique_lock lock(impl_->mtx_);
     impl_->cv_.wait(lock, [this]() { return !impl_->isRunning_; });
 
     VariableType currentType = determineType(value);
     if (currentType != type) {
-        THROW_RUNTIME_ERROR("Type mismatch when setting variable '" + name + "'. Expected " +
-                            std::to_string(static_cast<int>(type)) + ", got " +
-                            std::to_string(static_cast<int>(currentType)) + ".");
+        THROW_RUNTIME_ERROR(
+            "Type mismatch when setting variable '" + name + "'. Expected " +
+            std::to_string(static_cast<int>(type)) + ", got " +
+            std::to_string(static_cast<int>(currentType)) + ".");
     }
 
     if (impl_->variables_.find(name) != impl_->variables_.end()) {
         if (impl_->variables_[name].first != type) {
-            THROW_RUNTIME_ERROR("Type mismatch: Variable '" + name + "' already exists with a different type.");
+            THROW_RUNTIME_ERROR("Type mismatch: Variable '" + name +
+                                "' already exists with a different type.");
         }
     }
 
@@ -384,7 +390,7 @@ void TaskInterpreter::executeParallel(const json& step,
 
     for (const auto& nestedStep : step["steps"]) {
         futures.emplace_back(
-            impl_->taskPool_->enqueue([this, nestedStep, &script]() {
+            impl_->threadPool_->enqueue([this, nestedStep, &script]() {
                 size_t nestedIdx = 0;
                 executeStep(nestedStep, nestedIdx, script);
             }));
@@ -552,7 +558,9 @@ auto TaskInterpreter::evaluate(const json& value) -> json {
                 auto left = evaluate(operands[0]);
                 auto right = evaluate(operands[1]);
                 if (determineType(left) != determineType(right)) {
-                    THROW_RUNTIME_ERROR("Type mismatch in equality comparison: " + value.dump());
+                    THROW_RUNTIME_ERROR(
+                        "Type mismatch in equality comparison: " +
+                        value.dump());
                 }
                 return left == right;
             }

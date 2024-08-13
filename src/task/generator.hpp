@@ -21,36 +21,28 @@ Description: Task Generator
 #include <variant>
 #include <vector>
 
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#else
-#include <unordered_map>
-#endif
-
 #include "atom/type/json_fwd.hpp"
+using json = nlohmann::json;
 
 namespace lithium {
 using MacroValue = std::variant<
-    std::string, nlohmann::json,
-    std::function<nlohmann::json(const std::vector<std::string>&)>>;
+    std::string,
+    std::function<std::string(const std::vector<std::string>&)>>;
 
 class TaskGenerator {
 public:
     TaskGenerator();
+    ~TaskGenerator();
 
     static auto createShared() -> std::shared_ptr<TaskGenerator>;
 
     void addMacro(const std::string& name, MacroValue value);
-    void processJson(nlohmann::json& j) const;
-    void processJsonWithJsonMacros(nlohmann::json& j);
+    void processJson(json& j) const;
+    void processJsonWithJsonMacros(json& j);
 
 private:
-    std::unordered_map<std::string, MacroValue> macros_;
-
-    auto evaluateMacro(const std::string& name,
-                       const std::vector<std::string>& args) const
-        -> std::string;
-    auto replaceMacros(const std::string& input) const -> std::string;
+    class Impl;
+    std::unique_ptr<Impl> impl_;  // Pimpl for encapsulation
 };
 
 }  // namespace lithium

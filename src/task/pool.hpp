@@ -56,7 +56,7 @@ struct Task {
 class WorkerQueue {
 public:
     std::deque<std::shared_ptr<Task>> queue;
-    std::shared_mutex mutex;
+    mutable std::shared_mutex mutex;
 
     bool tryPop(std::shared_ptr<Task>& task);
     bool trySteal(std::shared_ptr<Task>& task);
@@ -69,18 +69,6 @@ public:
  * @brief A thread pool for executing tasks asynchronously.
  */
 class TaskPool : public std::enable_shared_from_this<TaskPool> {
-private:
-    std::atomic<bool> m_stop{false};
-    std::atomic<bool> m_acceptTasks{true};
-    std::vector<std::jthread> m_workers;
-    std::vector<std::unique_ptr<WorkerQueue>> m_queues;
-    std::condition_variable_any m_condition;
-    std::shared_mutex m_conditionMutex;
-    size_t m_defaultThreadCount;
-
-    static thread_local WorkerQueue* t_localQueue;
-    static thread_local size_t t_index;
-
 public:
     explicit TaskPool(size_t threads = std::thread::hardware_concurrency());
     ~TaskPool();
@@ -126,6 +114,18 @@ private:
     bool tryStealing(std::shared_ptr<Task>& task);
     void start(size_t threads);
     void stop();
+
+    std::atomic<bool> m_stop{false};
+    std::atomic<bool> m_acceptTasks{true};
+    std::vector<std::jthread> m_workers;
+    std::vector<std::unique_ptr<WorkerQueue>> m_queues;
+    std::condition_variable_any m_condition;
+    mutable std::shared_mutex m_conditionMutex;
+    size_t m_defaultThreadCount;
+
+    static thread_local WorkerQueue* t_localQueue;
+    static thread_local size_t t_index;
+
 };
 
 }  // namespace lithium

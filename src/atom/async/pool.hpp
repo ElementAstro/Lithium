@@ -217,7 +217,7 @@ public:
                         tasks_[id].signal.acquire();
 
                         do {
-                            while (auto task = tasks_[id].tasks.pop_front()) {
+                            while (auto task = tasks_[id].tasks.popFront()) {
                                 unassigned_tasks_.fetch_sub(
                                     1, std::memory_order_release);
                                 std::invoke(std::move(task.value()));
@@ -300,7 +300,7 @@ public:
                 promise.set_exception(std::current_exception());
             }
         };
-        enqueue_task(std::move(task));
+        enqueueTask(std::move(task));
         return future;
 #else
         auto shared_promise = std::make_shared<std::promise<ReturnType>>();
@@ -367,7 +367,7 @@ private:
             threads_complete_signal_.store(false, std::memory_order_release);
         }
 
-        tasks_[i].tasks.push_back(std::forward<Function>(f));
+        tasks_[i].tasks.pushBack(std::forward<Function>(f));
         tasks_[i].signal.release();
     }
 

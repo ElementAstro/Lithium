@@ -37,11 +37,11 @@ Env::Env(int argc, char **argv) {
         exePath = buf;
     }
 #else
-    char link_buf[1024];
-    ssize_t count = readlink("/proc/self/exe", link_buf, sizeof(link_buf));
+    char linkBuf[1024];
+    ssize_t count = readlink("/proc/self/exe", linkBuf, sizeof(linkBuf));
     if (count != -1) {
-        link_buf[count] = '\0';
-        exePath = link_buf;
+        linkBuf[count] = '\0';
+        exePath = linkBuf;
     }
 #endif
 
@@ -91,7 +91,7 @@ void Env::add(const std::string &key, const std::string &val) {
     }
 }
 
-bool Env::has(const std::string &key) {
+auto Env::has(const std::string &key) -> bool {
     std::lock_guard lock(m_mutex);
     return m_args.contains(key);
 }
@@ -102,7 +102,8 @@ void Env::del(const std::string &key) {
     DLOG_F(INFO, "Env::del: Remove key: {}", key);
 }
 
-std::string Env::get(const std::string &key, const std::string &default_value) {
+auto Env::get(const std::string &key,
+              const std::string &default_value) -> std::string {
     std::lock_guard lock(m_mutex);
     auto it = m_args.find(key);
     if (it == m_args.end()) {
@@ -245,5 +246,78 @@ auto Env::Environ() -> std::unordered_map<std::string, std::string> {
 #endif
 
     return envMap;
+}
+
+void Env::setVariable(const std::string &name, const std::string &value,
+                      bool overwrite) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (overwrite || !getenv(name.c_str())) {
+        if (SetEnvironmentVariableA(name.c_str(), value.c_str()) == 0) {
+            LOG_F(ERROR, "Failed to set environment variable: {}", name);
+        }
+    }
+#else
+    if (setenv(name.c_str(), value.c_str(), overwrite ? 1 : 0) != 0) {
+        LOG_F(ERROR, "Failed to set environment variable: {}", name);
+    }
+#endif
+}
+
+// 获取环境变量
+auto Env::getVariable(const std::string &name) -> std::string {
+#if defined(_WIN32) || defined(_WIN64)
+    char buffer[32767];
+    if (GetEnvironmentVariableA(name.c_str(), buffer, 32767) > 0) {
+        return std::string(buffer);
+    }
+#else
+    const char *value = getenv(name.c_str());
+    if (value != nullptr) {
+        return value;
+    }
+#endif
+    LOG_F(ERROR, "Environment variable not found: {}", name);
+    return "";
+}
+
+// 删除环境变量
+void Env::unsetVariable(const std::string &name) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (SetEnvironmentVariableA(name.c_str(), NULL) == 0) {
+        LOG_F(ERROR, "Failed to unset environment variable: {}", name);
+    }
+#else
+    if (unsetenv(name.c_str()) != 0) {
+        LOG_F(ERROR, "Failed to unset environment variable: {}", name);
+    }
+#endif
+}
+
+// 列出所有环境变量
+auto Env::listVariables() -> std::vector<std::string> {
+#if defined(_WIN32) || defined(_WIN64)
+    LPCH envStrings = GetEnvironmentStringsA();
+    if (envStrings) {
+        for (LPCH var = envStrings; *var; var += strlen(var) + 1) {
+            vars.emplace_back(var);
+        }
+        FreeEnvironmentStringsA(envStrings);
+    }
+#else
+    std::vector<std::string> vars;
+    extern char **environ;
+    for (char **env = environ; *env != nullptr; ++env) {
+        vars.emplace_back(*env);
+    }
+#endif
+    return vars;
+}
+
+// 输出所有环境变量
+void Env::printAllVariables() {
+    std::vector<std::string> vars = listVariables();
+    for (const auto &var : vars) {
+        DLOG_F(INFO, "{}", var);
+    }
 }
 }  // namespace atom::utils

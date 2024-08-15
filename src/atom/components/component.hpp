@@ -101,8 +101,6 @@ public:
 
     void setTypeInfo(atom::meta::TypeInfo typeInfo);
 
-    void setTypeInfo(atom::meta::Type_Info typeInfo);
-
     // -------------------------------------------------------------------
     // Variable methods
     // -------------------------------------------------------------------
@@ -361,8 +359,6 @@ public:
     auto getAllCommands() const -> std::vector<std::string>;
 
     auto getRegisteredTypes() const -> std::vector<std::string>;
-
-    std::vector<std::string> getRegisteredTypes() const;
 
     // -------------------------------------------------------------------
     // Other Components methods

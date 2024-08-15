@@ -14,6 +14,7 @@ set(${PROJECT_NAME}_SOURCES
     aes.cpp
     convert.cpp
     qdatetime.cpp
+    qprocess.cpp
     qtimer.cpp
     qtimezone.cpp
     random.cpp
@@ -30,6 +31,7 @@ set(${PROJECT_NAME}_HEADERS
     argsview.hpp
     convert.hpp
     qdatetime.hpp
+    qprocess.hpp
     qtimer.hpp
     qtimezone.hpp
     random.hpp

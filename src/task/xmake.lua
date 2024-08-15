@@ -21,10 +21,8 @@ local source_files = {
     "generator.cpp",
     "loader.cpp",
     "manager.cpp",
-    "pool.cpp",
     "singlepool.cpp",
     "task.cpp",
-    "tick.cpp"
 }
 
 -- Header files
@@ -35,7 +33,7 @@ local header_files = {
     "manager.hpp",
     "pool.hpp",
     "singlepool.hpp",
-    "tick.hpp"
+    "task.hpp"
 }
 
 -- Object Library

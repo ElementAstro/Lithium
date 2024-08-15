@@ -14,8 +14,8 @@ Description: Address class for IPv4, IPv6, and Unix domain sockets.
 
 #include "address.hpp"
 
-#include<regex>
 #include <cstring>
+#include <regex>
 #ifndef _WIN32
 #include <netdb.h>
 #endif
@@ -49,7 +49,8 @@ Address::ptr Address::Create(const std::string &address, uint16_t port) {
     return addr;
 }
 
-Address::ptr Address::Create(const sockaddr *addr, socklen_t addrlen) {
+Address::ptr Address::Create(const sockaddr *addr,
+                             [[maybe_unused]] socklen_t addrlen) {
     if (addr == nullptr) {
         return nullptr;
     }
@@ -73,7 +74,6 @@ bool Address::Lookup(std::vector<Address::ptr> &result, const std::string &host,
         return false;
     }
 
-    char addrbuf[INET6_ADDRSTRLEN] = {0};
     for (struct addrinfo *p = res; p != nullptr; p = p->ai_next) {
         result.push_back(Create(p->ai_addr, p->ai_addrlen));
     }

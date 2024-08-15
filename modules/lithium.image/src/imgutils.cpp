@@ -138,7 +138,7 @@ bool BresenHamCheckCircle(const cv::Mat& rect_contour, float radius,
         }
 
         if (if_debug) {
-            int singlewhite;
+            int singlewhite = 0;
             // std::tie(singlewhite, rect_contour_rgb) =
             // EightSymmetryCircleCheck_forDebug(rect_contour, rect_contour_rgb,
             // center, x_p, y_p);

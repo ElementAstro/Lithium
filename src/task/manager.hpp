@@ -32,7 +32,9 @@ using json = nlohmann::json;
 
 namespace lithium {
 
-enum class VariableType { INTEGER, STRING, BOOLEAN, JSON, UNKNOWN };
+enum class VariableType { NUMBER, STRING, BOOLEAN, JSON, UNKNOWN };
+
+auto determineType(const json& value) -> VariableType;
 
 class TaskInterpreterImpl;
 
@@ -97,6 +99,8 @@ private:
     void executeMessage(const json& step);
 
     auto evaluate(const json& value) -> json;
+    auto evaluateExpression(const std::string& expr) -> json;
+    auto precedence(char op) -> int;
     void handleException(const std::string& scriptName,
                          const std::exception& e);
 

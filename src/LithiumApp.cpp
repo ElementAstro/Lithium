@@ -29,8 +29,6 @@ Description: Lithium App Enter
 #include "task/generator.hpp"
 #include "task/loader.hpp"
 #include "task/manager.hpp"
-#include "task/pool.hpp"
-#include "task/tick.hpp"
 
 #include "script/manager.hpp"
 
@@ -229,7 +227,7 @@ void LithiumApp::registerExceptionHandler(
 }
 
 void LithiumApp::setVariable(const std::string &name, const json &value) {
-    m_task_interpreter_.lock()->setVariable(name, value);
+    m_task_interpreter_.lock()->setVariable(name, value, determineType(value));
 }
 
 auto LithiumApp::getVariable(const std::string &name) -> json {
@@ -297,9 +295,6 @@ void initLithiumApp(int argc, char **argv) {
     AddPtr("lithium.task.container", TaskContainer::createShared());
     AddPtr("lithiun.task.generator", TaskGenerator::createShared());
     AddPtr("lithium.task.loader", TaskLoader::createShared());
-    AddPtr("lithium.task.pool",
-           TaskPool::createShared(std::thread::hardware_concurrency()));
-    AddPtr("lithium.task.tick", TickScheduler::createShared());
     AddPtr("lithium.task.manager", TaskInterpreter::createShared());
 
     AddPtr("lithium.utils.env", atom::utils::Env::createShared(argc, argv));

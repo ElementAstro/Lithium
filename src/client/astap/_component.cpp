@@ -24,23 +24,7 @@ AstapComponent::AstapComponent(const std::string& name)
     : Component(name), m_solver(std::make_shared<AstapSolver>("astap")) {
     LOG_F(INFO, "AstapComponent Constructed");
 
-    def("connect", &AstapSolver::connect, m_solver, "main",
-        "Connect to astap solver");
-    def("disconnect", &AstapSolver::disconnect, m_solver, "main",
-        "Disconnect from astap solver");
-    def("reconnect", &AstapSolver::reconnect, m_solver, "main",
-        "Reconnect to astap solver");
-    def("isConnected", &AstapSolver::isConnected, m_solver, "main",
-        "Check if astap solver is connected");
-    def("scanSolver", &AstapSolver::scanSolver, m_solver, "main",
-        "Scan for astap solver");
-    def("solveImage", &AstapSolver::solveImage, m_solver, "main",
-        "Solve image");
-    def("getSolveResult", &AstapSolver::getSolveResult, m_solver, "main",
-        "Get solve result");
-
-    addVariable("astap.instance", m_solver, "Astap solver instance");
-    this->defType<AstapSolver>("astap");
+    
 }
 
 AstapComponent::~AstapComponent() { LOG_F(INFO, "AstapComponent Destructed"); }

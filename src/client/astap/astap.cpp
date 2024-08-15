@@ -1,5 +1,8 @@
 #include "astap.hpp"
 
+#include "atom/components/component.hpp"
+#include "atom/components/registry.hpp"
+
 #include "atom/async/async.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
@@ -223,3 +226,39 @@ auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
 
     return retStruct;
 }
+
+ATOM_MODULE(solver_astap, [](Component &component) {
+    LOG_F(INFO, "Registering solver_astap module...");
+
+    component.def("connect", &AstapSolver::connect, "main",
+                  "Connect to astap solver");
+    component.def("disconnect", &AstapSolver::disconnect, "main",
+                  "Disconnect from astap solver");
+    component.def("reconnect", &AstapSolver::reconnect, "main",
+                  "Reconnect to astap solver");
+    component.def("isConnected", &AstapSolver::isConnected, "main",
+                  "Check if astap solver is connected");
+    component.def("scanSolver", &AstapSolver::scanSolver, "main",
+                  "Scan for astap solver");
+    component.def("solveImage", &AstapSolver::solveImage, "main",
+                  "Solve image");
+    component.def("getSolveResult", &AstapSolver::getSolveResult, "main",
+                  "Get solve result");
+
+    component.addVariable("astap.instance", "Astap solver instance");
+    component.defType<AstapSolver>("astap");
+
+    component.def(
+        "create_instance",
+        [](const std::string &name) {
+            std::shared_ptr<AtomCamera> instance =
+                std::make_shared<AstapSolver>(name);
+            return instance;
+        },
+        "device", "Create a new camera instance.");
+    component.defType<INDICamera>("indi_camera", "device",
+                                  "Define a new camera instance.");
+
+
+    LOG_F(INFO, "Registered solver_astap module.");
+});

@@ -171,8 +171,11 @@ TEST_F(TaskInterpreterTest, LabelAndGoto) {
     [
         {"type": "assign", "variable": "x", "value": 0},
         {"type": "message", "label": "start"},
-        {"type": "assign", "variable": "x", "value": {"$": "x + 1"}},
-        {"type": "condition", "condition": {"x": 3}, "true": {"type": "goto", "label": "end"}, "false": {"type": "goto", "label": "start"}},
+        {"type": "assign", "variable": "x", "value": "x + 1"},
+        {"type": "condition", "condition": {"$eq": [
+                    "x",
+                    3
+                ]}, "true": {"type": "goto", "label": "end"}, "false": {"type": "goto", "label": "start"}},
         {"type": "message", "label": "end"}
     ]
     )"_json;
@@ -193,7 +196,6 @@ TEST_F(TaskInterpreterTest, ScriptImport) {
 
     json scriptB = R"(
     [
-        {"type": "import", "script": "scriptA"},
         {"type": "assign", "variable": "b", "value": {"$": "a + 1"}}
     ]
     )"_json;

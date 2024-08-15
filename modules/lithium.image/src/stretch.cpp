@@ -9,86 +9,87 @@
 #include <opencv2/imgproc.hpp>
 #include <vector>
 
-cv::Mat Stretch_WhiteBalance(const std::vector<cv::Mat>& hists,
-                             const std::vector<cv::Mat>& bgr_planes) {
+auto Stretch_WhiteBalance(const std::vector<cv::Mat>& hists,
+                          const std::vector<cv::Mat>& bgr_planes) -> cv::Mat {
     std::vector<cv::Mat> planes;
     std::vector<double> highs;
-    double max_para = 0.0001;
-    double min_para = 0.0001;
+    double maxPara = 0.0001;
+    double minPara = 0.0001;
 
     for (size_t i = 0; i < hists.size(); ++i) {
         cv::Mat plane;
-        std::vector<float> nonzero_indices;
-        cv::findNonZero(hists[i], nonzero_indices);
-        size_t nonezero_len = nonzero_indices.size();
-        float min_val = nonzero_indices[int(nonezero_len * min_para)];
-        float max_val = nonzero_indices[int(nonezero_len * (1 - max_para)) - 1];
+        std::vector<float> nonzeroIndices;
+        cv::findNonZero(hists[i], nonzeroIndices);
+        size_t nonezeroLen = nonzeroIndices.size();
+        float minVal = nonzeroIndices[int(nonezeroLen * minPara)];
+        float maxVal = nonzeroIndices[int(nonezeroLen * (1 - maxPara)) - 1];
 
         plane = bgr_planes[i].clone();
         plane.convertTo(plane, CV_32F);
-        plane = (plane - min_val) / (max_val - min_val) * 65535;
+        plane = (plane - minVal) / (maxVal - minVal) * 65535;
         cv::threshold(plane, plane, 65535, 65535, cv::THRESH_TRUNC);
         cv::threshold(plane, plane, 0, 0, cv::THRESH_TOZERO);
         plane.convertTo(plane, CV_16U);
 
         planes.push_back(plane);
         // TODO: Use cv::minMaxLoc
-        //double high = (cv::minMaxLoc(hists[i]).maxVal - min_val) /
+        // double high = (cv::minMaxLoc(hists[i]).maxVal - min_val) /
         //              (max_val - min_val) * 65535;
         double high = 0;
         highs.push_back(high);
     }
 
-    double high_mean =
+    double highMean =
         std::accumulate(highs.begin(), highs.end(), 0.0) / highs.size();
 
-    std::vector<cv::Mat> adjusted_planes;
+    std::vector<cv::Mat> adjustedPlanes;
     for (size_t i = 0; i < planes.size(); ++i) {
         cv::Mat temp;
         planes[i].convertTo(temp, CV_32F);
-        temp *= (high_mean / highs[i]);
+        temp *= (highMean / highs[i]);
         cv::threshold(temp, temp, 65535, 65535, cv::THRESH_TRUNC);
         temp.convertTo(temp, CV_16U);
-        adjusted_planes.push_back(temp);
+        adjustedPlanes.push_back(temp);
     }
 
     cv::Mat dst;
-    cv::merge(adjusted_planes, dst);
+    cv::merge(adjustedPlanes, dst);
     return dst;
 }
 
-cv::Mat StretchGray(const cv::Mat& hist, cv::Mat& plane) {
-    double max_para = 0.01;
-    double min_para = 0.01;
+auto StretchGray(const cv::Mat& hist, cv::Mat& plane) -> cv::Mat {
+    double maxPara = 0.01;
+    double minPara = 0.01;
 
     // Corrected: Using cv::Mat to store non-zero locations
-    cv::Mat nonzero_locations;
-    cv::findNonZero(hist, nonzero_locations);
+    cv::Mat nonzeroLocations;
+    cv::findNonZero(hist, nonzeroLocations);
 
     // Check if there are any nonzero elements
-    if (nonzero_locations.empty()) {
+    if (nonzeroLocations.empty()) {
         return plane;  // or handle this condition appropriately
     }
 
     // Assuming hist is a histogram of intensities, we sort the locations to
     // find min and max If hist is not structured as expected, you'll need to
     // adjust this logic
-    std::vector<int> nonzero_values;
-    for (int i = 0; i < nonzero_locations.rows; ++i) {
-        nonzero_values.push_back(
-            hist.at<float>(nonzero_locations.at<cv::Point>(i).y, 0));
+    std::vector<int> nonzeroValues;
+    nonzeroValues.reserve(nonzeroLocations.rows);
+    for (int i = 0; i < nonzeroLocations.rows; ++i) {
+        nonzeroValues.push_back(
+            hist.at<float>(nonzeroLocations.at<cv::Point>(i).y, 0));
     }
-    std::sort(nonzero_values.begin(), nonzero_values.end());
+    std::sort(nonzeroValues.begin(), nonzeroValues.end());
 
-    size_t nonzero_len = nonzero_values.size();
-    float min_val = nonzero_values[int(nonzero_len * min_para)];
-    float max_val = nonzero_values[int(nonzero_len * (1 - max_para)) - 1];
+    size_t nonzeroLen = nonzeroValues.size();
+    float minVal = nonzeroValues[int(nonzeroLen * minPara)];
+    float maxVal = nonzeroValues[int(nonzeroLen * (1 - maxPara)) - 1];
 
-    cv::threshold(plane, plane, max_val, 65535, cv::THRESH_TRUNC);
-    cv::threshold(plane, plane, min_val, 0, cv::THRESH_TOZERO);
+    cv::threshold(plane, plane, maxVal, 65535, cv::THRESH_TRUNC);
+    cv::threshold(plane, plane, minVal, 0, cv::THRESH_TOZERO);
 
     plane.convertTo(plane, CV_32F);
-    plane = (plane - min_val) / (max_val - min_val) * 65535;
+    plane = (plane - minVal) / (maxVal - minVal) * 65535;
     cv::threshold(plane, plane, 65535, 65535, cv::THRESH_TRUNC);
 
     // Corrected: Using cv::medianBlur correctly
@@ -103,8 +104,8 @@ cv::Mat StretchGray(const cv::Mat& hist, cv::Mat& plane) {
     // intend to use medianBlur's result
     double gradMed = 5000;  // Placeholder value, calculate as needed
 
-    double Mt = gradMed / 30000;
-    cv::pow(plane / 65535, 1 / Mt, plane);
+    double mt = gradMed / 30000;
+    cv::pow(plane / 65535, 1 / mt, plane);
     plane *= 65535;
     cv::threshold(plane, plane, 65535, 65535, cv::THRESH_TRUNC);
     plane.convertTo(plane, CV_16U);
@@ -112,44 +113,45 @@ cv::Mat StretchGray(const cv::Mat& hist, cv::Mat& plane) {
     return plane;
 }
 
-cv::Mat GrayStretch(const cv::Mat& img) {
-    double black_clip = -1.25;
-    double target_bkg = 0.1;
-    cv::Mat norm_img;
-    cv::normalize(img, norm_img, 0, 1, cv::NORM_MINMAX);
+auto GrayStretch(const cv::Mat& img) -> cv::Mat {
+    double blackClip = -1.25;
+    double targetBkg = 0.1;
+    cv::Mat normImg;
+    cv::normalize(img, normImg, 0, 1, cv::NORM_MINMAX);
 
     // double median = cv::median(norm_img);
-    double median = cv::mean(norm_img).val[0];
-    double avgbias = Cal_Avgdev(median, norm_img);
-    double c0 = std::min(std::max(median + (black_clip * avgbias), 0.0), 1.0);
+    double median = cv::mean(normImg).val[0];
+    double avgbias = Cal_Avgdev(median, normImg);
+    double c0 = std::min(std::max(median + (blackClip * avgbias), 0.0), 1.0);
 
-    double m = (median - c0) * (target_bkg - 1) /
-               ((((2 * target_bkg) - 1) * (median - c0)) - target_bkg);
+    double m = (median - c0) * (targetBkg - 1) /
+               ((((2 * targetBkg) - 1) * (median - c0)) - targetBkg);
 
-    for (int i = 0; i < norm_img.rows; i++) {
-        for (int j = 0; j < norm_img.cols; j++) {
-            double value = norm_img.at<double>(i, j);
+    for (int i = 0; i < normImg.rows; i++) {
+        for (int j = 0; j < normImg.cols; j++) {
+            double value = normImg.at<double>(i, j);
             if (value < c0) {
-                norm_img.at<double>(i, j) = 0;
+                normImg.at<double>(i, j) = 0;
             } else {
                 value = (value - c0) / (1 - c0);
-                norm_img.at<double>(i, j) = value;
+                normImg.at<double>(i, j) = value;
             }
         }
     }
 
-    norm_img *= 65535;
-    cv::Mat dst_img;
-    norm_img.convertTo(dst_img, CV_16U);
-    return dst_img;
+    normImg *= 65535;
+    cv::Mat dstImg;
+    normImg.convertTo(dstImg, CV_16U);
+    return dstImg;
 }
 
-cv::Mat Stretch_OneChannel(const cv::Mat& norm_img, double shadows,
-                           double midtones, double highlights) {
+auto Stretch_OneChannel(const cv::Mat& norm_img, double shadows,
+                        double midtones, double highlights) -> cv::Mat {
     cv::Mat result = norm_img.clone();
     double hsRangeFactor = 1.0;
-    if (highlights != shadows)
+    if (highlights != shadows) {
         hsRangeFactor = 1.0 / (highlights - shadows);
+    }
 
     double k1 = (midtones - 1) * hsRangeFactor;
     double k2 = ((2 * midtones) - 1) * hsRangeFactor;
@@ -173,17 +175,17 @@ cv::Mat Stretch_OneChannel(const cv::Mat& norm_img, double shadows,
     return result;
 }
 
-cv::Mat stretchThreeChannels(const cv::Mat& img,
-                             const std::vector<double>& shadows,
-                             const std::vector<double>& midtones,
-                             const std::vector<double>& highlights,
-                             int inputRange, bool do_jpg) {
-    cv::Mat dst_img = cv::Mat::zeros(img.size(), img.type());
-    std::vector<cv::Mat> bgr_planes;
-    cv::split(img, bgr_planes);
-    cv::Mat& b_plane = bgr_planes[0];
-    cv::Mat& g_plane = bgr_planes[1];
-    cv::Mat& r_plane = bgr_planes[2];
+auto stretchThreeChannels(const cv::Mat& img,
+                          const std::vector<double>& shadows,
+                          const std::vector<double>& midtones,
+                          const std::vector<double>& highlights, int inputRange,
+                          bool do_jpg) -> cv::Mat {
+    cv::Mat dstImg = cv::Mat::zeros(img.size(), img.type());
+    std::vector<cv::Mat> bgrPlanes;
+    cv::split(img, bgrPlanes);
+    cv::Mat& bPlane = bgrPlanes[0];
+    cv::Mat& gPlane = bgrPlanes[1];
+    cv::Mat& rPlane = bgrPlanes[2];
 
     int maxOutput = do_jpg ? 255 : 65535;
     double maxInput = inputRange - 1 > 0 ? inputRange - 1 : inputRange;
@@ -212,49 +214,46 @@ cv::Mat stretchThreeChannels(const cv::Mat& img,
 
     double epsilon = 1e-10;
 
-    for (int i = 0; i < b_plane.rows; i++) {
-        for (int j = 0; j < b_plane.cols; j++) {
+    for (int i = 0; i < bPlane.rows; i++) {
+        for (int j = 0; j < bPlane.cols; j++) {
             // Process B channel
-            double b_value = b_plane.at<uchar>(i, j);
-            if (b_value < nativeShadowsB) {
-                b_plane.at<uchar>(i, j) = 0;
-            } else if (b_value > nativeHighlightsB) {
-                b_plane.at<uchar>(i, j) = maxOutput;
+            double bValue = bPlane.at<uchar>(i, j);
+            if (bValue < nativeShadowsB) {
+                bPlane.at<uchar>(i, j) = 0;
+            } else if (bValue > nativeHighlightsB) {
+                bPlane.at<uchar>(i, j) = maxOutput;
             } else {
-                b_plane.at<uchar>(i, j) = static_cast<uchar>(
-                    (((b_value - nativeShadowsB) * k1B + epsilon) /
-                     ((b_value - nativeShadowsB) * k2B - midtones[2] +
-                      epsilon)));
+                bPlane.at<uchar>(i, j) = static_cast<uchar>((
+                    ((bValue - nativeShadowsB) * k1B + epsilon) /
+                    ((bValue - nativeShadowsB) * k2B - midtones[2] + epsilon)));
             }
 
             // Process G channel
-            double g_value = g_plane.at<uchar>(i, j);
-            if (g_value < nativeShadowsG) {
-                g_plane.at<uchar>(i, j) = 0;
-            } else if (g_value > nativeHighlightsG) {
-                g_plane.at<uchar>(i, j) = maxOutput;
+            double gValue = gPlane.at<uchar>(i, j);
+            if (gValue < nativeShadowsG) {
+                gPlane.at<uchar>(i, j) = 0;
+            } else if (gValue > nativeHighlightsG) {
+                gPlane.at<uchar>(i, j) = maxOutput;
             } else {
-                g_plane.at<uchar>(i, j) = static_cast<uchar>(
-                    (((g_value - nativeShadowsG) * k1G + epsilon) /
-                     ((g_value - nativeShadowsG) * k2G - midtones[1] +
-                      epsilon)));
+                gPlane.at<uchar>(i, j) = static_cast<uchar>((
+                    ((gValue - nativeShadowsG) * k1G + epsilon) /
+                    ((gValue - nativeShadowsG) * k2G - midtones[1] + epsilon)));
             }
 
             // Process R channel
-            double r_value = r_plane.at<uchar>(i, j);
-            if (r_value < nativeShadowsR) {
-                r_plane.at<uchar>(i, j) = 0;
-            } else if (r_value > nativeHighlightsR) {
-                r_plane.at<uchar>(i, j) = maxOutput;
+            double rValue = rPlane.at<uchar>(i, j);
+            if (rValue < nativeShadowsR) {
+                rPlane.at<uchar>(i, j) = 0;
+            } else if (rValue > nativeHighlightsR) {
+                rPlane.at<uchar>(i, j) = maxOutput;
             } else {
-                r_plane.at<uchar>(i, j) = static_cast<uchar>(
-                    (((r_value - nativeShadowsR) * k1R + epsilon) /
-                     ((r_value - nativeShadowsR) * k2R - midtones[0] +
-                      epsilon)));
+                rPlane.at<uchar>(i, j) = static_cast<uchar>((
+                    ((rValue - nativeShadowsR) * k1R + epsilon) /
+                    ((rValue - nativeShadowsR) * k2R - midtones[0] + epsilon)));
             }
         }
     }
 
-    cv::merge(bgr_planes, dst_img);
-    return dst_img;
+    cv::merge(bgrPlanes, dstImg);
+    return dstImg;
 }

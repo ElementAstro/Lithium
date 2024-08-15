@@ -7,7 +7,7 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom-connnection C CXX)
+project(atom-connection C CXX)
 
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES

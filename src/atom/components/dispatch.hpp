@@ -69,7 +69,7 @@ public:
 #define THROW_DISPATCH_TIMEOUT(...)                                       \
     throw DispatchTimeout(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
                           __VA_ARGS__);
-                          
+
 class CommandDispatcher {
 public:
     explicit CommandDispatcher(std::weak_ptr<atom::meta::TypeCaster> typeCaster)

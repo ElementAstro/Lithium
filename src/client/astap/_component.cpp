@@ -24,7 +24,7 @@ AstapComponent::AstapComponent(const std::string& name)
     : Component(name), m_solver(std::make_shared<AstapSolver>("astap")) {
     LOG_F(INFO, "AstapComponent Constructed");
 
-    
+
 }
 
 AstapComponent::~AstapComponent() { LOG_F(INFO, "AstapComponent Destructed"); }

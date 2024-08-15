@@ -29,7 +29,7 @@ private:
     bool updateGPS();
     bool saveConfigItems(FILE *fp);
     static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp);
-    
+
     int PortFD = -1;
     bool m_SetupComplete = false;
     std::thread m_SkyQualityUpdateThread;
@@ -63,7 +63,7 @@ bool UranusMeteo::initProperties()
     SensorData["Clouds"] = nlohmann::json::array();
     SensorData["SkyQuality"] = nlohmann::json::array();
     SensorData["GPS"] = nlohmann::json::array();
-    
+
     // Start the Sky Quality Update Thread
     m_SkyQualityUpdateThread = std::thread(&UranusMeteo::measureSkyQuality, this);
     return true;

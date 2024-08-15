@@ -14,7 +14,7 @@ flowchart TD
     B --> B2[Names]
     B --> B3[Position]
     B --> B4[Filters]
-    
+
     C --> C1[PostConnect]
     C --> C2[GetInstance]
 
@@ -49,9 +49,9 @@ flowchart TD
     G --> H[Yes] --> I[Import Missing Filters]
     G --> J[No] --> K[Continue]
     D --> L[No] --> M[End]
-    
+
     F --> N[Update Filter List]
-    
+
     N --> O{Profile Filters < Device Filters?}
     O --> P[Yes] --> Q[Add Missing Filters]
     O --> R[No] --> S{Profile Filters > Device Filters?}
@@ -86,7 +86,7 @@ flowchart TD
 ## Detailed Explanation
 
 - **Initialization**: The constructor is responsible for setting up the `AscomFilterWheel` with the provided ID, name, and profile service. It also calls the base class constructor.
-  
+
 - **PostConnect**: This method ensures that the filters in the active profile are consistent with those available in the filter wheel device. It removes duplicates caused by data corruption, adds missing filters, and truncates excess filters. This process ensures that the filters are synchronized between the device and the software, preventing any operational issues.
 
 - **GetInstance**: The method returns an appropriate instance of the filter wheel interface, depending on whether the device metadata is available.

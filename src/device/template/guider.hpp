@@ -22,5 +22,5 @@ class AtomGuider : public AtomDriver {
 public:
     explicit AtomGuider(std::string name) : AtomDriver(name) {}
 
-    
+
 };

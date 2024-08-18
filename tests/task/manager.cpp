@@ -364,7 +364,7 @@ TEST_F(TaskInterpreterTest, FunctionDefinitionWithClosureAndRecursion) {
             {"type": "call", "function": "factorial", "params": {"n": 5}, "result": "factorial_result"}
         ]
     })"_json;
-    
+
 
     interpreter->loadScript("factorial_script", script);
     interpreter->execute("factorial_script");

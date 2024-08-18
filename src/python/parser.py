@@ -3,7 +3,7 @@
 Python to Custom Script Converter
 
 This tool converts Python code into a custom script format defined by the user.
-It utilizes Python's Abstract Syntax Tree (AST) to parse the code and translate it 
+It utilizes Python's Abstract Syntax Tree (AST) to parse the code and translate it
 into the custom format. The tool supports command-line usage and batch processing of files.
 
 Features:

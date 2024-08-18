@@ -29,6 +29,10 @@ auto INDICamera::getDeviceInstance() -> INDI::BaseDevice & {
     return device_;
 }
 
+auto INDICamera::initialize() -> bool { return true; }
+
+auto INDICamera::destroy() -> bool { return true; }
+
 auto INDICamera::connect(const std::string &deviceName, int timeout,
                          int maxRetry) -> bool {
     ATOM_UNREF_PARAM(timeout);
@@ -358,9 +362,7 @@ auto INDICamera::reconnect(int timeout, int maxRetry) -> bool {
 
 auto INDICamera::scan() -> std::vector<std::string> {
     std::vector<std::string> devices;
-    auto devices_ = getDevices();
-    devices.reserve(devices_.size());
-    for (auto &device : devices_) {
+    for (auto &device : getDevices()) {
         devices.emplace_back(device.getDeviceName());
     }
     return devices;
@@ -604,8 +606,12 @@ auto INDICamera::setBinning(const int &hor, const int &ver) -> bool {
     return true;
 }
 
-ATOM_MODULE(indi_camera, [](Component &component) {
-    LOG_F(INFO, "Registering indi_camera module...");
+ATOM_MODULE(camera_indi, [](Component &component) {
+    LOG_F(INFO, "Registering camera_indi module...");
+    component.def("initialize", &INDICamera::initialize, "device",
+                  "Initialize camera device.");
+    component.def("destroy", &INDICamera::destroy, "device",
+                  "Destroy camera device.");
     component.def("connect", &INDICamera::connect, "device",
                   "Connect to a camera device.");
     component.def("disconnect", &INDICamera::disconnect, "device",
@@ -652,8 +658,8 @@ ATOM_MODULE(indi_camera, [](Component &component) {
             return instance;
         },
         "device", "Create a new camera instance.");
-    component.defType<INDICamera>("indi_camera", "device",
+    component.defType<INDICamera>("camera_indi", "device",
                                   "Define a new camera instance.");
 
-    LOG_F(INFO, "Registered indi_camera module.");
+    LOG_F(INFO, "Registered camera_indi module.");
 });

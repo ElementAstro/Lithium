@@ -303,7 +303,7 @@ public:
 
     void pushBack(const T& value) { emplace_back(value); }
 
-    void pushBack(T&& value) { emplace_back(std::move(value)); }
+    void pushBack(T&& value) { emplaceBack(std::move(value)); }
 
     template <typename... Args>
     auto emplaceBack(Args&&... args) -> reference {

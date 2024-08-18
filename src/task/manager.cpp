@@ -40,6 +40,7 @@
 
 #include "atom/async/pool.hpp"
 #include "atom/error/exception.hpp"
+#include "atom/function/abi.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "task/loader.hpp"
@@ -82,7 +83,9 @@ auto determineType(const json& value) -> VariableType {
 class TaskInterpreterImpl {
 public:
     std::unordered_map<std::string, json> scripts_;
+    std::unordered_map<std::string, json> scriptHeaders_;  // 存储脚本头部信息
     std::unordered_map<std::string, std::pair<VariableType, json>> variables_;
+    std::unordered_map<std::string, std::error_code> customErrors_;
     std::unordered_map<std::string, std::function<json(const json&)>>
         functions_;
     std::unordered_map<std::string, size_t> labels_;
@@ -93,7 +96,7 @@ public:
     std::atomic<bool> isRunning_{false};
     std::jthread executionThread_;
     std::vector<std::string> callStack_;
-    mutable std::shared_mutex mtx_;
+    mutable std::shared_timed_mutex mtx_;
     std::condition_variable_any cv_;
     std::queue<std::pair<std::string, json>> eventQueue_;
 
@@ -136,10 +139,32 @@ void TaskInterpreter::loadScript(const std::string& name, const json& script) {
     LOG_F(INFO, "Loading script: {} with {}", name, script.dump());
 #endif
     std::unique_lock lock(impl_->mtx_);
-    impl_->scripts_[name] = script;
+    impl_->scripts_[name] = script.contains("steps") ? script["steps"] : script;
     lock.unlock();
     if (prepareScript(impl_->scripts_[name])) {
-        parseLabels(script);
+        parseLabels(impl_->scripts_[name]);
+        if (script.contains("header")) {
+            const auto& header = script["header"];
+            LOG_F(INFO, "Loading script: {} (version: {}, author: {})",
+                  header.contains("name") ? header["name"].get<std::string>()
+                                          : name,
+                  header.contains("version")
+                      ? header["version"].get<std::string>()
+                      : "unknown",
+                  header.contains("author")
+                      ? header["author"].get<std::string>()
+                      : "unknown");
+            // 存储头部信息
+            impl_->scriptHeaders_[name] = header;
+            if (header.contains("auto_execute") &&
+                header["auto_execute"].is_boolean() &&
+                header["auto_execute"].get<bool>()) {
+                LOG_F(INFO, "Auto-executing script '{}'.", name);
+                execute(name);
+            }
+        } else {
+            LOG_F(INFO, "Loading script: {} (no header information)", name);
+        }
     } else {
         THROW_RUNTIME_ERROR("Failed to prepare script: " + name);
     }
@@ -184,6 +209,7 @@ void TaskInterpreter::registerFunction(const std::string& name,
         THROW_RUNTIME_ERROR("Function '" + name + "' is already registered.");
     }
     impl_->functions_[name] = std::move(func);
+    LOG_F(INFO, "Function registered: {}", name);
 }
 
 void TaskInterpreter::registerExceptionHandler(
@@ -216,9 +242,19 @@ void TaskInterpreter::setVariable(const std::string& name, const json& value,
     impl_->variables_[name] = {type, value};
 }
 
-auto TaskInterpreter::getVariable(const std::string& name) const -> json {
+auto TaskInterpreter::getVariableImmediate(const std::string& name) const
+    -> json {
     std::shared_lock lock(impl_->mtx_);
+    if (impl_->variables_.find(name) == impl_->variables_.end()) {
+        THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
+    }
+    return impl_->variables_.at(name).second;
+}
+
+auto TaskInterpreter::getVariable(const std::string& name) const -> json {
+    std::unique_lock lock(impl_->mtx_);
     impl_->cv_.wait(lock, [this]() { return !impl_->isRunning_; });
+
     if (impl_->variables_.find(name) == impl_->variables_.end()) {
         THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
     }
@@ -236,6 +272,7 @@ void TaskInterpreter::parseLabels(const json& script) {
 }
 
 void TaskInterpreter::execute(const std::string& scriptName) {
+    LOG_F(INFO, "Executing script: {}", scriptName);
     impl_->stopRequested_ = false;
     impl_->isRunning_ = true;
     if (impl_->executionThread_.joinable()) {
@@ -316,6 +353,8 @@ auto TaskInterpreter::executeStep(const json& step, size_t& idx,
             executeCondition(step, idx, script);
         } else if (type == "loop") {
             return executeLoop(step, idx, script);
+        } else if (type == "while") {
+            executeWhileLoop(step, idx, script);
         } else if (type == "goto") {
             executeGoto(step, idx, script);
         } else if (type == "switch") {
@@ -348,6 +387,20 @@ auto TaskInterpreter::executeStep(const json& step, size_t& idx,
             executeContinue(step, idx);
         } else if (type == "message") {
             executeMessage(step);
+        } else if (type == "broadcast_event") {
+            executeBroadcastEvent(step);
+        } else if (type == "listen_event") {
+            executeListenEvent(step, idx);
+        } else if (type == "retry") {
+            executeRetry(step, idx, script);
+        } else if (type == "schedule") {
+            executeSchedule(step, idx, script);
+        } else if (type == "scope") {
+            executeScope(step, idx, script);
+        } else if (type == "function_def") {
+            executeFunctionDef(step);
+        } else if (type == "throw") {
+            executeThrow(step);
         } else {
             LOG_F(ERROR, "Unknown step type: {}", type);
             return false;
@@ -410,6 +463,29 @@ auto TaskInterpreter::executeLoop(const json& step, size_t& idx,
     }
 
     return true;
+}
+
+/*
+{
+    "type": "while",
+    "condition": {"type": "greater_than", "left": "$x", "right": 0},
+    "steps": [
+        {"type": "print", "message": "x is: $x"},
+        {"type": "assign", "variable": "x", "value": {"$sub": ["$x", 1]}}
+    ]
+}
+*/
+void TaskInterpreter::executeWhileLoop(const json& step, size_t& idx,
+                                       const json& script) {
+    LOG_F(INFO, "Executing while loop...");
+    try {
+        while (evaluate(step["condition"]).get<bool>()) {
+            executeSteps(step["steps"], idx, script);
+        }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Error during executeWhileLoop: {}", e.what());
+        throw;
+    }
 }
 
 void TaskInterpreter::executeGoto(const json& step, size_t& idx,
@@ -544,7 +620,8 @@ void TaskInterpreter::executeParallel(const json& step,
 }
 
 void TaskInterpreter::executeCall(const json& step) {
-    // 获取函数名
+    LOG_F(INFO, "Executing call step");
+
     try {
         if (!step.contains("function") || !step["function"].is_string()) {
             THROW_MISSING_ARGUMENT(
@@ -552,30 +629,23 @@ void TaskInterpreter::executeCall(const json& step) {
         }
         std::string functionName = step["function"];
 
-        // 获取参数
         json params = step.contains("params") ? step["params"] : json::object();
 
         // 评估参数的值
         for (const auto& [key, value] : params.items()) {
             params[key] = evaluate(value);
-#if ENABLE_DEBUG
-            std::cout << "Pure value: " << key << " = " << value.dump()
-                      << std::endl;
-            std::cout << "Evaluated parameter: " << key << " = "
-                      << params[key].dump() << std::endl;
-#endif
         }
 
-        // 获取目标变量名（可选）
         std::string targetVariable =
             step.contains("result") ? step["result"].get<std::string>() : "";
 
         json returnValue;
+
+        // 仅在查找函数时加锁，执行时不加锁以避免卡死
         {
             std::shared_lock lock(impl_->mtx_);
-            // 检查函数是否已注册
             if (impl_->functions_.contains(functionName)) {
-                // 调用函数并获取返回值
+                lock.unlock();
                 returnValue = impl_->functions_[functionName](params);
             } else {
                 THROW_RUNTIME_ERROR("Function '" + functionName +
@@ -591,10 +661,215 @@ void TaskInterpreter::executeCall(const json& step) {
         }
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Error during executeCall: {}", e.what());
+        throw;
+    }
+}
+
+/*
+{
+    "type": "function_def",
+    "name": "add",
+    "params": ["a", "b"],
+    "default_values": {
+        "b": 10
+    },
+    "steps": [
+        { "type": "assign", "variable": "result", "value": { "$add": ["$a",
+"$b"] } }
+    ],
+    "return": "$result"
+}
+{
+    "type": "call",
+    "function": "add",
+    "params": {
+        "a": 5
+    },
+    "result": "sum"
+}
+
+*/
+void TaskInterpreter::executeFunctionDef(const json& step) {
+    LOG_F(INFO, "Executing function_def step");
+    if (!step.contains("name") || !step["name"].is_string()) {
+        THROW_INVALID_ARGUMENT("Function definition requires a 'name' field.");
+    }
+
+    std::string functionName = step["name"];
+    std::vector<std::string> paramNames;
+    if (step.contains("params") && step["params"].is_array()) {
+        paramNames = step["params"].get<std::vector<std::string>>();
+    }
+
+    json defaultValues = step.contains("default_values")
+                             ? step["default_values"]
+                             : json::object();
+    json closure = captureClosureVariables();
+
+    impl_->functions_[functionName] =
+        [this, step, paramNames, defaultValues,
+         closure](const json& passedParams) mutable -> json {
+        size_t idx = 0;
+        json mergedParams = defaultValues;
+
+        try {
+            // 合并传递的参数和默认值
+            for (const auto& paramName : paramNames) {
+                if (passedParams.contains(paramName)) {
+                    mergedParams[paramName] = passedParams[paramName];
+                }
+            }
+
+            // 恢复闭包变量
+            restoreClosureVariables(closure);
+
+            // 设置函数参数
+            for (const auto& [key, value] : mergedParams.items()) {
+                std::unique_lock lock(impl_->mtx_);
+                impl_->variables_[key] = {
+                    determineType(value),
+                    value,
+                };
+            }
+
+            // 执行函数体
+            json returnValue;
+            executeSteps(step["steps"], idx, step);
+
+            // 如果存在返回值
+            if (impl_->variables_.contains("__return_value__")) {
+                returnValue = impl_->variables_.at("__return_value__").second;
+                impl_->variables_.erase("__return_value__");
+            }
+
+            return returnValue;  // 返回结果
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Error during function execution: {}", e.what());
+            throw;
+        }
+    };
+}
+
+auto TaskInterpreter::captureClosureVariables() const -> json {
+    json closure;
+    for (const auto& var : impl_->variables_) {
+        closure[var.first] =
+            var.second.second;  // Capture the current value of the variable
+    }
+    return closure;
+}
+
+void TaskInterpreter::restoreClosureVariables(const json& closure) {
+    for (const auto& [key, value] : closure.items()) {
+        impl_->variables_[key] = {determineType(value), value};
+    }
+}
+
+/*
+{
+    "type": "scope",
+    "variables": {
+        "local_var": 10
+    },
+    "functions": [
+        {
+            "name": "calculate",
+            "params": ["x"],
+            "steps": [
+                { "type": "assign", "variable": "result", "value": { "$add":
+["$x", "$local_var"] } }
+            ]
+        }
+    ],
+    "steps": [
+        { "type": "call", "function": "calculate", "params": { "x": 5 } },
+        { "type": "throw", "message": "Something went wrong!" }  // Example
+error to trigger error handling
+    ],
+    "on_error": [
+        { "type": "print", "message": "Handled error within scope!" }
+    ],
+    "cleanup": [
+        { "type": "print", "message": "Cleanup after scope." }
+    ]
+}
+*/
+void TaskInterpreter::executeScope(const json& step, size_t& idx,
+                                   const json& script) {
+    // Store old variable states to restore after the scope ends
+    std::unordered_map<std::string, std::pair<VariableType, json>> oldVars;
+    std::unordered_map<std::string, std::function<json(const json&)>>
+        oldFunctions;
+
+    // Capture scope variables
+    if (step.contains("variables") && step["variables"].is_object()) {
+        for (const auto& [name, value] : step["variables"].items()) {
+            if (impl_->variables_.find(name) != impl_->variables_.end()) {
+                oldVars[name] = impl_->variables_[name];
+            }
+            setVariable(name, value, determineType(value));
+        }
+    }
+
+    // Capture scope-specific functions
+    if (step.contains("functions") && step["functions"].is_array()) {
+        for (const auto& funcDef : step["functions"]) {
+            if (funcDef.contains("name") && funcDef["name"].is_string()) {
+                std::string funcName = funcDef["name"];
+                if (impl_->functions_.find(funcName) !=
+                    impl_->functions_.end()) {
+                    oldFunctions[funcName] = impl_->functions_[funcName];
+                }
+                executeFunctionDef(funcDef);  // Define the new scope function
+            }
+        }
+    }
+
+    try {
+        // Execute scope steps
+        if (step.contains("steps") && step["steps"].is_array()) {
+            executeSteps(step["steps"], idx, script);
+        }
+    } catch (const std::exception& e) {
+        // Scope-specific error handling
+        if (step.contains("on_error") && step["on_error"].is_array()) {
+            LOG_F(WARNING, "Error occurred within scope: {}", e.what());
+            size_t errorIdx = 0;
+            executeSteps(step["on_error"], errorIdx, script);
+        } else {
+            throw;  // Rethrow if no specific error handling is provided
+        }
+    }
+
+    // Execute scope cleanup
+    if (step.contains("cleanup") && step["cleanup"].is_array()) {
+        size_t cleanupIdx = 0;
+        executeSteps(step["cleanup"], cleanupIdx, script);
+    }
+
+    // Restore old functions
+    for (const auto& [name, func] : oldFunctions) {
+        impl_->functions_[name] = func;  // Restore old function if it existed
+    }
+
+    // Restore old variables
+    for (const auto& [name, var] : oldVars) {
+        impl_->variables_[name] = var;  // Restore old variable
+    }
+
+    // Remove variables that were only within the scope
+    if (step.contains("variables") && step["variables"].is_object()) {
+        for (const auto& [name, _] : step["variables"].items()) {
+            if (oldVars.find(name) == oldVars.end()) {
+                impl_->variables_.erase(
+                    name);  // Remove variables specific to the scope
+            }
+        }
     }
 }
 
 void TaskInterpreter::executeNestedScript(const json& step) {
+    LOG_F(INFO, "Executing nested script step");
     std::string scriptName = step["script"];
     std::shared_lock lock(impl_->mtx_);
     if (impl_->scripts_.find(scriptName) != impl_->scripts_.end()) {
@@ -618,8 +893,20 @@ void TaskInterpreter::executeAssign(const json& step) {
         std::string variableName = step["variable"];
         json value = evaluate(step["value"]);
 
-        // 设置变量值
-        setVariable(variableName, value, determineType(value));
+        // Instead of locking the entire method, we update the variable directly
+        // since this is executed within the script execution context.
+        for (int attempt = 0; attempt < 3; ++attempt) {  // Retry 3 times
+            std::unique_lock lock(impl_->mtx_, std::defer_lock);
+            if (lock.try_lock_for(
+                    std::chrono::milliseconds(50))) {  // Wait for 50ms
+                impl_->variables_[variableName] = {determineType(value), value};
+                return;
+            }
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(100));  // Backoff delay
+        }
+        THROW_RUNTIME_ERROR(
+            "Failed to acquire lock after multiple attempts in executeAssign.");
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Error during executeAssign: {}", e.what());
         throw;
@@ -627,69 +914,110 @@ void TaskInterpreter::executeAssign(const json& step) {
 }
 
 void TaskInterpreter::executeImport(const json& step) {
+    LOG_F(INFO, "Executing import step");
+
+    // Validate the 'script' field
     if (!step.contains("script") || !step["script"].is_string()) {
         THROW_INVALID_ARGUMENT(
             "Import step is missing a valid 'script' field.");
     }
 
     std::string scriptName = step["script"];
-
-    if (impl_->scripts_.find(scriptName) != impl_->scripts_.end()) {
-        LOG_F(WARNING, "Script '{}' already imported. Skipping import.",
-              scriptName);
-        return;
-    }
-
+    // Handle namespace if provided
     std::string namespaceName;
     if (step.contains("namespace") && step["namespace"].is_string()) {
         namespaceName = step["namespace"];
     }
 
-    if (hasScript(scriptName)) {
-        LOG_F(INFO, "Script '{}' already imported. Skipping import.",
-              scriptName);
-        return;
+    json scriptToImport;
+
+    bool fromFile = step.contains("fromFile") && step["fromFile"].get<bool>();
+    // If we are importing from a file, check if the script is already imported
+    if (fromFile) {
+        if (hasScript(scriptName)) {
+            LOG_F(WARNING, "Script '{}' already imported. Skipping import.",
+                  scriptName);
+            return;
+        }
+
+        // Try to read the script from file
+        try {
+            // Synchronization for async operation
+            std::mutex mtx;
+            std::condition_variable cv;
+            bool callbackCalled = false;
+
+            std::string fullPath = constants::TASK_FOLDER + scriptName +
+                                   constants::PATH_SEPARATOR + ".json";
+            LOG_F(INFO, "Importing script from file: {}", fullPath);
+
+            // Asynchronously read the script file
+            TaskLoader::asyncReadJsonFile(
+                fullPath, [&](std::optional<json> data) {
+                    std::unique_lock lock(mtx);
+                    if (!data) {
+                        THROW_FILE_NOT_FOUND("Script '" + scriptName +
+                                             "' not found.");
+                    }
+                    if (data->is_null() || data->empty()) {
+                        THROW_JSON_VALUE_ERROR("Script '" + scriptName +
+                                               "' is empty or null.");
+                    }
+                    scriptToImport = std::move(*data);
+                    callbackCalled = true;
+                    cv.notify_one();  // Notify that the callback has been
+                                      // called
+                });
+
+            // Wait for the callback to finish
+            std::unique_lock lock(mtx);
+            cv.wait(lock, [&] { return callbackCalled; });
+            // Apply namespace if needed
+            if (!namespaceName.empty()) {
+                json namespacedScript;
+                for (const auto& [key, value] : scriptToImport.items()) {
+                    namespacedScript[namespaceName + "::" + key] = value;
+                }
+                scriptToImport = std::move(namespacedScript);
+            }
+            // Load the script
+            loadScript(scriptName, scriptToImport);
+            LOG_F(INFO, "Successfully imported script '{}'.", scriptName);
+        } catch (const json ::parse_error& e) {
+            THROW_JSON_PARSE_ERROR("Failed to parse script '" + scriptName +
+                                   "': " + e.what());
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Failed to import script '{}': {}", scriptName,
+                  e.what());
+            THROW_RUNTIME_ERROR("Error importing script '" + scriptName +
+                                "': " + e.what());
+        }
+    } else {
+        // Here we are importing from a local cache, so we must check
+        if (!hasScript(scriptName)) {
+            THROW_OBJ_NOT_EXIST("Script '" + scriptName + "' not found.");
+        }
+        LOG_F(INFO, "Importing script from cache: {}", scriptName);
+        // This means this script is not executed yet, so we need to execute it
+        // No 'auto_execute' flag found
+        if (!impl_->scriptHeaders_.contains(scriptName)) {
+            execute(scriptName);
+        }
     }
 
-    try {
-        bool callbackCalled = false;
-        json scriptToImport;
-        TaskLoader::asyncReadJsonFile(
-            constants::TASK_FOLDER, [&](std::optional<json> data) {
-                if (!data) {
-                    THROW_FILE_NOT_FOUND("Script '" + scriptName +
-                                         "' not found.");
+    // Handle nested imports recursively
+    if (scriptToImport.contains("imports") &&
+        scriptToImport["imports"].is_array()) {
+        for (const auto& nestedImport : scriptToImport["imports"]) {
+            if (nestedImport.is_string()) {
+                json importStep;
+                importStep["script"] = nestedImport.get<std::string>();
+                if (!namespaceName.empty()) {
+                    importStep["namespace"] = namespaceName;
                 }
-                if (data->is_null() || data->empty()) {
-                    THROW_JSON_VALUE_ERROR("Script '" + scriptName +
-                                           " is empty or null.");
-                }
-                scriptToImport = std::move(*data);
-                callbackCalled = true;
-            });
-
-        if (!namespaceName.empty()) {
-            json namespacedScript;
-            for (const auto& [key, value] : scriptToImport.items()) {
-                namespacedScript[namespaceName + "::" + key] = value;
-            }
-            loadScript(scriptName, namespacedScript);
-        } else {
-            loadScript(scriptName, scriptToImport);
-        }
-
-        LOG_F(INFO, "Successfully imported script '{}'.", scriptName);
-
-        if (scriptToImport.contains("imports")) {
-            for (const auto& nestedImport : scriptToImport["imports"]) {
-                executeImport(nestedImport);
+                executeImport(importStep);  // Recursively import nested scripts
             }
         }
-
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to import script '{}': {}", scriptName, e.what());
-        THROW_RUNTIME_ERROR("Error importing script '" + scriptName +
-                            "': " + e.what());
     }
 }
 
@@ -724,16 +1052,95 @@ void TaskInterpreter::executeAsync(const json& step) {
     });
 }
 
+/*
+{
+    "type": "try",
+    "try": [
+        {"type": "print", "message": "Executing try block..."},
+        {"type": "call", "function": "someFunction"}  // 假设此处可能抛出异常
+    ],
+    "catch": {
+        "type": "all",
+        "steps": [
+            {"type": "print", "message": "Exception caught in catch block!"}
+        ]
+    },
+    "finally": [
+        {"type": "print", "message": "Finally block executed."}
+    ]
+}
+ */
 void TaskInterpreter::executeTryCatch(const json& step, size_t& idx,
                                       const json& script) {
+    [[maybe_unused]] bool exceptionOccurred = false;
+    if (!step.contains("try") || !step["try"].is_array()) {
+        THROW_INVALID_ARGUMENT("TryCatch step is missing a valid 'try' field.");
+    }
     try {
         executeSteps(step["try"], idx, script);
     } catch (const std::exception& e) {
-        handleException(script["name"], e);
+        exceptionOccurred = true;
+        LOG_F(ERROR, "Exception caught: {}", e.what());
+
         if (step.contains("catch")) {
-            executeSteps(step["catch"], idx, script);
+            const auto& catchBlock = step["catch"];
+            auto abiName =
+                atom::meta::DemangleHelper::demangle(typeid(e).name());
+            // 遍历 catch block, 匹配异常类型
+            for (const auto& catchEntry : catchBlock) {
+                std::string catchType =
+                    catchEntry.contains("type")
+                        ? catchEntry["type"].get<std::string>()
+                        : "all";
+                LOG_F(INFO, "Checking catch block for type: {} {}", catchType,
+                      catchEntry.dump());
+
+                // 检查异常类型是否匹配
+                if (catchType == "all" || catchType == abiName) {
+                    LOG_F(INFO, "Catch block step: {}", catchEntry.dump());
+                    executeSteps(catchEntry["steps"], idx, script);
+                    break;  // 执行匹配的 catch 分支后跳出
+                }
+            }
         }
     }
+
+    // 执行 finally 块，无论是否发生异常
+    if (step.contains("finally")) {
+        const auto& finallyBlock = step["finally"];
+        executeSteps(finallyBlock, idx, script);
+    }
+
+    if (!exceptionOccurred && step.contains("else")) {
+        // 如果没有发生异常，执行 else 块
+        const auto& elseBlock = step["else"];
+        executeSteps(elseBlock, idx, script);
+    }
+}
+
+void TaskInterpreter::executeThrow(const json& step) {
+    if (!step.contains("exception_type") ||
+        !step["exception_type"].is_string()) {
+        THROW_INVALID_ARGUMENT(
+            "Throw step requires an 'exception_type' field.");
+    }
+
+    std::string exceptionType = step["exception_type"];
+    std::string message =
+        step.contains("message") && step["message"].is_string()
+            ? step["message"].get<std::string>()
+            : "An error occurred";
+
+    if (exceptionType == "runtime_error") {
+        throw std::runtime_error(message);
+    }
+    if (exceptionType == "invalid_argument") {
+        throw std::invalid_argument(message);
+    }
+    if (exceptionType == "out_of_range") {
+        throw std::out_of_range(message);
+    }
+    THROW_RUNTIME_ERROR("Unsupported exception type: " + exceptionType);
 }
 
 // TODO: Switch to self implementation of CommandDispatcher
@@ -757,7 +1164,11 @@ void TaskInterpreter::executeFunction(const json& step) {
     }
 }
 
-void TaskInterpreter::executeReturn(const json& /*step*/, size_t& idx) {
+void TaskInterpreter::executeReturn(const json& step, size_t& idx) {
+    if (step.contains("value")) {
+        impl_->variables_["__return_value__"] = {determineType(step["value"]),
+                                                 evaluate(step["value"])};
+    }
     idx = std::numeric_limits<size_t>::max();  // Terminate the script execution
 }
 
@@ -784,6 +1195,212 @@ void TaskInterpreter::executeMessage(const json& step) {
 #if ENABLE_DEBUG
     std::cout << message << std::endl;
 #endif
+}
+
+void TaskInterpreter::executeListenEvent(const json& step, size_t& idx) {
+    LOG_F(INFO, "Listening for events: {}", step.dump());
+
+    if (!step.contains("event_names") || !step["event_names"].is_array()) {
+        THROW_INVALID_ARGUMENT("Listen event requires an 'event_names' array.");
+    }
+
+    std::vector<std::string> eventNames =
+        step["event_names"].get<std::vector<std::string>>();
+    std::string channel =
+        step.contains("channel") && step["channel"].is_string()
+            ? step["channel"].get<std::string>()
+            : "default";
+    int timeout = step.contains("timeout") && step["timeout"].is_number()
+                      ? step["timeout"].get<int>()
+                      : -1;
+
+    std::unique_lock lock(impl_->mtx_);
+
+    bool eventReceived = false;
+    if (timeout < 0) {
+        // 无超时等待事件发生
+        impl_->cv_.wait(lock, [&]() {
+            for (const auto& eventName : eventNames) {
+                if (!impl_->eventQueue_.empty() &&
+                    impl_->eventQueue_.front().first ==
+                        eventName + "@" + channel) {
+                    eventReceived = true;
+                    return true;
+                }
+            }
+            return false;
+        });
+    } else {
+        // 带超时的等待
+        impl_->cv_.wait_for(lock, std::chrono::milliseconds(timeout), [&]() {
+            for (const auto& eventName : eventNames) {
+                if (!impl_->eventQueue_.empty() &&
+                    impl_->eventQueue_.front().first ==
+                        eventName + "@" + channel) {
+                    eventReceived = true;
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    if (!eventReceived) {
+        LOG_F(INFO, "Timeout occurred while waiting for events on channel '{}'",
+              channel);
+        return;
+    }
+
+    auto eventData = impl_->eventQueue_.front().second;
+    std::string receivedEvent = impl_->eventQueue_.front().first;
+
+    // 事件数据过滤（如果适用）
+    if (step.contains("filter")) {
+        const json& filter = step["filter"];
+        if (!evaluate(filter).get<bool>()) {
+            impl_->eventQueue_.pop();
+            return;  // 如果过滤条件不满足，跳过步骤
+        }
+    }
+
+    // 根据接收到的特定事件执行步骤
+    if (step.contains("event_steps") && step["event_steps"].is_object()) {
+        std::string eventKey = receivedEvent.substr(0, receivedEvent.find('@'));
+        if (step["event_steps"].contains(eventKey)) {
+            executeSteps(step["event_steps"][eventKey], idx, step);
+        } else if (step["event_steps"].contains("default")) {
+            executeSteps(step["event_steps"]["default"], idx, step);
+        }
+    } else if (step.contains("steps")) {
+        // 如果没有特定的事件处理逻辑，执行通用步骤
+        executeSteps(step["steps"], idx, step);
+    }
+
+    impl_->eventQueue_.pop();
+}
+
+void TaskInterpreter::executeBroadcastEvent(const json& step) {
+    LOG_F(INFO, "Broadcasting event: {}", step.dump());
+    if (!step.contains("event_name") || !step["event_name"].is_string()) {
+        THROW_INVALID_ARGUMENT("Broadcast event requires an 'event_name'.");
+    }
+
+    std::string eventName = step["event_name"];
+    std::string channel =
+        step.contains("channel") && step["channel"].is_string()
+            ? step["channel"].get<std::string>()
+            : "default";
+
+    std::unique_lock lock(impl_->mtx_);
+    impl_->eventQueue_.emplace(
+        eventName + "@" + channel,
+        step.contains("event_data") ? step["event_data"] : json());
+    impl_->cv_.notify_all();
+}
+
+/*
+{
+    "type": "schedule",
+    "delay": 3000,
+    "parallel": true,
+    "steps": [
+        { "type": "print", "message": "This message is delayed by 3 seconds and
+runs in parallel" }
+    ]
+}
+*/
+void TaskInterpreter::executeSchedule(const json& step, size_t& idx,
+                                      const json& script) {
+    if (!step.contains("delay") || !step["delay"].is_number_integer()) {
+        THROW_INVALID_ARGUMENT(
+            "Schedule step requires an integer 'delay' field.");
+    }
+    int delay = step["delay"];
+    bool parallel = step.contains("parallel") && step["parallel"].is_boolean()
+                        ? step["parallel"].get<bool>()
+                        : false;
+
+    if (parallel) {
+        // Non-blocking parallel execution
+        impl_->threadPool_->enqueueDetach(
+            [this, step, idx, script, delay]() mutable {
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+                executeSteps(step["steps"], idx, script);
+            });
+    } else {
+        // Blocking execution
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        executeSteps(step["steps"], idx, script);
+    }
+}
+
+void TaskInterpreter::executeRetry(const json& step, size_t& idx,
+                                   const json& script) {
+    if (!step.contains("retries") || !step["retries"].is_number_integer()) {
+        THROW_INVALID_ARGUMENT(
+            "Retry step requires an integer 'retries' field.");
+    }
+    int retries = step["retries"];
+    int delay = step.contains("delay") && step["delay"].is_number_integer()
+                    ? step["delay"].get<int>()
+                    : 0;
+    bool exponentialBackoff = step.contains("exponential_backoff") &&
+                                      step["exponential_backoff"].is_boolean()
+                                  ? step["exponential_backoff"].get<bool>()
+                                  : false;
+
+    std::string retryOnErrorType =
+        step.contains("error_type") && step["error_type"].is_string()
+            ? step["error_type"].get<std::string>()
+            : "";
+
+    auto logError = [&](int attempt, const std::exception& e) {
+        LOG_F(WARNING, "Retry {} failed, attempt {}/{}. Error: {}",
+              step["type"].get<std::string>(), attempt + 1, retries, e.what());
+        if (step.contains("on_retry")) {
+            // Execute the on_retry steps before the next retry
+            size_t retryIdx = 0;
+            executeSteps(step["on_retry"], retryIdx, script);
+        }
+    };
+
+    for (int i = 0; i <= retries; ++i) {
+        try {
+            executeSteps(step["steps"], idx, script);
+            return;  // Break on success
+        } catch (const std::exception& e) {
+            // Check if we should retry based on the error type
+            if (!retryOnErrorType.empty()) {
+                try {
+                    std::rethrow_if_nested(e);
+                } catch (const std::system_error& se) {
+                    if (se.code().category().name() != retryOnErrorType) {
+                        throw;  // Rethrow if the error type doesn't match
+                    }
+                } catch (const std::exception&) {
+                    if (typeid(e).name() != retryOnErrorType) {
+                        throw;  // Rethrow if the error type doesn't match
+                    }
+                }
+            }
+
+            if (i == retries) {
+                logError(i, e);
+                throw;  // Rethrow if all retries failed
+            }
+
+            logError(i, e);
+
+            if (delay > 0) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+            }
+
+            // Increase delay if exponential backoff is enabled
+            if (exponentialBackoff) {
+                delay *= 2;
+            }
+        }
+    }
 }
 
 auto TaskInterpreter::evaluate(const json& value) -> json {
@@ -813,6 +1430,15 @@ auto TaskInterpreter::evaluate(const json& value) -> json {
     }
 
     if (value.is_object()) {
+        if (value.contains("$")) {
+            if (value["$"].is_string()) {
+                std::string expr = value["$"].get<std::string>();
+                return evaluateExpression(expr);
+            } else {
+                THROW_RUNTIME_ERROR(
+                    "Invalid format: '$' key must map to a string expression.");
+            }
+        }
         if (value.contains("$eq")) {  // 等于比较
             auto operands = value["$eq"];
             if (operands.is_array() && operands.size() == 2) {
@@ -848,31 +1474,55 @@ auto TaskInterpreter::evaluate(const json& value) -> json {
                 auto right = evaluate(operands[1]);
                 return left < right;
             }
+        } else if (value.contains("$gte")) {  // 大于等于比较
+            auto operands = value["$gte"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]);
+                auto right = evaluate(operands[1]);
+                return left >= right;
+            }
+        } else if (value.contains("$lte")) {  // 小于等于比较
+            auto operands = value["$lte"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]);
+                auto right = evaluate(operands[1]);
+                return left <= right;
+            }
+        } else if (value.contains("$ne")) {  // 不等于比较
+            auto operands = value["$ne"];
+            if (operands.is_array() && operands.size() == 2) {
+                auto left = evaluate(operands[0]);
+                auto right = evaluate(operands[1]);
+                return left != right;
+            }
         } else if (value.contains("$add")) {  // 加法运算
             auto operands = value["$add"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0])[1].get<int>();
+                auto left = evaluate(operands[0]).get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 return left + right;
             }
         } else if (value.contains("$sub")) {  // 减法运算
             auto operands = value["$sub"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0])[1].get<int>();
+                LOG_F(INFO, "{}", operands.dump());
+                LOG_F(INFO, "{}", evaluate(operands[0]).dump());
+                auto left = evaluate(operands[0]).get<int>();
                 auto right = evaluate(operands[1]).get<int>();
+                LOG_F(INFO, "{}", left - right);
                 return left - right;
             }
         } else if (value.contains("$mul")) {  // 乘法运算
             auto operands = value["$mul"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0])[1].get<int>();
+                auto left = evaluate(operands[0]).get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 return left * right;
             }
         } else if (value.contains("$div")) {  // 除法运算
             auto operands = value["$div"];
             if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0])[1].get<int>();
+                auto left = evaluate(operands[0]).get<int>();
                 auto right = evaluate(operands[1]).get<int>();
                 if (right == 0) {
                     THROW_RUNTIME_ERROR("Division by zero");
@@ -899,6 +1549,20 @@ auto TaskInterpreter::evaluate(const json& value) -> json {
                 }
                 return false;
             }
+        }
+        // Conditional operation
+        else if (value.contains("$if")) {
+            const auto& cond = value["$if"];
+            return evaluate(cond["condition"]).get<bool>()
+                       ? evaluate(cond["then"])
+                       : evaluate(cond["else"]);
+        }
+        // Custom function call
+        else if (value.contains("$call")) {
+            const auto& callInfo = value["$call"];
+            std::string functionName = callInfo["function"];
+            const json& params = callInfo["params"];
+            return impl_->functions_[functionName](params);
         }
     }
     return value;
@@ -1035,6 +1699,20 @@ auto TaskInterpreter::precedence(char op) -> int {
         default:
             return 0;
     }
+}
+
+void TaskInterpreter::registerCustomError(const std::string& name,
+                                          const std::error_code& errorCode) {
+    std::unique_lock lock(impl_->mtx_);
+    impl_->customErrors_[name] = errorCode;
+}
+
+void TaskInterpreter::throwCustomError(const std::string& name) {
+    std::shared_lock lock(impl_->mtx_);
+    if (impl_->customErrors_.contains(name)) {
+        throw std::system_error(impl_->customErrors_.at(name));
+    }
+    THROW_RUNTIME_ERROR("Custom error '" + name + "' not found.");
 }
 
 void TaskInterpreter::handleException(const std::string& scriptName,

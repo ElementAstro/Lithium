@@ -6,8 +6,8 @@
 #include <system_error>
 #include <thread>
 
-#include "atom/type/json.hpp"
 #include "atom/error/exception.hpp"
+#include "atom/type/json.hpp"
 using namespace lithium;
 using json = nlohmann::json;
 
@@ -57,6 +57,15 @@ protected:
 
     std::shared_ptr<TaskInterpreter> interpreter;
 };
+
+TEST_F(TaskInterpreterTest, DetermineType) {
+    EXPECT_EQ(determineType(123), VariableType::NUMBER);
+    EXPECT_EQ(determineType("test"), VariableType::STRING);
+    EXPECT_EQ(determineType(true), VariableType::BOOLEAN);
+    EXPECT_EQ(determineType(json::parse("{\"key\": \"value\"}")),
+              VariableType::JSON);
+    EXPECT_EQ(determineType(nullptr), VariableType::UNKNOWN);
+}
 
 // Test loading and unloading scripts
 TEST_F(TaskInterpreterTest, LoadAndUnloadScript) {
@@ -114,7 +123,6 @@ TEST_F(TaskInterpreterTest, PrepareScriptFailure) {
 }
 */
 
-
 // Test handling of a function that throws an exception
 TEST_F(TaskInterpreterTest, FunctionExceptionHandling) {
     json script = R"(
@@ -144,7 +152,8 @@ TEST_F(TaskInterpreterTest, PauseAndResume) {
         {"type": "assign", "variable": "counter", "value": 0},
         {"type": "loop", "loop_iterations": 5, "steps": [
             {"type": "async", "steps": [
-                {"type": "assign", "variable": "counter", "value": {"$": "counter + 1"}}
+                {"type": "assign", "variable": "counter", "value": {"$":
+"counter + 1"}}
             ]}
         ]}
     ]
@@ -163,7 +172,6 @@ TEST_F(TaskInterpreterTest, PauseAndResume) {
     EXPECT_EQ(interpreter->getVariable("counter").get<int>(), 5);
 }
 */
-
 
 // Test handling of script labels and goto
 TEST_F(TaskInterpreterTest, LabelAndGoto) {
@@ -189,22 +197,38 @@ TEST_F(TaskInterpreterTest, LabelAndGoto) {
 // Test handling of script importing
 TEST_F(TaskInterpreterTest, ScriptImport) {
     json scriptA = R"(
-    [
-        {"type": "assign", "variable": "a", "value": 100}
-    ]
+    {
+        "header": {
+            "name": "Initialization Script",
+            "version": "1.0.1",
+            "author": "Max Qian",
+            "description": "This script initializes variables and runs setup steps.",
+            "auto_execute": true
+        },
+        "steps": [
+            {"type": "print", "message": "Initialization started."},
+            {"type": "assign", "variable": "initialized", "value": true},
+            {"type": "assign", "variable": "a", "value": 100},
+            {"type": "print", "message": "Initialization complete."}
+        ]
+    }
     )"_json;
 
     json scriptB = R"(
     [
-        {"type": "assign", "variable": "b", "value": {"$": "a + 1"}}
+        {"type": "import", "script": "scriptA"},
+        {"type": "print", "message": "Script B executed."},
+        {"type": "assign", "variable": "b", "value": {"$": "a + 1"}},
+        {"type": "print", "message": "Script B completed."}
     ]
     )"_json;
 
     interpreter->loadScript("scriptA", scriptA);
     interpreter->loadScript("scriptB", scriptB);
     interpreter->execute("scriptB");
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     EXPECT_EQ(interpreter->getVariable("a").get<int>(), 100);
+    std::cout << interpreter->getVariable("b").dump() << std::endl;
     EXPECT_EQ(interpreter->getVariable("b").get<int>(), 101);
 }
 
@@ -218,6 +242,42 @@ TEST_F(TaskInterpreterTest, LargeScriptExecution) {
     interpreter->execute("large_script");
 
     EXPECT_EQ(interpreter->getVariable("x").get<int>(), 9999);
+}
+
+TEST_F(TaskInterpreterTest, CompleteScriptExecution) {
+    // 注册函数
+    interpreter->registerFunction("multiply", [](const json& params) {
+        return params["a"].get<int>() * params["b"].get<int>();
+    });
+
+    // 注册异常处理
+    interpreter->registerExceptionHandler(
+        "complex_script", [&](const std::exception& e) {
+            std::cerr << "Handled exception: " << e.what() << std::endl;
+        });
+
+    // 定义并加载脚本
+    json script = R"({
+        "header": {
+            "name": "Complex Script",
+            "author": "Max Qian",
+            "version": "1.0",
+            "auto_execute": true
+        },
+        "steps": [
+            {"type": "assign", "variable": "x", "value": 5},
+            {"type": "assign", "variable": "y", "value": 10},
+            {"type": "call", "function": "multiply", "params": {"a": "$x", "b": "$y"}, "result": "product"},
+            {"type": "print", "message": "The product of x and y is $product"}
+        ]
+    })"_json;
+
+    interpreter->loadScript("complex_script", script);
+
+    // 校验脚本变量
+    EXPECT_EQ(interpreter->getVariable("x"), 5);
+    EXPECT_EQ(interpreter->getVariable("y"), 10);
+    EXPECT_EQ(interpreter->getVariable("product"), 50);
 }
 
 // Test edge case: Nested parallel execution
@@ -240,4 +300,241 @@ TEST_F(TaskInterpreterTest, NestedParallelExecution) {
     EXPECT_EQ(interpreter->getVariable("a").get<int>(), 1);
     EXPECT_EQ(interpreter->getVariable("b").get<int>(), 2);
     EXPECT_EQ(interpreter->getVariable("c").get<int>(), 3);
+}
+
+TEST_F(TaskInterpreterTest, EventHandling) {
+    json script = R"({
+        "steps": [
+            {"type": "listen_event", "event_names": ["my_event"], "timeout": 1000},
+            {"type": "broadcast_event", "event_name": "my_event"},
+            {"type": "assign", "variable": "event_triggered", "value": true}
+        ]
+    })"_json;
+
+    interpreter->loadScript("event_script", script);
+    interpreter->execute("event_script");
+
+    EXPECT_EQ(interpreter->getVariable("event_triggered"), true);
+}
+
+TEST_F(TaskInterpreterTest, TryCatchFinally) {
+    json script = R"({
+        "steps": [
+            {
+                "type": "try",
+                "try": [
+                    {"type": "throw", "exception_type": "runtime_error", "message": "Test Exception"}
+                ],
+                "catch": [{
+                    "type": "nlohmann::json_abi_v3_11_3::detail::type_error",
+                    "steps": [
+                        {"type": "assign", "variable": "caught", "value": true}
+                    ]
+                }],
+                "finally": [
+                    {"type": "assign", "variable": "finalized", "value": true}
+                ]
+            }
+        ]
+    })"_json;
+
+    interpreter->loadScript("try_catch_script", script);
+    interpreter->execute("try_catch_script");
+
+    EXPECT_EQ(interpreter->getVariable("caught"), true);
+    EXPECT_EQ(interpreter->getVariable("finalized"), true);
+}
+
+// TODO: FIX ME - This test is failing
+/*
+TEST_F(TaskInterpreterTest, FunctionDefinitionWithClosureAndRecursion) {
+    json script = R"({
+        "steps": [
+            {
+                "type": "function_def",
+                "name": "factorial",
+                "params": ["n"],
+                "steps": [
+                    {"type": "condition", "condition": {"$lt": ["$n", 2]}, "true": {"type": "return", "value": 1}},
+                    {"type": "assign", "variable": "n_minus_1", "value": {"$sub": ["$n", 1]}},
+                    {"type": "call", "function": "factorial", "params": {"n": "$n_minus_1"}, "result": "sub_result"},
+                    {"type": "return", "value": {"$mul": ["$n", "$sub_result"]}}
+                ]
+            },
+            {"type": "call", "function": "factorial", "params": {"n": 5}, "result": "factorial_result"}
+        ]
+    })"_json;
+    
+
+    interpreter->loadScript("factorial_script", script);
+    interpreter->execute("factorial_script");
+
+    EXPECT_EQ(interpreter->getVariable("factorial_result"), 120);
+}
+*/
+
+TEST_F(TaskInterpreterTest, FullAbilityTest)
+{
+    json script = R"(
+        {
+        "steps": [
+            // 定义一个简单的加法函数
+            {
+                "type": "function_def",
+                "name": "add",
+                "params": ["a", "b"],
+                "steps": [
+                    {
+                        "type": "return",
+                        "value": {"$add": ["$a", "$b"]}
+                    }
+                ]
+            },
+
+            // 调用 add 函数
+            {
+                "type": "call",
+                "function": "add",
+                "params": {"a": 3, "b": 4},
+                "result": "addition_result"
+            },
+
+            // 打印加法结果
+            {
+                "type": "print",
+                "message": "3 + 4 = $addition_result"
+            },
+
+            // 执行条件判断
+            {
+                "type": "condition",
+                "condition": {"$gt": ["$addition_result", 5]},
+                "true": {
+                    "type": "print",
+                    "message": "Addition result is greater than 5"
+                },
+                "false": {
+                    "type": "print",
+                    "message": "Addition result is not greater than 5"
+                }
+            },
+
+            // 执行一个 while 循环，将 n 从 5 减少到 0
+            {
+                "type": "assign",
+                "variable": "n",
+                "value": 5
+            },
+            {
+                "type": "while",
+                "condition": {"$gt": ["$n", 0]},
+                "steps": [
+                    {"type": "print", "message": "n is: $n"},
+                    {"type": "assign", "variable": "n", "value": {"$sub": ["$n", 1]}}
+                ]
+            },
+
+            // 执行并行任务
+            {
+                "type": "parallel",
+                "steps": [
+                    {"type": "print", "message": "Parallel task 1"},
+                    {"type": "print", "message": "Parallel task 2"},
+                    {"type": "print", "message": "Parallel task 3"}
+                ]
+            },
+
+            // 等待一个事件并处理
+            {
+                "type": "wait_event",
+                "event": "custom_event"
+            },
+            {
+                "type": "print",
+                "message": "Custom event received!"
+            },
+
+            // 调度一个任务，延迟3秒执行
+            {
+                "type": "schedule",
+                "delay": 3000,
+                "steps": [
+                    {"type": "print", "message": "This message is delayed by 3 seconds"}
+                ]
+            },
+
+            // 处理错误的 try-catch-finally 结构
+            {
+                "type": "try",
+                "try": [
+                    {"type": "throw", "exception_type": "runtime_error", "message": "Simulated Error"}
+                ],
+                "catch": {
+                    "type": "all",
+                    "steps": [
+                        {"type": "print", "message": "Exception caught in catch block!"}
+                    ]
+                },
+                "finally": [
+                    {"type": "print", "message": "Finally block executed."}
+                ]
+            },
+
+            // 广播事件
+            {
+                "type": "broadcast_event",
+                "event_name": "custom_event",
+                "event_data": {}
+            },
+
+            // 定义一个带有作用域和变量的嵌套脚本
+            {
+                "type": "scope",
+                "variables": {
+                    "local_var": 42
+                },
+                "steps": [
+                    {"type": "print", "message": "Local var inside scope is: $local_var"},
+                    {"type": "assign", "variable": "local_var", "value": {"$add": ["$local_var", 1]}},
+                    {"type": "print", "message": "Local var after increment: $local_var"}
+                ]
+            },
+
+            // 使用 switch-case 结构
+            {
+                "type": "switch",
+                "variable": "addition_result",
+                "cases": [
+                    {
+                        "case": 7,
+                        "steps": [
+                            {"type": "print", "message": "Result is exactly 7"}
+                        ]
+                    },
+                    {
+                        "case": 8,
+                        "steps": [
+                            {"type": "print", "message": "Result is 8"}
+                        ]
+                    }
+                ],
+                "default": {
+                    "steps": [
+                        {"type": "print", "message": "Result is neither 7 nor 8"}
+                    ]
+                }
+            },
+
+            // 导入另一个脚本
+            {
+                "type": "import",
+                "script": "external_script"
+            }
+        ]
+    }
+
+    )";
+
+    interpreter->loadScript("main_script", script);
+    interpreter->execute("main_script");
 }

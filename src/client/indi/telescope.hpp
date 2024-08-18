@@ -8,90 +8,92 @@
 #include <optional>
 #include <string_view>
 
-enum class ConnectionMode { SERIAL, TCP, NONE };
+#include "device/template/telescope.hpp"
 
-enum class BAUD_RATE { B9600, B19200, B38400, B57600, B115200, B230400, NONE };
-
-enum class TrackMode { SIDEREAL, SOLAR, LUNAR, CUSTOM, NONE };
-
-enum class PierSide { EAST, WEST, NONE };
-
-enum class ParkOptions { CURRENT, DEFAULT, WRITE_DATA, PURGE_DATA, NONE };
-
-enum class SlewRate { GUIDE, CENTERING, FIND, MAX, NONE };
-
-enum class MotionEW { WEST, EAST, NONE };
-
-enum class MotionNS { NORTH, SOUTH, NONE };
-
-enum class DomePolicy { IGNORED, LOCKED, NONE };
-
-class INDITelescope : public INDI::BaseClient {
+class INDITelescope : public INDI::BaseClient, public AtomTelescope {
 public:
     explicit INDITelescope(std::string name);
     ~INDITelescope() override = default;
 
-    auto connect(const std::string& deviceName) -> bool;
-    auto disconnect() -> void;
-    auto reconnect() -> bool;
+    auto connect(const std::string &deviceName, int timeout,
+                 int maxRetry) -> bool override;
+
+    auto disconnect(bool force, int timeout, int maxRetry) -> bool override;
+
+    auto reconnect(int timeout, int maxRetry) -> bool override;
+
+    auto scan() -> std::vector<std::string> override;
+
+    auto isConnected() -> bool override;
 
     virtual auto watchAdditionalProperty() -> bool;
 
     void setPropertyNumber(std::string_view propertyName, double value);
 
     auto getTelescopeInfo()
-        -> std::optional<std::tuple<double, double, double, double>>;
+        -> std::optional<std::tuple<double, double, double, double>> override;
     auto setTelescopeInfo(double telescopeAperture, double telescopeFocal,
-                          double guiderAperture, double guiderFocal) -> bool;
-    auto getTelescopePierSide() -> std::optional<PierSide>;
+                          double guiderAperture,
+                          double guiderFocal) -> bool override;
+    auto getTelescopePierSide() -> std::optional<PierSide> override;
 
-    auto getTelescopeTrackRate() -> std::optional<TrackMode>;
-    auto setTelescopeTrackRate(TrackMode rate) -> bool;
+    auto getTelescopeTrackRate() -> std::optional<TrackMode> override;
+    auto setTelescopeTrackRate(TrackMode rate) -> bool override;
 
-    auto getTelescopeTrackEnable() -> bool;
-    auto setTelescopeTrackEnable(bool enable) -> bool;
+    auto getTelescopeTrackEnable() -> bool override;
+    auto setTelescopeTrackEnable(bool enable) -> bool override;
 
-    auto setTelescopeAbortMotion() -> bool;
+    auto setTelescopeAbortMotion() -> bool override;
 
-    auto setTelescopeParkOption(ParkOptions option) -> bool;
+    auto setTelescopeParkOption(ParkOptions option) -> bool override;
 
-    auto getTelescopeParkPosition() -> std::optional<std::pair<double, double>>;
-    auto setTelescopeParkPosition(double parkRA, double parkDEC) -> bool;
+    auto getTelescopeParkPosition()
+        -> std::optional<std::pair<double, double>> override;
+    auto setTelescopeParkPosition(double parkRA,
+                                  double parkDEC) -> bool override;
 
-    auto getTelescopePark() -> bool;
-    auto setTelescopePark(bool isParked) -> bool;
+    auto getTelescopePark() -> bool override;
+    auto setTelescopePark(bool isParked) -> bool override;
 
-    auto setTelescopeHomeInit(std::string_view command) -> bool;
+    auto setTelescopeHomeInit(std::string_view command) -> bool override;
 
-    auto getTelescopeSlewRate() -> std::optional<double>;
-    auto setTelescopeSlewRate(double speed) -> bool;
-    auto getTelescopeTotalSlewRate() -> std::optional<double>;
+    auto getTelescopeSlewRate() -> std::optional<double> override;
+    auto setTelescopeSlewRate(double speed) -> bool override;
+    auto getTelescopeTotalSlewRate() -> std::optional<double> override;
 
-    auto getTelescopeMoveWE() -> std::optional<MotionEW>;
-    auto setTelescopeMoveWE(MotionEW direction) -> bool;
-    auto getTelescopeMoveNS() -> std::optional<MotionNS>;
-    auto setTelescopeMoveNS(MotionNS direction) -> bool;
+    auto getTelescopeMoveWE() -> std::optional<MotionEW> override;
+    auto setTelescopeMoveWE(MotionEW direction) -> bool override;
+    auto getTelescopeMoveNS() -> std::optional<MotionNS> override;
+    auto setTelescopeMoveNS(MotionNS direction) -> bool override;
 
-    auto setTelescopeGuideNS(int dir, int timeGuide) -> bool;
-    auto setTelescopeGuideWE(int dir, int timeGuide) -> bool;
+    auto setTelescopeGuideNS(int dir, int timeGuide) -> bool override;
+    auto setTelescopeGuideWE(int dir, int timeGuide) -> bool override;
 
-    auto setTelescopeActionAfterPositionSet(std::string_view action) -> bool;
+    auto setTelescopeActionAfterPositionSet(std::string_view action)
+        -> bool override;
 
-    auto getTelescopeRADECJ2000() -> std::optional<std::pair<double, double>>;
-    auto setTelescopeRADECJ2000(double RAHours, double DECDegree) -> bool;
+    auto getTelescopeRADECJ2000()
+        -> std::optional<std::pair<double, double>> override;
+    auto setTelescopeRADECJ2000(double RAHours,
+                                double DECDegree) -> bool override;
 
-    auto getTelescopeRADECJNOW() -> std::optional<std::pair<double, double>>;
-    auto setTelescopeRADECJNOW(double RAHours, double DECDegree) -> bool;
+    auto getTelescopeRADECJNOW()
+        -> std::optional<std::pair<double, double>> override;
+    auto setTelescopeRADECJNOW(double RAHours,
+                               double DECDegree) -> bool override;
 
     auto getTelescopeTargetRADECJNOW()
-        -> std::optional<std::pair<double, double>>;
-    auto setTelescopeTargetRADECJNOW(double RAHours, double DECDegree) -> bool;
+        -> std::optional<std::pair<double, double>> override;
+    auto setTelescopeTargetRADECJNOW(double RAHours,
+                                     double DECDegree) -> bool override;
     auto slewTelescopeJNowNonBlock(double RAHours, double DECDegree,
-                                   bool EnableTracking) -> bool;
+                                   bool EnableTracking) -> bool override;
 
-    auto syncTelescopeJNow(double RAHours, double DECDegree) -> bool;
-    auto getTelescopetAZALT() -> std::optional<std::pair<double, double>>;
-    auto setTelescopetAZALT(double AZ_DEGREE, double ALT_DEGREE) -> bool;
+    auto syncTelescopeJNow(double RAHours, double DECDegree) -> bool override;
+    auto getTelescopetAZALT()
+        -> std::optional<std::pair<double, double>> override;
+    auto setTelescopetAZALT(double AZ_DEGREE,
+                            double ALT_DEGREE) -> bool override;
 
 protected:
     void newMessage(INDI::BaseDevice baseDevice, int messageID) override;

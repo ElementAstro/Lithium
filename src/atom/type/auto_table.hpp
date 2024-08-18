@@ -124,6 +124,9 @@ private:
 };
 
 template <typename Key, typename Value>
+CountingHashTable<Key, Value>::CountingHashTable() {}
+
+template <typename Key, typename Value>
 CountingHashTable<Key, Value>::~CountingHashTable() {
     stopAutoSorting();
 }

@@ -25,8 +25,10 @@
 #include "task.hpp"
 
 #include "atom/log/loguru.hpp"
+#include "type/expected.hpp"
 
-Target::Target(std::string name, int delayAfterTarget, int priority)
+Target::Target(std::string name, std::chrono::seconds delayAfterTarget,
+               int priority)
     : name_(std::move(name)),
       delayAfterTarget_(delayAfterTarget),
       priority_(priority),
@@ -36,11 +38,13 @@ void Target::addTask(std::shared_ptr<Task> task) {
     tasks_.emplace_back(std::move(task));
 }
 
-void Target::setDelayAfterTarget(int delay) { delayAfterTarget_ = delay; }
+void Target::setDelayAfterTarget(std::chrono::seconds delay) {
+    delayAfterTarget_ = delay;
+}
 
 void Target::setPriority(int p) { priority_ = p; }
 
-auto Target::getPriority() const -> int { return priority_; }
+int Target::getPriority() const { return priority_; }
 
 void Target::enable() { enabled_ = true; }
 
@@ -48,49 +52,50 @@ void Target::disable() { enabled_ = false; }
 
 auto Target::isEnabled() const -> bool { return enabled_; }
 
-void Target::execute(std::stop_token stopToken, std::atomic<bool>& pauseFlag,
-                     std::condition_variable_any& cv, std::mutex& mtx) {
-    if (enabled_) {
-        LOG_F(INFO, "Starting target: {}", name_);
-        for (const auto& task : tasks_) {
-            if (stopToken.stop_requested()) {
-                return;
-            }
-
-            std::unique_lock lock(mtx);
-            cv.wait(lock, [&] {
-                return !pauseFlag.load() || stopToken.stop_requested();
-            });
-
-            if (stopToken.stop_requested()) {
-                return;
-            }
-
-            try {
-                task->start();
-                task->run();
-                if (task->isTimeout()) {
-                    LOG_F(ERROR, "Task {} timed out.", task->getName());
-                    task->fail(std::runtime_error("Timeout"));
-                }
-            } catch (const std::exception& ex) {
-                LOG_F(ERROR, "Task {} failed with exception: {}",
-                      task->getName(), ex.what());
-            }
-        }
-        LOG_F(INFO, "Completed target: {}", name_);
-        std::this_thread::sleep_for(std::chrono::seconds(delayAfterTarget_));
-    } else {
+auto Target::execute(std::stop_token stopToken, std::atomic_flag& pauseFlag,
+                     std::condition_variable_any& cv, std::shared_mutex& mtx)
+    -> atom::type::expected<void, std::string> {
+    if (!enabled_) {
         LOG_F(WARNING, "Target {} is disabled.", name_);
+        return atom::type::make_unexpected("Target is disabled");
     }
+
+    LOG_F(INFO, "Starting target: {}", name_);
+    for (const auto& task : tasks_) {
+        if (stopToken.stop_requested()) {
+            return {};
+        }
+
+        std::shared_lock lock(mtx);
+        cv.wait(lock, [&] {
+            return !pauseFlag.test() || stopToken.stop_requested();
+        });
+
+        if (stopToken.stop_requested()) {
+            return {};
+        }
+
+        try {
+            task->start();
+            task->run();
+            if (task->isTimeout()) {
+                LOG_F(ERROR, "Task {} timed out.", task->getName());
+                task->fail(std::runtime_error("Timeout"));
+            }
+        } catch (const std::exception& ex) {
+            LOG_F(ERROR, "Task {} failed with exception: {}", task->getName(),
+                  ex.what());
+            return atom::type::make_unexpected("Task execution failed");
+        }
+    }
+    LOG_F(INFO, "Completed target: {}", name_);
+    std::this_thread::sleep_for(delayAfterTarget_);
+    return {};
 }
 
-auto Target::getName() const -> std::string { return name_; }
+std::string Target::getName() const { return name_; }
 
-// ExposureSequence Class Implementation
-
-ExposureSequence::ExposureSequence()
-    : stopFlag_(false), pauseFlag_(false), sequenceThread_(nullptr) {}
+ExposureSequence::ExposureSequence() : sequenceThread_(nullptr) {}
 
 ExposureSequence::~ExposureSequence() {
     stop();
@@ -115,8 +120,9 @@ void ExposureSequence::removeTarget(size_t index) {
     }
 }
 
-void ExposureSequence::modifyTarget(size_t index, std::optional<int> newDelay,
-                                    std::optional<int> newPriority) {
+void ExposureSequence::modifyTarget(
+    size_t index, std::optional<std::chrono::seconds> newDelay,
+    std::optional<int> newPriority) {
     std::unique_lock lock(mutex_);
     if (index < targets_.size()) {
         if (newDelay) {
@@ -152,8 +158,8 @@ void ExposureSequence::disableTarget(size_t index) {
 }
 
 void ExposureSequence::executeAll() {
-    stopFlag_.store(false);
-    pauseFlag_.store(false);
+    stopFlag_.clear();
+    pauseFlag_.clear();
     if (sequenceThread_ && sequenceThread_->joinable()) {
         sequenceThread_->join();
     }
@@ -170,12 +176,12 @@ void ExposureSequence::stop() {
 }
 
 void ExposureSequence::pause() {
-    pauseFlag_.store(true);
+    pauseFlag_.test_and_set();
     LOG_F(INFO, "Pausing all tasks.");
 }
 
 void ExposureSequence::resume() {
-    pauseFlag_.store(false);
+    pauseFlag_.clear();
     cv_.notify_all();
     LOG_F(INFO, "Resuming all tasks.");
 }
@@ -186,7 +192,10 @@ void ExposureSequence::executeSequence(std::stop_token stopToken) {
             return;
         }
         if (target->isEnabled()) {
-            target->execute(stopToken, pauseFlag_, cv_, mutex_);
+            target->execute(stopToken, pauseFlag_, cv_, mutex_)
+                .value_or([&](std::string err) {
+                    LOG_F(ERROR, "Failed to execute target: {}", err);
+                });
         }
     }
 }

@@ -8,14 +8,23 @@
 #include <optional>
 #include <string_view>
 
-class INDIFocuser : public INDI::BaseClient {
+#include "device/template/focuser.hpp"
+
+class INDIFocuser : public INDI::BaseClient, public AtomFocuser {
 public:
     explicit INDIFocuser(std::string name);
     ~INDIFocuser() override = default;
 
-    auto connect(const std::string &deviceName) -> bool;
-    auto disconnect() -> void;
-    auto reconnect() -> bool;
+    auto connect(const std::string &deviceName, int timeout,
+                 int maxRetry) -> bool override;
+
+    auto disconnect(bool force, int timeout, int maxRetry) -> bool override;
+
+    auto reconnect(int timeout, int maxRetry) -> bool override;
+
+    auto scan() -> std::vector<std::string> override;
+
+    auto isConnected() -> bool override;
 
     virtual auto watchAdditionalProperty() -> bool;
 
@@ -24,8 +33,8 @@ public:
     auto getFocuserSpeed() -> std::optional<std::tuple<double, double, double>>;
     auto setFocuserSpeed(int value) -> bool;
 
-    auto getFocuserMoveDiretion() -> bool;
-    auto setFocuserMoveDiretion(bool isDirectionIn) -> bool;
+    auto getFocuserMoveDirection() -> bool;
+    auto setFocuserMoveDirection(bool isDirectionIn) -> bool;
 
     auto getFocuserMaxLimit() -> std::optional<int>;
     auto setFocuserMaxLimit(int maxlimit) -> bool;
@@ -62,6 +71,28 @@ private:
     std::atomic_bool isConnected_;
 
     INDI::BaseDevice device_;
+
+    std::string devicePort_;
+    BAUD_RATE baudRate_;
+
+    std::atomic_bool isFocuserMoving_;
+    FocusMode focusMode_;
+    FocusDirection focusDirection_;
+    std::atomic<double> currentFocusSpeed_;
+    std::atomic_bool isReverse_;
+    std::atomic<double> focusTimer_;
+
+    std::atomic_int realRelativePosition_;
+    std::atomic_int realAbsolutePosition_;
+    int maxPosition_;
+
+    std::atomic_bool backlashEnabled_;
+    std::atomic_int backlashSteps_;
+
+    std::atomic<double> temperature_;
+    std::atomic<double> chipTemperature_;
+
+    int delay_msec_;
 };
 
 #endif

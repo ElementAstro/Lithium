@@ -8,7 +8,7 @@
 
 Date: 2023-6-1
 
-Description: Basic Device Defination
+Description: Basic Device Defintion
 
 *************************************************/
 
@@ -28,9 +28,9 @@ public:
 
     virtual ~AtomDriver();
 
-    virtual auto initialize() -> bool;
+    virtual auto initialize() -> bool = 0;
 
-    virtual auto destroy() -> bool;
+    virtual auto destroy() -> bool = 0;
 
     [[nodiscard]] auto getUUID() const -> std::string;
 
@@ -45,15 +45,15 @@ public:
     // -------------------------------------------------------------------
 
     virtual auto connect(const std::string& name, int timeout,
-                         int maxRetry) -> bool;
+                         int maxRetry) -> bool = 0;
 
-    virtual auto disconnect(bool force, int timeout, int maxRetry) -> bool;
+    virtual auto disconnect(bool force, int timeout, int maxRetry) -> bool = 0;
 
-    virtual auto reconnect(int timeout, int maxRetry) -> bool;
+    virtual auto reconnect(int timeout, int maxRetry) -> bool = 0;
 
-    virtual auto scan() -> std::vector<std::string>;
+    virtual auto scan() -> std::vector<std::string> = 0;
 
-    virtual auto isConnected() -> bool;
+    virtual auto isConnected() -> bool = 0;
 
 private:
     std::string name_;

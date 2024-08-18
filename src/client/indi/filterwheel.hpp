@@ -7,15 +7,25 @@
 #include <atomic>
 #include <optional>
 #include <string_view>
+#include <vector>
 
-class INDIFilterwheel : public INDI::BaseClient {
+#include "device/template/filterwheel.hpp"
+
+class INDIFilterwheel : public INDI::BaseClient, public AtomFilterWheel {
 public:
     explicit INDIFilterwheel(std::string name);
     ~INDIFilterwheel() override = default;
 
-    auto connect(const std::string &deviceName) -> bool;
-    auto disconnect() -> void;
-    auto reconnect() -> bool;
+    auto connect(const std::string &deviceName, int timeout,
+                 int maxRetry) -> bool override;
+
+    auto disconnect(bool force, int timeout, int maxRetry) -> bool override;
+
+    auto reconnect(int timeout, int maxRetry) -> bool override;
+
+    auto scan() -> std::vector<std::string> override;
+
+    auto isConnected() -> bool override;
 
     virtual auto watchAdditionalProperty() -> bool;
 
@@ -46,6 +56,12 @@ private:
     std::atomic_bool isConnected_;
 
     INDI::BaseDevice device_;
+
+    std::atomic_int currentSlot_;
+    int maxSlot_;
+    int minSlot_;
+    std::string currentSlotName_;
+    std::vector<std::string> slotNames_;
 };
 
 #endif

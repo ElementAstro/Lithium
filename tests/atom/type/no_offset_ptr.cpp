@@ -1,58 +1,44 @@
 #include "atom/type//no_offset_ptr.hpp"
 #include <gtest/gtest.h>
 
-// Test fixture for UnshiftedPtr
-class UnshiftedPtrTest : public ::testing::Test {
-protected:
-    void SetUp() override { ptr = new UnshiftedPtr<int>(5); }
-
-    void TearDown() override { delete ptr; }
-
-    // Pointer to UnshiftedPtr instance for testing
-    UnshiftedPtr<int>* ptr;
+struct TestObject {
+    int value;
+    TestObject() = default;
+    explicit TestObject(int val) : value(val) {}
+    TestObject(const TestObject&) = default;
+    TestObject& operator=(const TestObject&) = default;
+    ~TestObject() = default;
 };
 
-// Test the constructor
-TEST_F(UnshiftedPtrTest, ConstructorTest) {
-    UnshiftedPtr<int> p(10);
-    EXPECT_EQ(*p, 10);
+TEST(UnshiftedPtrTest, DefaultConstructor) {
+    UnshiftedPtr<TestObject> ptr;
+    EXPECT_EQ(ptr->value, 0);  // assuming TestObject has a default value of 0
 }
 
-// Test the copy constructor
-TEST_F(UnshiftedPtrTest, CopyConstructorTest) {
-    UnshiftedPtr<int> p(*ptr);
-    EXPECT_EQ(*p, 5);
+TEST(UnshiftedPtrTest, ParameterizedConstructor) {
+    UnshiftedPtr<TestObject> ptr(42);
+    EXPECT_EQ(ptr->value, 42);
 }
 
-// Test the move constructor
-TEST_F(UnshiftedPtrTest, MoveConstructorTest) {
-    UnshiftedPtr<int> p(std::move(*ptr));
-    EXPECT_EQ(*p, 5);
+TEST(UnshiftedPtrTest, Reset) {
+    UnshiftedPtr<TestObject> ptr(42);
+    ptr.reset(84);
+    EXPECT_EQ(ptr->value, 84);
 }
 
-// Test the destructor
-TEST_F(UnshiftedPtrTest, DestructorTest) {
-    // Destructor should be called after TearDown()
-    // Verify that there are no memory leaks or errors
+TEST(UnshiftedPtrTest, Release) {
+    UnshiftedPtr<TestObject> ptr(42);
+    TestObject* raw_ptr = ptr.release();
+    EXPECT_EQ(raw_ptr->value, 42);
+    delete raw_ptr;
 }
 
-// Test the copy assignment operator
-TEST_F(UnshiftedPtrTest, CopyAssignmentOperatorTest) {
-    UnshiftedPtr<int> p;
-    p = *ptr;
-    EXPECT_EQ(*p, 5);
+TEST(UnshiftedPtrTest, MoveConstructorDisabled) {
+    static_assert(!std::is_move_constructible_v<UnshiftedPtr<TestObject>>,
+                  "UnshiftedPtr should not be movable");
 }
 
-// Test the move assignment operator
-TEST_F(UnshiftedPtrTest, MoveAssignmentOperatorTest) {
-    UnshiftedPtr<int> p;
-    p = std::move(*ptr);
-    EXPECT_EQ(*p, 5);
-}
-
-// Test the dereference operators
-TEST_F(UnshiftedPtrTest, DereferenceOperatorsTest) {
-    EXPECT_EQ(*ptr, 5);
-    EXPECT_EQ((ptr)++, 5);
-    EXPECT_EQ(*ptr, 6);
+TEST(UnshiftedPtrTest, CopyConstructorDisabled) {
+    static_assert(!std::is_copy_constructible_v<UnshiftedPtr<TestObject>>,
+                  "UnshiftedPtr should not be copyable");
 }

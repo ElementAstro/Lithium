@@ -25,44 +25,53 @@
 #define LITHIUM_TASK_SEQUENCER_HPP
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
+#include <expected>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "atom/type/expected.hpp"
 
 class Task;
 
 class Target {
 public:
-    explicit Target(std::string name, int delayAfterTarget = 0,
-                    int priority = 0);
+    explicit Target(
+        std::string name,
+        std::chrono::seconds delayAfterTarget = std::chrono::seconds{0},
+        int priority = 0);
 
     void addTask(std::shared_ptr<Task> task);
 
-    void setDelayAfterTarget(int delay);
+    void setDelayAfterTarget(std::chrono::seconds delay);
 
     void setPriority(int p);
 
-    [[nodiscard]] auto getPriority() const -> int;
+    [[nodiscard]] int getPriority() const;
 
     void enable();
 
     void disable();
 
-    [[nodiscard]] auto isEnabled() const -> bool;
+    [[nodiscard]] bool isEnabled() const;
 
-    void execute(std::stop_token stopToken, std::atomic<bool>& pauseFlag,
-                 std::condition_variable_any& cv, std::mutex& mtx);
+    atom::type::expected<void, std::string> execute(std::stop_token stopToken,
+                                             std::atomic_flag& pauseFlag,
+                                             std::condition_variable_any& cv,
+                                             std::shared_mutex& mtx);
 
-    [[nodiscard]] auto getName() const -> std::string;
+    [[nodiscard]] std::string getName() const;
 
 private:
     std::string name_;
     std::vector<std::shared_ptr<Task>> tasks_;
-    int delayAfterTarget_;
+    std::chrono::seconds delayAfterTarget_;
     int priority_;
     bool enabled_;
 };
@@ -76,8 +85,10 @@ public:
 
     void removeTarget(size_t index);
 
-    void modifyTarget(size_t index, std::optional<int> newDelay = std::nullopt,
-                      std::optional<int> newPriority = std::nullopt);
+    void modifyTarget(
+        size_t index,
+        std::optional<std::chrono::seconds> newDelay = std::nullopt,
+        std::optional<int> newPriority = std::nullopt);
 
     void enableTarget(size_t index);
 
@@ -92,11 +103,11 @@ public:
     void resume();
 
 private:
-    mutable std::mutex mutex_;
+    mutable std::shared_mutex mutex_;
     std::condition_variable_any cv_;
     std::vector<std::shared_ptr<Target>> targets_;
-    std::atomic<bool> stopFlag_;
-    std::atomic<bool> pauseFlag_;
+    std::atomic_flag stopFlag_ = ATOMIC_FLAG_INIT;
+    std::atomic_flag pauseFlag_ = ATOMIC_FLAG_INIT;
     std::unique_ptr<std::jthread> sequenceThread_;
 
     void executeSequence(std::stop_token stopToken);

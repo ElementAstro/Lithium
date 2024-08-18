@@ -1,8 +1,11 @@
 #include "task/sequencer.hpp"
 #include "task/task.hpp"
 
-#include <thread>
 #include <gtest/gtest.h>
+#include <atomic>
+#include <chrono>
+#include <shared_mutex>
+#include <thread>
 
 using json = nlohmann::json;
 
@@ -71,7 +74,7 @@ TEST_F(TaskSequencerTest, TaskExecutionFailureWithoutTerminationHandler) {
 }
 
 TEST_F(TaskSequencerTest, TargetExecutionWithTasks) {
-    Target target("Test Target", 2, 1);
+    Target target("Test Target", std::chrono::seconds(2), 1);
 
     json params1 = {{"input", 5}};
     json params2 = {{"input", 3}};
@@ -92,8 +95,8 @@ TEST_F(TaskSequencerTest, TargetExecutionWithTasks) {
     target.addTask(task2);
 
     std::stop_source stopSource;
-    std::atomic<bool> pauseFlag(false);
-    std::mutex mtx;
+    std::atomic_flag pauseFlag(false);
+    std::shared_mutex mtx;
     std::condition_variable_any cv;
 
     target.execute(stopSource.get_token(), pauseFlag, cv, mtx);
@@ -106,7 +109,7 @@ TEST_F(TaskSequencerTest, ExposureSequenceExecutionWithTaskFailures) {
     ExposureSequence sequence;
 
     // First target with a successful task
-    Target target1("Target 1", 1, 1);
+    Target target1("Target 1", std::chrono::seconds(1), 1);
     json params1 = {{"input", 5}};
     auto task1 =
         std::make_shared<Task>("Task 1", params1, [](const json& p) -> json {
@@ -117,7 +120,7 @@ TEST_F(TaskSequencerTest, ExposureSequenceExecutionWithTaskFailures) {
     sequence.addTarget(target1);
 
     // Second target with a failing task
-    Target target2("Target 2", 1, 2);
+    Target target2("Target 2", std::chrono::seconds(1), 2);
     json params2 = {{"input", -5}};
     bool exceptionHandled = false;
     auto task2 = std::make_shared<Task>(
@@ -146,7 +149,7 @@ TEST_F(TaskSequencerTest, ExposureSequenceExecutionWithTaskFailures) {
 TEST_F(TaskSequencerTest, ExposureSequenceStopDuringExecution) {
     ExposureSequence sequence;
 
-    Target target1("Target 1", 1, 1);
+    Target target1("Target 1", std::chrono::seconds(1), 1);
     json params1 = {{"input", 5}};
     auto task1 =
         std::make_shared<Task>("Task 1", params1, [](const json& p) -> json {
@@ -155,7 +158,7 @@ TEST_F(TaskSequencerTest, ExposureSequenceStopDuringExecution) {
         });
     target1.addTask(task1);
 
-    Target target2("Target 2", 1, 2);
+    Target target2("Target 2", std::chrono::seconds(1), 1);
     json params2 = {{"input", 3}};
     auto task2 =
         std::make_shared<Task>("Task 2", params2, [](const json& p) -> json {

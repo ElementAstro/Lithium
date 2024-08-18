@@ -5,9 +5,13 @@
 
 #include "atom/log/loguru.hpp"
 
-INDITelescope::INDITelescope(std::string name) : name_(name) {}
+#include "atom/components/component.hpp"
+#include "atom/components/registry.hpp"
 
-auto INDITelescope::connect(const std::string &deviceName) -> bool {
+INDITelescope::INDITelescope(std::string name) : AtomTelescope(name) {}
+
+auto INDITelescope::connect(const std::string &deviceName, int timeout,
+                            int maxRetry) -> bool {
     if (isConnected_.load()) {
         LOG_F(ERROR, "{} is already connected.", deviceName_);
         return false;
@@ -390,8 +394,8 @@ auto INDITelescope::connect(const std::string &deviceName) -> bool {
 
     return true;
 }
-auto INDITelescope::disconnect() -> void {}
-auto INDITelescope::reconnect() -> bool {}
+auto INDITelescope::disconnect(bool force, int timeout, int maxRetry) -> bool {}
+auto INDITelescope::reconnect(int timeout, int maxRetry) -> bool {}
 
 auto INDITelescope::watchAdditionalProperty() -> bool {}
 
@@ -879,3 +883,119 @@ auto INDITelescope::setTelescopetAZALT(double AZ_DEGREE,
     sendNewProperty(property);
     return true;
 }
+
+ATOM_MODULE(telescope_indi, [](Component &component) {
+    LOG_F(INFO, "Registering telescope_indi module...");
+    component.doc("INDI telescope module.");
+    component.def("initialize", &INDITelescope::initialize, "device",
+                  "Initialize a focuser device.");
+    component.def("destroy", &INDITelescope::destroy, "device",
+                  "Destroy a focuser device.");
+    component.def("connect", &INDITelescope::connect, "device",
+                  "Connect to a camera device.");
+    component.def("disconnect", &INDITelescope::disconnect, "device",
+                  "Disconnect from a camera device.");
+    component.def("reconnect", &INDITelescope::reconnect, "device",
+                  "Reconnect to a camera device.");
+    component.def("scan", &INDITelescope::scan, "Scan for camera devices.");
+    component.def("is_connected", &INDITelescope::isConnected,
+                  "Check if a camera device is connected.");
+
+    component.def("get_info", &INDITelescope::getTelescopeInfo, "device",
+                  "Get telescope info.");
+    component.def("set_info", &INDITelescope::setTelescopeInfo, "device",
+                  "Set telescope info.");
+    component.def("get_pierside", &INDITelescope::getTelescopePierSide,
+                  "device", "Get telescope pier side.");
+    component.def("get_track_rate", &INDITelescope::getTelescopeTrackRate,
+                  "device", "Get telescope track rate.");
+    component.def("set_track_rate", &INDITelescope::setTelescopeTrackRate,
+                  "device", "Set telescope track rate.");
+
+    component.def("get_tracking_enabled",
+                  &INDITelescope::getTelescopeTrackEnable, "device",
+                  "Get telescope tracking enabled.");
+    component.def("set_tracking_enabled",
+                  &INDITelescope::setTelescopeTrackEnable, "device",
+                  "Set telescope tracking enabled.");
+
+    component.def("abort", &INDITelescope::setTelescopeAbortMotion, "device",
+                  "Abort telescope motion.");
+
+    component.def("get_park_position", &INDITelescope::getTelescopeParkPosition,
+                  "device", "Get telescope park option.");
+    component.def("set_park_option", &INDITelescope::setTelescopeParkOption,
+                  "device", "Set telescope park option.");
+
+    component.def("get_park", &INDITelescope::getTelescopePark, "device",
+                  "Get whether telescope is parked.");
+    component.def("set_park", &INDITelescope::setTelescopePark, "device",
+                  "Set whether telescope is parked.");
+
+    component.def("set_home_init", &INDITelescope::setTelescopeHomeInit,
+                  "device", "Set telescope home init.");
+
+    component.def("get_slew_rate", &INDITelescope::getTelescopeSlewRate,
+                  "device", "Get telescope slew rate.");
+    component.def("set_slew_rate", &INDITelescope::setTelescopeSlewRate,
+                  "device", "Set telescope slew rate.");
+    component.def("get_total_slew_rate",
+                  &INDITelescope::getTelescopeTotalSlewRate, "device",
+                  "Get telescope total slew rate.");
+
+    component.def("get_move_we", &INDITelescope::getTelescopeMoveWE, "device",
+                  "Get whether telescope is moving west or east.");
+    component.def("set_move_we", &INDITelescope::setTelescopeMoveWE, "device",
+                  "Set telescope moving west or east.");
+    component.def("get_move_ns", &INDITelescope::getTelescopeMoveNS, "device",
+                  "Get whether telescope is moving north or south.");
+    component.def("set_move_ns", &INDITelescope::setTelescopeMoveNS, "device",
+                  "Set telescope moving north or south.");
+
+    component.def("set_guide_ns", &INDITelescope::setTelescopeGuideNS, "device",
+                  "Set telescope guide north or south.");
+    component.def("set_guide_we", &INDITelescope::setTelescopeGuideWE, "device",
+                  "Set telescope guide west or east.");
+
+    component.def("set_action_after_position_set",
+                  &INDITelescope::setTelescopeActionAfterPositionSet, "device",
+                  "Get telescope action after position set.");
+
+    component.def("get_radec_j2000", &INDITelescope::getTelescopeRADECJ2000,
+                  "device", "Get telescope RA/DEC in J2000.");
+    component.def("set_radec_j2000", &INDITelescope::setTelescopeRADECJ2000,
+                  "device", "Set telescope RA/DEC in J2000.");
+    component.def("get_radec_jnow", &INDITelescope::getTelescopeRADECJNOW,
+                  "device", "Get telescope RA/DEC in JNOW.");
+    component.def("set_radec_jnow", &INDITelescope::setTelescopeRADECJNOW,
+                  "device", "Set telescope RA/DEC in JNOW.");
+
+    component.def("set_target_radec_jnow",
+                  &INDITelescope::setTelescopeTargetRADECJNOW, "device",
+                  "Set telescope target RA/DEC in JNOW.");
+    component.def("get_target_radec_jnow",
+                  &INDITelescope::getTelescopeTargetRADECJNOW, "device",
+                  "Get telescope target RA/DEC in JNOW.");
+
+    component.def("slew_jnow", &INDITelescope::slewTelescopeJNowNonBlock,
+                  "device", "Slew telescope to JNOW position.");
+    component.def("sync_jnow", &INDITelescope::syncTelescopeJNow, "device",
+                  "Sync telescope to JNOW position.");
+
+    component.def("get_azalt", &INDITelescope::getTelescopetAZALT, "device",
+                  "Get telescope azimuth/altitude.");
+    component.def("set_azalt", &INDITelescope::setTelescopetAZALT, "device",
+                  "Set telescope azimuth/altitude.");
+    component.def(
+        "create_instance",
+        [](const std::string &name) {
+            std::shared_ptr<AtomTelescope> instance =
+                std::make_shared<INDITelescope>(name);
+            return instance;
+        },
+        "device", "Create a new camera instance.");
+    component.defType<INDITelescope>("telescope_indi", "device",
+                                     "Define a new camera instance.");
+
+    LOG_F(INFO, "Registered telescope_indi module.");
+});

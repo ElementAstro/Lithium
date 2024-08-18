@@ -71,7 +71,7 @@ void processContainer(ContainerT& container) {
     auto endIter = std::prev(container.end());
 
     std::vector<std::optional<typename ContainerT::value_type*>> ptrs;
-    auto ptrPair = make_pointer_range(beginIter, endIter);
+    auto ptrPair = makePointerRange(beginIter, endIter);
     for (auto it = ptrPair.first; it != ptrPair.second; ++it) {
         ptrs.push_back(*it);
     }

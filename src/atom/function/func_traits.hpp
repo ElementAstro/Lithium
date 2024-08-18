@@ -18,9 +18,6 @@
 #include "abi.hpp"
 #include "template_traits.hpp"
 
-#include "abi.hpp"
-#include "template_traits.hpp"
-
 #if ENABLE_DEBUG
 #include <iostream>
 #endif

@@ -22,17 +22,21 @@ Description: System Information Module - Disk
 #include <ranges>
 #include <span>
 #include <sstream>
+#include <unordered_set>
 
 #ifdef _WIN32
 #include <windows.h>
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
+#include <sys/inotify.h>
+#include <sys/stat.h>
 #include <sys/statfs.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <csignal>
+#include <cstdlib>
 #elif __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #include <DiskArbitration/DiskArbitration.h>
@@ -78,7 +82,7 @@ std::vector<std::pair<std::string, float>> getDiskUsage() {
         std::string path;
         iss >> device >> path;
 
-        struct statfs stats{};
+        struct statfs stats {};
         if (statfs(path.c_str(), &stats) == 0) {
             unsigned long long totalSpace =
                 static_cast<unsigned long long>(stats.f_blocks) * stats.f_bsize;
@@ -186,7 +190,7 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
                 std::string model = getDriveModel(drivePath);
                 if (!model.empty()) {
                     storageDeviceModels.emplace_back(drivePath,
-                                                       std::move(model));
+                                                     std::move(model));
                 }
             }
         }
@@ -201,7 +205,7 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
                 std::string model = getDriveModel(devicePath);
                 if (!model.empty()) {
                     storageDeviceModels.emplace_back(devicePath,
-                                                       std::move(model));
+                                                     std::move(model));
                 }
             }
         }
@@ -242,4 +246,184 @@ double calculateDiskUsagePercentage(unsigned long totalSpace,
             totalSpace) *
            100.0;
 }
+
+std::unordered_set<std::string> whiteList = {"SD1234", "SD5678"};
+
+// Function to check file type and possible malicious behavior
+bool checkForMaliciousFiles(const std::string& path) {
+    LOG_F(INFO, "Checking for malicious files on: {}", path);
+    bool maliciousFound = false;
+    DIR* dir;
+    struct dirent* ent;
+    if ((dir = opendir(path.c_str())) != nullptr) {
+        while ((ent = readdir(dir)) != nullptr) {
+            std::string filename(ent->d_name);
+            std::string filePath = path + "/" + filename;
+
+            struct stat fileStat;
+            if (stat(filePath.c_str(), &fileStat) == 0 &&
+                S_ISREG(fileStat.st_mode)) {
+                // Check file extension and report any suspicious files
+                if (filename.find(".exe") != std::string::npos ||
+                    filename.find(".sh") != std::string::npos) {
+                    LOG_F(WARNING, "Suspicious file found: {} ({} bytes)",
+                          filename, fileStat.st_size);
+                    maliciousFound = true;
+                }
+            }
+        }
+        closedir(dir);
+    }
+    return maliciousFound;
+}
+
+bool isDeviceInWhiteList(const std::string& deviceID) {
+    if (whiteList.find(deviceID) != whiteList.end()) {
+        LOG_F(INFO, "Device {} is in the whitelist. Access granted.", deviceID);
+        return true;
+    }
+    LOG_F(ERROR, "Device {} is not in the whitelist. Access denied.", deviceID);
+    return false;
+}
+
+#ifdef _WIN32
+
+bool setReadOnlyWindows(const std::string& driveLetter) {
+    std::string volumePath = "\\\\.\\";
+    volumePath += driveLetter;
+    volumePath += ":";
+
+    HANDLE hDevice = CreateFile(volumePath.c_str(), GENERIC_READ,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                OPEN_EXISTING, 0, NULL);
+
+    if (hDevice == INVALID_HANDLE_VALUE) {
+        std::cerr << "Failed to access volume: " << GetLastError() << std::endl;
+        logEvent("Failed to access volume: " + driveLetter);
+        return false;
+    }
+
+    DWORD bytesReturned;
+    bool result = DeviceIoControl(hDevice, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0,
+                                  &bytesReturned, NULL);
+
+    if (result) {
+        std::cout << "Volume locked as read-only." << std::endl;
+        logEvent("Successfully locked volume " + driveLetter +
+                 " as read-only.");
+    } else {
+        std::cerr << "Failed to lock volume: " << GetLastError() << std::endl;
+        logEvent("Failed to lock volume: " + driveLetter);
+    }
+
+    CloseHandle(hDevice);
+    return result;
+}
+
+// Disable AutoRun functionality (Windows only)
+void disableAutoRun() {
+    const char* registryPath =
+        "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer";
+    HKEY hKey;
+    DWORD value = 0xFF;  // Disable AutoRun
+
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, registryPath, 0, KEY_SET_VALUE,
+                     &hKey) == ERROR_SUCCESS) {
+        RegSetValueEx(hKey, "NoDriveTypeAutoRun", 0, REG_DWORD, (BYTE*)&value,
+                      sizeof(DWORD));
+        RegCloseKey(hKey);
+        logEvent("Successfully disabled AutoRun.");
+    } else {
+        logEvent("Failed to disable AutoRun.");
+    }
+}
+
+bool setReadOnly(const std::string& path) {
+    disableAutoRun();
+    return setReadOnlyWindows(path);
+}
+
+void monitorDeviceInsertionWindows() {
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::string deviceID = "SD1234";  // Simulate device ID
+        if (isDeviceInWhiteList(deviceID)) {
+            std::cout << "Detected device insertion, executing read-only lock "
+                         "and security scan..."
+                      << std::endl;
+            disableAutoRun();
+            setReadOnlyWindows("E");  // Assume the SD card is on drive E
+            checkForMaliciousFiles("E:/");
+        }
+    }
+}
+
+#elif __linux__ || __ANDROID__ || __APPLE__
+
+auto setReadOnlyLinux(const std::string& mountPoint) -> bool {
+    std::string command = "mount -o remount,ro " + mountPoint;
+    int result = std::system(command.c_str());
+
+    if (result == 0) {
+        LOG_F(INFO, "Successfully mounted SD card {} as read-only.",
+              mountPoint);
+        return true;
+    }
+    LOG_F(ERROR, "Failed to mount SD card {} as read-only.", mountPoint);
+    return false;
+}
+
+void disableAutoRun() {
+    LOG_F(INFO, "AutoRun disabled (Linux/macOS/Android).");
+}
+
+auto setReadOnly(const std::string& mountPoint) -> bool {
+    disableAutoRun();
+    return setReadOnlyLinux(mountPoint);
+}
+
+void monitorDeviceInsertionUnix() {
+    int fd = inotify_init();
+    if (fd < 0) {
+        LOG_F(ERROR, "inotify initialization failed.");
+        return;
+    }
+
+    int wd = inotify_add_watch(fd, "/dev", IN_CREATE | IN_ATTRIB);
+    if (wd < 0) {
+        LOG_F(ERROR, "Failed to add watch for /dev directory.");
+        return;
+    }
+
+    const int buf_len = 1024;
+    char buffer[buf_len];
+
+    while (true) {
+        int length = read(fd, buffer, buf_len);
+        if (length < 0) {
+            LOG_F(ERROR, "Failed to read inotify events.");
+            continue;
+        }
+
+        for (int i = 0; i < length; i += sizeof(struct inotify_event)) {
+            struct inotify_event* event = (struct inotify_event*)&buffer[i];
+            if (event->mask & IN_CREATE) {
+                std::string deviceID = "SD5678";  // Simulate device ID
+                if (isDeviceInWhiteList(deviceID)) {
+                    LOG_F(INFO,
+                          "Detected device insertion, executing "
+                          "read-only lock and security scan...");
+                    disableAutoRun();
+                    setReadOnlyLinux("/mnt/sdcard");
+                    checkForMaliciousFiles("/mnt/sdcard");
+                }
+            }
+        }
+    }
+
+    inotify_rm_watch(fd, wd);
+    close(fd);
+}
+
+#endif
 }  // namespace atom::system

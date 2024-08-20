@@ -295,6 +295,103 @@ template <typename T>
 using extract_array_element_type_t =
     typename extract_array_element_type<T>::type;
 
+// instantiated_traits
+
+template <template <class...> class T, class TL, class Is, class... Args>
+struct instantiated_traits;
+
+template <template <class...> class T, class TL, std::size_t... Is,
+          class... Args>
+struct instantiated_traits<T, TL, std::index_sequence<Is...>, Args...> {
+    using type = T<Args..., std::tuple_element_t<Is, TL>...>;
+};
+
+template <template <class...> class T, class TL, class... Args>
+using instantiated_t = typename instantiated_traits<
+    T, TL, std::make_index_sequence<std::tuple_size_v<TL>>, Args...>::type;
+
+// is_tuple_like_well_formed
+
+template <class T, std::size_t I>
+concept has_tuple_element = requires { typename std::tuple_element_t<I, T>; };
+
+template <class Expr>
+consteval bool is_consteval(Expr) {
+    return requires { typename std::bool_constant<(Expr{}(), false)>; };
+}
+
+template <class T>
+consteval bool is_tuple_like_well_formed() {
+    if constexpr (requires {
+                      {
+                          std::tuple_size<T>::value
+                      } -> std::same_as<const std::size_t&>;
+                  }) {
+        if constexpr (is_consteval([] { return std::tuple_size<T>::value; })) {
+            return []<std::size_t... I>(std::index_sequence<I...>) {
+                return (has_tuple_element<T, I> && ...);
+            }(std::make_index_sequence<std::tuple_size_v<T>>{});
+        }
+    }
+    return false;
+}
+
+// constraint_level
+
+enum class constraint_level { none, nontrivial, nothrow, trivial };
+
+// has_copyability
+
+template <class T>
+consteval auto has_copyability(constraint_level level) -> bool {
+    switch (level) {
+        case constraint_level::none:
+            return true;
+        case constraint_level::nontrivial:
+            return std::is_copy_constructible_v<T>;
+        case constraint_level::nothrow:
+            return std::is_nothrow_copy_constructible_v<T>;
+        case constraint_level::trivial:
+            return std::is_trivially_copy_constructible_v<T> &&
+                   std::is_trivially_destructible_v<T>;
+        default:
+            return false;
+    }
+}
+
+template <class T>
+consteval auto has_relocatability(constraint_level level) -> bool {
+    switch (level) {
+        case constraint_level::none:
+            return true;
+        case constraint_level::nontrivial:
+            return std::is_move_constructible_v<T> && std::is_destructible_v<T>;
+        case constraint_level::nothrow:
+            return std::is_nothrow_move_constructible_v<T> &&
+                   std::is_nothrow_destructible_v<T>;
+        case constraint_level::trivial:
+            return std::is_trivially_move_constructible_v<T> &&
+                   std::is_trivially_destructible_v<T>;
+        default:
+            return false;
+    }
+}
+
+template <class T>
+consteval auto has_destructibility(constraint_level level) -> bool {
+    switch (level) {
+        case constraint_level::none:
+            return true;
+        case constraint_level::nontrivial:
+            return std::is_destructible_v<T>;
+        case constraint_level::nothrow:
+            return std::is_nothrow_destructible_v<T>;
+        case constraint_level::trivial:
+            return std::is_trivially_destructible_v<T>;
+        default:
+            return false;
+    }
+}
 }  // namespace atom::meta
 
 #endif

@@ -12,14 +12,12 @@ project(atom-io C CXX)
 # Sources
 set(${PROJECT_NAME}_SOURCES
     compress.cpp
-    file.cpp
     io.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
     compress.hpp
-    file.hpp
     glob.hpp
     io.hpp
 )

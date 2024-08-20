@@ -18,8 +18,10 @@
  * @copyright Copyright (C) 2023-2024 Max Qian
  */
 
-#include "manager.hpp"
+#include "config.h"
+
 #include "generator.hpp"
+#include "manager.hpp"
 #include "task.hpp"
 
 #include <atomic>
@@ -47,6 +49,8 @@
 
 #include "utils/constant.hpp"
 
+#include "matchit/matchit.h"
+
 // #define ENABLE_DEBUG 1
 
 #if ENABLE_DEBUG
@@ -54,7 +58,6 @@
 #endif
 
 using namespace std::literals;
-using json = nlohmann::json;
 
 auto operator<<(std::ostream& os, const std::error_code& ec) -> std::ostream& {
     os << "Error Code: " << ec.value() << ", Category: " << ec.category().name()
@@ -346,65 +349,64 @@ auto TaskInterpreter::executeStep(const json& step, size_t& idx,
     }
 
     try {
+        using namespace matchit;
         std::string type = step["type"];
-        if (type == "call") {
-            executeCall(step);
-        } else if (type == "condition") {
-            executeCondition(step, idx, script);
-        } else if (type == "loop") {
-            return executeLoop(step, idx, script);
-        } else if (type == "while") {
-            executeWhileLoop(step, idx, script);
-        } else if (type == "goto") {
-            executeGoto(step, idx, script);
-        } else if (type == "switch") {
-            executeSwitch(step, idx, script);
-        } else if (type == "delay") {
-            executeDelay(step);
-        } else if (type == "parallel") {
-            executeParallel(step, idx, script);
-        } else if (type == "nested_script") {
-            executeNestedScript(step);
-        } else if (type == "assign") {
-            executeAssign(step);
-        } else if (type == "import") {
-            executeImport(step);
-        } else if (type == "wait_event") {
-            executeWaitEvent(step);
-        } else if (type == "print") {
-            executePrint(step);
-        } else if (type == "async") {
-            executeAsync(step);
-        } else if (type == "try") {
-            executeTryCatch(step, idx, script);
-        } else if (type == "function") {
-            executeFunction(step);
-        } else if (type == "return") {
-            executeReturn(step, idx);
-        } else if (type == "break") {
-            executeBreak(step, idx);
-        } else if (type == "continue") {
-            executeContinue(step, idx);
-        } else if (type == "message") {
-            executeMessage(step);
-        } else if (type == "broadcast_event") {
-            executeBroadcastEvent(step);
-        } else if (type == "listen_event") {
-            executeListenEvent(step, idx);
-        } else if (type == "retry") {
-            executeRetry(step, idx, script);
-        } else if (type == "schedule") {
-            executeSchedule(step, idx, script);
-        } else if (type == "scope") {
-            executeScope(step, idx, script);
-        } else if (type == "function_def") {
-            executeFunctionDef(step);
-        } else if (type == "throw") {
-            executeThrow(step);
-        } else {
-            LOG_F(ERROR, "Unknown step type: {}", type);
-            return false;
-        }
+        match(type)(
+            pattern | "call" = [this, &step] { executeCall(step); },
+            pattern | "condition" =
+                [this, &step, &idx, &script] {
+                    executeCondition(step, idx, script);
+                },
+            pattern | "loop" = [this, &step, &idx,
+                                &script] { executeLoop(step, idx, script); },
+            pattern |
+                "while" = [this, &step, &idx,
+                           &script] { executeWhileLoop(step, idx, script); },
+            pattern | "goto" = [this, &step, &idx,
+                                &script] { executeGoto(step, idx, script); },
+            pattern |
+                "switch" = [this, &step, &idx,
+                            &script] { executeSwitch(step, idx, script); },
+            pattern | "delay" = [this, &step] { executeDelay(step); },
+            pattern |
+                "parallel" = [this, &step, &idx,
+                              &script] { executeParallel(step, idx, script); },
+            pattern |
+                "nested_script" = [this, &step] { executeNestedScript(step); },
+            pattern | "assign" = [this, &step] { executeAssign(step); },
+            pattern | "import" = [this, &step] { executeImport(step); },
+            pattern | "wait_event" = [this, &step] { executeWaitEvent(step); },
+            pattern | "print" = [this, &step] { executePrint(step); },
+            pattern | "async" = [this, &step] { executeAsync(step); },
+            pattern | "try" = [this, &step, &idx,
+                               &script] { executeTryCatch(step, idx, script); },
+            pattern | "function" = [this, &step] { executeFunction(step); },
+            pattern |
+                "return" = [this, &step, &idx] { executeReturn(step, idx); },
+            pattern |
+                "break" = [this, &step, &idx] { executeBreak(step, idx); },
+            pattern | "continue" = [this, &step,
+                                    &idx] { executeContinue(step, idx); },
+            pattern | "message" = [this, &step] { executeMessage(step); },
+            pattern | "broadcast_event" =
+                [this, &step] { executeBroadcastEvent(step); },
+            pattern | "listen_event" =
+                [this, &step, &idx] { executeListenEvent(step, idx); },
+            pattern | "retry" = [this, &step, &idx,
+                                 &script] { executeRetry(step, idx, script); },
+            pattern |
+                "schedule" = [this, &step, &idx,
+                              &script] { executeSchedule(step, idx, script); },
+            pattern | "scope" = [this, &step, &idx,
+                                 &script] { executeScope(step, idx, script); },
+            pattern |
+                "function_def" = [this, &step] { executeFunctionDef(step); },
+            pattern | "throw" = [this, &step] { executeThrow(step); },
+            pattern | _ =
+                [&step] {
+                    THROW_RUNTIME_ERROR("Unknown step type: " +
+                                        step["type"].get<std::string>());
+                });
         return true;
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Error during step {} execution: {}",

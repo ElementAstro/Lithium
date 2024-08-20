@@ -31,7 +31,6 @@ template <typename Return, typename... Args>
 struct FunctionTraitsBase {
     using return_type = Return;
     using argument_types = std::tuple<Args...>;
-
     static constexpr std::size_t arity = sizeof...(Args);
 
     template <std::size_t N>
@@ -45,14 +44,9 @@ struct FunctionTraitsBase {
     static constexpr bool is_noexcept = false;
     static constexpr bool is_variadic = false;
 
-    static const std::string full_name;
+    static const inline std::string full_name =
+        DemangleHelper::demangle(typeid(Return(Args...)).name());
 };
-
-template <typename Return, typename... Args>
-const std::string FunctionTraitsBase<Return, Args...>::full_name = [] {
-    std::string name = typeid(Return(Args...)).name();
-    return DemangleHelper::demangle(name);
-}();
 
 template <typename Return, typename... Args>
 struct FunctionTraits<Return(Args...)> : FunctionTraitsBase<Return, Args...> {};
@@ -235,11 +229,13 @@ inline constexpr bool is_variadic_v = FunctionTraits<Func>::is_variadic;
 
 #if ENABLE_DEBUG
 // Helper function to print tuple types
-template <typename Tuple, std::size_t... Is>
-void print_tuple_types(std::index_sequence<Is...>) {
-    ((std::cout << (Is == 0 ? "" : ", ")
-                << typeid(std::tuple_element_t<Is, Tuple>).name()),
-     ...);
+template <typename Tuple>
+void print_tuple_types() {
+    std::apply(
+        [](auto &&...args) {
+            ((std::cout << (typeid(decltype(args)).name()) << ", "), ...);
+        },
+        std::tuple<>{});
 }
 
 // Helper function to print function information
@@ -251,8 +247,7 @@ void print_function_info(const std::string &name, F &&) {
               << typeid(typename traits::return_type).name() << "\n";
     std::cout << "  Arity: " << traits::arity << "\n";
     std::cout << "  Parameter types: (";
-    print_tuple_types<typename traits::argument_types>(
-        std::make_index_sequence<traits::arity>{});
+    print_tuple_types<typename traits::argument_types>();
     std::cout << ")\n";
     if constexpr (is_member_function_v<F>) {
         std::cout << "  Class type: "
@@ -289,4 +284,4 @@ void print_function_info(const std::string &name, F &&) {
 
 }  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_FUNC_TRAITS_HPP

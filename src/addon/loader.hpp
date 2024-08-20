@@ -1,5 +1,5 @@
 /*
- * module_loader.hpp
+ * loader.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -8,7 +8,7 @@
 
 Date: 2023-3-29
 
-Description: C++ and Modules Loader
+Description: C++20 and Modules Loader
 
 **************************************************/
 
@@ -38,6 +38,7 @@ using json = nlohmann::json;
 #define LOAD_FUNCTION(handle, name) dlsym(handle, name)
 
 namespace lithium {
+
 class ModuleLoader {
 public:
     explicit ModuleLoader(std::string dirName);
@@ -56,11 +57,6 @@ public:
     auto enableModule(const std::string& name) -> bool;
     auto disableModule(const std::string& name) -> bool;
     auto isModuleEnabled(const std::string& name) const -> bool;
-    auto getModuleVersion(const std::string& name) -> std::string;
-    auto getModuleDescription(const std::string& name) -> std::string;
-    auto getModuleAuthor(const std::string& name) -> std::string;
-    auto getModuleLicense(const std::string& name) -> std::string;
-    auto getModuleConfig(const std::string& name) -> json;
     auto getAllExistedModules() const -> std::vector<std::string>;
 
     template <typename T>
@@ -98,7 +94,8 @@ private:
     void loadFunctionsWindows(
         void* handle, std::vector<std::unique_ptr<FunctionInfo>>& funcs);
 #else
-    void loadFunctionsUnix(std::vector<std::unique_ptr<FunctionInfo>>& funcs);
+    void loadFunctionsUnix(void* handle,
+                           std::vector<std::unique_ptr<FunctionInfo>>& funcs);
 #endif
 };
 

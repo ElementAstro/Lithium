@@ -102,6 +102,7 @@ loguru::Verbosity_MAX);
 
 */
 
+#include "macro.hpp"
 #if defined(LOGURU_IMPLEMENTATION)
 #error \
     "You are defining LOGURU_IMPLEMENTATION. This is for older versions of Loguru. You should now instead include loguru.cpp (or build it and link with it)"
@@ -297,7 +298,7 @@ loguru::Verbosity_MAX);
 #define STRDUP(str) strdup(str)
 #endif
 
-#include <stdarg.h>
+#include <cstdarg>
 
 // --------------------------------------------------------------------
 LOGURU_ANONYMOUS_NAMESPACE_BEGIN
@@ -306,38 +307,40 @@ namespace loguru {
 // Simple RAII ownership of a char*.
 class LOGURU_EXPORT Text {
 public:
-    explicit Text(char* owned_str) : _str(owned_str) {}
+    explicit Text(char* owned_str) : str_(owned_str) {}
     ~Text();
-    Text(Text&& t) {
-        _str = t._str;
-        t._str = nullptr;
+    Text(Text&& t) noexcept {
+        str_ = t.str_;
+        t.str_ = nullptr;
     }
     Text(Text& t) = delete;
-    Text& operator=(Text& t) = delete;
+    auto operator=(Text& t) -> Text& = delete;
     void operator=(Text&& t) = delete;
 
-    const char* c_str() const { return _str; }
-    bool empty() const { return _str == nullptr || *_str == '\0'; }
+    [[nodiscard]] auto c_str() const -> const char* { return str_; }
+    [[nodiscard]] auto empty() const -> bool {
+        return str_ == nullptr || *str_ == '\0';
+    }
 
-    char* release() {
-        auto result = _str;
-        _str = nullptr;
+    auto release() -> char* {
+        auto* result = str_;
+        str_ = nullptr;
         return result;
     }
 
 private:
-    char* _str;
+    char* str_;
 };
 
 // Like printf, but returns the formated text.
 #if LOGURU_USE_FMTLIB
 #if __cplusplus >= 202002L && __has_include(<format>)
 LOGURU_EXPORT
-Text vtextprintf(const char* format, std::format_args args);
+auto vtextprintf(const char* format, std::format_args args) -> Text;
 
 template <typename... Args>
-LOGURU_EXPORT Text textprintf(LOGURU_FORMAT_STRING_TYPE format,
-                              const Args&... args) {
+LOGURU_EXPORT auto textprintf(LOGURU_FORMAT_STRING_TYPE format,
+                              const Args&... args) -> Text {
     return vtextprintf(format, std::make_format_args(args...));
 }
 #else
@@ -357,7 +360,7 @@ Text textprintf(LOGURU_FORMAT_STRING_TYPE format, ...) LOGURU_PRINTF_LIKE(1, 2);
 
 // Overloaded for variadic template matching.
 LOGURU_EXPORT
-Text textprintf();
+auto textprintf() -> Text;
 
 using Verbosity = int;
 
@@ -446,19 +449,19 @@ LOGURU_EXPORT extern bool
     g_preamble_pipe;  // The pipe symbol right before the message
 
 // May not throw!
-typedef void (*log_handler_t)(void* user_data, const Message& message);
-typedef void (*close_handler_t)(void* user_data);
-typedef void (*flush_handler_t)(void* user_data);
+using log_handler_t = void (*)(void*, const Message&);
+using close_handler_t = void (*)(void*);
+using flush_handler_t = void (*)(void*);
 
 // May throw if that's how you'd like to handle your errors.
-typedef void (*fatal_handler_t)(const Message& message);
+using fatal_handler_t = void (*)(const Message&);
 
 // Given a verbosity level, return the level's name or nullptr.
-typedef const char* (*verbosity_to_name_t)(Verbosity verbosity);
+using verbosity_to_name_t = const char* (*)(Verbosity);
 
 // Given a verbosity level name, return the verbosity level or
 // Verbosity_INVALID if name is not recognized.
-typedef Verbosity (*name_to_verbosity_t)(const char* name);
+using name_to_verbosity_t = Verbosity (*)(const char*);
 
 struct SignalOptions {
     /// Make Loguru try to do unsafe but useful things,
@@ -487,7 +490,7 @@ struct SignalOptions {
     /// Should Loguru catch SIGTERM ?
     bool sigterm = true;
 
-    static SignalOptions none() {
+    static auto none() -> SignalOptions {
         SignalOptions options;
         options.unsafe_signal_handler = false;
         options.sigabrt = false;
@@ -499,7 +502,7 @@ struct SignalOptions {
         options.sigterm = false;
         return options;
     }
-};
+} ATOM_ALIGNAS(8);
 
 // Runtime options passed to loguru::init
 struct Options {
@@ -516,7 +519,7 @@ struct Options {
     const char* main_thread_name = "main thread";
 
     SignalOptions signal_options;
-};
+} ATOM_ALIGNAS(32);
 
 /*  Should be called from the main thread.
         You don't *need* to call this, but if you do you get:
@@ -554,30 +557,30 @@ void shutdown();
 
 // What ~ will be replaced with, e.g. "/home/your_user_name/"
 LOGURU_EXPORT
-const char* home_dir();
+auto home_dir() -> const char*;
 
 /* Returns the name of the app as given in argv[0] but without leading path.
    That is, if argv[0] is "../foo/app" this will return "app".
 */
 LOGURU_EXPORT
-const char* argv0_filename();
+auto argv0_filename() -> const char*;
 
 // Returns all arguments given to loguru::init(), but escaped with a single
 // space as separator.
 LOGURU_EXPORT
-const char* arguments();
+auto arguments() -> const char*;
 
 // Returns the path to the current working dir when loguru::init() was called.
 LOGURU_EXPORT
-const char* current_dir();
+auto current_dir() -> const char*;
 
 // Returns the part of the path after the last / or \ (if any).
 LOGURU_EXPORT
-const char* filename(const char* path);
+auto filename(const char* path) -> const char*;
 
 // e.g. "foo/bar/baz.ext" will create the directories "foo/" and "foo/bar/"
 LOGURU_EXPORT
-bool create_directories(const char* file_path_const);
+auto create_directories(const char* file_path_const) -> bool;
 
 // Writes date and time with millisecond precision, e.g. "20151017_161503.123"
 LOGURU_EXPORT
@@ -585,7 +588,7 @@ void write_date_time(char* buff, unsigned long long buff_size);
 
 // Helper: thread-safe version strerror
 LOGURU_EXPORT
-Text errno_as_text();
+auto errno_as_text() -> Text;
 
 /* Given a prefix of e.g. "~/loguru/" this might return
    "/home/your_username/loguru/app_name/20151017_161503.123.log"
@@ -607,15 +610,16 @@ enum FileMode { Truncate, Append };
    the same path.
 */
 LOGURU_EXPORT
-bool add_file(const char* path, FileMode mode, Verbosity verbosity);
+auto add_file(const char* path, FileMode mode, Verbosity verbosity) -> bool;
 
 LOGURU_EXPORT
 // Send logs to syslog with LOG_USER facility (see next call)
-bool add_syslog(const char* app_name, Verbosity verbosity);
+auto add_syslog(const char* app_name, Verbosity verbosity) -> bool;
 LOGURU_EXPORT
 // Send logs to syslog with your own choice of facility (LOG_USER, LOG_AUTH,
 // ...) see loguru.cpp: syslog_log() for more details.
-bool add_syslog(const char* app_name, Verbosity verbosity, int facility);
+auto add_syslog(const char* app_name, Verbosity verbosity,
+                int facility) -> bool;
 
 /*  Will be called right before abort().
         You can for instance use this to print custom error messages, or throw
@@ -634,8 +638,8 @@ fatal_handler_t get_fatal_handler();
 */
 LOGURU_EXPORT
 void add_callback(const char* id, log_handler_t callback, void* user_data,
-                  Verbosity verbosity, close_handler_t on_close = nullptr,
-                  flush_handler_t on_flush = nullptr);
+                 Verbosity verbosity, close_handler_t on_close = nullptr,
+                 flush_handler_t on_flush = nullptr);
 
 /*  Set a callback that returns custom verbosity level names. If callback
         is nullptr or returns nullptr, default log names will be used.
@@ -652,18 +656,18 @@ void set_name_to_verbosity_callback(name_to_verbosity_t callback);
 
 /*  Get a custom name for a specific verbosity, if one exists, or nullptr. */
 LOGURU_EXPORT
-const char* get_verbosity_name(Verbosity verbosity);
+auto get_verbosity_name(Verbosity verbosity) -> const char*;
 
 /*  Get the verbosity enum value from a custom 4-character level name, if one
    exists. If the name does not match a custom level name, Verbosity_INVALID is
    returned.
 */
 LOGURU_EXPORT
-Verbosity get_verbosity_from_name(const char* name);
+auto get_verbosity_from_name(const char* name) -> Verbosity;
 
 // Returns true iff the callback was found (and removed).
 LOGURU_EXPORT
-bool remove_callback(const char* id);
+auto remove_callback(const char* id) -> bool;
 
 // Shut down all file logging and any other callback hooks installed.
 LOGURU_EXPORT
@@ -671,7 +675,7 @@ void remove_all_callbacks();
 
 // Returns the maximum of g_stderr_verbosity and all file/custom outputs.
 LOGURU_EXPORT
-Verbosity current_verbosity_cutoff();
+auto current_verbosity_cutoff() -> Verbosity;
 
 #if LOGURU_USE_FMTLIB
 // Internal functions
@@ -773,17 +777,17 @@ public:
     LogScopeRAII(LogScopeRAII&&) = default;
 #endif
 
-private:
     LogScopeRAII(const LogScopeRAII&) = delete;
-    LogScopeRAII& operator=(const LogScopeRAII&) = delete;
+    auto operator=(const LogScopeRAII&) -> LogScopeRAII& = delete;
     void operator=(LogScopeRAII&&) = delete;
 
-    Verbosity _verbosity;
+private:
+    Verbosity _verbosity{};
     const char* _file;  // Set to null if we are disabled due to verbosity
-    unsigned _line;
-    bool _indent_stderr;  // Did we?
-    long long _start_time_ns;
-    char _name[LOGURU_SCOPE_TEXT_SIZE];
+    unsigned _line{};
+    bool _indent_stderr{};  // Did we?
+    long long _start_time_ns{};
+    char _name[LOGURU_SCOPE_TEXT_SIZE]{};
 };
 
 // Marked as 'noreturn' for the benefit of the static analyzer and optimizer.
@@ -835,45 +839,45 @@ LOGURU_EXPORT
 void flush();
 
 template <class T>
-inline Text format_value(const T&) {
+inline auto format_value(const T&) -> Text {
     return textprintf("N/A");
 }
 template <>
-inline Text format_value(const char& v) {
+inline auto format_value(const char& v) -> Text {
     return textprintf(LOGURU_FMT(c), v);
 }
 template <>
-inline Text format_value(const int& v) {
+inline auto format_value(const int& v) -> Text {
     return textprintf(LOGURU_FMT(d), v);
 }
 template <>
-inline Text format_value(const float& v) {
+inline auto format_value(const float& v) -> Text {
     return textprintf(LOGURU_FMT(f), v);
 }
 template <>
-inline Text format_value(const double& v) {
+inline auto format_value(const double& v) -> Text {
     return textprintf(LOGURU_FMT(f), v);
 }
 
 #if LOGURU_USE_FMTLIB
 template <>
-inline Text format_value(const unsigned int& v) {
+inline auto format_value(const unsigned int& v) -> Text {
     return textprintf(LOGURU_FMT(d), v);
 }
 template <>
-inline Text format_value(const long& v) {
+inline auto format_value(const long& v) -> Text {
     return textprintf(LOGURU_FMT(d), v);
 }
 template <>
-inline Text format_value(const unsigned long& v) {
+inline auto format_value(const unsigned long& v) -> Text {
     return textprintf(LOGURU_FMT(d), v);
 }
 template <>
-inline Text format_value(const long long& v) {
+inline auto format_value(const long long& v) -> Text {
     return textprintf(LOGURU_FMT(d), v);
 }
 template <>
-inline Text format_value(const unsigned long long& v) {
+inline auto format_value(const unsigned long long& v) -> Text {
     return textprintf(LOGURU_FMT(d), v);
 }
 #else
@@ -924,7 +928,7 @@ void get_thread_name(char* buffer, unsigned long long length,
    For instance, the default skip (1) means:
    don't include the call to loguru::stacktrace in the stack trace. */
 LOGURU_EXPORT
-Text stacktrace(int skip = 1);
+auto stacktrace(int skip = 1) -> Text;
 
 /*  Add a string to be replaced with something else in the stack output.
 
@@ -944,7 +948,7 @@ void add_stack_cleanup(const char* find_this, const char* replace_with_this);
 // Example: demangle(typeid(std::ofstream).name()) -> "std::basic_ofstream<char,
 // std::char_traits<char> >"
 LOGURU_EXPORT
-Text demangle(const char* name);
+auto demangle(const char* name) -> Text;
 
 // ------------------------------------------------------------------------
 /*

@@ -20,62 +20,42 @@ Description: Compressor using ZLib
 
 namespace atom::io {
 /**
- * @brief 对单个文件进行压缩
- * @param file_name 待压缩的文件名（包含路径）
- * @return 是否压缩成功
- *
- * 该函数用于压缩单个文件，压缩后的文件命名方式为源文件名添加.gz后缀名。
- *
- * @note 如果文件名中已经包含.gz后缀名，则不会对其进行重复压缩。
- *
+ * @brief Compress a single file
  * @param file_name The name (including path) of the file to be compressed.
+ * @param output_folder The folder where the compressed file will be saved.
  * @return Whether the compression is successful.
  *
- * This function is used to compress a single file, and the compressed file is
- * named by adding the .gz suffix to the source file name.
+ * This function compresses a single file, and the compressed file is named by
+ * adding the .gz suffix to the source file name.
  *
- * @note If the file name already contains the .gz suffix, it will not be
+ * @note If the file name already contains a .gz suffix, it will not be
  * compressed again.
  */
 auto compressFile(std::string_view file_name,
                   std::string_view output_folder) -> bool;
 
 /**
- * @brief 对单个文件进行解压缩
- * @param file_name 待解压的文件名（包含路径）
- * @return 是否解压成功
- *
- * 该函数用于解压缩单个已经被压缩的文件，解压缩后的文件命名方式为源文件名去掉.gz后缀名。
- *
- * @note 如果文件名中没有包含.gz后缀名，则不会进行解压缩。
- *
+ * @brief Decompress a single file
  * @param file_name The name (including path) of the file to be decompressed.
+ * @param output_folder The folder where the decompressed file will be saved.
  * @return Whether the decompression is successful.
  *
- * This function is used to decompress a single compressed file, and the
- * decompressed file is named by removing the .gz suffix from the source file
- * name.
+ * This function decompresses a single compressed file, and the decompressed
+ * file is named by removing the .gz suffix from the source file name.
  *
- * @note If the file name does not contain the .gz suffix, it will not be
+ * @note If the file name does not contain a .gz suffix, it will not be
  * decompressed.
  */
 auto decompressFile(std::string_view file_name,
                     std::string_view output_folder) -> bool;
 
 /**
- * @brief 对指定目录下的文件进行压缩
- * @param folder_name 待压缩的目录名（绝对路径）
- * @return 是否压缩成功
- *
- * 该函数用于压缩指定目录下的所有文件，压缩后的文件命名方式为每个源文件名添加.gz后缀名。
- *
- * @note 压缩后的文件将保存在原目录下，并且不会对子目录中的文件进行压缩。
- *
+ * @brief Compress all files in a specified directory
  * @param folder_name The name (absolute path) of the folder to be compressed.
  * @return Whether the compression is successful.
  *
- * This function is used to compress all files in the specified folder, and the
- * compressed file is named by adding .gz suffix to each source file name.
+ * This function compresses all files in the specified folder, and the
+ * compressed file is named by adding the .gz suffix to each source file name.
  *
  * @note The compressed files will be saved in the original directory, and files
  * in subdirectories will not be compressed.
@@ -83,77 +63,87 @@ auto decompressFile(std::string_view file_name,
 auto compressFolder(const char *folder_name) -> bool;
 
 /**
- * @brief 对单个ZIP文件进行解压缩
- * @param zip_file 待解压的ZIP文件名（包含路径）
- * @param destination_folder 解压后的文件保存路径（包含路径）
- * @return 是否解压成功
+ * @brief Extract a single ZIP file
+ * @param zip_file The name (including path) of the ZIP file to be extracted.
+ * @param destination_folder The path where the extracted files will be saved
+ * (including path).
+ * @return Whether the extraction is successful.
  *
- * 该函数用于解压缩单个ZIP文件，解压后的文件将保存在指定的路径下。
+ * This function extracts a single ZIP file, and the extracted files are saved
+ * in the specified path.
  *
- * @note 如果指定的路径不存在，则函数将尝试创建该路径。
- *
+ * @note If the specified path does not exist, the function will attempt to
+ * create it.
  */
 auto extractZip(std::string_view zip_file,
                 std::string_view destination_folder) -> bool;
 
 /**
- * @brief 创建ZIP文件
- * @param source_folder 待压缩的文件夹名（包含路径）
- * @param zip_file 压缩后的ZIP文件名（包含路径）
- * @param compression_level 压缩级别（可选，默认为-1，表示使用默认级别）
- * @return 是否创建成功
+ * @brief Create a ZIP file
+ * @param source_folder The name (including path) of the folder to be
+ * compressed.
+ * @param zip_file The name (including path) of the resulting ZIP file.
+ * @param compression_level Compression level (optional, default is -1, meaning
+ * use default level).
+ * @return Whether the creation is successful.
  *
- * 该函数用于创建ZIP文件，并将指定文件夹中的文件压缩到ZIP文件中。
+ * This function creates a ZIP file and compresses the files in the specified
+ * folder into the ZIP file.
  *
- * @note如果指定的路径不存在，则函数将尝试创建该路径。
+ * @note If the specified path does not exist, the function will attempt to
+ * create it.
  */
 auto createZip(std::string_view source_folder, std::string_view zip_file,
                int compression_level = -1) -> bool;
+
 /**
- * @brief 列出ZIP文件中的文件列表
- * @param zip_file ZIP文件名（包含路径）
- * @return 文件列表
+ * @brief List files in a ZIP file
+ * @param zip_file The name (including path) of the ZIP file.
+ * @return A list of file names.
  *
- * 该函数用于列出ZIP文件中的文件列表。
+ * This function lists the files in a ZIP file.
  *
- * @note 如果指定的ZIP文件不存在，则函数将返回空列表。
+ * @note If the specified ZIP file does not exist, the function will return an
+ * empty list.
  */
 auto listFilesInZip(std::string_view zip_file) -> std::vector<std::string>;
 
 /**
- * @brief 判断ZIP文件中是否存在指定的文件
- * @param zip_file ZIP文件名（包含路径）
- * @param file_name 文件名
- * @return 是否存在
+ * @brief Check if a specified file exists in a ZIP file
+ * @param zip_file The name (including path) of the ZIP file.
+ * @param file_name The name of the file to check.
+ * @return Whether the file exists.
  *
- * 该函数用于判断ZIP文件中是否存在指定的文件。
+ * This function checks if a specified file exists in a ZIP file.
  *
- * @note 如果指定的ZIP文件不存在，则函数将返回false。
+ * @note If the specified ZIP file does not exist, the function will return
+ * false.
  */
 auto fileExistsInZip(std::string_view zip_file,
                      std::string_view file_name) -> bool;
 
 /**
- * @brief 从ZIP文件中删除指定的文件
- * @param zip_file ZIP文件名（包含路径）
- * @param file_name 文件名
- * @return 是否删除成功
+ * @brief Remove a specified file from a ZIP file
+ * @param zip_file The name (including path) of the ZIP file.
+ * @param file_name The name of the file to be removed.
+ * @return Whether the removal is successful.
  *
- * 该函数用于从ZIP文件中删除指定的文件。
+ * This function removes a specified file from a ZIP file.
  *
- * @note 如果指定的ZIP文件不存在，则函数将返回false。
+ * @note If the specified ZIP file does not exist, the function will return
+ * false.
  */
 auto removeFileFromZip(std::string_view zip_file,
                        std::string_view file_name) -> bool;
 
 /**
- * @brief 获取ZIP文件中的文件大小
- * @param zip_file ZIP文件名（包含路径）
- * @return 文件大小
+ * @brief Get the size of a file in a ZIP file
+ * @param zip_file The name (including path) of the ZIP file.
+ * @return The file size.
  *
- * 该函数用于获取ZIP文件中的文件大小。
+ * This function gets the size of a file in a ZIP file.
  *
- * @note 如果指定的ZIP文件不存在，则函数将返回0。
+ * @note If the specified ZIP file does not exist, the function will return 0.
  */
 auto getZipFileSize(std::string_view zip_file) -> size_t;
 }  // namespace atom::io

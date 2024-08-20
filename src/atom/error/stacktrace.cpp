@@ -15,6 +15,7 @@ Description: StackTrace
 #include "stacktrace.hpp"
 #include "atom/function/abi.hpp"
 
+#include <regex>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -29,14 +30,33 @@ Description: StackTrace
 #endif
 #elif defined(__APPLE__) || defined(__linux__)
 #include <cxxabi.h>
+#include <dlfcn.h>
 #include <execinfo.h>
 #endif
 
 namespace atom::error {
 
-#if defined(linux) || defined(__APPLE__)
-std::string processString(const std::string& input) {
-    // Find the position of "_Z" in the string
+namespace {
+
+/**
+ * @brief Perform platform-specific symbol demangling.
+ *
+ * @param input The mangled symbol name.
+ * @return A demangled symbol name if possible, otherwise the original name.
+ */
+auto demangleSymbol(const std::string& input) -> std::string {
+#if defined(__linux__) || defined(__APPLE__)
+    int status = 0;
+    std::unique_ptr<char, decltype(&free)> demangled(
+        abi::__cxa_demangle(input.c_str(), nullptr, nullptr, &status), free);
+    return (status == 0 && demangled) ? demangled.get() : input;
+#else
+    return input;
+#endif
+}
+
+#if defined(__linux__) || defined(__APPLE__)
+auto processString(const std::string& input) -> std::string {
     size_t startIndex = input.find("_Z");
     if (startIndex == std::string::npos) {
         return input;
@@ -46,12 +66,33 @@ std::string processString(const std::string& input) {
         return input;
     }
     std::string abiName = input.substr(startIndex, endIndex - startIndex);
-    abiName = meta::DemangleHelper::demangle(abiName);
+    abiName = demangleSymbol(abiName);
     std::string result = input;
     result.replace(startIndex, endIndex - startIndex, abiName);
     return result;
 }
 #endif
+
+auto prettifyStacktrace(const std::string& input) -> std::string {
+    std::string output = input;
+    static const std::vector<std::pair<std::string, std::string>> REPLACEMENTS =
+        {{"std::__1::", "std::"},
+         {"__thiscall ", ""},
+         {"__cdecl ", ""},
+         {", std::allocator<[^<>]+>", ""}};
+
+    for (const auto& [from, to] : REPLACEMENTS) {
+        output = std::regex_replace(output, std::regex(from), to);
+    }
+
+    // Clean up spaces in template arguments
+    output =
+        std::regex_replace(output, std::regex(R"(<\s*([^<> ]+)\s*>)"), "<$1>");
+
+    return output;
+}
+
+}  // unnamed namespace
 
 StackTrace::StackTrace() { capture(); }
 
@@ -69,9 +110,8 @@ auto StackTrace::toString() const -> std::string {
                     symbol);
         std::string symbol_name = symbol->Name;
         if (!symbol_name.empty()) {
-            oss << "\t\t"
-                << atom::meta::DemangleHelper::demangle("_" + symbol_name)
-                << " - 0x" << std::hex << symbol->Address << "\n";
+            oss << "\t\t" << demangleSymbol("_" + symbol_name) << " - 0x"
+                << std::hex << symbol->Address << "\n";
         }
     }
     free(symbol);
@@ -79,15 +119,14 @@ auto StackTrace::toString() const -> std::string {
 #elif defined(__APPLE__) || defined(__linux__)
     for (int i = 0; i < num_frames_; ++i) {
         std::string_view symbol(symbols_.get()[i]);
-        auto demangledName = processString(std::string(symbol));
-        oss << "\t\t" << demangledName << "\n";
+        oss << "\t\t" << processString(std::string(symbol)) << "\n";
     }
 
 #else
     oss << "\t\tStack trace not available on this platform.\n";
 #endif
 
-    return oss.str();
+    return prettifyStacktrace(oss.str());
 }
 
 void StackTrace::capture() {

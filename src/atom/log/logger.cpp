@@ -1,14 +1,14 @@
 /*
- * log_manager.cpp
+ * logger.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
 /*************************************************
 
-Date: 2023-6-30
+Date: 2024-08-19
 
-Description: Custom Logger Manager
+Description: Optimized Custom Logger Manager Implementation
 
 **************************************************/
 
@@ -16,30 +16,65 @@ Description: Custom Logger Manager
 
 #include <filesystem>
 #include <fstream>
-#include <future>
-#include <iomanip>
 #include <map>
-#include <sstream>
+#include <string_view>
+#include <thread>
 #include <vector>
 
-#include <openssl/evp.h>
-
 #include "atom/log/loguru.hpp"
-#include "cpp_httplib/httplib.h"
+#include "atom/web/curl.hpp"
 
 namespace lithium {
+
+class LoggerManager::Impl {
+public:
+    void scanLogsFolder(const std::string &folderPath);
+    auto searchLogs(std::string_view keyword) -> std::vector<LogEntry>;
+    void uploadFile(const std::string &filePath);
+    void analyzeLogs();
+
+private:
+    void parseLog(const std::string &filePath);
+    auto extractErrorMessages() -> std::vector<std::string>;
+    auto encryptFileContent(const std::string &content) -> std::string;
+    auto getErrorType(std::string_view errorMessage) -> std::string;
+    auto getMostCommonErrorMessage(
+        const std::vector<std::string> &errorMessages) -> std::string;
+
+    std::vector<LogEntry> logEntries_;  // 存储日志条目的向量
+};
+
+LoggerManager::LoggerManager() : pImpl(std::make_unique<Impl>()) {}
+LoggerManager::~LoggerManager() = default;
+
 void LoggerManager::scanLogsFolder(const std::string &folderPath) {
+    pImpl->scanLogsFolder(folderPath);
+}
+
+auto LoggerManager::searchLogs(std::string_view keyword)
+    -> std::vector<LogEntry> {
+    return pImpl->searchLogs(keyword);
+}
+
+void LoggerManager::uploadFile(const std::string &filePath) {
+    pImpl->uploadFile(filePath);
+}
+
+void LoggerManager::analyzeLogs() { pImpl->analyzeLogs(); }
+
+void LoggerManager::Impl::scanLogsFolder(const std::string &folderPath) {
+    std::vector<std::jthread> threads;
     for (const auto &entry : std::filesystem::directory_iterator(folderPath)) {
-        DLOG_F(INFO, "Scanning log file: {}", entry.path().generic_string());
         if (entry.is_regular_file()) {
-            parseLog(entry.path().string());
+            threads.emplace_back(&Impl::parseLog, this, entry.path().string());
         }
     }
 }
 
-std::vector<LogEntry> LoggerManager::searchLogs(const std::string &keyword) {
+auto LoggerManager::Impl::searchLogs(std::string_view keyword)
+    -> std::vector<LogEntry> {
     std::vector<LogEntry> searchResults;
-    for (const auto &logEntry : logEntries) {
+    for (const auto &logEntry : logEntries_) {
         if (logEntry.message.find(keyword) != std::string::npos) {
             searchResults.push_back(logEntry);
         }
@@ -47,36 +82,49 @@ std::vector<LogEntry> LoggerManager::searchLogs(const std::string &keyword) {
     return searchResults;
 }
 
-void LoggerManager::parseLog(const std::string &filePath) {
+void LoggerManager::Impl::parseLog(const std::string &filePath) {
     std::ifstream logFile(filePath);
     if (logFile.is_open()) {
         std::string line;
         int lineNumber = 1;
         while (std::getline(logFile, line)) {
-            LogEntry logEntry;
-            logEntry.fileName = filePath;
-            logEntry.lineNumber = lineNumber++;
-            logEntry.message = line;
-            logEntries.push_back(logEntry);
+            logEntries_.push_back({filePath, lineNumber++, line});
         }
-        logFile.close();
     }
 }
 
-void LoggerManager::uploadFile(const std::string &filePath) {
-    httplib::Client client("https://lightapt.com");  // 替换为服务器地址
-    auto res =
-        client.Post("/upload", filePath.c_str(), "application/octet-stream");
-    if (res && res->status == 200) {
-        DLOG_F(INFO, "File uploaded successfully");
-    } else {
-        LOG_F(ERROR, "Failed to upload file");
+void LoggerManager::Impl::uploadFile(const std::string &filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        LOG_F(ERROR, "Failed to open file: {}", filePath);
+        return;
     }
+
+    std::string content((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+    std::string encryptedContent = encryptFileContent(content);
+
+    atom::web::CurlWrapper curl;
+    curl.setUrl("https://lightapt.com/upload");
+    curl.setRequestMethod("POST");
+    curl.setHeader("Content-Type", "application/octet-stream");
+    curl.setRequestBody(encryptedContent);
+
+    curl.setOnErrorCallback([](CURLcode error) {
+        LOG_F(ERROR, "Failed to upload file: curl error code %d", error);
+    });
+
+    curl.setOnResponseCallback([](const std::string &response) {
+        DLOG_F(INFO, "File uploaded successfully. Server response: %s",
+               response.c_str());
+    });
+
+    curl.performRequest();
 }
 
-std::vector<std::string> LoggerManager::extractErrorMessages() {
+auto LoggerManager::Impl::extractErrorMessages() -> std::vector<std::string> {
     std::vector<std::string> errorMessages;
-    for (const auto &logEntry : logEntries) {
+    for (const auto &logEntry : logEntries_) {
         if (logEntry.message.find("[ERROR]") != std::string::npos) {
             errorMessages.push_back(logEntry.message);
             DLOG_F(INFO, "{}", logEntry.message);
@@ -85,8 +133,8 @@ std::vector<std::string> LoggerManager::extractErrorMessages() {
     return errorMessages;
 }
 
-void LoggerManager::analyzeLogs() {
-    std::vector<std::string> errorMessages = extractErrorMessages();
+void LoggerManager::Impl::analyzeLogs() {
+    auto errorMessages = extractErrorMessages();
 
     if (errorMessages.empty()) {
         DLOG_F(INFO, "No errors found in the logs.");
@@ -94,71 +142,50 @@ void LoggerManager::analyzeLogs() {
     }
     DLOG_F(INFO, "Analyzing logs...");
 
-    // 统计错误类型
     std::map<std::string, int> errorTypeCount;
     for (const auto &errorMessage : errorMessages) {
         std::string errorType = getErrorType(errorMessage);
         errorTypeCount[errorType]++;
     }
+
     DLOG_F(INFO, "Error Type Count:");
     for (const auto &[errorType, count] : errorTypeCount) {
         DLOG_F(INFO, "{} : {}", errorType, count);
     }
 
-    // 查找最常见的错误消息
     std::string mostCommonErrorMessage =
         getMostCommonErrorMessage(errorMessages);
     DLOG_F(INFO, "Most Common Error Message: {}", mostCommonErrorMessage);
 }
 
-std::string computeMd5Hash(const std::string &filePath) {
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file) {
-        return "";
+std::string LoggerManager::Impl::encryptFileContent(
+    const std::string &content) {
+    // 简单的加密示例，可以根据需要替换为更复杂的加密算法
+    std::string encryptedContent;
+    for (char c : content) {
+        encryptedContent += c ^ 0xFF;
     }
-
-    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-    const EVP_MD *md = EVP_md5();  // 获取 MD5 哈希算法对象
-    unsigned char digest[EVP_MAX_MD_SIZE];
-    unsigned int digestLen;
-
-    EVP_DigestInit_ex(mdctx, md, NULL);
-
-    constexpr size_t bufferSize = 4096;
-    char buffer[bufferSize];
-    while (file.read(buffer, bufferSize)) {
-        EVP_DigestUpdate(mdctx, buffer, bufferSize);
-    }
-    EVP_DigestUpdate(mdctx, buffer, file.gcount());
-
-    EVP_DigestFinal_ex(mdctx, digest, &digestLen);
-    EVP_MD_CTX_free(mdctx);
-
-    std::stringstream ss;
-    for (unsigned int i = 0; i < digestLen; i++) {
-        ss << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<int>(digest[i]);
-    }
-
-    return ss.str();
+    return encryptedContent;
 }
 
-std::string LoggerManager::getErrorType(const std::string &errorMessage) {
-    std::size_t startPos = errorMessage.find("[");
-    std::size_t endPos = errorMessage.find("]");
+std::string LoggerManager::Impl::getErrorType(std::string_view errorMessage) {
+    auto startPos = errorMessage.find("[");
+    auto endPos = errorMessage.find("]");
     if (startPos != std::string::npos && endPos != std::string::npos &&
         endPos > startPos) {
-        return errorMessage.substr(startPos + 1, endPos - startPos - 1);
+        return std::string(
+            errorMessage.substr(startPos + 1, endPos - startPos - 1));
     }
     return "Unknown";
 }
 
-std::string LoggerManager::getMostCommonErrorMessage(
+std::string LoggerManager::Impl::getMostCommonErrorMessage(
     const std::vector<std::string> &errorMessages) {
     std::map<std::string, int> errorMessageCount;
     for (const auto &errorMessage : errorMessages) {
         errorMessageCount[errorMessage]++;
     }
+
     std::string mostCommonErrorMessage;
     int maxCount = 0;
     for (const auto &[errorMessage, count] : errorMessageCount) {
@@ -169,4 +196,5 @@ std::string LoggerManager::getMostCommonErrorMessage(
     }
     return mostCommonErrorMessage;
 }
+
 }  // namespace lithium

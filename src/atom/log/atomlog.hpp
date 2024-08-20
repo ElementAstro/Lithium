@@ -15,17 +15,10 @@ Description: Logger for Atom
 #ifndef ATOM_LOG_ATOMLOG_HPP
 #define ATOM_LOG_ATOMLOG_HPP
 
-#include <condition_variable>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <memory>
-#include <mutex>
-#include <queue>
 #include <string>
-#include <thread>
-#include <unordered_map>
-#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -40,6 +33,8 @@ enum class LogLevel {
     CRITICAL,
     OFF  // Used to disable logging
 };
+
+class LoggerImpl;  // Forward declaration
 
 class Logger {
 public:
@@ -99,34 +94,14 @@ public:
 
     void clearSinks();
 
+    // New: Enable or disable system logging
+    void enableSystemLogging(bool enable);
+
 private:
-    fs::path file_name_;
-    std::ofstream log_file_;
-    std::queue<std::string> log_queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable cv_;
-    bool finished_ = false;
-    std::jthread worker_;
-    size_t max_file_size_;
-    int max_files_;
-    LogLevel min_level_;
-    int file_index_ = 0;
-    std::unordered_map<std::thread::id, std::string> thread_names_;
-    std::string pattern_ = "[{}][{}][{}] {v}";
-    std::vector<std::shared_ptr<Logger>> sinks_;
-
-    void rotateLogFile();
-
-    auto getThreadName() -> std::string;
-
-    static auto logLevelToString(LogLevel level) -> std::string;
-
-    auto formatMessage(LogLevel level, const std::string& msg) -> std::string;
-
+    std::shared_ptr<LoggerImpl> impl_;
     void log(LogLevel level, const std::string& msg);
-
-    void run();
 };
+
 }  // namespace atom::log
 
 #endif  // ATOM_LOG_ATOMLOG_HPP

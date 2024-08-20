@@ -52,12 +52,10 @@ add_subdirectory(web)
 # Sources and Headers
 set(ATOM_SOURCES
     log/logger.cpp
-    log/syslog.cpp
 )
 
 set(ATOM_HEADERS
     log/logger.hpp
-    log/syslog.hpp
 )
 
 # Libraries

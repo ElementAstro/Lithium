@@ -132,7 +132,7 @@ public:
                *ti.mBareTypeInfo_ == *mBareTypeInfo_;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto bareEqualTypeInfo(
+    ATOM_NODISCARD auto bareEqualTypeInfo(
         const std::type_info &ti) const ATOM_NOEXCEPT -> bool {
         return !isUndef() && (*mBareTypeInfo_) == ti;
     }
@@ -147,59 +147,59 @@ public:
                           : "undefined";
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isConst() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isConst() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_CONST_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isReference() const ATOM_NOEXCEPT
+    ATOM_NODISCARD auto isReference() const ATOM_NOEXCEPT
         -> bool {
         return mFlags_.test(IS_REFERENCE_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isVoid() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isVoid() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_VOID_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isArithmetic() const ATOM_NOEXCEPT
+    ATOM_NODISCARD auto isArithmetic() const ATOM_NOEXCEPT
         -> bool {
         return mFlags_.test(IS_ARITHMETIC_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isArray() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isArray() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_ARRAY_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isEnum() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isEnum() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_ENUM_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isClass() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isClass() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_CLASS_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isFunction() const ATOM_NOEXCEPT
+    ATOM_NODISCARD auto isFunction() const ATOM_NOEXCEPT
         -> bool {
         return mFlags_.test(IS_FUNCTION_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isTrivial() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isTrivial() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_TRIVIAL_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isStandardLayout() const ATOM_NOEXCEPT
+    ATOM_NODISCARD auto isStandardLayout() const ATOM_NOEXCEPT
         -> bool {
         return mFlags_.test(IS_STANDARD_LAYOUT_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isPod() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isPod() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_POD_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isPointer() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isPointer() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_POINTER_FLAG);
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto isUndef() const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto isUndef() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_UNDEF_FLAG);
     }
 

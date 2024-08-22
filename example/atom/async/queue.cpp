@@ -1,118 +1,47 @@
+#include <chrono>
 #include <iostream>
-#include <string>
 #include <thread>
+#include <vector>
 
-using namespace Atom::Async;
+#include "atom/async/queue.hpp"
 
-void producer(ThreadSafeQueue<int>& queue) {
+// Function to simulate a producer that adds messages to the queue
+void producer(atom::async::ThreadSafeQueue<std::string> &queue) {
     for (int i = 0; i < 10; ++i) {
-        queue.put(i);
-        std::cout << "Produced: " << i << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::string message = "Message " + std::to_string(i);
+        queue.put(message);
+        std::cout << "Produced: " << message << std::endl;
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(200));  // Simulate work
     }
 }
 
-void consumer(ThreadSafeQueue<int>& queue) {
-    while (true) {
-        auto item = queue.take();
-        if (!item) {
-            break;
+// Function to simulate a consumer that takes messages from the queue
+void consumer(atom::async::ThreadSafeQueue<std::string> &queue) {
+    for (int i = 0; i < 10; ++i) {
+        auto message = queue.take();
+        if (message) {
+            std::cout << "Consumed: " << *message << std::endl;
+        } else {
+            std::cout << "No message taken!" << std::endl;
         }
-        std::cout << "Consumed: " << *item << std::endl;
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(300));  // Simulate processing delay
     }
 }
 
 int main() {
-    ThreadSafeQueue<int> queue;
+    atom::async::ThreadSafeQueue<std::string> messageQueue;
 
-    std::thread t1(producer, std::ref(queue));
-    std::thread t2(consumer, std::ref(queue));
+    // Create producer and consumer threads
+    std::thread producerThread(producer, std::ref(messageQueue));
+    std::thread consumerThread(consumer, std::ref(messageQueue));
 
-    t1.join();
-    queue.destroy();
-    t2.join();
+    // Wait for both threads to finish
+    producerThread.join();
+    consumerThread.join();
 
-    // 使用 emplace
-    ThreadSafeQueue<std::string> strQueue;
-    strQueue.emplace("Hello");
-    strQueue.emplace("World");
-    std::cout << "Front: " << *strQueue.front() << std::endl;
-    std::cout << "Back: " << *strQueue.back() << std::endl;
-
-    // 使用 waitFor
-    ThreadSafeQueue<int> intQueue;
-    std::thread t3([&intQueue]() {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        intQueue.put(42);
-    });
-    auto item =
-        intQueue.waitFor([](const std::queue<int>& q) { return !q.empty(); });
-    std::cout << "Waited for: " << *item << std::endl;
-    t3.join();
-
-    // 使用 extractIf
-    /*
-    ThreadSafeQueue<int> extractQueue;
-    for (int i = 0; i < 10; ++i) {
-        extractQueue.put(i);
-    }
-    auto evenNumbers = extractQueue.extractIf([](int i) { return i % 2 == 0; });
-    std::cout << "Extracted even numbers: ";
-    for (auto num : evenNumbers) {
-        std::cout << num << " ";
-    }
-    std::cout << std::endl;
-    */
-
-
-    // 使用 sort
-    ThreadSafeQueue<int> sortQueue;
-    sortQueue.put(3);
-    sortQueue.put(1);
-    sortQueue.put(4);
-    sortQueue.put(1);
-    sortQueue.put(5);
-    sortQueue.sort(std::greater<int>());
-    std::cout << "Sorted queue: ";
-    while (!sortQueue.empty()) {
-        std::cout << *sortQueue.take() << " ";
-    }
-    std::cout << std::endl;
-
-    // 使用 transform
-    ThreadSafeQueue<int> transformQueue;
-    for (int i = 1; i <= 5; ++i) {
-        transformQueue.put(i);
-    }
-    /*auto squaredQueue =
-        transformQueue.transform<int>([](int i) { return i * i; });
-    std::cout << "Squared queue: ";
-    while (!squaredQueue.empty()) {
-        std::cout << *squaredQueue.take() << " ";
-    }
-    std::cout << std::endl;*/
-
-    // 使用 groupBy
-    /*
-    ThreadSafeQueue<std::string> groupByQueue;
-    groupByQueue.put("apple");
-    groupByQueue.put("banana");
-    groupByQueue.put("cherry");
-    groupByQueue.put("date");
-    groupByQueue.put("elderberry");
-    auto groupedQueues = groupByQueue.groupBy<std::string>(
-        [](const std::string& s) -> std::string {
-            return std::to_string(s[0]);
-        });
-    std::cout << "Grouped queues: " << std::endl;
-    for (auto& queue : groupedQueues) {
-        std::cout << "Group: ";
-        while (!queue.empty()) {
-            std::cout << *queue.take() << " ";
-        }
-        std::cout << std::endl;
-    }
-    */
+    std::cout << "Processing complete." << std::endl;
 
     return 0;
 }

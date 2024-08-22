@@ -65,7 +65,7 @@ Timer::~Timer() {
 }
 
 void Timer::cancelAllTasks() {
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock lock(m_mutex);
     m_taskQueue = std::priority_queue<TimerTask>();
     m_cond.notify_all();
 }
@@ -88,7 +88,7 @@ auto Timer::now() const -> std::chrono::steady_clock::time_point {
 
 void Timer::run() {
     while (!m_stop) {
-        std::unique_lock<std::mutex> lock(m_mutex);
+        std::unique_lock lock(m_mutex);
         while (!m_stop && m_paused && m_taskQueue.empty()) {
             m_cond.wait(lock, [&]() {
                 return m_stop || !m_paused || !m_taskQueue.empty();
@@ -105,7 +105,7 @@ void Timer::run() {
                 lock.unlock();
                 task.run();
                 if (task.m_repeatCount > 0) {
-                    std::unique_lock<std::mutex> lock(m_mutex);
+                    std::unique_lock lock(m_mutex);
                     m_taskQueue.emplace(task.m_func, task.m_delay,
                                         task.m_repeatCount, task.m_priority);
                 }
@@ -120,7 +120,7 @@ void Timer::run() {
 }
 
 auto Timer::getTaskCount() const -> size_t {
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock lock(m_mutex);
     return m_taskQueue.size();
 }
 }  // namespace atom::async

@@ -199,7 +199,7 @@ auto Timer::setTimeout(Function &&func, unsigned int delay, Args &&...args)
     auto task = std::make_shared<std::packaged_task<ReturnType()>>(
         std::bind(std::forward<Function>(func), std::forward<Args>(args)...));
     std::future<ReturnType> result = task->get_future();
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock lock(m_mutex);
     m_taskQueue.emplace([task]() { (*task)(); }, delay, 1, 0);
     m_cond.notify_all();
     return result;
@@ -220,7 +220,7 @@ std::future<typename std::result_of<Function(Args...)>::type> Timer::addTask(
     auto task = std::make_shared<std::packaged_task<ReturnType()>>(
         std::bind(std::forward<Function>(func), std::forward<Args>(args)...));
     std::future<ReturnType> result = task->get_future();
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock lock(m_mutex);
     m_taskQueue.emplace([task]() { (*task)(); }, delay, repeatCount, priority);
     m_cond.notify_all();
     return result;

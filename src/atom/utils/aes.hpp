@@ -47,7 +47,7 @@ namespace atom::utils {
  * @param data The data to be compressed
  * @return The compressed data
  */
-[[nodiscard]] std::string compress(std::string_view data);
+[[nodiscard]] auto compress(std::string_view data) -> std::string;
 
 /**
  * @brief Decompresses the input data using the Zlib library.
@@ -55,7 +55,7 @@ namespace atom::utils {
  * @param data The data to be decompressed
  * @return The decompressed data
  */
-[[nodiscard]] std::string decompress(std::string_view data);
+[[nodiscard]] auto decompress(std::string_view data) -> std::string;
 
 /**
  * @brief Calculates the SHA-256 hash of a file.
@@ -63,7 +63,7 @@ namespace atom::utils {
  * @param filename The name of the file
  * @return The SHA-256 hash of the file
  */
-[[nodiscard]] std::string calculateSha256(std::string_view filename);
+[[nodiscard]] auto calculateSha256(std::string_view filename) -> std::string;
 }  // namespace atom::utils
 
 #endif

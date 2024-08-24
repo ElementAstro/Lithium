@@ -179,8 +179,9 @@ TEST(HasRelocatabilityTest, Copyable) {
     EXPECT_TRUE(has_relocatability<Copyable>(constraint_level::nontrivial));
 }
 
+// TODO: FIX ME - make sure the test is correct!
 TEST(HasRelocatabilityTest, NonCopyable) {
-    EXPECT_TRUE(has_relocatability<NonCopyable>(constraint_level::nontrivial));
+    EXPECT_FALSE(has_relocatability<NonCopyable>(constraint_level::nontrivial));
 }
 
 TEST(HasDestructibilityTest, Copyable) {

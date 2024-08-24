@@ -216,7 +216,7 @@ auto decompress(std::string_view data) -> std::string {
     return decompressed;
 }
 
-std::string calculateSha256(std::string_view filename) {
+auto calculateSha256(std::string_view filename) -> std::string {
     if (!atom::io::isFileExists(std::string(filename))) {
         LOG_F(ERROR, "File not exist: {}", filename);
         return "";

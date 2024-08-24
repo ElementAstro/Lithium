@@ -16,7 +16,7 @@
 #include <utility>
 
 #include "abi.hpp"
-#include "template_traits.hpp"
+#include "concept.hpp"
 
 #if ENABLE_DEBUG
 #include <iostream>
@@ -281,6 +281,42 @@ void print_function_info(const std::string &name, F &&) {
 }
 
 #endif
+
+// Definition of the function_pipe class
+template <typename Func>
+class function_pipe;
+
+// Specialization for specific function signatures
+template <typename R, typename Arg0, typename... Args>
+class function_pipe<R(Arg0, Args...)> {
+    std::function<R(Arg0, Args...)> _func;
+    std::tuple<Args...> _args;
+
+public:
+    // Constructor accepting any callable type
+    template <Callable T>
+    explicit function_pipe(T &&f) : _func(std::forward<T>(f)) {}
+
+    // Overload operator() to capture arguments by storing them in a tuple
+    auto operator()(Args... args) -> auto & {
+        _args = std::make_tuple(args...);
+        return *this;
+    }
+
+    // Friend operator| to invoke the function with the stored arguments
+    friend auto operator|(Arg0 arg0, const function_pipe &pf) -> R {
+        return std::apply(pf._func,
+                          std::tuple_cat(std::make_tuple(arg0), pf._args));
+    }
+};
+
+// Deduction guide using function traits to determine the function signature
+template <Callable T>
+function_pipe(T) -> function_pipe<typename FunctionTraits<T>::result_type(
+                     typename std::tuple_element<
+                         0, typename FunctionTraits<T>::argument_types>::type,
+                     typename std::tuple_element<
+                         1, typename FunctionTraits<T>::argument_types>::type)>;
 
 }  // namespace atom::meta
 

@@ -354,8 +354,8 @@ ATOM_INLINE void CommandDispatcher::checkPrecondition(const Command& cmd,
 ATOM_INLINE auto CommandDispatcher::executeCommand(
     const Command& cmd, const std::string& name,
     const std::vector<std::any>& args) -> std::any {
-    auto timeoutIt = timeoutMap_.find(name);
-    if (timeoutIt != timeoutMap_.end()) {
+    if (auto timeoutIt = timeoutMap_.find(name);
+        timeoutIt != timeoutMap_.end()) {
         return executeWithTimeout(cmd, name, args, timeoutIt->second);
     }
     return executeWithoutTimeout(cmd, name, args);

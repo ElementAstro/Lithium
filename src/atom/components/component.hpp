@@ -307,6 +307,10 @@ public:
     void defType(std::string_view name, const std::string& group = "",
                  const std::string& description = "");
 
+    template <typename EnumType>
+    void defEnum(std::string_view name,
+                 const std::unordered_map<std::string, EnumType>& enumMap);
+
     template <typename SourceType, typename DestinationType>
     void defConversion(std::function<std::any(const std::any&)> func);
 
@@ -850,6 +854,29 @@ void Component::defConstructor(const std::string& name,
     m_CommandDispatcher_->def(name, group, description,
                               std::function<std::shared_ptr<Class>(Args...)>(
                                   atom::meta::constructor<Class, Args...>()));
+}
+
+template <typename EnumType>
+void Component::defEnum(
+    std::string_view name,
+    const std::unordered_map<std::string, EnumType>& enumMap) {
+    m_TypeCaster_->registerType<EnumType>(std::string(name));
+
+    for (const auto& [key, value] : enumMap) {
+        m_TypeCaster_->registerEnumValue(name, key, value);
+    }
+
+    defConversion<EnumType, std::string>(
+        [this, name](const std::any& enumValue) -> std::any {
+            const EnumType& value = std::any_cast<EnumType>(enumValue);
+            return m_TypeCaster_->enumToString<EnumType>(value, name);
+        });
+
+    defConversion<std::string, EnumType>(
+        [this, name](const std::any& strValue) -> std::any {
+            const std::string& value = std::any_cast<std::string>(strValue);
+            return m_TypeCaster_->stringToEnum<EnumType>(value, name);
+        });
 }
 
 template <typename Class>

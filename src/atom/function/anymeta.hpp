@@ -1,9 +1,8 @@
 /*!
  * \file anymeta.hpp
- * \brief Type Metadata for Any
- * \author Max Qian <lightapt.com>
- * \date 2023-12-28
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \brief Enhanced Type Metadata with Dynamic Reflection, Method Overloads, and
+ * Event System \author Max Qian <lightapt.com> \date 2023-12-28 \copyright
+ * Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_ANYMETA_HPP
@@ -14,7 +13,16 @@
 #include "macro.hpp"
 #include "type_info.hpp"
 
+#include <functional>
+#include <iostream>
+#include <optional>
+#include <shared_mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace atom::meta {
+
 class TypeMetadata {
 public:
     using MethodFunction = std::function<BoxedValue(std::vector<BoxedValue>)>;
@@ -22,50 +30,103 @@ public:
     using SetterFunction = std::function<void(BoxedValue&, const BoxedValue&)>;
     using ConstructorFunction =
         std::function<BoxedValue(std::vector<BoxedValue>)>;
+    using EventCallback =
+        std::function<void(BoxedValue&, const std::vector<BoxedValue>&)>;
 
     struct Property {
         GetterFunction getter;
         SetterFunction setter;
     } ATOM_ALIGNAS(64);
 
+    struct Event {
+        std::vector<EventCallback> listeners;
+    } ATOM_ALIGNAS(32);
+
 private:
-    std::unordered_map<std::string, MethodFunction> m_methods_;
+    std::unordered_map<std::string, std::vector<MethodFunction>>
+        m_methods_;  // Supports overloaded methods
     std::unordered_map<std::string, Property> m_properties_;
-    std::vector<ConstructorFunction> m_constructors_;
+    std::unordered_map<std::string, std::vector<ConstructorFunction>>
+        m_constructors_;
+    std::unordered_map<std::string, Event> m_events_;
 
 public:
+    // Add overloaded method to type metadata
     void addMethod(const std::string& name, MethodFunction method) {
-        m_methods_[name] = std::move(method);
+        m_methods_[name].push_back(std::move(method));
     }
 
+    // Add property (getter and setter) to type metadata
     void addProperty(const std::string& name, GetterFunction getter,
                      SetterFunction setter) {
         m_properties_[name] = {std::move(getter), std::move(setter)};
     }
 
-    void addConstructor(ConstructorFunction constructor) {
-        m_constructors_.push_back(std::move(constructor));
+    // Add constructor to type metadata with an associated type name
+    void addConstructor(const std::string& type_name,
+                        ConstructorFunction constructor) {
+        m_constructors_[type_name].push_back(std::move(constructor));
     }
 
-    auto getMethod(const std::string& name) const
-        -> std::optional<MethodFunction> {
+    // Add event to type metadata
+    void addEvent(const std::string& event_name) {
+        m_events_[event_name];  // Creates an empty event
+    }
+
+    // Add event listener to a specific event
+    void addEventListener(const std::string& event_name,
+                          EventCallback callback) {
+        m_events_[event_name].listeners.push_back(std::move(callback));
+    }
+
+    // Fire event and notify listeners
+    void fireEvent(BoxedValue& obj, const std::string& event_name,
+                   const std::vector<BoxedValue>& args) const {
+        if (auto it = m_events_.find(event_name); it != m_events_.end()) {
+            for (const auto& listener : it->second.listeners) {
+                listener(obj, args);
+            }
+        } else {
+            std::cerr << "Event " << event_name << " not found." << std::endl;
+        }
+    }
+
+    // Retrieve all overloaded methods by name
+    [[nodiscard]] auto getMethods(const std::string& name) const
+        -> std::optional<const std::vector<MethodFunction>*> {
         if (auto it = m_methods_.find(name); it != m_methods_.end()) {
-            return it->second;
+            return &it->second;
         }
         return std::nullopt;
     }
 
-    auto getProperty(const std::string& name) const -> std::optional<Property> {
+    // Retrieve property by name
+    [[nodiscard]] auto getProperty(const std::string& name) const
+        -> std::optional<Property> {
         if (auto it = m_properties_.find(name); it != m_properties_.end()) {
             return it->second;
         }
         return std::nullopt;
     }
 
-    auto getConstructor(size_t index = 0) const
+    // Retrieve constructor by index (defaults to the first constructor)
+    [[nodiscard]] auto getConstructor(const std::string& type_name,
+                                      size_t index = 0) const
         -> std::optional<ConstructorFunction> {
-        if (index < m_constructors_.size()) {
-            return m_constructors_[index];
+        if (auto it = m_constructors_.find(type_name);
+            it != m_constructors_.end()) {
+            if (index < it->second.size()) {
+                return it->second[index];
+            }
+        }
+        return std::nullopt;
+    }
+
+    // Retrieve event by name
+    [[nodiscard]] auto getEvent(const std::string& name) const
+        -> std::optional<const Event*> {
+        if (auto it = m_events_.find(name); it != m_events_.end()) {
+            return &it->second;
         }
         return std::nullopt;
     }
@@ -77,69 +138,149 @@ private:
     mutable std::shared_mutex m_mutex_;
 
 public:
+    // Singleton pattern to retrieve the global type registry
     static auto instance() -> TypeRegistry& {
         static TypeRegistry registry;
         return registry;
     }
 
+    // Register a type and its metadata
     void registerType(const std::string& name, TypeMetadata metadata) {
         std::unique_lock lock(m_mutex_);
         m_registry_[name] = std::move(metadata);
     }
 
-    auto getMetadata(const std::string& name) const
+    // Retrieve metadata for a registered type
+    [[nodiscard]] auto getMetadata(const std::string& name) const
         -> std::optional<TypeMetadata> {
         std::shared_lock lock(m_mutex_);
-        auto it = m_registry_.find(name);
-        if (it != m_registry_.end()) {
+        if (auto it = m_registry_.find(name); it != m_registry_.end()) {
             return it->second;
         }
         return std::nullopt;
     }
 };
 
-// Helper function to call methods dynamically
+// Helper function to dynamically call overloaded methods on BoxedValue objects
 inline auto callMethod(BoxedValue& obj, const std::string& method_name,
                        std::vector<BoxedValue> args) -> BoxedValue {
-    auto metadata =
-        TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
-    if (metadata) {
-        auto method = metadata->getMethod(method_name);
-        if (method) {
-            args.insert(args.begin(), obj);
-            return (*method)(args);
+    if (auto metadata =
+            TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
+        metadata) {
+        if (auto methods = metadata->getMethods(method_name); methods) {
+            for (const auto& method : **methods) {
+                // TODO: FIX ME - 参数类型匹配逻辑:
+                // 确保传入的参数与方法期望的参数类型一致
+                /*
+                auto argTypesMatch = true;
+                for (size_t i = 0; i < args.size(); ++i) {
+                    if (args[i].getTypeInfo() != method.argument_type(i)) {
+                        argTypesMatch = false;
+                        break;
+                    }
+                }
+                */
+                // if (argTypesMatch) {
+                return method(args);
+                //}
+            }
         }
     }
-    THROW_NOT_FOUND("Method not found");
+    THROW_NOT_FOUND("Method not found or no matching overload found");
 }
 
-// Helper function to get/set properties dynamically
-inline auto getProperty(BoxedValue& obj,
+// Helper function to dynamically get properties from BoxedValue objects
+inline auto getProperty(const BoxedValue& obj,
                         const std::string& property_name) -> BoxedValue {
-    auto metadata =
-        TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
-    if (metadata) {
-        auto property = metadata->getProperty(property_name);
-        if (property) {
-            return property->getter(obj);
+    if (auto metadata =
+            TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
+        metadata) {
+        if (auto property = metadata->getProperty(property_name); property) {
+            return (*property).getter(
+                obj);  // 修复后的代码，正确调用 getter 函数
         }
     }
     THROW_NOT_FOUND("Property not found");
 }
 
+// Helper function to dynamically set properties on BoxedValue objects
 inline void setProperty(BoxedValue& obj, const std::string& property_name,
                         const BoxedValue& value) {
-    auto metadata =
-        TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
-    if (metadata) {
-        auto property = metadata->getProperty(property_name);
-        if (property) {
+    if (auto metadata =
+            TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
+        metadata) {
+        if (auto property = metadata->getProperty(property_name); property) {
             property->setter(obj, value);
             return;
         }
     }
     THROW_NOT_FOUND("Property not found");
 }
+
+// Helper function to fire events on BoxedValue objects
+inline void fireEvent(BoxedValue& obj, const std::string& event_name,
+                      const std::vector<BoxedValue>& args) {
+    if (auto metadata =
+            TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
+        metadata) {
+        metadata->fireEvent(obj, event_name, args);
+    } else {
+        std::cerr << "Event not found." << std::endl;
+    }
+}
+
+// Factory function to dynamically construct an object by type name
+inline auto createInstance(const std::string& type_name,
+                           std::vector<BoxedValue> args) -> BoxedValue {
+    if (auto metadata = TypeRegistry::instance().getMetadata(type_name);
+        metadata) {
+        if (auto constructor = metadata->getConstructor(type_name);
+            constructor) {
+            return (*constructor)(std::move(args));
+        }
+    }
+    THROW_NOT_FOUND("Constructor not found");
+}
+
+// Reflective registration of types, methods, properties, and events leveraging
+// C++20 features
+template <typename T>
+class TypeRegistrar {
+public:
+    // Register a type with metadata
+    static void registerType(const std::string& type_name) {
+        TypeMetadata metadata;
+
+        // Register default constructor
+        metadata.addConstructor(
+            type_name, [](std::vector<BoxedValue> args) -> BoxedValue {
+                if (args.empty()) {
+                    return BoxedValue(T{});  // Default constructor
+                }
+                return BoxedValue{};  // Placeholder for more complex
+                                      // constructors
+            });
+
+        // Register events
+        metadata.addEvent("onCreate");
+        metadata.addEvent("onDestroy");
+
+        // Add methods, properties, events dynamically as needed
+        metadata.addMethod(
+            "print", [](std::vector<BoxedValue> args) -> BoxedValue {
+                if (!args.empty()) {
+                    std::cout << "Method print called with value: "
+                              << args[0].debugString() << std::endl;
+                    return BoxedValue{};
+                }
+                return BoxedValue{};
+            });
+
+        // Register type in the global registry
+        TypeRegistry::instance().registerType(type_name, std::move(metadata));
+    }
+};
+
 }  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_ANYMETA_HPP

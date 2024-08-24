@@ -40,6 +40,23 @@ ATOM_NODISCARD auto executeCommand(
         [](const std::string &) {}) -> std::string;
 
 /**
+ * @brief Execute a command with input and return the command output as a
+ * string.
+ *
+ * @param command The command to execute.
+ * @param input The input to provide to the command.
+ * @param processLine A callback function to process each line of output.
+ * @return The output of the command as a string.
+ *
+ * @note The function throws a std::runtime_error if the command fails to
+ * execute.
+ */
+ATOM_NODISCARD auto executeCommandWithInput(
+    const std::string &command, const std::string &input,
+    const std::function<void(const std::string &)> &processLine = nullptr)
+    -> std::string;
+
+/**
  * @brief Execute a command and return the command output as a string.
  *
  * @param command The command to execute.

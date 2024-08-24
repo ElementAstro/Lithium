@@ -1,76 +1,51 @@
-/*
- * main.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2024-10-01
-
-Description: Example usage of constructors methods.
-
-**************************************************/
-
+#include "atom/function/constructor.hpp"
 #include <iostream>
 #include <memory>
+#include <string>
 
-#include "atom/function/constructor.hpp"
-
-// Sample class to demonstrate constructors
-class MyClass {
+class Example {
 public:
-    MyClass(int x) : value(x) {}
+    Example() { std::cout << "Default constructor called." << std::endl; }
 
-    void display() const { std::cout << "Value: " << value << std::endl; }
+    Example(int a, double b, const std::string& c) : a_(a), b_(b), c_(c) {
+        std::cout << "Parameterized constructor called: " << a_ << ", " << b_
+                  << ", " << c_ << std::endl;
+    }
 
-    void setValue(int x) { value = x; }
+    Example(const Example& other) : a_(other.a_), b_(other.b_), c_(other.c_) {
+        std::cout << "Copy constructor called." << std::endl;
+    }
 
-    int getValue() const { return value; }
+    void print() const {
+        std::cout << "Values: " << a_ << ", " << b_ << ", " << c_ << std::endl;
+    }
 
-    int value;
+private:
+    int a_ = 0;
+    double b_ = 0.0;
+    std::string c_ = "default";
 };
 
-// Function to demonstrate binding member functions
-void demonstrateBindMemberFunction() {
-    MyClass myObject(10);
-
-    // Bind member function
-    auto memberFunc = atom::meta::bindMemberFunction(&MyClass::display);
-    memberFunc(myObject, 0);
-
-    // Bind member variable
-    auto bindVar = atom::meta::bindMemberVariable(&MyClass::value);
-    std::cout << "Accessed value using bound member variable: "
-              << bindVar(myObject) << std::endl;
-}
-
-// Function to demonstrate building constructors
-void demonstrateConstructors() {
-    // Build shared constructor
-    auto sharedConstructor =
-        atom::meta::buildSharedConstructor<MyClass>(&MyClass::MyClass);
-    auto myClassInstance = sharedConstructor(15);
-    myClassInstance->display();
-
-    // Build regular constructor
-    auto copyConstructor =
-        atom::meta::buildCopyConstructor<MyClass>(&MyClass::MyClass);
-    MyClass copiedInstance = copyConstructor(20);
-    copiedInstance.display();
-
-    // Build default constructor
-    auto defaultConstructor = atom::meta::buildDefaultConstructor<MyClass>();
-    MyClass defaultInstance = defaultConstructor();
-    defaultInstance.display();
-}
-
 int main() {
-    // Demonstrate binding of member functions and variables
-    demonstrateBindMemberFunction();
+    // 使用默认构造函数
+    auto default_constructor = atom::meta::defaultConstructor<Example>();
+    Example example1 = default_constructor();
 
-    // Demonstrate various constructors
-    demonstrateConstructors();
+    // 使用带参数的构造函数
+    auto param_constructor =
+        atom::meta::constructorWithArgs<Example, int, double, std::string>();
+    std::shared_ptr<Example> example2 =
+        param_constructor(42, 3.14, "Hello, world!");
+
+    example2->print();
+
+    /*
+    // 使用复制构造函数
+    auto copy_constructor = atom::meta::constructor<Example>();
+    Example example3 = copy_constructor(*example2);
+
+    example3.print();
+    */
 
     return 0;
 }

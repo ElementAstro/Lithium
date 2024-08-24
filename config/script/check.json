@@ -1,0 +1,116 @@
+{
+    "danger_patterns": [
+        {
+            "pattern": "\\brm\\s+-rf\\b",
+            "reason": "Potentially destructive operation"
+        },
+        {
+            "pattern": "\\bsudo\\b",
+            "reason": "Elevated permissions, dangerous"
+        },
+        {
+            "pattern": "\\bmkfs\\b",
+            "reason": "Filesystem creation, dangerous operation"
+        },
+        {
+            "pattern": "\\|",
+            "reason": "Pipeline usage might lead to unintended consequences"
+        },
+        {
+            "pattern": "2>&1\\s*>\\s*/dev/null",
+            "reason": "Redirection might hide errors"
+        },
+        {
+            "pattern": "\\bkill\\s+-9\\b",
+            "reason": "Forcefully killing processes, consider using safer signal"
+        },
+        {
+            "pattern": "eval\\s+",
+            "reason": "Using eval can lead to security vulnerabilities"
+        },
+        {
+            "pattern": "\\bshutdown\\b",
+            "reason": "Potentially shuts down or restarts the system"
+        },
+        {
+            "pattern": "\\bdd\\s+iflag=fullblock",
+            "reason": "Low-level data copying can lead to data loss or corruption"
+        },
+        {
+            "pattern": "\\bchmod\\s+([0-7]{3,4}|[ugoa]+\\+?)\\s+[^/].*",
+            "reason": "Changing file permissions may lead to security issues"
+        },
+        {
+            "pattern": "\\bchown\\s+[^:]+:[^/]+\\s+[^/].*",
+            "reason": "Changing file ownership may lead to access issues"
+        },
+        {
+            "pattern": "\\bssh\\s+root@[^\\s]+",
+            "reason": "SSH access as root user can be risky"
+        },
+        {
+            "pattern": "\\bwget\\s+[^\\s]+",
+            "reason": "Downloading files might lead to unintended consequences"
+        },
+        {
+            "pattern": "\\bcurl\\s+[^\\s]+",
+            "reason": "Fetching data from the internet can be risky"
+        }
+    ],
+    "sensitive_patterns": [
+        {
+            "pattern": "password\\s*=\\s*['\"].*['\"]",
+            "reason": "Possible plaintext password"
+        },
+        {
+            "pattern": "AWS_SECRET_ACCESS_KEY",
+            "reason": "AWS secret key detected"
+        },
+        {
+            "pattern": "GITHUB_TOKEN",
+            "reason": "GitHub token detected"
+        },
+        {
+            "pattern": "PRIVATE_KEY",
+            "reason": "Private key detected"
+        },
+        {
+            "pattern": "DB_PASSWORD\\s*=\\s*['\"].*['\"]",
+            "reason": "Database password detected"
+        },
+        {
+            "pattern": "SECRET_KEY\\s*=\\s*['\"].*['\"]",
+            "reason": "Application secret key detected"
+        },
+        {
+            "pattern": "API_KEY\\s*=\\s*['\"].*['\"]",
+            "reason": "API key detected"
+        },
+        {
+            "pattern": "TOKEN\\s*=\\s*['\"].*['\"]",
+            "reason": "Authorization token detected"
+        },
+        {
+            "pattern": "PASSWORD\\s*=\\s*['\"].*['\"]",
+            "reason": "Password detected"
+        }
+    ],
+    "environment_patterns": [
+        {
+            "pattern": "\\$\\{?\\w+\\}?",
+            "reason": "Environment variable dependency detected"
+        },
+        {
+            "pattern": "\\$\\{[^\\}]+\\}",
+            "reason": "Environment variable with braces detected"
+        },
+        {
+            "pattern": "\\$\\w+",
+            "reason": "Environment variable placeholder detected"
+        },
+        {
+            "pattern": "\\${HOME|USER|SHELL|PATH}",
+            "reason": "Common environment variables detected"
+        }
+    ]
+}

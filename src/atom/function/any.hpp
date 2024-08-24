@@ -1,6 +1,6 @@
 /*!
  * \file any.hpp
- * \brief BoxedValue
+ * \brief Enhanced BoxedValue using C++20 features
  * \author Max Qian <lightapt.com>
  * \date 2023-12-28
  * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
@@ -10,6 +10,7 @@
 #define ATOM_META_ANY_HPP
 
 #include <any>
+#include <concepts>
 #include <functional>
 #include <map>
 #include <memory>
@@ -20,6 +21,7 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -42,6 +44,7 @@ private:
         const void* mConstDataPtr = nullptr;
 
         template <typename T>
+            requires(!std::is_same_v<std::decay_t<T>, VoidType>)
         Data(T&& obj, bool is_ref, bool return_value, bool readonly)
             : mObj(std::forward<T>(obj)),
               mTypeInfo(userType<std::decay_t<T>>()),
@@ -49,34 +52,71 @@ private:
               mIsRef(is_ref),
               mReturnValue(return_value),
               mReadonly(readonly),
-              mConstDataPtr((const void*)std::addressof(obj)) {}
+              mConstDataPtr(std::is_const_v<std::remove_reference_t<T>>
+                                ? &obj
+                                : nullptr) {}
+
+        template <typename T>
+            requires(std::is_same_v<std::decay_t<T>, VoidType>)
+        Data(T&& obj, bool is_ref, bool return_value, bool readonly)
+            : mTypeInfo(userType<std::decay_t<T>>()),
+              mAttrs(nullptr),
+              mIsRef(is_ref),
+              mReturnValue(return_value),
+              mReadonly(readonly),
+              mConstDataPtr(std::is_const_v<std::remove_reference_t<T>>
+                                ? &obj
+                                : nullptr) {}
     } ATOM_ALIGNAS(128);
 
     std::shared_ptr<Data> m_data_;
     mutable std::shared_mutex m_mutex_;
 
 public:
-    template <typename T, typename = std::enable_if_t<
-                              !std::is_same_v<BoxedValue, std::decay_t<T>>>>
+    // Constructor
+    template <typename T>
+        requires(!std::same_as<BoxedValue, std::decay_t<T>>)
     explicit BoxedValue(T&& t, bool t_return_value = false,
                         bool readonly = false)
-        : m_data_(std::make_shared<Data>(std::forward<T>(t),
-                                         std::is_reference_v<T>, t_return_value,
-                                         readonly)) {}
+        : m_data_(std::make_shared<Data>(
+              std::forward<T>(t),
+              std::is_reference_v<T> ||
+                  std::is_same_v<
+                      std::decay_t<T>,
+                      std::reference_wrapper<std::remove_reference_t<T>>>,
+              t_return_value, readonly)) {
+        if constexpr (std::is_same_v<
+                          std::decay_t<T>,
+                          std::reference_wrapper<std::remove_reference_t<T>>>) {
+            m_data_->mIsRef = true;
+        }
+    }
 
+    // Default constructor for void type
     BoxedValue()
         : m_data_(std::make_shared<Data>(VoidType{}, false, false, false)) {}
 
+    explicit BoxedValue(std::shared_ptr<Data> data)
+        : m_data_(std::move(data)) {}
+
+    // Copy constructor
     BoxedValue(const BoxedValue& other) {
         std::shared_lock lock(other.m_mutex_);
-        m_data_ = other.m_data_;
+        if (other.m_data_) {
+            m_data_ = std::make_shared<Data>(*other.m_data_);  // 深拷贝Data对象
+        } else {
+            m_data_ = nullptr;
+        }
     }
 
+    // Move constructor
     BoxedValue(BoxedValue&& other) noexcept {
         std::unique_lock lock(other.m_mutex_);
-        m_data_ = std::move(other.m_data_);
+        m_data_ = std::move(other.m_data_);  // 安全移动
+        other.m_data_ = nullptr;             // 清空原对象
     }
 
+    // Copy assignment operator
     auto operator=(const BoxedValue& other) -> BoxedValue& {
         if (this != &other) {
             std::unique_lock lock(m_mutex_);
@@ -86,6 +126,7 @@ public:
         return *this;
     }
 
+    // Move assignment operator
     auto operator=(BoxedValue&& other) noexcept -> BoxedValue& {
         if (this != &other) {
             std::unique_lock lock(m_mutex_);
@@ -95,36 +136,53 @@ public:
         return *this;
     }
 
+    template <typename T>
+        requires(!std::same_as<BoxedValue, std::decay_t<T>>)
+    auto operator=(T&& t) -> BoxedValue& {
+        std::unique_lock lock(m_mutex_);
+        m_data_->mObj = std::forward<T>(t);
+        m_data_->mTypeInfo = userType<T>();
+        return *this;
+    }
+
+    template <typename T>
+    BoxedValue(const T& t)
+        : m_data_(std::make_shared<Data>(t, false, false, true)) {}
+
+    // Swap function
     void swap(BoxedValue& rhs) noexcept {
         if (this != &rhs) {
-            std::unique_lock lock1(m_mutex_, std::defer_lock);
-            std::unique_lock lock2(rhs.m_mutex_, std::defer_lock);
-            std::lock(lock1, lock2);
+            std::scoped_lock lock(m_mutex_, rhs.m_mutex_);
             std::swap(m_data_, rhs.m_data_);
         }
     }
 
-    auto isUndef() const noexcept -> bool {
+    // Check if the value is undefined (VoidType)
+    [[nodiscard]] bool isUndef() const noexcept {
         std::shared_lock lock(m_mutex_);
-        return m_data_->mObj.type() == typeid(VoidType);
+        if (m_data_ == nullptr) {
+            return true;
+        }
+        return m_data_->mObj.type() == typeid(VoidType) ||
+               !m_data_->mObj.has_value();
     }
 
-    auto isConst() const noexcept -> bool {
+    [[nodiscard]] bool isConst() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mTypeInfo.isConst();
     }
 
-    auto isType(const TypeInfo& ti) const noexcept -> bool {
+    [[nodiscard]] bool isType(const TypeInfo& ti) const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mTypeInfo == ti;
     }
 
-    auto isRef() const noexcept -> bool {
+    [[nodiscard]] bool isRef() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mIsRef;
     }
 
-    auto isReturnValue() const noexcept -> bool {
+    [[nodiscard]] bool isReturnValue() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mReturnValue;
     }
@@ -134,28 +192,28 @@ public:
         m_data_->mReturnValue = false;
     }
 
-    auto isReadonly() const noexcept -> bool {
+    [[nodiscard]] bool isReadonly() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mReadonly;
     }
 
-    auto isConstDataPtr() const noexcept -> bool {
+    [[nodiscard]] bool isConstDataPtr() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mConstDataPtr != nullptr;
     }
 
-    auto get() const noexcept -> const std::any& {
+    [[nodiscard]] const std::any& get() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mObj;
     }
 
-    auto getTypeInfo() const noexcept -> const TypeInfo& {
+    [[nodiscard]] const TypeInfo& getTypeInfo() const noexcept {
         std::shared_lock lock(m_mutex_);
         return m_data_->mTypeInfo;
     }
 
-    auto setAttr(const std::string& name,
-                 const BoxedValue& value) -> BoxedValue& {
+    // Attribute handling
+    BoxedValue& setAttr(const std::string& name, const BoxedValue& value) {
         std::unique_lock lock(m_mutex_);
         if (!m_data_->mAttrs) {
             m_data_->mAttrs = std::make_shared<
@@ -165,21 +223,21 @@ public:
         return *this;
     }
 
-    auto getAttr(const std::string& name) const -> BoxedValue {
+    [[nodiscard]] BoxedValue getAttr(const std::string& name) const {
         std::shared_lock lock(m_mutex_);
         if (m_data_->mAttrs) {
-            auto it = m_data_->mAttrs->find(name);
-            if (it != m_data_->mAttrs->end()) {
+            if (auto it = m_data_->mAttrs->find(name);
+                it != m_data_->mAttrs->end()) {
                 return BoxedValue(it->second);
             }
         }
-        return {};  // Return undefined BoxedValue
+        return {};  // Undefined BoxedValue
     }
 
-    auto hasAttr(const std::string& name) const -> bool {
+    [[nodiscard]] bool hasAttr(const std::string& name) const {
         std::shared_lock lock(m_mutex_);
         return m_data_->mAttrs &&
-               (m_data_->mAttrs->find(name) != m_data_->mAttrs->end());
+               m_data_->mAttrs->find(name) != m_data_->mAttrs->end();
     }
 
     void removeAttr(const std::string& name) {
@@ -189,10 +247,11 @@ public:
         }
     }
 
-    auto listAttrs() const -> std::vector<std::string> {
+    [[nodiscard]] std::vector<std::string> listAttrs() const {
         std::shared_lock lock(m_mutex_);
         std::vector<std::string> attrs;
         if (m_data_->mAttrs) {
+            attrs.reserve(m_data_->mAttrs->size());
             for (const auto& entry : *m_data_->mAttrs) {
                 attrs.push_back(entry.first);
             }
@@ -200,36 +259,37 @@ public:
         return attrs;
     }
 
-    auto isNull() const noexcept -> bool {
+    [[nodiscard]] bool isNull() const noexcept {
         std::shared_lock lock(m_mutex_);
-        if (m_data_->mObj.has_value()) {
-            try {
-                return std::any_cast<std::nullptr_t>(m_data_->mObj) != nullptr;
-            } catch (const std::bad_any_cast&) {
-                return false;
-            }
-        }
-        return true;
+        return !m_data_->mObj.has_value();
     }
 
-    auto getPtr() const noexcept -> void* {
+    [[nodiscard]] void* getPtr() const noexcept {
         std::shared_lock lock(m_mutex_);
         return const_cast<void*>(m_data_->mConstDataPtr);
     }
 
+    // Try casting the contained value to a specific type
     template <typename T>
-    auto tryCast() const noexcept -> std::optional<T> {
+    [[nodiscard]] std::optional<T> tryCast() const noexcept {
         std::shared_lock lock(m_mutex_);
         try {
             if constexpr (std::is_reference_v<T>) {
                 if (m_data_->mObj.type() ==
                     typeid(
                         std::reference_wrapper<std::remove_reference_t<T>>)) {
-                    auto& ref = std::any_cast<
-                        std::reference_wrapper<std::remove_reference_t<T>>>(
-                        m_data_->mObj);
-                    return ref.get();
+                    return std::any_cast<std::reference_wrapper<
+                        std::remove_reference_t<T>>>(m_data_->mObj)
+                        .get();
                 }
+            }
+            if (m_data_->mObj.type() == typeid(std::reference_wrapper<T>)) {
+                return std::any_cast<std::reference_wrapper<T>>(m_data_->mObj)
+                    .get();
+            }
+            if (isConst() || isReadonly()) {
+                using constT = std::add_const_t<T>;
+                return std::any_cast<constT>(m_data_->mObj);
             }
             return std::any_cast<T>(m_data_->mObj);
         } catch (const std::bad_any_cast&) {
@@ -237,14 +297,15 @@ public:
         }
     }
 
+    // Check if the contained value can be cast to a specific type
     template <typename T>
-    auto canCast() const noexcept -> bool {
+    [[nodiscard]] bool canCast() const noexcept {
         std::shared_lock lock(m_mutex_);
         try {
             if constexpr (std::is_reference_v<T>) {
-                if (m_data_->mObj.type() == typeid(std::reference_wrapper<T>)) {
-                    return true;
-                }
+                return m_data_->mObj.type() ==
+                       typeid(
+                           std::reference_wrapper<std::remove_reference_t<T>>);
             } else {
                 std::any_cast<T>(m_data_->mObj);
                 return true;
@@ -252,44 +313,27 @@ public:
         } catch (const std::bad_any_cast&) {
             return false;
         }
-        return false;
     }
 
-    /// Debug string representation of the contained object
-    auto debugString() const -> std::string {
+    // Debug string representation
+    [[nodiscard]] std::string debugString() const {
         std::ostringstream oss;
         oss << "BoxedValue<" << m_data_->mTypeInfo.name() << ">: ";
-        if (m_data_->mObj.type() == typeid(int)) {
-            oss << std::any_cast<int>(m_data_->mObj);
-        } else if (m_data_->mObj.type() == typeid(double)) {
-            oss << std::any_cast<double>(m_data_->mObj);
-        } else if (m_data_->mObj.type() == typeid(std::string)) {
-            oss << std::any_cast<std::string>(m_data_->mObj);
-        } else if (m_data_->mObj.type() == typeid(bool)) {
-            oss << std::any_cast<bool>(m_data_->mObj);
-        } else if (m_data_->mObj.type() == typeid(std::vector<int>)) {
-            oss << "vector<int>";
-        } else if (m_data_->mObj.type() == typeid(std::vector<double>)) {
-            oss << "vector<double>";
-        } else if (m_data_->mObj.type() == typeid(std::vector<std::string>)) {
-            oss << "vector<string>";
-        } else if (m_data_->mObj.type() == typeid(std::vector<bool>)) {
-            oss << "vector<bool>";
+        std::shared_lock lock(m_mutex_);
+        if (auto* intPtr = std::any_cast<int>(&m_data_->mObj)) {
+            oss << *intPtr;
+        } else if (auto* doublePtr = std::any_cast<double>(&m_data_->mObj)) {
+            oss << *doublePtr;
+        } else if (auto* strPtr = std::any_cast<std::string>(&m_data_->mObj)) {
+            oss << *strPtr;
         } else {
             oss << "unknown type";
         }
         return oss.str();
     }
-
-    /// Visitor pattern implementation
-    template <typename Visitor>
-    auto visit(Visitor&& visitor) {
-        std::shared_lock lock(m_mutex_);
-        return std::visit(std::forward<Visitor>(visitor), m_data_->mObj);
-    }
 };
 
-// Helper function to create a non-constant BoxedValue
+// Helper functions to create BoxedValue instances
 template <typename T>
 auto var(T&& t) -> BoxedValue {
     using DecayedType = std::decay_t<T>;
@@ -299,7 +343,6 @@ auto var(T&& t) -> BoxedValue {
     return BoxedValue(std::forward<T>(t), IS_REF_WRAPPER, false);
 }
 
-// Helper function to create a constant BoxedValue
 template <typename T>
 auto constVar(const T& t) -> BoxedValue {
     using DecayedType = std::decay_t<T>;
@@ -309,10 +352,9 @@ auto constVar(const T& t) -> BoxedValue {
     return BoxedValue(std::cref(t), IS_REF_WRAPPER, true);
 }
 
-// Helper function to create a void BoxedValue
 inline auto voidVar() -> BoxedValue { return {}; }
 
-// Factory functions
+// Factory functions for creating BoxedValues
 template <typename T>
 auto makeBoxedValue(T&& t, bool is_return_value = false,
                     bool readonly = false) -> BoxedValue {
@@ -322,6 +364,7 @@ auto makeBoxedValue(T&& t, bool is_return_value = false,
         return BoxedValue(std::forward<T>(t), is_return_value, readonly);
     }
 }
+
 }  // namespace atom::meta
 
 #endif  // ATOM_META_ANY_HPP

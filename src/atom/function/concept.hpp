@@ -58,6 +58,11 @@ concept NothrowInvocableR = requires(F f, Args&&... args) {
 template <typename T>
 concept FunctionPointer = std::is_function_v<std::remove_pointer_t<T>>;
 
+template <typename T>
+concept Callable = requires(T t) {
+    { std::function{std::declval<T>()} };
+};
+
 // Checks if a callable type has a specific return type
 template <typename T, typename Ret, typename... Args>
 concept CallableReturns = std::is_invocable_r_v<Ret, T, Args...>;

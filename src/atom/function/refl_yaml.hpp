@@ -45,8 +45,10 @@ struct Reflectable {
                 (([&] {
                      using MemberType = decltype(T().*(field.member));
                      if (node[field.name]) {
-                         obj.*(field.member) =
-                             node[field.name].template as<MemberType>();
+                         // Deserialize into a value first
+                         auto temp = node[field.name].template as<MemberType>();
+                         // Then assign the value to the object
+                         obj.*(field.member) = std::move(temp);
                          if (field.validator &&
                              !field.validator(obj.*(field.member))) {
                              THROW_INVALID_ARGUMENT(

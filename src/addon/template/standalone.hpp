@@ -1,12 +1,10 @@
 #ifndef LITHIUM_ADDON_TEMPLATE_STANDALONE_HPP
 #define LITHIUM_ADDON_TEMPLATE_STANDALONE_HPP
 
-#include <atomic>
 #include <memory>
+#include <optional>
 #include <string>
-#include <string_view>
-#include <thread>
-#include <vector>
+
 #include "atom/components/component.hpp"
 
 class StandAloneComponentImpl;
@@ -26,7 +24,7 @@ public:
 
     void sendMessageToDriver(std::string_view message);
 
-    void printDriver();
+    void printDriver() const;
 
     void toggleDriverListening();
 
@@ -42,9 +40,9 @@ private:
     void startUnixProcess(const std::string& driver_name, int stdinPipe[2],
                           int stdoutPipe[2]);
 
-    auto createSharedMemory(int& shm_fd, int*& shm_ptr) -> bool;
+    auto createSharedMemory() -> std::optional<std::pair<int, int*> >;
     void closeSharedMemory(int shm_fd, int* shm_ptr);
-    auto createSemaphore(sem_t*& sem) -> bool;
+    auto createSemaphore() -> std::optional<sem_t*>;
     void handleChildProcess(const std::string& driver_name, int stdinPipe[2],
                             int stdoutPipe[2], int* shm_ptr, sem_t* sem,
                             int shm_fd);

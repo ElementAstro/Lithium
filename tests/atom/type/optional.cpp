@@ -74,8 +74,8 @@ TEST_F(OptionalTest, FlatMap) {
     EXPECT_EQ(*optFirstChar, 't');
 
     Optional<std::string> optEmptyStr(std::nullopt);
-    auto optEmptyResult =
-        optEmptyStr.flat_map([](const std::string& str) -> Optional<int> {
+    auto optEmptyResult = optEmptyStr.flat_map(
+        []([[maybe_unused]] const std::string& str) -> Optional<int> {
             return Optional<int>(std::nullopt);
         });
     EXPECT_FALSE(optEmptyResult);
@@ -128,7 +128,9 @@ TEST_F(OptionalTest, AndThen) {
     EXPECT_EQ(*finalResult, "world");
 
     auto emptyResult = optStr.and_then(
-        [](const std::string& str) -> Optional<int> { return std::nullopt; });
+        []([[maybe_unused]] const std::string& str) -> Optional<int> {
+            return std::nullopt;
+        });
     EXPECT_FALSE(emptyResult);
 }
 

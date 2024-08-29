@@ -22,6 +22,18 @@ Description: String methods in compilation time
 using namespace std::literals;
 
 namespace atom::utils {
+
+/**
+ * @brief Deduplicates characters in a C-style string.
+ *
+ * This function removes duplicate characters from a C-style string
+ * and returns a new C-style string with the unique characters.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string with potential duplicate characters.
+ * @return std::array<char, N> A new C-style string with duplicate characters
+ * removed.
+ */
 template <std::size_t N>
 constexpr auto deduplicate(const char (&str)[N]) {
     std::array<char, N> result{};
@@ -38,8 +50,24 @@ constexpr auto deduplicate(const char (&str)[N]) {
     return result;
 }
 
-template<std::size_t N, std::size_t... Is>
-constexpr auto splitImpl(const char(&str)[N], char delimiter, std::index_sequence<Is...>) {
+/**
+ * @brief Splits a C-style string into substrings based on a delimiter.
+ *
+ * This function splits a C-style string into substrings wherever the
+ * specified delimiter character is found, returning an array of
+ * `std::string_view` representing the substrings.
+ *
+ * @tparam N The size of the input C-style string.
+ * @tparam Is A parameter pack of indices for template specialization.
+ * @param str The input C-style string to be split.
+ * @param delimiter The delimiter character used to split the string.
+ * @param indices A sequence of indices used for the split operation.
+ * @return std::array<std::string_view, N> An array of `std::string_view`
+ * representing the substrings.
+ */
+template <std::size_t N, std::size_t... Is>
+constexpr auto splitImpl(const char (&str)[N], char delimiter,
+                         std::index_sequence<Is...>) {
     std::array<std::string_view, N> result{};
     size_t index = 0;
     size_t start = 0;
@@ -58,11 +86,36 @@ constexpr auto splitImpl(const char(&str)[N], char delimiter, std::index_sequenc
     return result;
 }
 
-template<std::size_t N>
-constexpr auto split(const char(&str)[N], char delimiter) {
+/**
+ * @brief Splits a C-style string into substrings based on a delimiter.
+ *
+ * This function splits a C-style string into substrings wherever the
+ * specified delimiter character is found, returning an array of
+ * `std::string_view` representing the substrings.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string to be split.
+ * @param delimiter The delimiter character used to split the string.
+ * @return std::array<std::string_view, N> An array of `std::string_view`
+ * representing the substrings.
+ */
+template <std::size_t N>
+constexpr auto split(const char (&str)[N], char delimiter) {
     return splitImpl(str, delimiter, std::make_index_sequence<N>());
 }
 
+/**
+ * @brief Replaces all occurrences of a character in a C-style string.
+ *
+ * This function replaces all occurrences of a specified character in a C-style
+ * string with a new character and returns the modified string.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string where replacements will be made.
+ * @param oldChar The character to be replaced.
+ * @param newChar The character to replace with.
+ * @return std::array<char, N> A new C-style string with characters replaced.
+ */
 template <std::size_t N>
 constexpr auto replace(const char (&str)[N], char oldChar, char newChar) {
     std::array<char, N> result{};
@@ -73,6 +126,17 @@ constexpr auto replace(const char (&str)[N], char oldChar, char newChar) {
     return result;
 }
 
+/**
+ * @brief Converts all characters in a C-style string to lowercase.
+ *
+ * This function converts all uppercase characters in a C-style string
+ * to their lowercase equivalents and returns the modified string.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string to be converted to lowercase.
+ * @return std::array<char, N> A new C-style string with all characters
+ * converted to lowercase.
+ */
 template <std::size_t N>
 constexpr auto toLower(const char (&str)[N]) {
     std::array<char, N> result{};
@@ -84,6 +148,17 @@ constexpr auto toLower(const char (&str)[N]) {
     return result;
 }
 
+/**
+ * @brief Converts all characters in a C-style string to uppercase.
+ *
+ * This function converts all lowercase characters in a C-style string
+ * to their uppercase equivalents and returns the modified string.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string to be converted to uppercase.
+ * @return std::array<char, N> A new C-style string with all characters
+ * converted to uppercase.
+ */
 template <std::size_t N>
 constexpr auto toUpper(const char (&str)[N]) {
     std::array<char, N> result{};
@@ -95,6 +170,19 @@ constexpr auto toUpper(const char (&str)[N]) {
     return result;
 }
 
+/**
+ * @brief Concatenates two C-style strings.
+ *
+ * This function concatenates two C-style strings and returns a new C-style
+ * string that combines the contents of both input strings.
+ *
+ * @tparam N1 The size of the first input C-style string.
+ * @tparam N2 The size of the second input C-style string.
+ * @param str1 The first C-style string to be concatenated.
+ * @param str2 The second C-style string to be concatenated.
+ * @return std::array<char, N1 + N2 - 1> A new C-style string resulting from the
+ * concatenation of `str1` and `str2`.
+ */
 template <std::size_t N1, std::size_t N2>
 constexpr auto concat(const char (&str1)[N1], const char (&str2)[N2]) {
     std::array<char, N1 + N2 - 1> result{};
@@ -108,6 +196,17 @@ constexpr auto concat(const char (&str1)[N1], const char (&str2)[N2]) {
     return result;
 }
 
+/**
+ * @brief Trims leading and trailing whitespace from a C-style string.
+ *
+ * This function removes leading and trailing whitespace characters from a
+ * C-style string and returns a new C-style string with the remaining content.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string to be trimmed.
+ * @return std::array<char, N> A new C-style string with leading and trailing
+ * whitespace removed.
+ */
 template <std::size_t N>
 constexpr auto trim(const char (&str)[N]) {
     std::array<char, N> result{};
@@ -116,7 +215,8 @@ constexpr auto trim(const char (&str)[N]) {
 
     auto start = view.find_first_not_of(' ');
     if (start == std::string_view::npos) {
-        result[0] = '\0'; // 如果全是空格，返回空字符串
+        result[0] = '\0';  // If the string contains only spaces, return an
+                           // empty string.
         return result;
     }
 
@@ -129,6 +229,19 @@ constexpr auto trim(const char (&str)[N]) {
     return result;
 }
 
+/*/ * @brief Extracts a substring from a C-style string.
+ *
+ * This function extracts a substring of a specified length from a C-style
+ * string, starting at a given index, and returns the new substring.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string from which the substring will be
+ * extracted.
+ * @param start The starting index of the substring.
+ * @param length The length of the substring.
+ * @return std::array<char, N> A new C-style string containing the extracted
+ * substring.
+ */
 template <std::size_t N>
 constexpr auto substring(const char (&str)[N], std::size_t start,
                          std::size_t length) {
@@ -141,8 +254,21 @@ constexpr auto substring(const char (&str)[N], std::size_t start,
     return result;
 }
 
+/**
+ * @brief Compares two C-style strings for equality.
+ *
+ * This function compares two C-style strings to determine if they are equal.
+ * The comparison is performed lexicographically, and the function returns
+ * `true` if the strings are equal and `false` otherwise.
+ *
+ * @tparam N1 The size of the first input C-style string.
+ * @tparam N2 The size of the second input C-style string.
+ * @param str1 The first C-style string to be compared.
+ * @param str2 The second C-style string to be compared.
+ * @return bool `true` if the strings are equal, `false` otherwise.
+ */
 template <std::size_t N1, std::size_t N2>
-constexpr bool equal(const char (&str1)[N1], const char (&str2)[N2]) {
+constexpr auto equal(const char (&str1)[N1], const char (&str2)[N2]) -> bool {
     if (N1 != N2) {
         return false;
     }
@@ -154,8 +280,21 @@ constexpr bool equal(const char (&str1)[N1], const char (&str2)[N2]) {
     return true;
 }
 
+/**
+ * @brief Finds the first occurrence of a character in a C-style string.
+ *
+ * This function searches for the first occurrence of a specified character
+ * in a C-style string and returns its index. If the character is not found,
+ * the function returns the size of the string minus one.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string in which the search is performed.
+ * @param ch The character to be found.
+ * @return std::size_t The index of the first occurrence of the character, or `N
+ * - 1` if not found.
+ */
 template <std::size_t N>
-constexpr std::size_t find(const char (&str)[N], char ch) {
+constexpr auto find(const char (&str)[N], char ch) -> std::size_t {
     for (std::size_t i = 0; i < N - 1; ++i) {
         if (str[i] == ch) {
             return i;
@@ -164,11 +303,32 @@ constexpr std::size_t find(const char (&str)[N], char ch) {
     return N - 1;
 }
 
+/**
+ * @brief Returns the length of a C-style string.
+ *
+ * This function returns the length of a C-style string, which is defined as
+ * the number of characters before the null terminator.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string.
+ * @return std::size_t The length of the C-style string.
+ */
 template <std::size_t N>
-constexpr std::size_t length([[maybe_unused]] const char (&str)[N]) {
+constexpr auto length([[maybe_unused]] const char (&str)[N]) -> std::size_t {
     return N - 1;
 }
 
+/**
+ * @brief Reverses the characters in a C-style string.
+ *
+ * This function reverses the characters in a C-style string and returns a new
+ * C-style string with the characters in reverse order.
+ *
+ * @tparam N The size of the input C-style string.
+ * @param str The input C-style string to be reversed.
+ * @return std::array<char, N> A new C-style string with the characters
+ * reversed.
+ */
 template <std::size_t N>
 constexpr auto reverse(const char (&str)[N]) {
     std::array<char, N> result{};
@@ -179,7 +339,18 @@ constexpr auto reverse(const char (&str)[N]) {
     return result;
 }
 
-inline constexpr std::string_view trim(std::string_view str) noexcept {
+/**
+ * @brief Trims leading and trailing whitespace from a `std::string_view`.
+ *
+ * This function removes leading and trailing whitespace characters from a
+ * `std::string_view` and returns a new `std::string_view` with the remaining
+ * content.
+ *
+ * @param str The `std::string_view` to be trimmed.
+ * @return std::string_view A new `std::string_view` with leading and trailing
+ * whitespace removed.
+ */
+constexpr auto trim(std::string_view str) noexcept -> std::string_view {
     constexpr auto WHITESPACE = " \t\n\r\f\v"sv;
     const auto START = str.find_first_not_of(WHITESPACE);
     if (START == std::string_view::npos) {
@@ -188,6 +359,7 @@ inline constexpr std::string_view trim(std::string_view str) noexcept {
     const auto END = str.find_last_not_of(WHITESPACE);
     return str.substr(START, END - START + 1);
 }
+
 }  // namespace atom::utils
 
 #endif

@@ -5,69 +5,69 @@
 #include <sstream>
 
 namespace atom::utils {
-MyDateTime::MyDateTime() : dateTime(std::nullopt) {}
+QDateTime::QDateTime() : dateTime_(std::nullopt) {}
 
-MyDateTime::MyDateTime(const std::string& dateTimeString,
-                       const std::string& format) {
+QDateTime::QDateTime(const std::string& dateTimeString,
+                     const std::string& format) {
     std::istringstream ss(dateTimeString);
     std::tm t = {};
     ss >> std::get_time(&t, format.c_str());
     if (!ss.fail()) {
-        dateTime = Clock::from_time_t(std::mktime(&t));
+        dateTime_ = Clock::from_time_t(std::mktime(&t));
     }
 }
 
-MyDateTime::MyDateTime(const std::string& dateTimeString,
-                       const std::string& format, const MyTimeZone& timeZone) {
+QDateTime::QDateTime(const std::string& dateTimeString,
+                     const std::string& format, const QTimeZone& timeZone) {
     std::istringstream ss(dateTimeString);
     std::tm t = {};
     ss >> std::get_time(&t, format.c_str());
     if (!ss.fail()) {
         auto time = std::mktime(&t) - timeZone.offsetFromUtc(*this).count();
-        dateTime = Clock::from_time_t(time);
+        dateTime_ = Clock::from_time_t(time);
     }
 }
 
-auto MyDateTime::currentDateTime() -> MyDateTime {
-    MyDateTime dt;
-    dt.dateTime = Clock::now();
+auto QDateTime::currentDateTime() -> QDateTime {
+    QDateTime dt;
+    dt.dateTime_ = Clock::now();
     return dt;
 }
 
-auto MyDateTime::currentDateTime(const MyTimeZone& timeZone) -> MyDateTime {
-    MyDateTime dt;
-    dt.dateTime = Clock::now() + timeZone.offsetFromUtc(dt);
+auto QDateTime::currentDateTime(const QTimeZone& timeZone) -> QDateTime {
+    QDateTime dt;
+    dt.dateTime_ = Clock::now() + timeZone.offsetFromUtc(dt);
     return dt;
 }
 
-auto MyDateTime::fromString(const std::string& dateTimeString,
-                            const std::string& format) -> MyDateTime {
-    return MyDateTime(dateTimeString, format);
+auto QDateTime::fromString(const std::string& dateTimeString,
+                           const std::string& format) -> QDateTime {
+    return QDateTime(dateTimeString, format);
 }
 
-auto MyDateTime::fromString(const std::string& dateTimeString,
-                            const std::string& format,
-                            const MyTimeZone& timeZone) -> MyDateTime {
-    return MyDateTime(dateTimeString, format, timeZone);
+auto QDateTime::fromString(const std::string& dateTimeString,
+                           const std::string& format,
+                           const QTimeZone& timeZone) -> QDateTime {
+    return QDateTime(dateTimeString, format, timeZone);
 }
 
-auto MyDateTime::toString(const std::string& format) const -> std::string {
-    if (!dateTime) {
+auto QDateTime::toString(const std::string& format) const -> std::string {
+    if (!dateTime_) {
         return "";
     }
-    std::time_t tt = Clock::to_time_t(dateTime.value());
+    std::time_t tt = Clock::to_time_t(dateTime_.value());
     std::tm tm = *std::localtime(&tt);
     std::ostringstream ss;
     ss << std::put_time(&tm, format.c_str());
     return ss.str();
 }
 
-auto MyDateTime::toString(const std::string& format,
-                          const MyTimeZone& timeZone) const -> std::string {
-    if (!dateTime) {
+auto QDateTime::toString(const std::string& format,
+                         const QTimeZone& timeZone) const -> std::string {
+    if (!dateTime_) {
         return "";
     }
-    auto adjustedTime = dateTime.value() + timeZone.offsetFromUtc(*this);
+    auto adjustedTime = dateTime_.value() + timeZone.offsetFromUtc(*this);
     std::time_t tt = Clock::to_time_t(adjustedTime);
     std::tm tm = *std::localtime(&tt);
     std::ostringstream ss;
@@ -75,49 +75,49 @@ auto MyDateTime::toString(const std::string& format,
     return ss.str();
 }
 
-auto MyDateTime::toTimeT() const -> std::time_t {
-    if (!dateTime) {
+auto QDateTime::toTimeT() const -> std::time_t {
+    if (!dateTime_) {
         return 0;
     }
-    return Clock::to_time_t(dateTime.value());
+    return Clock::to_time_t(dateTime_.value());
 }
 
-auto MyDateTime::isValid() const -> bool { return dateTime.has_value(); }
+auto QDateTime::isValid() const -> bool { return dateTime_.has_value(); }
 
-auto MyDateTime::addDays(int days) const -> MyDateTime {
-    if (!dateTime) {
+auto QDateTime::addDays(int days) const -> QDateTime {
+    if (!dateTime_) {
         return {};
     }
-    MyDateTime dt;
-    dt.dateTime = dateTime.value() + std::chrono::hours(days * 24);
+    QDateTime dt;
+    dt.dateTime_ = dateTime_.value() + std::chrono::hours(days * 24);
     return dt;
 }
 
-auto MyDateTime::addSecs(int seconds) const -> MyDateTime {
-    if (!dateTime) {
+auto QDateTime::addSecs(int seconds) const -> QDateTime {
+    if (!dateTime_) {
         return {};
     }
-    MyDateTime dt;
-    dt.dateTime = dateTime.value() + std::chrono::seconds(seconds);
+    QDateTime dt;
+    dt.dateTime_ = dateTime_.value() + std::chrono::seconds(seconds);
     return dt;
 }
 
-auto MyDateTime::daysTo(const MyDateTime& other) const -> int {
-    if (!dateTime || !other.dateTime) {
+auto QDateTime::daysTo(const QDateTime& other) const -> int {
+    if (!dateTime_ || !other.dateTime_) {
         return 0;
     }
     return std::chrono::duration_cast<std::chrono::hours>(
-               other.dateTime.value() - dateTime.value())
+               other.dateTime_.value() - dateTime_.value())
                .count() /
            24;
 }
 
-auto MyDateTime::secsTo(const MyDateTime& other) const -> int {
-    if (!dateTime || !other.dateTime) {
+auto QDateTime::secsTo(const QDateTime& other) const -> int {
+    if (!dateTime_ || !other.dateTime_) {
         return 0;
     }
     return std::chrono::duration_cast<std::chrono::seconds>(
-               other.dateTime.value() - dateTime.value())
+               other.dateTime_.value() - dateTime_.value())
         .count();
 }
 

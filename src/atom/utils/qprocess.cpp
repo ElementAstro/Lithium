@@ -1,6 +1,9 @@
 #include "qprocess.hpp"
 
+#include <condition_variable>
+#include <mutex>
 #include <thread>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -12,36 +15,115 @@
 #include "atom/log/loguru.hpp"
 
 namespace atom::utils {
-QProcess::QProcess()
-    : running(false),
-      processStarted(false),
-      childPid(-1),
-      childStdin(-1),
-      childStdout(-1),
-      childStderr(-1) {}
 
-QProcess::~QProcess() {
-    if (running) {
+class QProcess::Impl {
+public:
+    Impl() = default;
+    ~Impl();
+
+    void setWorkingDirectory(const std::string& dir);
+    void setEnvironment(const std::vector<std::string>& env);
+
+    void start(const std::string& program,
+               const std::vector<std::string>& args);
+    auto waitForStarted(int timeoutMs) -> bool;
+    auto waitForFinished(int timeoutMs) -> bool;
+    [[nodiscard]] auto isRunning() const -> bool;
+
+    void write(const std::string& data);
+    auto readAllStandardOutput() -> std::string;
+    auto readAllStandardError() -> std::string;
+    void terminate();
+
+private:
+    void startWindowsProcess();
+    void startPosixProcess();
+
+    bool running_{};
+    bool processStarted_{};
+    std::string program_;
+    std::vector<std::string> args_;
+    std::optional<std::string> workingDirectory_;
+    std::vector<std::string> environment_;
+
+    std::mutex mutex_;
+    std::condition_variable cv_;
+
+#ifdef _WIN32
+    PROCESS_INFORMATION procInfo;
+    HANDLE childStdinWrite{NULL};
+    HANDLE childStdoutRead{NULL};
+    HANDLE childStderrRead{NULL};
+#else
+    pid_t childPid_{-1};
+    int childStdin_{-1};
+    int childStdout_{-1};
+    int childStderr_{-1};
+#endif
+};
+
+// Implementation of QProcess
+QProcess::QProcess() : impl_(std::make_unique<Impl>()) {}
+QProcess::~QProcess() = default;
+
+void QProcess::setWorkingDirectory(const std::string& dir) {
+    impl_->setWorkingDirectory(dir);
+}
+
+void QProcess::setEnvironment(const std::vector<std::string>& env) {
+    impl_->setEnvironment(env);
+}
+
+void QProcess::start(const std::string& program,
+                     const std::vector<std::string>& args) {
+    impl_->start(program, args);
+}
+
+bool QProcess::waitForStarted(int timeoutMs) {
+    return impl_->waitForStarted(timeoutMs);
+}
+
+bool QProcess::waitForFinished(int timeoutMs) {
+    return impl_->waitForFinished(timeoutMs);
+}
+
+bool QProcess::isRunning() const { return impl_->isRunning(); }
+
+void QProcess::write(const std::string& data) { impl_->write(data); }
+
+std::string QProcess::readAllStandardOutput() {
+    return impl_->readAllStandardOutput();
+}
+
+std::string QProcess::readAllStandardError() {
+    return impl_->readAllStandardError();
+}
+
+void QProcess::terminate() { impl_->terminate(); }
+
+// Implementation details of QProcess::Impl
+QProcess::Impl::~Impl() {
+    if (running_) {
         terminate();
     }
 }
 
-void QProcess::setWorkingDirectory(const std::string &dir) {
-    workingDirectory = dir;
+void QProcess::Impl::setWorkingDirectory(const std::string& dir) {
+    workingDirectory_ = dir;
 }
 
-void QProcess::setEnvironment(const std::vector<std::string> &env) {
-    environment = env;
+void QProcess::Impl::setEnvironment(const std::vector<std::string>& env) {
+    environment_ = env;
 }
 
-void QProcess::start(const std::string &program,
-                     const std::vector<std::string> &args) {
-    if (running) {
+void QProcess::Impl::start(const std::string& program,
+                           const std::vector<std::string>& args) {
+    if (running_) {
         THROW_RUNTIME_ERROR("Process already running");
     }
 
-    this->program = program;
-    this->args = args;
+    this->program_ = program;
+    this->args_ = args;
 
 #ifdef _WIN32
     startWindowsProcess();
@@ -49,40 +131,40 @@ void QProcess::start(const std::string &program,
     startPosixProcess();
 #endif
 
-    running = true;
+    running_ = true;
     {
-        std::lock_guard lock(mutex);
-        processStarted = true;
+        std::lock_guard lock(mutex_);
+        processStarted_ = true;
     }
-    cv.notify_all();
+    cv_.notify_all();
 }
 
-auto QProcess::waitForStarted(int timeoutMs) -> bool {
-    std::unique_lock lock(mutex);
+auto QProcess::Impl::waitForStarted(int timeoutMs) -> bool {
+    std::unique_lock lock(mutex_);
     if (timeoutMs < 0) {
-        cv.wait(lock, [this] { return processStarted; });
+        cv_.wait(lock, [this] { return processStarted_; });
     } else {
-        if (!cv.wait_for(lock, std::chrono::milliseconds(timeoutMs),
-                         [this] { return processStarted; })) {
+        if (!cv_.wait_for(lock, std::chrono::milliseconds(timeoutMs),
+                          [this] { return processStarted_; })) {
             return false;
         }
     }
     return true;
 }
 
-auto QProcess::waitForFinished(int timeoutMs) -> bool {
+auto QProcess::Impl::waitForFinished(int timeoutMs) -> bool {
 #ifdef _WIN32
     DWORD waitResult = WaitForSingleObject(
         procInfo.hProcess, timeoutMs < 0 ? INFINITE : timeoutMs);
     return waitResult == WAIT_OBJECT_0;
 #else
-    if (childPid == -1) {
+    if (childPid_ == -1) {
         return false;
-}
+    }
 
     int status;
     if (timeoutMs < 0) {
-        waitpid(childPid, &status, 0);
+        waitpid(childPid_, &status, 0);
     } else {
         auto startTime = std::chrono::steady_clock::now();
         while (true) {
@@ -93,7 +175,7 @@ auto QProcess::waitForFinished(int timeoutMs) -> bool {
             if (elapsed.count() >= timeoutMs) {
                 return false;
             }
-            if (waitpid(childPid, &status, WNOHANG) > 0) {
+            if (waitpid(childPid_, &status, WNOHANG) > 0) {
                 break;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -103,32 +185,32 @@ auto QProcess::waitForFinished(int timeoutMs) -> bool {
 #endif
 }
 
-bool QProcess::isRunning() const {
+auto QProcess::Impl::isRunning() const -> bool {
 #ifdef _WIN32
     DWORD exitCode;
     GetExitCodeProcess(procInfo.hProcess, &exitCode);
     return exitCode == STILL_ACTIVE;
 #else
-    if (childPid == -1) {
+    if (childPid_ == -1) {
         return false;
-}
+    }
     int status;
-    return waitpid(childPid, &status, WNOHANG) == 0;
+    return waitpid(childPid_, &status, WNOHANG) == 0;
 #endif
 }
 
-void QProcess::write(const std::string &data) {
+void QProcess::Impl::write(const std::string& data) {
 #ifdef _WIN32
     DWORD written;
     WriteFile(childStdinWrite, data.c_str(), data.size(), &written, nullptr);
 #else
-    if (childStdin != -1) {
-        ::write(childStdin, data.c_str(), data.size());
+    if (childStdin_ != -1) {
+        ::write(childStdin_, data.c_str(), data.size());
     }
 #endif
 }
 
-auto QProcess::readAllStandardOutput() -> std::string {
+auto QProcess::Impl::readAllStandardOutput() -> std::string {
 #ifdef _WIN32
     std::string output;
     DWORD read;
@@ -142,14 +224,14 @@ auto QProcess::readAllStandardOutput() -> std::string {
     std::string output;
     char buffer[4096];
     ssize_t count;
-    while ((count = ::read(childStdout, buffer, sizeof(buffer))) > 0) {
+    while ((count = ::read(childStdout_, buffer, sizeof(buffer))) > 0) {
         output.append(buffer, count);
     }
     return output;
 #endif
 }
 
-auto QProcess::readAllStandardError() -> std::string {
+auto QProcess::Impl::readAllStandardError() -> std::string {
 #ifdef _WIN32
     std::string output;
     DWORD read;
@@ -163,28 +245,28 @@ auto QProcess::readAllStandardError() -> std::string {
     std::string output;
     char buffer[4096];
     ssize_t count;
-    while ((count = ::read(childStderr, buffer, sizeof(buffer))) > 0) {
+    while ((count = ::read(childStderr_, buffer, sizeof(buffer))) > 0) {
         output.append(buffer, count);
     }
     return output;
 #endif
 }
 
-void QProcess::terminate() {
-    if (running) {
+void QProcess::Impl::terminate() {
+    if (running_) {
 #ifdef _WIN32
         TerminateProcess(procInfo.hProcess, 0);
         CloseHandle(procInfo.hProcess);
         CloseHandle(procInfo.hThread);
 #else
-        kill(childPid, SIGTERM);
+        kill(childPid_, SIGTERM);
 #endif
-        running = false;
+        running_ = false;
     }
 }
 
 #ifdef _WIN32
-void QProcess::startWindowsProcess() {
+void QProcess::Impl::startWindowsProcess() {
     SECURITY_ATTRIBUTES saAttr;
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
@@ -220,18 +302,18 @@ void QProcess::startWindowsProcess() {
     ZeroMemory(&procInfo, sizeof(PROCESS_INFORMATION));
 
     std::string cmdLine = program;
-    for (const auto &arg : args) {
+    for (const auto& arg : args) {
         cmdLine += " " + arg;
     }
 
-    char *envBlock = nullptr;
+    char* envBlock = nullptr;
     if (!environment.empty()) {
         std::string envString;
-        for (const auto &envVar : environment) {
+        for (const auto& envVar : environment) {
             envString += envVar + '\0';
         }
         envString += '\0';
-        envBlock = const_cast<char *>(envString.c_str());
+        envBlock = const_cast<char*>(envString.c_str());
     }
 
     if (!CreateProcess(NULL, cmdLine.data(), NULL, NULL, TRUE, 0, envBlock,
@@ -245,73 +327,73 @@ void QProcess::startWindowsProcess() {
     CloseHandle(childStderrWrite);
 }
 #else
-void QProcess::startPosixProcess() {
+void QProcess::Impl::startPosixProcess() {
     int stdinPipe[2];
     int stdoutPipe[2];
     int stderrPipe[2];
 
-    // 创建管道
+    // Create pipes
     if (pipe(stdinPipe) == -1 || pipe(stdoutPipe) == -1 ||
         pipe(stderrPipe) == -1) {
         THROW_SYSTEM_COLLAPSE("Failed to create pipes");
     }
 
-    // 创建子进程
-    childPid = fork();
+    // Fork process
+    childPid_ = fork();
 
-    if (childPid == 0) {  // 子进程
-        // 关闭不需要的管道端
+    if (childPid_ == 0) {  // Child process
+        // Close unnecessary pipe ends
         close(stdinPipe[1]);
         close(stdoutPipe[0]);
         close(stderrPipe[0]);
 
-        // 重定向标准输入/输出/错误
+        // Redirect standard input/output/error
         dup2(stdinPipe[0], STDIN_FILENO);
         dup2(stdoutPipe[1], STDOUT_FILENO);
         dup2(stderrPipe[1], STDERR_FILENO);
 
-        // 关闭原始的管道描述符
+        // Close original pipe descriptors
         close(stdinPipe[0]);
         close(stdoutPipe[1]);
         close(stderrPipe[1]);
 
-        // 如果设置了工作目录，切换到该目录
-        if (workingDirectory) {
-            if (chdir(workingDirectory->c_str()) != 0) {
+        // Change directory if set
+        if (workingDirectory_) {
+            if (chdir(workingDirectory_->c_str()) != 0) {
                 LOG_F(ERROR, "Failed to change directory");
                 exit(1);
             }
         }
 
-        // 设置环境变量
-        if (!environment.empty()) {
-            for (const auto &envVar : environment) {
-                putenv(const_cast<char *>(envVar.c_str()));
+        // Set environment variables
+        if (!environment_.empty()) {
+            for (const auto& envVar : environment_) {
+                putenv(const_cast<char*>(envVar.c_str()));
             }
         }
 
-        // 构建exec需要的参数列表
-        std::vector<char *> execArgs;
-        execArgs.push_back(const_cast<char *>(program.c_str()));
-        for (const auto &arg : args) {
-            execArgs.push_back(const_cast<char *>(arg.c_str()));
+        // Build exec argument list
+        std::vector<char*> execArgs;
+        execArgs.push_back(const_cast<char*>(program_.c_str()));
+        for (const auto& arg : args_) {
+            execArgs.push_back(const_cast<char*>(arg.c_str()));
         }
         execArgs.push_back(nullptr);
 
-        // 使用execvp执行新程序
+        // Execute new program
         execvp(execArgs[0], execArgs.data());
         LOG_F(ERROR, "Failed to execute process");
-        exit(1);                // execvp失败则退出子进程
-    } else if (childPid > 0) {  // 父进程
-        // 关闭不需要的管道端
+        exit(1);                 // Exit if execvp fails
+    } else if (childPid_ > 0) {  // Parent process
+        // Close unnecessary pipe ends
         close(stdinPipe[0]);
         close(stdoutPipe[1]);
         close(stderrPipe[1]);
 
-        // 保存管道文件描述符，用于后续通信
-        childStdin = stdinPipe[1];
-        childStdout = stdoutPipe[0];
-        childStderr = stderrPipe[0];
+        // Store pipe file descriptors for communication
+        childStdin_ = stdinPipe[1];
+        childStdout_ = stdoutPipe[0];
+        childStderr_ = stderrPipe[0];
     } else {
         THROW_SYSTEM_COLLAPSE("Failed to fork process");
     }

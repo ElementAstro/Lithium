@@ -2,23 +2,20 @@
 
 #include <array>
 #include <chrono>
-#include <iostream>
-#include <string>
-#include <string_view>
+#include <optional>
+#include <span>
 #include <thread>
-#include <vector>
+
 #include "macro.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
-// clang-format off
-#include <windows.h>
+#include <fcntl.h>
 #include <io.h>
 #include <process.h>
-#include <fcntl.h>
+#include <windows.h>
 #define pipe _pipe
 #define popen _popen
 #define pclose _pclose
-// clang-format on
 #else
 #include <fcntl.h>
 #include <semaphore.h>
@@ -33,7 +30,7 @@ struct LocalDriver {
     int stdoutFd{};
     std::string name;
     bool isListening{};
-} ATOM_ALIGNAS(64);
+};
 
 #if defined(_WIN32) || defined(_WIN64)
 constexpr char SEM_NAME[] = "driver_semaphore";
@@ -49,10 +46,10 @@ public:
     std::atomic<bool> shouldExit{false};
     std::jthread driverThread;
 
-    void handleDriverOutput(std::string_view driver_name, const char* buffer,
-                            int length) {
+    void handleDriverOutput(std::string_view driver_name,
+                            std::span<const char> buffer) {
         LOG_F(INFO, "Output from driver {}: {}", driver_name,
-              std::string_view(buffer, length));
+              std::string_view(buffer.data(), buffer.size()));
     }
 
     void closePipes(int stdinPipe[2], int stdoutPipe[2]) {
@@ -84,6 +81,10 @@ StandAloneComponent::StandAloneComponent(std::string name)
 
 StandAloneComponent::~StandAloneComponent() {
     LOG_F(INFO, "Component {} destroyed", getName());
+    impl_->shouldExit = true;
+    if (impl_->driverThread.joinable()) {
+        impl_->driverThread.join();
+    }
 }
 
 void StandAloneComponent::startLocalDriver(const std::string& driver_name) {
@@ -146,8 +147,8 @@ void StandAloneComponent::startWindowsProcess(const std::string& driver_name,
     PROCESS_INFORMATION pi;
     std::string cmd = driver_name;
 
-    if (!CreateProcess(NULL, cmd.data(), NULL, NULL, TRUE, CREATE_NO_WINDOW,
-                       NULL, NULL, &si, &pi)) {
+    if (!CreateProcess(nullptr, cmd.data(), nullptr, nullptr, TRUE,
+                       CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
         LOG_F(ERROR, "Failed to start process");
         impl_->closePipes(stdinPipe, stdoutPipe);
         return;
@@ -156,8 +157,8 @@ void StandAloneComponent::startWindowsProcess(const std::string& driver_name,
     CloseHandle(hStdoutWrite);
     CloseHandle(hStdinRead);
 
-    // Cast HANDLE to int (not recommended)
-    impl_->driver.processHandle = static_cast<int>(reinterpret_cast<intptr_t>(pi.hProcess));
+    impl_->driver.processHandle =
+        static_cast<int>(reinterpret_cast<intptr_t>(pi.hProcess));
 
     impl_->driver.stdinFd =
         _open_osfhandle(reinterpret_cast<intptr_t>(hStdinWrite), 0);
@@ -169,16 +170,15 @@ void StandAloneComponent::startWindowsProcess(const std::string& driver_name,
 void StandAloneComponent::startUnixProcess(const std::string& driver_name,
                                            int stdinPipe[2],
                                            int stdoutPipe[2]) {
-    int shmFd;
-    int* shmPtr;
-    sem_t* sem;
-
-    if (!createSharedMemory(shmFd, shmPtr)) {
+    auto [shmFd, shmPtr] =
+        createSharedMemory().value_or(std::pair<int, int*>{-1, nullptr});
+    if (shmFd == -1 || shmPtr == nullptr) {
         impl_->closePipes(stdinPipe, stdoutPipe);
         return;
     }
 
-    if (!createSemaphore(sem)) {
+    auto sem = createSemaphore().value_or(nullptr);
+    if (sem == nullptr) {
         impl_->closePipes(stdinPipe, stdoutPipe);
         closeSharedMemory(shmFd, shmPtr);
         return;
@@ -198,32 +198,32 @@ void StandAloneComponent::startUnixProcess(const std::string& driver_name,
     }
 }
 
-auto StandAloneComponent::createSharedMemory(int& shm_fd,
-                                             int*& shm_ptr) -> bool {
-    shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
+auto StandAloneComponent::createSharedMemory()
+    -> std::optional<std::pair<int, int*> > {
+    int shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
     if (shm_fd == -1) {
         LOG_F(ERROR, "Failed to create shared memory");
-        return false;
+        return std::nullopt;
     }
 
     if (ftruncate(shm_fd, sizeof(int)) == -1) {
         LOG_F(ERROR, "Failed to set size of shared memory");
         close(shm_fd);
         shm_unlink(SHM_NAME);
-        return false;
+        return std::nullopt;
     }
 
-    shm_ptr = static_cast<int*>(mmap(
+    int* shm_ptr = static_cast<int*>(mmap(
         nullptr, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0));
     if (shm_ptr == MAP_FAILED) {
         LOG_F(ERROR, "Failed to map shared memory");
         close(shm_fd);
         shm_unlink(SHM_NAME);
-        return false;
+        return std::nullopt;
     }
 
     *shm_ptr = 0;  // Initialize shared memory to 0
-    return true;
+    return std::make_pair(shm_fd, shm_ptr);
 }
 
 void StandAloneComponent::closeSharedMemory(int shm_fd, int* shm_ptr) {
@@ -232,15 +232,15 @@ void StandAloneComponent::closeSharedMemory(int shm_fd, int* shm_ptr) {
     shm_unlink(SHM_NAME);
 }
 
-auto StandAloneComponent::createSemaphore(sem_t*& sem) -> bool {
-    sem = sem_open(SEM_NAME, O_CREAT | O_EXCL, 0644, 0);
+auto StandAloneComponent::createSemaphore() -> std::optional<sem_t*> {
+    sem_t* sem = sem_open(SEM_NAME, O_CREAT | O_EXCL, 0644, 0);
     if (sem == SEM_FAILED) {
         LOG_F(ERROR, "Failed to create semaphore");
-        return false;
+        return std::nullopt;
     }
     sem_unlink(SEM_NAME);  // Ensure the semaphore is removed once it's no
                            // longer needed
-    return true;
+    return sem;
 }
 
 void StandAloneComponent::handleChildProcess(const std::string& driver_name,
@@ -253,18 +253,15 @@ void StandAloneComponent::handleChildProcess(const std::string& driver_name,
     dup2(stdinPipe[0], STDIN_FILENO);
     dup2(stdoutPipe[1], STDOUT_FILENO);
 
-    // Try to execute the driver
     execlp(driver_name.data(), driver_name.data(), nullptr);
-    impl_->driver.name = driver_name;
 
-    // If exec fails, set shared memory and post semaphore
     *shm_ptr = -1;
     sem_post(sem);
     LOG_F(ERROR, "Failed to exec driver process");
     close(shm_fd);
     munmap(shm_ptr, sizeof(int));
     sem_close(sem);
-    exit(1);
+    std::exit(1);
 }
 
 void StandAloneComponent::handleParentProcess(pid_t pid, int stdinPipe[2],
@@ -273,43 +270,40 @@ void StandAloneComponent::handleParentProcess(pid_t pid, int stdinPipe[2],
     close(stdinPipe[0]);
     close(stdoutPipe[1]);
 
-    // Wait for the semaphore to be posted
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += 1;  // 1 second timeout
+    ts.tv_sec += 1;
 
-    int s = sem_timedwait(sem, &ts);
-    if (s == -1) {
-        if (errno == ETIMEDOUT) {
-            LOG_F(ERROR, "Driver process start timed out");
-        } else {
-            LOG_F(ERROR, "Failed to wait on semaphore");
-        }
+    if (sem_timedwait(sem, &ts) == -1) {
+        LOG_F(ERROR, errno == ETIMEDOUT ? "Driver process start timed out"
+                                        : "Failed to wait on semaphore");
         close(stdinPipe[1]);
         close(stdoutPipe[0]);
-        kill(pid, SIGKILL);  // Kill the process if it didn't start correctly
-        waitpid(pid, nullptr, 0);  // Wait for the process to terminate
+        kill(pid, SIGKILL);
+        waitpid(pid, nullptr, 0);
+    } else if (*shm_ptr == -1) {
+        LOG_F(ERROR, "Driver process failed to start");
+        close(stdinPipe[1]);
+        close(stdoutPipe[0]);
+        waitpid(pid, nullptr, 0);
     } else {
-        if (*shm_ptr == -1) {
-            LOG_F(ERROR, "Driver process failed to start");
-            close(stdinPipe[1]);
-            close(stdoutPipe[0]);
-            waitpid(pid, nullptr, 0);  // Ensure child process is cleaned up
-        } else {
-            impl_->driver.processHandle = pid;
-            impl_->driver.stdinFd = stdinPipe[1];
-            impl_->driver.stdoutFd = stdoutPipe[0];
-            //impl_->driver.name = driver_name;
-        }
+        impl_->driver.processHandle = pid;
+        impl_->driver.stdinFd = stdinPipe[1];
+        impl_->driver.stdoutFd = stdoutPipe[0];
+        // impl_->driver.name = driver_name;
     }
+
     closeSharedMemory(shm_fd, shm_ptr);
     sem_close(sem);
 }
 #endif
 
 void StandAloneComponent::stopLocalDriver() {
-    close(impl_->driver.stdinFd);
-    close(impl_->driver.stdoutFd);
+    if (impl_->driver.stdinFd != -1)
+        close(impl_->driver.stdinFd);
+    if (impl_->driver.stdoutFd != -1)
+        close(impl_->driver.stdoutFd);
+
 #if defined(_WIN32) || defined(_WIN64)
     TerminateProcess(reinterpret_cast<HANDLE>(impl_->driver.processHandle), 0);
     CloseHandle(reinterpret_cast<HANDLE>(impl_->driver.processHandle));
@@ -331,29 +325,26 @@ void StandAloneComponent::monitorDrivers() {
         exitCode == STILL_ACTIVE) {
         return;
     }
-    LOG_F(INFO, "Driver {} exited, restarting...", impl_->driver.name);
-    startLocalDriver(impl_->driver.name);
 #else
     int status;
     pid_t result = waitpid(impl_->driver.processHandle, &status, WNOHANG);
-    if (result == 0) {
+    if (result == 0)
         return;
-    }
     if (result == -1) {
         LOG_F(ERROR, "Failed to wait for driver process");
         return;
     }
+#endif
     LOG_F(INFO, "Driver {} exited, restarting...", impl_->driver.name);
     startLocalDriver(impl_->driver.name);
-#endif
 }
 
 void StandAloneComponent::processMessages() {
     std::array<char, 1024> buffer;
     if (impl_->driver.isListening) {
 #if defined(_WIN32) || defined(_WIN64)
-        int bytesRead =
-            _read(impl_->driver.stdoutFd, buffer.data(), buffer.size());
+        int bytesRead = _read(impl_->driver.stdoutFd, buffer.data(),
+                              static_cast<unsigned int>(buffer.size()));
 #else
         int flags = fcntl(impl_->driver.stdoutFd, F_GETFL, 0);
         fcntl(impl_->driver.stdoutFd, F_SETFL, flags | O_NONBLOCK);
@@ -361,13 +352,13 @@ void StandAloneComponent::processMessages() {
             read(impl_->driver.stdoutFd, buffer.data(), buffer.size());
 #endif
         if (bytesRead > 0) {
-            impl_->handleDriverOutput(impl_->driver.name, buffer.data(),
-                                      bytesRead);
+            impl_->handleDriverOutput(impl_->driver.name,
+                                      std::span(buffer.data(), bytesRead));
         }
     }
 }
 
-void StandAloneComponent::sendMessageToDriver(const std::string_view message) {
+void StandAloneComponent::sendMessageToDriver(std::string_view message) {
 #if defined(_WIN32) || defined(_WIN64)
     _write(impl_->driver.stdinFd, message.data(),
            static_cast<unsigned int>(message.size()));
@@ -376,7 +367,7 @@ void StandAloneComponent::sendMessageToDriver(const std::string_view message) {
 #endif
 }
 
-void StandAloneComponent::printDriver() {
+void StandAloneComponent::printDriver() const {
     LOG_F(INFO, "{} (PID: {}) {}", impl_->driver.name,
           impl_->driver.processHandle,
           impl_->driver.isListening ? "[Listening]" : "");

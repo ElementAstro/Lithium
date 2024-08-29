@@ -13,18 +13,20 @@
 #include <utility>
 
 namespace atom::meta {
+
 struct Any {
     template <typename T>
-    operator T() const;
+    consteval operator T() const noexcept;
 };
 
 template <typename T, std::size_t... I>
-consteval auto isBracesConstructible(std::index_sequence<I...>) -> bool {
+consteval auto isBracesConstructible(std::index_sequence<I...>) noexcept
+    -> bool {
     return requires { T{((void)I, std::declval<Any>())...}; };
 }
 
 template <typename T, std::size_t N = 0>
-consteval auto fieldCount() -> std::size_t {
+consteval auto fieldCount() noexcept -> std::size_t {
     if constexpr (!isBracesConstructible<T>(
                       std::make_index_sequence<N + 1>{})) {
         return N;
@@ -36,11 +38,8 @@ consteval auto fieldCount() -> std::size_t {
 template <typename T>
 struct TypeInfo;
 
-/**
- *  @brief Retrieve the count of fields of a struct
- */
 template <typename T>
-consteval auto fieldCountOf() {
+consteval auto fieldCountOf() noexcept -> std::size_t {
     if constexpr (std::is_aggregate_v<T>) {
         if constexpr (requires { TypeInfo<T>::count; }) {
             return TypeInfo<T>::count;
@@ -54,7 +53,7 @@ consteval auto fieldCountOf() {
 
 // Overload for arrays
 template <typename T, std::size_t N>
-consteval auto fieldCountOf() {
+consteval auto fieldCountOf() noexcept -> std::size_t {
     return N;
 }
 

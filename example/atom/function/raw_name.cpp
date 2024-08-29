@@ -49,7 +49,7 @@ void example_raw_name_of_enum() {
 // Example using raw_name_of_member with class member
 void example_raw_name_of_member() {
 #ifdef ATOM_CPP_20_SUPPORT
-    std::cout << "Member name of MyClassWithMember::myFunction: " 
+    std::cout << "Member name of MyClassWithMember::myFunction: "
               << atom::meta::raw_name_of_member<atom::meta::Wrapper<MyClassWithMember::myFunction>>() << "\n";
 #else
     std::cout << "raw_name_of_member requires C++20 support\n";

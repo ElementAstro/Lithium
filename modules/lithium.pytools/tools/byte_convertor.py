@@ -10,7 +10,7 @@ Description:
 ------------
 This Python script provides functionality to convert binary files into C-style header files
 containing array data, and vice versa. The script supports several features, including data
-compression, various data formats (hex, binary, decimal), optional C++ class wrappers, and 
+compression, various data formats (hex, binary, decimal), optional C++ class wrappers, and
 splitting large arrays into multiple header files.
 
 The script can be used in two main modes:

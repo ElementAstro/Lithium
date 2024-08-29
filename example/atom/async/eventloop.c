@@ -42,7 +42,7 @@ int main() {
     rmWorkProc(workProcId);
     rmTimer(timerId);
     rmTimer(periodicTimerId);
-  
+
     printf("Ending Event Loop\n");
     return 0;
 }

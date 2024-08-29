@@ -21,7 +21,7 @@ def setup_logging():
     Set up the logging configuration to log both to console and to a file.
 
     The log messages will include timestamps and the severity level.
-    The logs will be saved in 'download.log' file, and 
+    The logs will be saved in 'download.log' file, and
     will also be output to the console.
     """
     logging.basicConfig(
@@ -42,7 +42,7 @@ def download_image(image_id, retry_count=0):
         image_id (int): The ID of the image to download.
         retry_count (int): The current retry attempt count for this image.
 
-    This function constructs the URL for the specified image ID, 
+    This function constructs the URL for the specified image ID,
     makes an HTTP GET request to download the image,
     and saves it to the specified directory.
     If the download fails, it will retry up to the specified limit

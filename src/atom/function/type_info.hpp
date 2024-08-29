@@ -6,90 +6,71 @@
  * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#ifndef ATOM_META_TypeInfo_HPP
-#define ATOM_META_TypeInfo_HPP
+#ifndef ATOM_META_TYPEINFO_HPP
+#define ATOM_META_TYPEINFO_HPP
 
 #include <bitset>
 #include <cstdlib>
 #include <functional>  // For std::hash
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <unordered_map>
 
 #include "abi.hpp"
 #include "atom/macro.hpp"
-#include "god.hpp"
 
 namespace atom::meta {
+
 // Helper to remove cv-qualifiers, references, and pointers
 template <typename T>
 using BareType =
     std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
 
 template <typename T>
-struct is_shared_ptr : std::false_type {};
-
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
-
-// 检测是否为std::unique_ptr
-template <typename T>
-struct is_unique_ptr : std::false_type {};
-
-template <typename T>
-struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {};
-
-template <typename T>
-constexpr bool is_pointer_like_v =
-    std::is_pointer_v<T> || is_shared_ptr<T>::value || is_unique_ptr<T>::value;
-
-template <typename T>
-struct pointer_type {};
-
-template <typename T>
-struct pointer_type<T *> {
-    using type = T;
+concept PointerLike = std::is_pointer_v<T> || requires {
+    typename std::enable_if_t<
+        std::is_same_v<std::remove_cvref_t<T>,
+                       std::shared_ptr<typename T::element_type>> ||
+        std::is_same_v<std::remove_cvref_t<T>,
+                       std::unique_ptr<typename T::element_type>> ||
+        std::is_same_v<std::remove_cvref_t<T>,
+                       std::weak_ptr<typename T::element_type>>>;
 };
 
 template <typename T>
-struct pointer_type<std::shared_ptr<T>> {
-    using type = T;
-};
-
-template <typename T>
-struct pointer_type<std::unique_ptr<T>> {
-    using type = T;
-};
-
-template <typename T>
-constexpr bool is_arithmetic_pointer_v =
-    std::is_arithmetic_v<typename pointer_type<T>::type>;
+concept ArithmeticPointer =
+    PointerLike<T> &&
+    std::is_arithmetic_v<
+        typename std::pointer_traits<std::remove_cvref_t<T>>::element_type>;
 
 /// \brief Compile time deduced information about a type
 class TypeInfo {
 public:
     using Flags = std::bitset<13>;  // Using bitset for flags
+
     /// \brief Construct a new Type Info object
-    ATOM_CONSTEXPR TypeInfo(Flags flags, const std::type_info *t_ti,
-                            const std::type_info *t_bare_ti) ATOM_NOEXCEPT
+    consteval TypeInfo(Flags flags, const std::type_info* t_ti,
+                       const std::type_info* t_bare_ti) ATOM_NOEXCEPT
         : mTypeInfo_(t_ti),
           mBareTypeInfo_(t_bare_ti),
           mFlags_(flags) {}
 
-    ATOM_CONSTEXPR TypeInfo() ATOM_NOEXCEPT = default;
+    consteval TypeInfo() ATOM_NOEXCEPT = default;
 
     template <typename T>
-    static auto fromType() ATOM_NOEXCEPT -> TypeInfo {
+    static consteval auto fromType() ATOM_NOEXCEPT -> TypeInfo {
         using BareT = BareType<T>;
         Flags flags;
         flags.set(IS_CONST_FLAG, std::is_const_v<std::remove_reference_t<T>>);
         flags.set(IS_REFERENCE_FLAG, std::is_reference_v<T>);
-        flags.set(IS_POINTER_FLAG, is_pointer_like_v<T>);
+        flags.set(IS_POINTER_FLAG, PointerLike<T>);
         flags.set(IS_VOID_FLAG, std::is_void_v<T>);
-        if constexpr (is_pointer_like_v<T>) {
-            flags.set(IS_ARITHMETIC_FLAG, is_arithmetic_pointer_v<T>);
+        if ATOM_CONSTEXPR (PointerLike<T>) {
+            flags.set(IS_ARITHMETIC_FLAG, ArithmeticPointer<T>);
         } else {
             flags.set(IS_ARITHMETIC_FLAG, std::is_arithmetic_v<T>);
         }
@@ -106,34 +87,34 @@ public:
     }
 
     template <typename T>
-    static auto fromInstance(const T &) ATOM_NOEXCEPT -> TypeInfo {
+    static consteval auto fromInstance(const T&) ATOM_NOEXCEPT -> TypeInfo {
         return fromType<T>();
     }
 
-    auto operator<(const TypeInfo &ti) const ATOM_NOEXCEPT->bool {
+    auto operator<(const TypeInfo& ti) const ATOM_NOEXCEPT->bool {
         return mTypeInfo_->before(*ti.mTypeInfo_);
     }
 
-    ATOM_CONSTEXPR auto operator!=(const TypeInfo &ti) const
+    ATOM_CONSTEXPR auto operator!=(const TypeInfo& ti) const
         ATOM_NOEXCEPT->bool {
         return !(*this == ti);
     }
 
-    ATOM_CONSTEXPR auto operator==(const TypeInfo &ti) const
+    ATOM_CONSTEXPR auto operator==(const TypeInfo& ti) const
         ATOM_NOEXCEPT->bool {
         return ti.mTypeInfo_ == mTypeInfo_ && *ti.mTypeInfo_ == *mTypeInfo_ &&
                ti.mBareTypeInfo_ == mBareTypeInfo_ &&
                *ti.mBareTypeInfo_ == *mBareTypeInfo_ && ti.mFlags_ == mFlags_;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto bareEqual(const TypeInfo &ti) const
+    ATOM_NODISCARD ATOM_CONSTEXPR auto bareEqual(const TypeInfo& ti) const
         ATOM_NOEXCEPT -> bool {
         return ti.mBareTypeInfo_ == mBareTypeInfo_ ||
                *ti.mBareTypeInfo_ == *mBareTypeInfo_;
     }
 
-    ATOM_NODISCARD auto bareEqualTypeInfo(
-        const std::type_info &ti) const ATOM_NOEXCEPT -> bool {
+    ATOM_NODISCARD auto bareEqualTypeInfo(const std::type_info& ti) const
+        ATOM_NOEXCEPT -> bool {
         return !isUndef() && (*mBareTypeInfo_) == ti;
     }
 
@@ -151,8 +132,7 @@ public:
         return mFlags_.test(IS_CONST_FLAG);
     }
 
-    ATOM_NODISCARD auto isReference() const ATOM_NOEXCEPT
-        -> bool {
+    ATOM_NODISCARD auto isReference() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_REFERENCE_FLAG);
     }
 
@@ -160,8 +140,7 @@ public:
         return mFlags_.test(IS_VOID_FLAG);
     }
 
-    ATOM_NODISCARD auto isArithmetic() const ATOM_NOEXCEPT
-        -> bool {
+    ATOM_NODISCARD auto isArithmetic() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_ARITHMETIC_FLAG);
     }
 
@@ -177,8 +156,7 @@ public:
         return mFlags_.test(IS_CLASS_FLAG);
     }
 
-    ATOM_NODISCARD auto isFunction() const ATOM_NOEXCEPT
-        -> bool {
+    ATOM_NODISCARD auto isFunction() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_FUNCTION_FLAG);
     }
 
@@ -186,8 +164,7 @@ public:
         return mFlags_.test(IS_TRIVIAL_FLAG);
     }
 
-    ATOM_NODISCARD auto isStandardLayout() const ATOM_NOEXCEPT
-        -> bool {
+    ATOM_NODISCARD auto isStandardLayout() const ATOM_NOEXCEPT -> bool {
         return mFlags_.test(IS_STANDARD_LAYOUT_FLAG);
     }
 
@@ -204,34 +181,34 @@ public:
     }
 
     ATOM_NODISCARD ATOM_CONSTEXPR auto bareTypeInfo() const ATOM_NOEXCEPT
-        -> const std::type_info * {
+        -> const std::type_info* {
         return mBareTypeInfo_;
     }
 
 private:
-    const std::type_info *mTypeInfo_ = &typeid(void);  // Adjusted for clarity
-    const std::type_info *mBareTypeInfo_ = &typeid(void);
+    const std::type_info* mTypeInfo_ = &typeid(void);  // Adjusted for clarity
+    const std::type_info* mBareTypeInfo_ = &typeid(void);
     Flags mFlags_ = Flags().set(IS_UNDEF_FLAG);  // Default to undefined
 
     // Preserve flag indices
-    static constexpr unsigned int IS_CONST_FLAG = 0;
-    static constexpr unsigned int IS_REFERENCE_FLAG = 1;
-    static constexpr unsigned int IS_POINTER_FLAG = 2;
-    static constexpr unsigned int IS_VOID_FLAG = 3;
-    static constexpr unsigned int IS_ARITHMETIC_FLAG = 4;
-    static constexpr unsigned int IS_UNDEF_FLAG = 5;
-    static constexpr unsigned int IS_ARRAY_FLAG = 6;
-    static constexpr unsigned int IS_ENUM_FLAG = 7;
-    static constexpr unsigned int IS_CLASS_FLAG = 8;
-    static constexpr unsigned int IS_FUNCTION_FLAG = 9;
-    static constexpr unsigned int IS_TRIVIAL_FLAG = 10;
-    static constexpr unsigned int IS_STANDARD_LAYOUT_FLAG = 11;
-    static constexpr unsigned int IS_POD_FLAG = 12;
+    static ATOM_CONSTEXPR unsigned int IS_CONST_FLAG = 0;
+    static ATOM_CONSTEXPR unsigned int IS_REFERENCE_FLAG = 1;
+    static ATOM_CONSTEXPR unsigned int IS_POINTER_FLAG = 2;
+    static ATOM_CONSTEXPR unsigned int IS_VOID_FLAG = 3;
+    static ATOM_CONSTEXPR unsigned int IS_ARITHMETIC_FLAG = 4;
+    static ATOM_CONSTEXPR unsigned int IS_UNDEF_FLAG = 5;
+    static ATOM_CONSTEXPR unsigned int IS_ARRAY_FLAG = 6;
+    static ATOM_CONSTEXPR unsigned int IS_ENUM_FLAG = 7;
+    static ATOM_CONSTEXPR unsigned int IS_CLASS_FLAG = 8;
+    static ATOM_CONSTEXPR unsigned int IS_FUNCTION_FLAG = 9;
+    static ATOM_CONSTEXPR unsigned int IS_TRIVIAL_FLAG = 10;
+    static ATOM_CONSTEXPR unsigned int IS_STANDARD_LAYOUT_FLAG = 11;
+    static ATOM_CONSTEXPR unsigned int IS_POD_FLAG = 12;
 };
 
 template <typename T>
 struct GetTypeInfo {
-    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
+    consteval static auto get() ATOM_NOEXCEPT -> TypeInfo {
         return TypeInfo::fromType<T>();
     }
 };
@@ -239,68 +216,68 @@ struct GetTypeInfo {
 // Specialization for std::shared_ptr<T>
 template <typename T>
 struct GetTypeInfo<std::shared_ptr<T>> {
-    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
+    consteval static auto get() ATOM_NOEXCEPT -> TypeInfo {
         return TypeInfo::fromType<std::shared_ptr<T>>();
     }
 };
 
 template <typename T>
-struct GetTypeInfo<std::shared_ptr<T> &> : GetTypeInfo<std::shared_ptr<T>> {};
+struct GetTypeInfo<std::shared_ptr<T>&> : GetTypeInfo<std::shared_ptr<T>> {};
 
 // Specialization for const std::shared_ptr<T>&
 template <typename T>
-struct GetTypeInfo<const std::shared_ptr<T> &> {
-    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
+struct GetTypeInfo<const std::shared_ptr<T>&> {
+    consteval static auto get() ATOM_NOEXCEPT -> TypeInfo {
         return TypeInfo::fromType<T>();
     }
 };
 
 // Specialization for const std::reference_wrapper<T>&
 template <typename T>
-struct GetTypeInfo<const std::reference_wrapper<T> &> {
-    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
+struct GetTypeInfo<const std::reference_wrapper<T>&> {
+    consteval static auto get() ATOM_NOEXCEPT -> TypeInfo {
         using BareT = BareType<T>;
         return TypeInfo::fromType<BareT>();
     }
 };
 
 template <typename T>
-ATOM_CONSTEXPR auto userType(const T & /*t*/) ATOM_NOEXCEPT -> TypeInfo {
+consteval auto userType(const T& /*t*/) ATOM_NOEXCEPT -> TypeInfo {
     return GetTypeInfo<T>::get();
 }
 
 template <typename T>
-ATOM_CONSTEXPR auto userType() ATOM_NOEXCEPT -> TypeInfo {
+consteval auto userType() ATOM_NOEXCEPT -> TypeInfo {
     return GetTypeInfo<T>::get();
 }
 
 namespace detail {
 ATOM_INLINE auto getTypeRegistry()
-    -> std::unordered_map<std::string, TypeInfo> & {
+    -> std::unordered_map<std::string, TypeInfo>& {
     static std::unordered_map<std::string, TypeInfo> typeRegistry;
     return typeRegistry;
 }
 
 template <typename T>
 struct TypeRegistrar {
-    explicit TypeRegistrar(const std::string &type_name) {
+    explicit TypeRegistrar(const std::string& type_name) {
         detail::getTypeRegistry()[type_name] = userType<T>();
     }
 };
 }  // namespace detail
 
-ATOM_INLINE void registerType(const std::string &type_name, TypeInfo TypeInfo) {
-    detail::getTypeRegistry()[type_name] = TypeInfo;
+ATOM_INLINE void registerType(const std::string& type_name, TypeInfo typeInfo) {
+    detail::getTypeRegistry()[type_name] = std::move(typeInfo);
 }
 
 template <typename T>
-ATOM_INLINE void registerType(const std::string &type_name) {
+ATOM_INLINE void registerType(const std::string& type_name) {
     detail::getTypeRegistry()[type_name] = userType<T>();
 }
 
-ATOM_INLINE auto getTypeInfo(const std::string &type_name)
+ATOM_INLINE auto getTypeInfo(const std::string& type_name)
     -> std::optional<TypeInfo> {
-    auto &registry = detail::getTypeRegistry();
+    auto& registry = detail::getTypeRegistry();
     auto findIt = registry.find(type_name);
     if (findIt != registry.end()) {
         return findIt->second;
@@ -310,22 +287,23 @@ ATOM_INLINE auto getTypeInfo(const std::string &type_name)
 }  // namespace atom::meta
 
 ATOM_INLINE auto operator<<(
-    std::ostream &oss, const atom::meta::TypeInfo &typeInfo) -> std::ostream & {
+    std::ostream& oss, const atom::meta::TypeInfo& typeInfo) -> std::ostream& {
     return oss << typeInfo.name();
 }
 
 namespace std {
 template <>
 struct hash<atom::meta::TypeInfo> {
-    auto operator()(const atom::meta::TypeInfo &typeInfo) const
+    auto operator()(const atom::meta::TypeInfo& typeInfo) const
         ATOM_NOEXCEPT->std::size_t {
         if (typeInfo.isUndef()) {
             return 0;
         }
-        return std::hash<const std::type_info *>{}(typeInfo.bareTypeInfo()) ^
+        return std::hash<const std::type_info*>{}(typeInfo.bareTypeInfo()) ^
                (std::hash<std::string>{}(typeInfo.name()) << 2) ^
                (std::hash<std::string>{}(typeInfo.bareName()) << 3);
     }
 };
 }  // namespace std
-#endif
+
+#endif  // ATOM_META_TYPEINFO_HPP

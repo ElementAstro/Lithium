@@ -68,21 +68,6 @@ TEST(TemplateTraitsTest, IsPartialSpecializationOfTest) {
         !is_partial_specialization_of_v<Wrapper<int>, PartialSpecialization>);
 }
 
-// Tests for is_class_template
-TEST(TemplateTraitsTest, IsClassTemplateTest) {
-    static_assert(is_class_template_v<Wrapper<int>>);
-    static_assert(!is_class_template_v<int>);
-}
-
-// Tests for is_variable_template
-template <auto... Values>
-struct VariableTemplate {};
-
-TEST(TemplateTraitsTest, IsVariableTemplateTest) {
-    static_assert(is_variable_template_v<VariableTemplate<1, 2, 3>>);
-    static_assert(!is_variable_template_v<int>);
-}
-
 // Tests for is_alias_template
 template <typename T>
 using AliasTemplate = Wrapper<T>;
@@ -101,37 +86,10 @@ TEST(TemplateTraitsTest, TemplateArgsAsTupleTest) {
     static_assert(std::is_same_v<Tuple2, std::tuple<int, double>>);
 }
 
-// Tests for template_args_as_value_tuple
-template <auto... Values>
-struct ValueTemplate {};
-
-TEST(TemplateTraitsTest, TemplateArgsAsValueTupleTest) {
-    using ValueTuple = template_args_as_value_tuple_t<ValueTemplate<1, 2, 3>>;
-    static_assert(
-        std::is_same_v<ValueTuple, std::tuple<std::integral_constant<int, 1>,
-                                              std::integral_constant<int, 2>,
-                                              std::integral_constant<int, 3>>>);
-}
-
 // Tests for count_occurrences
 TEST(TemplateTraitsTest, CountOccurrencesTest) {
     static_assert(count_occurrences_v<int, double, int, float, int> == 2);
     static_assert(count_occurrences_v<int, double, float, double> == 0);
-}
-
-template <class... Args>
-struct MyTemplate {
-    using type = std::tuple<Args...>;
-};
-
-TEST(InstantiatedTraitsTest, BasicTest) {
-    using Tuple = std::tuple<int, double, char>;
-    using Result = instantiated_t<MyTemplate, Tuple>;
-
-    using Expected = MyTemplate<int, double, char>;
-
-    static_assert(std::is_same_v<Result, Expected>,
-                  "Instantiated type is incorrect");
 }
 
 struct WellFormedTuple {

@@ -318,6 +318,82 @@ function_pipe(T) -> function_pipe<typename FunctionTraits<T>::result_type(
                      typename std::tuple_element<
                          1, typename FunctionTraits<T>::argument_types>::type)>;
 
+// Primary template to detect non-static member function
+template <typename, typename T, typename = void>
+struct has_method : std::false_type {};
+
+// Specialization to detect non-static member function
+template <typename T, typename Ret, typename... Args>
+struct has_method<
+    T, Ret(Args...),
+    std::void_t<decltype(std::declval<T>().method(std::declval<Args>()...))>>
+    : std::true_type {};
+
+// Macro to define a check for a specific function name
+#define DEFINE_HAS_METHOD(MethodName)                                          \
+    template <typename T, typename Ret, typename... Args>                      \
+    struct has_##MethodName {                                                  \
+        template <typename U>                                                  \
+        static auto test(int)                                                  \
+            -> decltype(std::declval<U>().MethodName(std::declval<Args>()...), \
+                        std::true_type());                                     \
+                                                                               \
+        template <typename>                                                    \
+        static std::false_type test(...);                                      \
+                                                                               \
+        static constexpr bool value = decltype(test<T>(0))::value;             \
+    }
+
+// Primary template to detect static member function
+template <typename, typename T, typename = void>
+struct has_static_method : std::false_type {};
+
+// Specialization to detect static member function
+template <typename T, typename Ret, typename... Args>
+struct has_static_method<
+    T, Ret(Args...),
+    std::void_t<decltype(T::static_method(std::declval<Args>()...))>>
+    : std::true_type {};
+
+// Macro to define a check for a specific static function name
+#define DEFINE_HAS_STATIC_METHOD(MethodName)                       \
+    template <typename T, typename Ret, typename... Args>          \
+    struct has_static_##MethodName {                               \
+        template <typename U>                                      \
+        static auto test(int)                                      \
+            -> decltype(U::MethodName(std::declval<Args>()...),    \
+                        std::true_type());                         \
+                                                                   \
+        template <typename>                                        \
+        static std::false_type test(...);                          \
+                                                                   \
+        static constexpr bool value = decltype(test<T>(0))::value; \
+    }
+
+// Primary template to detect const member function
+template <typename, typename T, typename = void>
+struct has_const_method : std::false_type {};
+
+// Specialization to detect const member function
+template <typename T, typename Ret, typename... Args>
+struct has_const_method<T, Ret(Args...) const,
+                        std::void_t<decltype(std::declval<const T>().method(
+                            std::declval<Args>()...))>> : std::true_type {};
+
+// Macro to define a check for a specific const function name
+#define DEFINE_HAS_CONST_METHOD(MethodName)                                   \
+    template <typename T, typename Ret, typename... Args>                     \
+    struct has_const_##MethodName {                                           \
+        template <typename U>                                                 \
+        static auto test(int) -> decltype(std::declval<const U>().MethodName( \
+                                              std::declval<Args>()...),       \
+                                          std::true_type());                  \
+                                                                              \
+        template <typename>                                                   \
+        static std::false_type test(...);                                     \
+                                                                              \
+        static constexpr bool value = decltype(test<T>(0))::value;            \
+    }
 }  // namespace atom::meta
 
 #endif  // ATOM_META_FUNC_TRAITS_HPP

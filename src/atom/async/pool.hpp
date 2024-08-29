@@ -115,7 +115,7 @@ public:
         std::scoped_lock lock(mutex_);
         if (data_.empty()) {
             return std::nullopt;
-}
+        }
 
         auto front = std::move(data_.front());
         data_.pop_front();
@@ -158,7 +158,7 @@ public:
 
         if (data_.empty()) {
             return std::nullopt;
-}
+        }
 
         auto front = data_.front();
         data_.pop_front();

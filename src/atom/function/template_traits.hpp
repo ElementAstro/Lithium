@@ -1,6 +1,6 @@
 /*!
  * \file template_traits.hpp
- * \brief Template Traits
+ * \brief Template Traits (Optimized with C++20)
  * \author Max Qian <lightapt.com>
  * \date 2024-05-25
  * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
@@ -9,12 +9,12 @@
 #ifndef ATOM_META_TEMPLATE_TRAITS_HPP
 #define ATOM_META_TEMPLATE_TRAITS_HPP
 
+#include <concepts>
 #include <limits>
+#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
-
-#include "abi.hpp"
 
 #include "abi.hpp"
 
@@ -24,14 +24,9 @@ namespace atom::meta {
 template <typename T, auto... Value>
 struct identity {
     using type = T;
-    static constexpr bool has_value = false;
-};
-
-template <typename T, auto Value>
-struct identity<T, Value> {
-    using type = T;
-    static constexpr auto value = Value;
-    static constexpr bool has_value = true;
+    static constexpr bool has_value = sizeof...(Value) > 0;
+    static constexpr auto value =
+        (has_value ? std::get<0>(std::tuple{Value...}) : 0);
 };
 
 // Check if a type is a template instantiation
@@ -51,14 +46,9 @@ struct template_traits;
 template <template <typename...> typename Template, typename... Args>
 struct template_traits<Template<Args...>> {
     using args_type = std::tuple<Args...>;
-    static const std::string full_name;
+    static const inline std::string full_name =
+        DemangleHelper::demangle(typeid(Template<Args...>).name());
 };
-
-template <template <typename...> typename Template, typename... Args>
-const std::string template_traits<Template<Args...>>::full_name = [] {
-    std::string name = typeid(Template<Args...>).name();
-    return DemangleHelper::demangle(name);
-}();
 
 // Helper alias templates
 template <typename T>
@@ -105,37 +95,6 @@ template <typename T, template <typename, typename...> typename Template>
 inline constexpr bool is_partial_specialization_of_v =
     is_partial_specialization_of<T, Template>::value;
 
-// Check if a type is a class template
-template <typename T>
-struct is_class_template : std::false_type {};
-
-template <template <typename...> typename Template, typename... Args>
-struct is_class_template<Template<Args...>> : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_class_template_v = is_class_template<T>::value;
-
-// Check if a type is a function template
-template <typename T>
-struct is_function_template : std::false_type {};
-
-template <template <typename...> typename Template, typename... Args>
-struct is_function_template<Template<Args...>> : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_function_template_v = is_function_template<T>::value;
-
-// Check if a type is a variable template
-template <typename T>
-struct is_variable_template : std::false_type {};
-
-template <template <auto...> typename Template, auto... Args>
-struct is_variable_template<Template<Args...>> : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_variable_template_v = is_variable_template<T>::value;
-
-// Check if a type is an alias template
 template <typename T>
 struct is_alias_template : std::false_type {};
 
@@ -145,172 +104,60 @@ struct is_alias_template<Template<Args...>> : std::true_type {};
 template <typename T>
 inline constexpr bool is_alias_template_v = is_alias_template<T>::value;
 
+// Check if a type is a class or function template
+template <typename T>
+concept is_class_template =
+    requires { typename template_traits<T>::args_type; };
+
+template <typename T>
+concept is_function_template =
+    requires(T) { typename template_traits<T>::args_type; };
+
 // Extract the template arguments as a tuple of types
 template <typename T>
-struct template_args_as_tuple;
-
-template <template <typename...> typename Template, typename... Args>
-struct template_args_as_tuple<Template<Args...>> {
-    using type = std::tuple<Args...>;
-};
-
-template <typename T>
-using template_args_as_tuple_t = typename template_args_as_tuple<T>::type;
-
-// Extract the template arguments as a tuple of values
-template <typename T>
-struct template_args_as_value_tuple;
-
-template <template <auto...> typename Template, auto... Args>
-struct template_args_as_value_tuple<Template<Args...>> {
-    using type = std::tuple<std::integral_constant<decltype(Args), Args>...>;
-};
-
-template <typename T>
-using template_args_as_value_tuple_t =
-    typename template_args_as_value_tuple<T>::type;
+using template_args_as_tuple_t = typename template_traits<T>::args_type;
 
 // Count the number of occurrences of a type in a parameter pack
 template <typename T, typename... Args>
-struct count_occurrences;
-
-template <typename T>
-struct count_occurrences<T> {
-    static constexpr std::size_t value = 0;
-};
-
-template <typename T, typename U, typename... Args>
-struct count_occurrences<T, U, Args...> {
-    static constexpr std::size_t value =
-        std::is_same_v<T, U> + count_occurrences<T, Args...>::value;
-};
-
-template <typename T, typename... Args>
-inline constexpr std::size_t count_occurrences_v =
-    count_occurrences<T, Args...>::value;
+constexpr std::size_t count_occurrences_v = (0 + ... + std::is_same_v<T, Args>);
 
 // Find the index of the first occurrence of a type in a parameter pack
 template <typename T, typename... Args>
-struct find_first_index;
+constexpr std::size_t find_first_index_v = []() {
+    constexpr auto idx = []<std::size_t... I>(std::index_sequence<I...>) {
+        return ((std::is_same_v<T, Args>
+                     ? I
+                     : std::numeric_limits<std::size_t>::max()) +
+                ...);
+    }(std::index_sequence_for<Args...>{});
+    return idx < sizeof...(Args) ? idx
+                                 : std::numeric_limits<std::size_t>::max();
+}();
 
-template <typename T, typename U, typename... Args>
-struct find_first_index<T, U, Args...> {
-    static constexpr std::size_t value =
-        std::is_same_v<T, U> ? 0 : 1 + find_first_index<T, Args...>::value;
-};
+// Extract reference wrapper or pointer types
+template <typename T>
+using extract_reference_wrapper_type_t = std::remove_reference_t<T>;
 
 template <typename T>
-struct find_first_index<T> {
-    static constexpr std::size_t value =
-        std::numeric_limits<std::size_t>::max();
-};
+using extract_pointer_type_t = std::remove_pointer_t<T>;
 
-template <typename T, typename... Args>
-inline constexpr std::size_t find_first_index_v =
-    find_first_index<T, Args...>::value;
-
-// Find the index of the last occurrence of a type in a parameter pack
-template <typename T, typename... Args>
-struct find_last_index;
-
-template <typename T, typename U, typename... Args>
-struct find_last_index<T, U, Args...> {
-    static constexpr std::size_t value =
-        std::is_same_v<T, U> ? sizeof...(Args)
-                             : find_last_index<T, Args...>::value;
-};
-
+// Extract function return type and parameter types
 template <typename T>
-struct find_last_index<T> {
-    static constexpr std::size_t value =
-        std::numeric_limits<std::size_t>::max();
-};
-
-template <typename T, typename... Args>
-inline constexpr std::size_t find_last_index_v =
-    find_last_index<T, Args...>::value;
-
-template <typename T>
-struct extract_reference_wrapper_type {
-    using type = T;
-};
-
-template <typename U>
-struct extract_reference_wrapper_type<std::reference_wrapper<U>> {
-    using type = U;
-};
-
-template <typename T>
-using extract_reference_wrapper_type_t =
-    typename extract_reference_wrapper_type<T>::type;
-
-template <typename T>
-struct extract_pointer_type {
-    using type = T;
-};
-
-template <typename U>
-struct extract_pointer_type<U*> {
-    using type = U;
-};
-
-template <typename T>
-using extract_pointer_type_t = typename extract_pointer_type<T>::type;
-
-template <typename T>
-struct extract_function_return_type;
+struct extract_function_traits;
 
 template <typename R, typename... Args>
-struct extract_function_return_type<R(Args...)> {
-    using type = R;
+struct extract_function_traits<R(Args...)> {
+    using return_type = R;
+    using parameter_types = std::tuple<Args...>;
 };
 
 template <typename T>
 using extract_function_return_type_t =
-    typename extract_function_return_type<T>::type;
-
-template <typename T>
-struct extract_function_parameters;
-
-template <typename R, typename... Args>
-struct extract_function_parameters<R(Args...)> {
-    using type = std::tuple<Args...>;
-};
+    typename extract_function_traits<T>::return_type;
 
 template <typename T>
 using extract_function_parameters_t =
-    typename extract_function_parameters<T>::type;
-
-template <typename T>
-struct extract_array_element_type {
-    using type = T;
-};
-
-template <typename U, std::size_t N>
-struct extract_array_element_type<U[N]> {
-    using type = U;
-};
-
-template <typename T>
-using extract_array_element_type_t =
-    typename extract_array_element_type<T>::type;
-
-// instantiated_traits
-
-template <template <class...> class T, class TL, class Is, class... Args>
-struct instantiated_traits;
-
-template <template <class...> class T, class TL, std::size_t... Is,
-          class... Args>
-struct instantiated_traits<T, TL, std::index_sequence<Is...>, Args...> {
-    using type = T<Args..., std::tuple_element_t<Is, TL>...>;
-};
-
-template <template <class...> class T, class TL, class... Args>
-using instantiated_t = typename instantiated_traits<
-    T, TL, std::make_index_sequence<std::tuple_size_v<TL>>, Args...>::type;
-
-// is_tuple_like_well_formed
+    typename extract_function_traits<T>::parameter_types;
 
 template <class T, std::size_t I>
 concept has_tuple_element = requires { typename std::tuple_element_t<I, T>; };
@@ -336,14 +183,11 @@ consteval bool is_tuple_like_well_formed() {
     return false;
 }
 
-// constraint_level
-
+// Check copyability and relocatability constraints using C++20 features
 enum class constraint_level { none, nontrivial, nothrow, trivial };
 
-// has_copyability
-
-template <class T>
-consteval auto has_copyability(constraint_level level) -> bool {
+template <typename T>
+consteval bool has_copyability(constraint_level level) {
     switch (level) {
         case constraint_level::none:
             return true;
@@ -359,8 +203,8 @@ consteval auto has_copyability(constraint_level level) -> bool {
     }
 }
 
-template <class T>
-consteval auto has_relocatability(constraint_level level) -> bool {
+template <typename T>
+consteval bool has_relocatability(constraint_level level) {
     switch (level) {
         case constraint_level::none:
             return true;
@@ -377,8 +221,8 @@ consteval auto has_relocatability(constraint_level level) -> bool {
     }
 }
 
-template <class T>
-consteval auto has_destructibility(constraint_level level) -> bool {
+template <typename T>
+consteval bool has_destructibility(constraint_level level) {
     switch (level) {
         case constraint_level::none:
             return true;
@@ -392,6 +236,45 @@ consteval auto has_destructibility(constraint_level level) -> bool {
             return false;
     }
 }
+
+template <template <typename...> class Base, typename Derived>
+struct is_base_of_template_impl {
+private:
+    // 使用SFINAE机制，判断Derived是否可以转换为Base<U...>*
+    template <typename... U>
+    static constexpr std::true_type test(const Base<U...>*);
+    static constexpr std::false_type test(...);
+
+public:
+    // value为true_type或false_type，取决于test的返回类型
+    static constexpr bool value =
+        decltype(test(std::declval<Derived*>()))::value;
+};
+
+// 支持多重继承检查
+template <typename Derived, template <typename...> class... Bases>
+struct is_base_of_any_template {
+    static constexpr bool value =
+        (is_base_of_template_impl<Bases, Derived>::value || ...);
+};
+
+// 变量模板简化接口
+template <template <typename...> class Base, typename Derived>
+inline constexpr bool is_base_of_template_v =
+    is_base_of_template_impl<Base, Derived>::value;
+
+template <typename Derived, template <typename...> class... Bases>
+inline constexpr bool is_base_of_any_template_v =
+    is_base_of_any_template<Derived, Bases...>::value;
+
+// 使用概念定义
+template <template <typename...> class Base, typename Derived>
+concept is_delivered_from_template = is_base_of_template_v<Base, Derived>;
+
+template <typename Derived, template <typename...> class... Bases>
+concept is_delivered_from_any_template =
+    is_base_of_any_template_v<Derived, Bases...>;
+
 }  // namespace atom::meta
 
 #endif

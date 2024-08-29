@@ -6,15 +6,20 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "macro.hpp"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "macro.hpp"
+
 using json = nlohmann::json;
 
 namespace lithium {
+
 struct DangerItem {
     std::string category;
     std::string command;
@@ -23,7 +28,6 @@ struct DangerItem {
     std::optional<std::string> context;
 } ATOM_ALIGNAS(128);
 
-// 实现类的定义
 class ScriptAnalyzerImpl {
 public:
     explicit ScriptAnalyzerImpl(const std::string& config_file) {
@@ -32,10 +36,7 @@ public:
 
     void analyze(const std::string& script, bool output_json = false) {
         std::vector<DangerItem> dangers;
-        checkScript(script, dangers);
-        checkSensitiveInfo(script, dangers);
-        checkEnvironmentDependencies(script, dangers);
-        checkExternalDependencies(script, dangers);
+        detectScriptTypeAndAnalyze(script, dangers);
         suggestSafeReplacements(script, dangers);
         int complexity = calculateComplexity(script);
         generateReport(dangers, complexity, output_json);
@@ -61,41 +62,50 @@ private:
     }
 
     static auto isSkippableLine(const std::string& line) -> bool {
-        return line.empty() || std::regex_match(line, std::regex(R"(^\s*#.*)"));
+        return line.empty() ||
+               std::regex_match(line, std::regex(R"(^\s*#.*)")) ||
+               std::regex_match(
+                   line, std::regex(R"(^\s*//.*)"));  // 支持PowerShell注释
     }
 
-    void checkScript(const std::string& script,
-                     std::vector<DangerItem>& dangers) {
+    void detectScriptTypeAndAnalyze(const std::string& script,
+                                    std::vector<DangerItem>& dangers) {
         std::shared_lock lock(config_mutex_);
-        checkPattern(script, config_["danger_patterns"], "Security Issue",
-                     dangers);
+
+#ifdef _WIN32
+        bool isPowerShell = detectPowerShell(script);
+        if (isPowerShell) {
+            checkPattern(script, config_["powershell_danger_patterns"],
+                         "PowerShell Security Issue", dangers);
+        } else {
+            checkPattern(script, config_["windows_cmd_danger_patterns"],
+                         "CMD Security Issue", dangers);
+        }
+#else
+        checkPattern(script, config_["bash_danger_patterns"],
+                     "Shell Script Security Issue", dangers);
+#endif
     }
 
-    void checkSensitiveInfo(const std::string& script,
-                            std::vector<DangerItem>& dangers) {
-        std::shared_lock lock(config_mutex_);
-        checkPattern(script, config_["sensitive_patterns"],
-                     "Sensitive Information", dangers);
-    }
-
-    void checkEnvironmentDependencies(const std::string& script,
-                                      std::vector<DangerItem>& dangers) {
-        std::shared_lock lock(config_mutex_);
-        checkPattern(script, config_["environment_patterns"],
-                     "Environment Dependency", dangers);
-    }
-
-    void checkExternalDependencies(const std::string& script,
-                                   std::vector<DangerItem>& dangers) {
-        std::unordered_set<std::string> availableCommands = {
-            "echo", "ls", "cd"};  // 示例可用命令列表
-        checkCommands(script, availableCommands, dangers);
+    static bool detectPowerShell(const std::string& script) {
+        return script.find("param(") !=
+                   std::string::npos ||  // PowerShell 参数化的典型特征
+               script.find("$PSVersionTable") !=
+                   std::string::npos;  // 检测PowerShell的版本信息
     }
 
     void suggestSafeReplacements(const std::string& script,
                                  std::vector<DangerItem>& dangers) {
         std::unordered_map<std::string, std::string> replacements = {
-            {"rm -rf /", "find . -type f -delete"}, {"kill -9", "kill -TERM"}};
+#ifdef _WIN32
+            {"Remove-Item -Recurse -Force",
+             "Remove-Item -Recurse"},  // PowerShell危险命令替换
+            {"Stop-Process -Force", "Stop-Process"},
+#else
+            {"rm -rf /", "find . -type f -delete"},
+            {"kill -9", "kill -TERM"},
+#endif
+        };
         checkReplacements(script, replacements, dangers);
     }
 
@@ -169,44 +179,9 @@ private:
 
                 if (std::regex_search(line, pattern)) {
                     std::string key = std::to_string(lineNum) + ":" + reason;
-                    if (detectedIssues.find(key) == detectedIssues.end()) {
+                    if (!detectedIssues.contains(key)) {
                         dangers.push_back(
                             {category, line, reason, lineNum, {}});
-                        detectedIssues.insert(key);
-                    }
-                }
-            }
-        }
-    }
-
-    static void checkCommands(
-        const std::string& script,
-        const std::unordered_set<std::string>& available_commands,
-        std::vector<DangerItem>& dangers) {
-        std::regex commandPattern(R"(\b(\w+)\b)");
-        std::istringstream scriptStream(script);
-        std::string line;
-        int lineNum = 0;
-        std::unordered_set<std::string> detectedIssues;
-
-        while (std::getline(scriptStream, line)) {
-            lineNum++;
-            if (isSkippableLine(line)) {
-                continue;
-            }
-
-            std::smatch match;
-            if (std::regex_search(line, match, commandPattern)) {
-                std::string command = match.str(1);
-                if (available_commands.find(command) ==
-                    available_commands.end()) {
-                    std::string key = std::to_string(lineNum) + ":" + command;
-                    if (detectedIssues.find(key) == detectedIssues.end()) {
-                        dangers.push_back({"External Dependency",
-                                           line,
-                                           "Command not found: " + command,
-                                           lineNum,
-                                           {}});
                         detectedIssues.insert(key);
                     }
                 }
@@ -233,7 +208,7 @@ private:
                 if (line.find(unsafe_command) != std::string::npos) {
                     std::string key =
                         std::to_string(lineNum) + ":" + unsafe_command;
-                    if (detectedIssues.find(key) == detectedIssues.end()) {
+                    if (!detectedIssues.contains(key)) {
                         dangers.push_back(
                             {"Suggestion",
                              line,

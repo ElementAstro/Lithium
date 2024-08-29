@@ -1,175 +1,370 @@
 #include "atom/async/message_bus.hpp"
+
 #include <gtest/gtest.h>
 #include <string>
+#include <thread>
 
-// 使用的命名空间
 using namespace atom::async;
 
-// 测试套件
-class MessageBusTest : public ::testing::Test {
-protected:
-    void SetUp() override { bus = MessageBus::createUnique(); }
-
-    std::unique_ptr<MessageBus> bus;
+// 示例消息类型
+struct MyMessage {
+    int data;
 };
 
-// 测试基本的订阅和发布
-TEST_F(MessageBusTest, BasicSubscribeAndPublish) {
-    std::string receivedMessage;
-    bus->subscribe<std::string>(
-        "test_topic",
-        [&receivedMessage](const std::string &msg) { receivedMessage = msg; });
+// Test Suite for MessageBus
+class MessageBusTest : public ::testing::Test {
+protected:
+    MessageBus bus;
 
-    bus->publish("test_topic", std::string("Hello, World!"));
+    void SetUp() override {
+        // 可以在每个测试之前设置一些初始状态
+    }
 
-    // 使用独立线程处理消息
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    void TearDown() override {
+        // 可以在每个测试之后进行清理工作
+    }
+};
 
-    EXPECT_EQ(receivedMessage, "Hello, World!");
-    bus->stopAllProcessingThreads();
+// 测试同步发布和订阅消息
+TEST_F(MessageBusTest, SynchronousSubscriptionAndPublishing) {
+    MyMessage message{42};
+    bool messageReceived = false;
+
+    auto token = bus.subscribe<MyMessage>(
+        "testSync",
+        [&](const MyMessage& msg) {
+            EXPECT_EQ(msg.data, message.data);
+            messageReceived = true;
+        },
+        false);
+
+    bus.publish("testSync", message);
+
+    EXPECT_TRUE(messageReceived);
+    bus.unsubscribe<MyMessage>(token);
 }
 
-// 测试多个订阅者的优先级
-TEST_F(MessageBusTest, MultipleSubscribersWithPriority) {
-    std::vector<int> receivedPriorities;
-    bus->subscribe<std::string>(
-        "test_topic",
-        [&receivedPriorities](const std::string &msg) {
-            receivedPriorities.push_back(1);
-        },
-        1);
-    bus->subscribe<std::string>(
-        "test_topic",
-        [&receivedPriorities](const std::string &msg) {
-            receivedPriorities.push_back(2);
-        },
-        2);
-    bus->subscribe<std::string>(
-        "test_topic",
-        [&receivedPriorities](const std::string &msg) {
-            receivedPriorities.push_back(0);
-        },
-        0);
+// 测试异步发布和订阅消息
+TEST_F(MessageBusTest, AsynchronousSubscriptionAndPublishing) {
+    MyMessage message{42};
+    std::atomic<bool> messageReceived(false);
 
-    bus->publish("test_topic", std::string("Test"));
+    auto token = bus.subscribe<MyMessage>(
+        "testAsync",
+        [&](const MyMessage& msg) {
+            EXPECT_EQ(msg.data, message.data);
+            messageReceived = true;
+        },
+        true);
 
-    // 使用独立线程处理消息
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    bus.publish("testAsync", message);
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(50));  // 等待异步执行完成
 
-    std::vector<int> expectedPriorities = {2, 1, 0};
-    EXPECT_EQ(receivedPriorities, expectedPriorities);
-    bus->stopAllProcessingThreads();
+    EXPECT_TRUE(messageReceived.load());
+    bus.unsubscribe<MyMessage>(token);
+}
+
+TEST_F(MessageBusTest, PublishGlobalSubscription) {
+    std::atomic_int receivedCount = 0;
+    MyMessage message{42};
+    auto token = bus.subscribe<MyMessage>(
+        "testGlobal", [&](const MyMessage& msg) { receivedCount++; });
+
+    auto token1 = bus.subscribe<MyMessage>(
+        "testGlobal", [&](const MyMessage& msg) { receivedCount++; });
+
+    bus.publishGlobal(message);
+    EXPECT_EQ(receivedCount, 2);
+    bus.unsubscribe<MyMessage>(token);
+    bus.unsubscribe<MyMessage>(token1);
+}
+
+// 测试一次性订阅
+TEST_F(MessageBusTest, OnceSubscription) {
+    MyMessage message{42};
+    int receivedCount = 0;
+
+    auto token = bus.subscribe<MyMessage>(
+        "testOnce",
+        [&](const MyMessage& msg) {
+            EXPECT_EQ(msg.data, message.data);
+            receivedCount++;
+        },
+        false, true);  // once = true
+
+    bus.publish("testOnce", message);
+    bus.publish("testOnce", message);  // 第二次发布消息
+
+    EXPECT_EQ(receivedCount, 1);  // 处理程序应仅运行一次
+}
+
+// 测试带过滤器的订阅
+TEST_F(MessageBusTest, FilteredSubscription) {
+    MyMessage message{42};
+    MyMessage filteredMessage{100};
+    int receivedCount = 0;
+
+    auto token = bus.subscribe<MyMessage>(
+        "testFilter",
+        [&](const MyMessage& msg) {
+            EXPECT_EQ(msg.data, message.data);
+            receivedCount++;
+        },
+        false, false,
+        [&](const MyMessage& msg) {
+            return msg.data == 42;  // 过滤器只匹配 data == 42 的消息
+        });
+
+    bus.publish("testFilter", message);          // 这个消息应该被处理
+    bus.publish("testFilter", filteredMessage);  // 这个消息应该被过滤
+
+    EXPECT_EQ(receivedCount, 1);  // 处理程序应仅运行一次
 }
 
 // 测试取消订阅
 TEST_F(MessageBusTest, Unsubscribe) {
-    std::string receivedMessage;
-    auto callback = [&receivedMessage](const std::string &msg) {
-        receivedMessage = msg;
+    MyMessage message{42};
+    bool messageReceived = false;
+
+    auto token = bus.subscribe<MyMessage>(
+        "testUnsubscribe",
+        [&](const MyMessage& msg) { messageReceived = true; });
+
+    bus.unsubscribe<MyMessage>(token);
+    bus.publish("testUnsubscribe", message);
+
+    EXPECT_FALSE(messageReceived);  // 应该没有接收到消息
+}
+
+// 测试命名空间发布
+TEST_F(MessageBusTest, NamespaceSubscription) {
+    MyMessage message{42};
+    bool messageReceived = false;
+    auto token = bus.subscribe<MyMessage>(
+        "namespace", [&](const MyMessage& msg) { messageReceived = true; });
+
+    bus.publish("namespace.subspace", message);  // 命名空间匹配应接收到消息
+
+    EXPECT_TRUE(messageReceived);
+    bus.unsubscribe<MyMessage>(token);
+}
+
+// 测试延迟发布
+TEST_F(MessageBusTest, DelayedPublishing) {
+    MyMessage message{42};
+    bool messageReceived = false;
+
+    auto token =
+        bus.subscribe<MyMessage>("testDelay", [&](const MyMessage& msg) {
+            EXPECT_EQ(msg.data, message.data);
+            messageReceived = true;
+        });
+
+    bus.publish("testDelay", message, std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    EXPECT_FALSE(messageReceived);  // 消息不应在50ms时接收到
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    EXPECT_TRUE(messageReceived);  // 消息应在150ms时接收到
+    bus.unsubscribe<MyMessage>(token);
+}
+
+// 测试同时多个订阅者接收消息
+TEST_F(MessageBusTest, MultipleSubscribers) {
+    MyMessage message{42};
+    int receivedCount = 0;
+
+    auto token1 = bus.subscribe<MyMessage>(
+        "testMulti", [&](const MyMessage& msg) { receivedCount++; });
+
+    auto token2 = bus.subscribe<MyMessage>(
+        "testMulti", [&](const MyMessage& msg) { receivedCount++; });
+
+    bus.publish("testMulti", message);
+
+    // 确保计数器正确反映消息处理的次数
+    EXPECT_EQ(receivedCount, 2);  // 应该有两个订阅者接收到消息
+    bus.unsubscribe<MyMessage>(token1);
+    bus.unsubscribe<MyMessage>(token2);
+}
+
+// 测试订阅相同名称但不同类型的消息
+TEST_F(MessageBusTest, DifferentMessageTypes) {
+    struct AnotherMessage {
+        std::string text;
     };
-    bus->subscribe<std::string>("test_topic", callback);
-    bus->unsubscribe<std::string>("test_topic", callback);
 
-    bus->publish("test_topic", std::string("This should not be received"));
+    MyMessage myMessage{42};
+    AnotherMessage anotherMessage{"Hello"};
+    bool myMessageReceived = false;
+    bool anotherMessageReceived = false;
 
-    // 使用独立线程处理消息
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto token1 = bus.subscribe<MyMessage>(
+        "testTypes", [&](const MyMessage& msg) { myMessageReceived = true; });
 
-    EXPECT_EQ(receivedMessage, "");
-    bus->stopAllProcessingThreads();
+    auto token2 = bus.subscribe<AnotherMessage>(
+        "testTypes",
+        [&](const AnotherMessage& msg) { anotherMessageReceived = true; });
+
+    bus.publish("testTypes", myMessage);
+    bus.publish("testTypes", anotherMessage);
+
+    EXPECT_TRUE(myMessageReceived);
+    EXPECT_TRUE(anotherMessageReceived);
+
+    bus.unsubscribe<MyMessage>(token1);
+    bus.unsubscribe<AnotherMessage>(token2);
 }
 
-// 测试命名空间订阅
-TEST_F(MessageBusTest, SubscribeToNamespace) {
-    std::string receivedMessage;
-    bus->subscribeToNamespace<std::string>(
-        "namespace",
-        [&receivedMessage](const std::string &msg) { receivedMessage = msg; });
+// 测试消息处理时抛出异常
+TEST_F(MessageBusTest, ExceptionInHandler) {
+    MyMessage message{42};
+    bool exceptionCaught = false;
 
-    bus->publish("test_topic", std::string("Test message"), "namespace");
+    auto token =
+        bus.subscribe<MyMessage>("testException", [&](const MyMessage& msg) {
+            throw std::runtime_error("Handler exception");
+        });
 
-    // 使用独立线程处理消息
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    try {
+        bus.publish("testException", message);
+    } catch (const std::runtime_error& e) {
+        exceptionCaught = true;
+        EXPECT_STREQ(e.what(), "Handler exception");
+    }
 
-    EXPECT_EQ(receivedMessage, "Test message");
-    bus->stopAllProcessingThreads();
+    EXPECT_TRUE(exceptionCaught);
+    bus.unsubscribe<MyMessage>(token);
 }
 
-// 测试全局订阅
-TEST_F(MessageBusTest, GlobalSubscribe) {
-    std::string receivedMessage;
-    bus->globalSubscribe<std::string>(
-        [&receivedMessage](const std::string &msg) { receivedMessage = msg; });
+TEST_F(MessageBusTest, UnsubscribeAllByName) {
+    MyMessage message{42};
+    bool messageReceived1 = false;
+    bool messageReceived2 = false;
 
-    bus->publish("any_topic", std::string("Global message"));
+    auto token1 = bus.subscribe<MyMessage>(
+        "test.unsubscribeAll",
+        [&](const MyMessage& msg) { messageReceived1 = true; });
 
-    // 使用独立线程处理消息
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto token2 = bus.subscribe<MyMessage>(
+        "test.unsubscribeAll",
+        [&](const MyMessage& msg) { messageReceived2 = true; });
 
-    EXPECT_EQ(receivedMessage, "Global message");
-    bus->stopAllProcessingThreads();
+    bus.unsubscribeAll<MyMessage>("test.unsubscribeAll");
+    bus.publish("test.unsubscribeAll", message);
+
+    EXPECT_FALSE(messageReceived1);
+    EXPECT_FALSE(messageReceived2);
 }
 
-// 测试消息队列大小限制
-TEST_F(MessageBusTest, MessageQueueSizeLimit) {
-    bus = MessageBus::createUnique();
-    bus->publish("test_topic", std::string("Message 1"));
-    bus->publish("test_topic", std::string("Message 2"));
-    bus->publish("test_topic", std::string("Message 3"));
+// 测试获取特定名称的订阅者数量
+TEST_F(MessageBusTest, GetSubscriberCount) {
+    auto token1 =
+        bus.subscribe<MyMessage>("test.count", [](const MyMessage& msg) {});
+    auto token2 =
+        bus.subscribe<MyMessage>("test.count", [](const MyMessage& msg) {});
 
-    std::string receivedMessage;
-    bus->subscribe<std::string>(
-        "test_topic",
-        [&receivedMessage](const std::string &msg) { receivedMessage = msg; });
+    EXPECT_EQ(bus.getSubscriberCount<MyMessage>("test.count"), 2);
 
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    bus.unsubscribe<MyMessage>(token1);
+    EXPECT_EQ(bus.getSubscriberCount<MyMessage>("test.count"), 1);
 
-    EXPECT_EQ(receivedMessage, "Message 3");
-    bus->stopAllProcessingThreads();
+    bus.unsubscribe<MyMessage>(token2);
+    EXPECT_EQ(bus.getSubscriberCount<MyMessage>("test.count"), 0);
 }
 
-// 测试 tryPublish 方法
-TEST_F(MessageBusTest, TryPublish) {
-    std::string receivedMessage;
-    bus->subscribe<std::string>(
-        "test_topic",
-        [&receivedMessage](const std::string &msg) { receivedMessage = msg; });
+// 测试获取命名空间的订阅者数量
+TEST_F(MessageBusTest, GetNamespaceSubscriberCount) {
+    auto token1 =
+        bus.subscribe<MyMessage>("namespace.sub1", [](const MyMessage& msg) {});
+    auto token2 =
+        bus.subscribe<MyMessage>("namespace.sub2", [](const MyMessage& msg) {});
 
-    bool published = bus->tryPublish("test_topic", std::string("Try message"),
-                                     "", std::chrono::milliseconds(100));
+    EXPECT_EQ(bus.getNamespaceSubscriberCount<MyMessage>("namespace"), 2);
 
-    // 使用独立线程处理消息
-    bus->startProcessingThread<std::string>();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    bus.unsubscribe<MyMessage>(token1);
+    EXPECT_EQ(bus.getNamespaceSubscriberCount<MyMessage>("namespace"), 1);
 
-    EXPECT_TRUE(published);
-    EXPECT_EQ(receivedMessage, "Try message");
-    bus->stopAllProcessingThreads();
+    bus.unsubscribe<MyMessage>(token2);
+    EXPECT_EQ(bus.getNamespaceSubscriberCount<MyMessage>("namespace"), 0);
 }
 
-// 测试 tryReceive 方法
-TEST_F(MessageBusTest, TryReceive) {
-    std::string sentMessage = "Hello, TryReceive!";
-    bus->publish("test_topic", sentMessage);
+// 测试是否存在订阅者
+TEST_F(MessageBusTest, HasSubscriber) {
+    EXPECT_FALSE(bus.hasSubscriber<MyMessage>("test.exists"));
 
-    std::string receivedMessage;
-    bool received = bus->tryReceive<std::string>(
-        receivedMessage, std::chrono::milliseconds(100));
+    auto token =
+        bus.subscribe<MyMessage>("test.exists", [](const MyMessage& msg) {});
+    EXPECT_TRUE(bus.hasSubscriber<MyMessage>("test.exists"));
 
-    EXPECT_TRUE(received);
-    EXPECT_EQ(receivedMessage, sentMessage);
+    bus.unsubscribe<MyMessage>(token);
+    EXPECT_FALSE(bus.hasSubscriber<MyMessage>("test.exists"));
 }
 
-// 测试停止所有处理线程
-TEST_F(MessageBusTest, StopAllProcessingThreads) {
-    bus->startProcessingThread<std::string>();
-    bus->startProcessingThread<int>();
+// 测试清空所有订阅者
+TEST_F(MessageBusTest, ClearAllSubscribers) {
+    auto token1 =
+        bus.subscribe<MyMessage>("test.clear1", [](const MyMessage& msg) {});
+    auto token2 =
+        bus.subscribe<MyMessage>("test.clear2", [](const MyMessage& msg) {});
 
-    bus->stopAllProcessingThreads();
+    EXPECT_TRUE(bus.hasSubscriber<MyMessage>("test.clear1"));
+    EXPECT_TRUE(bus.hasSubscriber<MyMessage>("test.clear2"));
+
+    bus.clearAllSubscribers();
+
+    EXPECT_FALSE(bus.hasSubscriber<MyMessage>("test.clear1"));
+    EXPECT_FALSE(bus.hasSubscriber<MyMessage>("test.clear2"));
+}
+
+// 测试获取当前活动的命名空间
+TEST_F(MessageBusTest, GetActiveNamespaces) {
+    auto token1 =
+        bus.subscribe<MyMessage>("namespace1", [](const MyMessage& msg) {});
+    auto token2 = bus.subscribe<MyMessage>("namespace2.sub1",
+                                           [](const MyMessage& msg) {});
+
+    auto activeNamespaces = bus.getActiveNamespaces();
+    EXPECT_EQ(activeNamespaces.size(), 2);
+    EXPECT_TRUE(std::find(activeNamespaces.begin(), activeNamespaces.end(),
+                          "namespace1") != activeNamespaces.end());
+    EXPECT_TRUE(std::find(activeNamespaces.begin(), activeNamespaces.end(),
+                          "namespace2.sub1") != activeNamespaces.end());
+
+    bus.clearAllSubscribers();
+    activeNamespaces = bus.getActiveNamespaces();
+    EXPECT_TRUE(activeNamespaces.empty());
+}
+
+// 测试消息历史记录功能
+TEST_F(MessageBusTest, MessageHistory) {
+    MyMessage message1{42};
+    MyMessage message2{84};
+
+    bus.publish("test.history", message1);
+    bus.publish("test.history", message2);
+
+    auto history = bus.getMessageHistory<MyMessage>("test.history");
+
+    ASSERT_EQ(history.size(), 2);
+    EXPECT_EQ(history[0].data, 42);
+    EXPECT_EQ(history[1].data, 84);
+
+    // 测试消息记录超出最大数量时，是否删除旧消息
+    for (int i = 0; i < 101; ++i) {
+        bus.publish("test.history", MyMessage{i});
+    }
+
+    history = bus.getMessageHistory<MyMessage>("test.history");
+    EXPECT_EQ(history.size(), 100);  // 最大记录数为100
+    EXPECT_EQ(history[0].data, 1);  // 第一个应为第2条消息（0被丢弃）
+    EXPECT_EQ(history.back().data, 100);
+}
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

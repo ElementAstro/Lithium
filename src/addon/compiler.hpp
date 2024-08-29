@@ -60,48 +60,6 @@ public:
 private:
     std::unique_ptr<CompilerImpl> impl_;
 };
-
-class CppMemberGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
-class CppConstructorGenerator {
-public:
-    static void generate(const std::string &className, const json &j,
-                         std::ostream &os);
-};
-
-class CppMethodGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
-class CppAccessorGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
-class CppMutatorGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
-class CppFriendFunctionGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
-class CppOperatorOverloadGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
-class CppClassGenerator {
-public:
-    static void generate(const json &j, std::ostream &os);
-};
-
 }  // namespace lithium
 
 #endif

@@ -1,9 +1,11 @@
 import os
-import requests
 from threading import Thread, Lock
 from queue import Queue
-import logging
 import argparse
+import time
+import requests
+from loguru import logger
+
 
 # Global constants
 DOWNLOAD_DIR = 'images'  # Directory to save downloaded images
@@ -15,23 +17,21 @@ RETRY_LIMIT = 3  # Maximum number of retry attempts for downloading
 # Initialize a lock for logging to ensure thread-safe log access
 log_lock = Lock()
 
+# Initialize task queue
+queue = Queue()
+
 
 def setup_logging():
     """
-    Set up the logging configuration to log both to console and to a file.
+    Set up the loguru logging configuration to log both to console and to a file.
 
     The log messages will include timestamps and the severity level.
-    The logs will be saved in 'download.log' file, and
-    will also be output to the console.
+    The logs will be saved in 'download.log' file,
+    and will also be output to the console.
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler("download.log"),  # Log to a file
-            logging.StreamHandler()  # Log to console
-        ]
-    )
+    logger.add("download.log", level="DEBUG",
+               format="{time} {level} {message}", rotation="10 MB")
+    logger.info("Logging setup complete.")
 
 
 def download_image(image_id, retry_count=0):
@@ -53,6 +53,7 @@ def download_image(image_id, retry_count=0):
     url = BASE_URL.format(prefix, image_id)
 
     try:
+        logger.debug(f"Attempting to download image ID {image_id} from {url}")
         # Perform the HTTP request to download the image
         response = requests.get(url, timeout=10)
         if response.status_code == 200:  # Check for a successful response
@@ -60,21 +61,18 @@ def download_image(image_id, retry_count=0):
             filename = os.path.join(DOWNLOAD_DIR, f"n{image_id:04d}.jpg")
             with open(filename, 'wb') as file:  # Save the content to a file
                 file.write(response.content)
-            with log_lock:  # Acquire the lock for thread-safe logging
-                logging.info(f"Downloaded: {filename}")
+            logger.info(f"Downloaded: {filename}")
         else:
             raise requests.RequestException(
                 f"Failed with status code: {response.status_code}")
     except requests.RequestException as e:
         if retry_count < RETRY_LIMIT:  # Check if we can retry
-            with log_lock:
-                logging.warning(f"Retry {retry_count + 1} for {url}: {e}")
+            logger.warning(f"Retry {retry_count + 1} for {url}: {e}")
             # Retry downloading the image
             download_image(image_id, retry_count + 1)
         else:
-            with log_lock:
-                logging.error(
-                    f"Failed to download {url} after {RETRY_LIMIT} retries.")
+            logger.error(
+                f"Failed to download {url} after {RETRY_LIMIT} retries.")
 
 
 def worker():
@@ -89,6 +87,7 @@ def worker():
         image_id = queue.get()  # Get the next image ID from the queue
         download_image(image_id)  # Download the image
         queue.task_done()  # Indicate that the task is completed
+        logger.debug(f"Task for image ID {image_id} completed.")
 
 
 def create_download_dir():
@@ -101,6 +100,25 @@ def create_download_dir():
     """
     if not os.path.exists(DOWNLOAD_DIR):
         os.makedirs(DOWNLOAD_DIR)  # Create the directory if it doesn't exist
+        logger.info(f"Created directory: {DOWNLOAD_DIR}")
+    else:
+        logger.info(f"Directory already exists: {DOWNLOAD_DIR}")
+
+
+def show_progress(start, end):
+    """
+    Display download progress in the console.
+
+    Args:
+        start (int): The starting image ID.
+        end (int): The ending image ID.
+    """
+    total_images = end - start + 1
+    while not queue.empty():
+        downloaded = total_images - queue.qsize()
+        progress = (downloaded / total_images) * 100
+        logger.info(f"Progress: {downloaded}/{total_images} ({progress:.2f}%)")
+        time.sleep(5)
 
 
 def main(start, end):
@@ -121,21 +139,27 @@ def main(start, end):
     # Start worker threads
     threads = []
     for _ in range(THREAD_COUNT):
-        # Create a new thread that runs the worker function
         thread = Thread(target=worker)
-        thread.start()  # Start the thread
-        threads.append(thread)  # Add the thread to the list
+        thread.start()
+        threads.append(thread)
+
+    # Start progress monitor thread
+    progress_thread = Thread(target=show_progress, args=(start, end))
+    progress_thread.start()
 
     # Wait for all tasks to be completed
-    queue.join()  # Block until all items in the queue have been processed
+    queue.join()
 
     # Ensure all threads have finished execution
     for thread in threads:
-        thread.join()  # Wait for each thread to finish
+        thread.join()
+
+    # Wait for progress thread to finish
+    progress_thread.join()
+    logger.info("All downloads completed.")
 
 
 if __name__ == "__main__":
-    # Set up command-line argument parsing
     parser = argparse.ArgumentParser(
         description="Download images with multi-threading.")
     parser.add_argument('--start', type=int, default=1,
@@ -149,9 +173,6 @@ if __name__ == "__main__":
 
     # Update thread count based on user input
     THREAD_COUNT = args.threads
-
-    # Initialize task queue
-    queue = Queue()
 
     # Set up logging
     setup_logging()

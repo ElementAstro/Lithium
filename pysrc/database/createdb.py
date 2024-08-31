@@ -1,22 +1,17 @@
-#!/usr/bin/python
-
-"""Creates sqlite3 database from csv OpenNGC file.
-The first line of the csv file, which contains the headers, must be removed.
-
-    Usage: createdb.py
-"""
-
-import os
 import csv
+import os
 import numpy as np
 import re
 import sqlite3
 from typing import Dict, List, Tuple, Optional
+from loguru import logger
+import argparse
 
-outputFile = os.path.join(os.path.dirname(
+# 默认输出数据库文件路径
+default_db_path = os.path.join(os.path.dirname(
     __file__), os.pardir, 'src', 'pyongc', 'ongc.db')
 
-# Dictionaries
+# Object Types
 objectTypes: Dict[str, str] = {
     '*': 'Star',
     '**': 'Double star',
@@ -60,10 +55,18 @@ PATTERNS: Dict[str, str] = {
 }
 
 
+def setup_logging():
+    """Set up the loguru logging configuration to log both to console and to a file."""
+    logger.add("create_db.log", level="DEBUG",
+               format="{time} {level} {message}", rotation="10 MB")
+    logger.info("Logging setup complete.")
+
+
 def parse_ra_dec(ra_str: str, dec_str: str) -> Tuple[Optional[float], Optional[float]]:
     if ra_str:
         ra_array = np.array([float(x) for x in ra_str.split(':')])
         ra_rad = np.radians(np.sum(ra_array * [15, 1 / 4, 1 / 240]))
+        logger.debug(f"Parsed RA: {ra_str} to radians: {ra_rad}")
     else:
         ra_rad = None
 
@@ -71,6 +74,7 @@ def parse_ra_dec(ra_str: str, dec_str: str) -> Tuple[Optional[float], Optional[f
         dec_array = np.array([float(x) for x in dec_str.split(':')])
         sign = -1 if np.signbit(dec_array[0]) else 1
         dec_rad = np.radians(np.sum(dec_array * [1, sign / 60, sign / 3600]))
+        logger.debug(f"Parsed Dec: {dec_str} to radians: {dec_rad}")
     else:
         dec_rad = None
 
@@ -102,15 +106,19 @@ def insert_object_identifiers(cursor: sqlite3.Cursor, name: str, identifier: str
                 case _:
                     objectname = f"{match.group(1).strip()}{int(match.group(2)):03d}"
 
+            logger.debug(
+                f"Inserting identifier: {objectname} for object: {name}")
             cursor.execute(
                 'INSERT INTO objIdentifiers(name, identifier) VALUES(?, ?)', (name, objectname))
 
 
-def main() -> None:
+def create_database(db_path: str, filenames: List[str]) -> None:
+    """Creates the SQLite database from CSV files."""
     try:
-        with sqlite3.connect(outputFile) as db:
+        with sqlite3.connect(db_path) as db:
             cursor = db.cursor()
 
+            logger.info("Creating tables in database...")
             # Create objects types table
             cursor.execute('DROP TABLE IF EXISTS objTypes')
             cursor.execute('''CREATE TABLE IF NOT EXISTS objTypes(
@@ -163,12 +171,16 @@ def main() -> None:
                                 name TEXT NOT NULL,
                                 identifier TEXT NOT NULL UNIQUE)''')
 
-            columns_maybe_null: List[str] = ['MajAx', 'MinAx', 'PosAng', 'B-Mag', 'V-Mag', 'J-Mag', 'H-Mag', 'K-Mag',
-                                             'SurfBr', 'Pax', 'Pm-RA', 'Pm-Dec', 'RadVel', 'Redshift', 'Cstar U-Mag',
-                                             'Cstar B-Mag', 'Cstar V-Mag']
+            columns_maybe_null: List[str] = [
+                'MajAx', 'MinAx', 'PosAng', 'B-Mag', 'V-Mag', 'J-Mag', 'H-Mag', 'K-Mag',
+                'SurfBr', 'Pax', 'Pm-RA', 'Pm-Dec', 'RadVel', 'Redshift', 'Cstar U-Mag',
+                'Cstar B-Mag', 'Cstar V-Mag'
+            ]
 
-            for filename in ('NGC.csv', 'addendum.csv'):
+            for filename in filenames:
                 notngc = filename != 'NGC.csv'
+                logger.info(f"Processing file: {filename}")
+
                 with open(filename, 'r', encoding="utf-8") as csvFile:
                     reader = csv.DictReader(csvFile, delimiter=';')
 
@@ -181,8 +193,9 @@ def main() -> None:
 
                         cursor.execute('''INSERT INTO objects(name, type, ra, dec, const, majax, minax, pa, bmag, vmag,
                                                                jmag, hmag, kmag, sbrightn, hubble, parallax, pmra,
-                                                               pmdec, radvel, redshift, cstarumag                                                               , cstarbmag, cstarvmag, messier, ngc, ic, cstarnames,
-                                                               identifiers, commonnames, nednotes, ongcnotes, notngc)
+                                                               pmdec, radvel, redshift, cstarumag, cstarbmag, cstarvmag,
+                                                                                                                              messier, ngc, ic, cstarnames, identifiers, commonnames,
+                                                               nednotes, ongcnotes, notngc)
                                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                                        (line['Name'], line['Type'], ra_rad, dec_rad, line['Const'],
                                         line['MajAx'], line['MinAx'], line['PosAng'], line['B-Mag'],
@@ -194,20 +207,45 @@ def main() -> None:
                                         line['Identifiers'], line['Common names'], line['NED notes'],
                                         line['OpenNGC notes'], notngc))
 
+                        logger.debug(f"Inserted object: {line['Name']}")
+
+                        # Insert primary identifier (name) into objIdentifiers table
                         cursor.execute('INSERT INTO objIdentifiers(name, identifier) VALUES(?, ?)',
                                        (line['Name'], line['Name'].upper()))
 
+                        # Insert other identifiers into objIdentifiers table
                         for identifier in line['Identifiers'].split(','):
                             insert_object_identifiers(
                                 cursor, line['Name'], identifier)
 
+            # Create index on objIdentifiers table for faster searches
             cursor.execute(
                 'CREATE UNIQUE INDEX "idx_identifiers" ON "objIdentifiers" ("identifier");')
+            logger.info("Index created on objIdentifiers table.")
+
             db.commit()
+            logger.info(f"Database created successfully at {db_path}")
 
     except Exception as e:
         db.rollback()
+        logger.error(f"Error occurred: {e}")
         raise e
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Creates an SQLite database from OpenNGC CSV files.")
+    parser.add_argument('--db_path', type=str, default=default_db_path,
+                        help="Output SQLite database file path.")
+    parser.add_argument('--csv_files', type=str, nargs='+',
+                        required=True, help="List of input CSV files.")
+    args = parser.parse_args()
+
+    # Set up logging
+    setup_logging()
+
+    # Create the database
+    create_database(args.db_path, args.csv_files)
 
 
 if __name__ == "__main__":

@@ -17,16 +17,16 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         client_ip = request.client.host
         current_time = time()
-        
+
         # 过滤超过时间窗口的请求
         request_times[client_ip] = [
-            timestamp for timestamp in request_times[client_ip] 
+            timestamp for timestamp in request_times[client_ip]
             if timestamp > current_time - TIME_WINDOW
         ]
-        
+
         if len(request_times[client_ip]) >= RATE_LIMIT:
             raise HTTPException(status_code=429, detail="Rate limit exceeded")
-        
+
         request_times[client_ip].append(current_time)
         response = await call_next(request)
         return response

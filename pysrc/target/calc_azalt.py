@@ -51,7 +51,7 @@ def calculate_star_info(observation_start_time: datetime, observer_location: Ear
                         ra: float, dec: float, time_span: int = 20,
                         observation_hours: Tuple[int, int] = (16, 8)) -> List[Tuple[str, float, float]]:
     """
-    Calculate azimuth and altitude of a star over a night from the specified start time to the end time next day 
+    Calculate azimuth and altitude of a star over a night from the specified start time to the end time next day
     at specified intervals.
 
     :param observation_start_time: The date and time when observation starts.

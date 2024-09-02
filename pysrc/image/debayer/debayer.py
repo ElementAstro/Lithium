@@ -97,7 +97,7 @@ class Debayer:
     def debayer_bilinear(self, cfa_image, pattern='BGGR'):
         """
         使用双线性插值法进行去拜耳处理。
-        
+
         :param cfa_image: 输入的CFA图像
         :param pattern: Bayer模式 ('BGGR', 'RGGB', 'GBRG', 'GRBG')
         :return: 去拜耳处理后的RGB图像
@@ -154,7 +154,7 @@ class Debayer:
     def calculate_laplacian(self, image):
         """
         计算图像的拉普拉斯算子，用于增强边缘检测。
-        
+
         :param image: 输入的图像（灰度图像）
         :return: 拉普拉斯图像
         """
@@ -164,7 +164,7 @@ class Debayer:
     def harmonize_edges(self, original, interpolated, laplacian):
         """
         使用拉普拉斯算子结果来调整插值后的图像，增强边缘细节。
-        
+
         :param original: 原始CFA图像
         :param interpolated: 双线性插值后的图像
         :param laplacian: 计算的拉普拉斯图像
@@ -175,27 +175,27 @@ class Debayer:
     def debayer_laplacian_harmonization(self, cfa_image, pattern='BGGR'):
         """
         使用简化的拉普拉斯调和方法进行去拜耳处理，以增强边缘处理。
-        
+
         :param cfa_image: 输入的CFA图像
         :param pattern: Bayer模式 ('BGGR', 'RGGB', 'GBRG', 'GRBG')
         :return: 去拜耳处理后的RGB图像
         """
         # Step 1: 双线性插值
         interpolated_image = self.debayer_bilinear(cfa_image, pattern)
-        
+
         # Step 2: 计算每个通道的拉普拉斯图像
         laplacian_b = self.calculate_laplacian(interpolated_image[:, :, 0])
         laplacian_g = self.calculate_laplacian(interpolated_image[:, :, 1])
         laplacian_r = self.calculate_laplacian(interpolated_image[:, :, 2])
-        
+
         # Step 3: 使用拉普拉斯结果调和插值后的图像
         harmonized_b = self.harmonize_edges(cfa_image, interpolated_image[:, :, 0], laplacian_b)
         harmonized_g = self.harmonize_edges(cfa_image, interpolated_image[:, :, 1], laplacian_g)
         harmonized_r = self.harmonize_edges(cfa_image, interpolated_image[:, :, 2], laplacian_r)
-        
+
         # Step 4: 合并调和后的通道
         harmonized_image = np.stack((harmonized_b, harmonized_g, harmonized_r), axis=-1)
-        
+
         return harmonized_image
 
     def extend_image_edges(self, image: np.ndarray, pad_width: int) -> np.ndarray:

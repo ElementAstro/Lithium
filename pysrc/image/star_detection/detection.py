@@ -7,16 +7,16 @@ class StarDetectionConfig:
     """
     Configuration class for star detection settings.
     """
-    def __init__(self, 
-                 median_filter_size: int = 3, 
-                 wavelet_levels: int = 4, 
-                 binarization_threshold: int = 30, 
-                 min_star_size: int = 10, 
-                 min_star_brightness: int = 20, 
-                 min_circularity: float = 0.7, 
-                 max_circularity: float = 1.3, 
-                 scales: List[float] = [1.0, 0.75, 0.5], 
-                 dbscan_eps: float = 10, 
+    def __init__(self,
+                 median_filter_size: int = 3,
+                 wavelet_levels: int = 4,
+                 binarization_threshold: int = 30,
+                 min_star_size: int = 10,
+                 min_star_brightness: int = 20,
+                 min_circularity: float = 0.7,
+                 max_circularity: float = 1.3,
+                 scales: List[float] = [1.0, 0.75, 0.5],
+                 dbscan_eps: float = 10,
                  dbscan_min_samples: int = 2):
         self.median_filter_size = median_filter_size
         self.wavelet_levels = wavelet_levels
@@ -77,8 +77,8 @@ def filter_stars(star_properties: List[Tuple[Tuple[int, int], float, float]], bi
         cv2.circle(mask, center, 5, 255, -1)
         star_pixels = cv2.countNonZero(mask)
         brightness = np.mean(binary_image[mask == 255])
-        if (star_pixels > config.min_star_size and 
-            brightness > config.min_star_brightness and 
+        if (star_pixels > config.min_star_size and
+            brightness > config.min_star_brightness and
             config.min_circularity <= circularity <= config.max_circularity):
             filtered_stars.append(center)
     return filtered_stars

@@ -19,7 +19,7 @@ def cluster_stars(stars: List[Tuple[int, int]], dbscan_eps: float, dbscan_min_sa
 
     clustering = DBSCAN(eps=dbscan_eps, min_samples=dbscan_min_samples).fit(stars)
     labels = clustering.labels_
-    
+
     unique_labels = set(labels)
     clustered_stars = []
     for label in unique_labels:
@@ -28,5 +28,5 @@ def cluster_stars(stars: List[Tuple[int, int]], dbscan_eps: float, dbscan_min_sa
         class_members = [stars[i] for i in range(len(stars)) if labels[i] == label]
         centroid = np.mean(class_members, axis=0).astype(int)
         clustered_stars.append(tuple(centroid))
-    
+
     return clustered_stars

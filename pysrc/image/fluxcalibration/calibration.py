@@ -14,12 +14,12 @@ def compute_flx2dn(params: CalibrationParams) -> float:
     wavelength_m = params.wavelength * 1e-9  # Convert nm to meters
 
     aperture_area = np.pi * (params.aperture**2 - params.obstruction**2) / 4
-    FLX2DN = (params.exposure_time * aperture_area * params.filter_width * 
-              params.transmissivity * params.gain * params.quantum_efficiency * 
+    FLX2DN = (params.exposure_time * aperture_area * params.filter_width *
+              params.transmissivity * params.gain * params.quantum_efficiency *
               (1 - params.extinction) * (wavelength_m / (c * h)))
     return FLX2DN
 
-def flux_calibration(image: np.ndarray, params: CalibrationParams, 
+def flux_calibration(image: np.ndarray, params: CalibrationParams,
                      response_function: Optional[np.ndarray] = None) -> np.ndarray:
     """
     Perform flux calibration on an astronomical image.
@@ -44,7 +44,7 @@ def flux_calibration(image: np.ndarray, params: CalibrationParams,
 
     return rescaled_image, FLXMIN, FLXRANGE, FLX2DN
 
-def save_to_fits(image: np.ndarray, filename: str, FLXMIN: float, FLXRANGE: float, 
+def save_to_fits(image: np.ndarray, filename: str, FLXMIN: float, FLXRANGE: float,
                  FLX2DN: float, header_info: dict = {}) -> None:
     """
     Save the calibrated image to a FITS file with necessary header information.

@@ -11,7 +11,7 @@ class ImageProcessing:
     def apply_gamma_correction(self, gamma: float) -> np.ndarray:
         """
         Apply gamma correction to the image to adjust the contrast.
-        
+
         Parameters:
             gamma (float): The gamma value to apply. < 1 makes the image darker, > 1 makes it brighter.
 

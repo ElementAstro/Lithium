@@ -113,7 +113,7 @@ def parallel_defect_map(image: np.ndarray, defect_map: np.ndarray, **kwargs) -> 
     """
     if image.ndim == 2:
         return defect_map_enhanced(image, defect_map, **kwargs)
-    
+
     pool = multiprocessing.Pool()
     channels = [image[:, :, i] for i in range(image.shape[2])]
 

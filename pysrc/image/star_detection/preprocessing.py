@@ -86,15 +86,15 @@ def wavelet_transform(image: np.ndarray, levels: int) -> List[np.ndarray]:
     for _ in range(levels):
         down = cv2.pyrDown(current_image)
         up = cv2.pyrUp(down, current_image.shape[:2])
-        
+
         # Resize up to match the original image size
         up = cv2.resize(up, (current_image.shape[1], current_image.shape[0]))
-        
+
         # Calculate the difference to get the detail layer
         layer = cv2.subtract(current_image, up)
         pyramid.append(layer)
         current_image = down
-    
+
     pyramid.append(current_image)  # Add the final low-resolution image
     return pyramid
 
@@ -111,13 +111,13 @@ def inverse_wavelet_transform(pyramid: List[np.ndarray]) -> np.ndarray:
     image = pyramid.pop()
     while pyramid:
         up = cv2.pyrUp(image, pyramid[-1].shape[:2])
-        
+
         # Resize up to match the size of the current level
         up = cv2.resize(up, (pyramid[-1].shape[1], pyramid[-1].shape[0]))
-        
+
         # Add the detail layer to reconstruct the image
         image = cv2.add(up, pyramid.pop())
-    
+
     return image
 
 def background_subtraction(image: np.ndarray, background: np.ndarray) -> np.ndarray:
@@ -133,7 +133,7 @@ def background_subtraction(image: np.ndarray, background: np.ndarray) -> np.ndar
     """
     # Resize the background to match the original image size
     background_resized = cv2.resize(background, (image.shape[1], image.shape[0]))
-    
+
     # Subtract background and ensure no negative values
     result = cv2.subtract(image, background_resized)
     result[result < 0] = 0
@@ -166,7 +166,7 @@ def detect_stars(binary_image: np.ndarray) -> Tuple[List[Tuple[int, int]], List[
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     star_centers = []
     star_properties = []
-    
+
     for contour in contours:
         M = cv2.moments(contour)
         if M['m00'] != 0:
@@ -175,5 +175,5 @@ def detect_stars(binary_image: np.ndarray) -> Tuple[List[Tuple[int, int]], List[
             area = cv2.contourArea(contour)
             perimeter = cv2.arcLength(contour, True)
             star_properties.append((center, area, perimeter))
-    
+
     return star_centers, star_properties

@@ -60,6 +60,51 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(cmake_modules/compiler_options.cmake)
 
+if (USE_CONAN)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake OPTIONAL) # Optional inclusion
+
+# 检查是否已经安装Conan
+find_program(CONAN_CMD conan)
+if(NOT CONAN_CMD)
+    message(FATAL_ERROR "Conan is not installed. Please install Conan (pip install conan).")
+endif()
+
+# 检测Conan默认配置文件是否存在
+execute_process(
+    COMMAND ${CONAN_CMD} config home
+    OUTPUT_VARIABLE CONAN_HOME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+set(CONAN_DEFAULT_PROFILE "${CONAN_HOME}/profiles/default")
+
+if(NOT EXISTS "${CONAN_DEFAULT_PROFILE}")
+    message(STATUS "Conan default profile not found. Creating a new profile based on platform.")
+    # 根据操作系统创建默认配置
+    if(WIN32)
+        execute_process(COMMAND ${CONAN_CMD} profile detect --force)
+    elseif(UNIX)
+        execute_process(COMMAND ${CONAN_CMD} profile detect --force)
+    else()
+        message(FATAL_ERROR "Unsupported platform for Conan profile detection.")
+    endif()
+endif()
+
+# 如果conanbuildinfo.cmake不存在，执行conan install命令
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+    message(STATUS "Running Conan install...")
+    execute_process(
+        COMMAND ${CONAN_CMD} install ${CMAKE_SOURCE_DIR} --build=missing
+        RESULT_VARIABLE result
+    )
+    if(result)
+        message(FATAL_ERROR "Conan install failed with error code: ${result}")
+    endif()
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup()
+endif()
+endif()
+
 # Include directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/libs/)

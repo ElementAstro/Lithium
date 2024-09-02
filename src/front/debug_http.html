@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API 调试界面</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #282c34;
+        color: #ffffff;
+        margin: 0;
+        padding: 0;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 20px;
+        background-color: #3a3f47;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.3s, box-shadow 0.3s;
+      }
+
+      h1 {
+        text-align: center;
+        color: #61dafb;
+      }
+
+      label {
+        display: block;
+        margin-top: 20px;
+        font-size: 14px;
+      }
+
+      input,
+      textarea,
+      select,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: #2c3038;
+        color: #ffffff;
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      }
+
+      textarea {
+        height: 120px;
+      }
+
+      button {
+        display: inline-block;
+        background-color: #61dafb;
+        color: #000;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        width: auto;
+        margin-top: 20px;
+        margin-right: 10px;
+      }
+
+      button:hover {
+        background-color: #21a1f1;
+      }
+
+      .response-section,
+      .history,
+      .headers-section {
+        margin-top: 30px;
+      }
+
+      pre {
+        background-color: #1e2126;
+        padding: 15px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 300px;
+        overflow-y: auto;
+        color: #abb2bf;
+      }
+
+      .history-item {
+        padding: 10px;
+        border-bottom: 1px solid #444b53;
+        background-color: #2c3038;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+
+      .history-item:last-child {
+        border-bottom: none;
+      }
+
+      .history-controls,
+      .url-controls,
+      .headers-controls {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+      }
+
+      .history-controls button,
+      .url-controls button,
+      .headers-controls button {
+        width: 30%;
+      }
+
+      .header-item {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+      }
+
+      .header-item input {
+        width: 45%;
+      }
+
+      #response-status {
+        margin-top: 10px;
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      .dark-mode {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .dark-mode .container {
+        background-color: #1f1f1f;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+      }
+
+      .dark-mode input,
+      .dark-mode textarea,
+      .dark-mode select,
+      .dark-mode button {
+        background-color: #333;
+        color: #e0e0e0;
+        border-color: #555;
+      }
+
+      .dark-mode pre {
+        background-color: #2c2c2c;
+        color: #c5c5c5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>API 调试界面</h1>
+
+      <div class="url-controls">
+        <button id="toggle-theme">切换主题</button>
+        <button id="save-url">保存URL</button>
+        <select id="saved-urls"></select>
+      </div>
+
+      <div class="request-section">
+        <label for="url">URL:</label>
+        <input type="text" id="url" placeholder="请输入API URL" />
+
+        <label for="method">请求方法:</label>
+        <select id="method">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+
+        <div class="headers-section">
+          <h2>请求头</h2>
+          <div id="headers-list"></div>
+          <div class="headers-controls">
+            <button id="add-header">添加头</button>
+          </div>
+        </div>
+
+        <label for="json-input">请求体 (JSON):</label>
+        <textarea
+          id="json-input"
+          placeholder="请输入JSON格式的请求体"
+        ></textarea>
+
+        <button id="send-request">发送请求</button>
+      </div>
+
+      <div class="response-section">
+        <h2>响应结果</h2>
+        <div id="response-status"></div>
+        <pre id="response-output"></pre>
+        <button id="copy-response">复制响应</button>
+      </div>
+
+      <div class="history">
+        <h2>消息历史</h2>
+        <div id="history-list"></div>
+        <div class="history-controls">
+          <button id="clear-history">清除历史</button>
+          <button id="save-history">保存历史</button>
+          <button id="load-history">加载历史</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let isDarkMode = false;
+
+      document
+        .getElementById("send-request")
+        .addEventListener("click", function () {
+          const url = document.getElementById("url").value;
+          const method = document.getElementById("method").value;
+          const headersList = document.querySelectorAll(".header-item");
+          let jsonInput = document.getElementById("json-input").value;
+
+          if (!url) {
+            alert("请提供API URL");
+            return;
+          }
+
+          if (jsonInput) {
+            try {
+              jsonInput = JSON.parse(jsonInput);
+            } catch (e) {
+              alert("请求体不是有效的JSON格式");
+              return;
+            }
+          }
+
+          const headers = {};
+          headersList.forEach((headerItem) => {
+            const key = headerItem.querySelector(".header-key").value;
+            const value = headerItem.querySelector(".header-value").value;
+            if (key) {
+              headers[key] = value;
+            }
+          });
+
+          const options = {
+            method: method,
+            headers: {
+              "Content-Type": "application/json",
+              ...headers,
+            },
+          };
+
+          if (method !== "GET") {
+            options.body = JSON.stringify(jsonInput);
+          }
+
+          fetch(url, options)
+            .then((response) => {
+              document.getElementById(
+                "response-status"
+              ).textContent = `状态: ${response.status} ${response.statusText}`;
+              return response.json();
+            })
+            .then((data) => {
+              document.getElementById("response-output").textContent =
+                JSON.stringify(data, null, 4);
+              updateHistory(url, method, jsonInput, data, headers);
+            })
+            .catch((error) => {
+              document.getElementById("response-status").textContent =
+                "请求失败";
+              document.getElementById(
+                "response-output"
+              ).textContent = `请求失败: ${error}`;
+            });
+        });
+
+      function updateHistory(url, method, request, response, headers) {
+        const historyList = document.getElementById("history-list");
+        const historyItem = document.createElement("div");
+        historyItem.className = "history-item";
+
+        historyItem.innerHTML = `
+                <strong>URL:</strong> ${url}<br>
+                <strong>Method:</strong> ${method}<br>
+                <strong>Headers:</strong> <pre>${JSON.stringify(
+                  headers,
+                  null,
+                  4
+                )}</pre><br>
+                <strong>Request:</strong> <pre>${JSON.stringify(
+                  request,
+                  null,
+                  4
+                )}</pre><br>
+                <strong>Response:</strong> <pre>${JSON.stringify(
+                  response,
+                  null,
+                  4
+                )}</pre>
+            `;
+
+        historyList.appendChild(historyItem);
+      }
+
+      document
+        .getElementById("add-header")
+        .addEventListener("click", function () {
+          const headersList = document.getElementById("headers-list");
+          const headerItem = document.createElement("div");
+          headerItem.className = "header-item";
+
+          headerItem.innerHTML = `
+                <input type="text" class="header-key" placeholder="Header 名称">
+                <input type="text" class="header-value" placeholder="Header 值">
+                <button class="remove-header">删除</button>
+            `;
+
+          headersList.appendChild(headerItem);
+
+          headerItem
+            .querySelector(".remove-header")
+            .addEventListener("click", function () {
+              headersList.removeChild(headerItem);
+            });
+        });
+
+      document
+        .getElementById("clear-history")
+        .addEventListener("click", function () {
+          document.getElementById("history-list").innerHTML = "";
+          localStorage.removeItem("apiHistory");
+        });
+
+      document
+        .getElementById("save-history")
+        .addEventListener("click", function () {
+          const historyList = document.getElementById("history-list").innerHTML;
+          localStorage.setItem("apiHistory", historyList);
+          alert("历史已保存");
+        });
+
+      document
+        .getElementById("load-history")
+        .addEventListener("click", function () {
+          const historyList = localStorage.getItem("apiHistory");
+          if (historyList) {
+            document.getElementById("history-list").innerHTML = historyList;
+            alert("历史已加载");
+          } else {
+            alert("没有保存的历史");
+          }
+        });
+
+      // URL 预设列表保存和加载
+      document
+        .getElementById("save-url")
+        .addEventListener("click", function () {
+          const url = document.getElementById("url").value;
+          if (!url) {
+            alert("请先输入URL");
+            return;
+          }
+
+          const savedUrls = JSON.parse(localStorage.getItem("savedUrls")) || [];
+          if (!savedUrls.includes(url)) {
+            savedUrls.push(url);
+            localStorage.setItem("savedUrls", JSON.stringify(savedUrls));
+            updateSavedUrls();
+            alert("URL已保存");
+          } else {
+            alert("URL已存在");
+          }
+        });
+
+      document
+        .getElementById("saved-urls")
+        .addEventListener("change", function () {
+          const selectedUrl = this.value;
+          document.getElementById("url").value = selectedUrl;
+        });
+
+      function updateSavedUrls() {
+        const savedUrls = JSON.parse(localStorage.getItem("savedUrls")) || [];
+        const savedUrlsSelect = document.getElementById("saved-urls");
+        savedUrlsSelect.innerHTML = "";
+
+        savedUrls.forEach((url) => {
+          const option = document.createElement("option");
+          option.value = url;
+          option.textContent = url;
+          savedUrlsSelect.appendChild(option);
+        });
+      }
+
+      // 复制响应内容到剪贴板
+      document
+        .getElementById("copy-response")
+        .addEventListener("click", function () {
+          const responseOutput =
+            document.getElementById("response-output").textContent;
+          navigator.clipboard
+            .writeText(responseOutput)
+            .then(() => {
+              alert("响应内容已复制到剪贴板");
+            })
+            .catch((err) => {
+              alert("复制失败: " + err);
+            });
+        });
+
+      // 主题切换
+      document
+        .getElementById("toggle-theme")
+        .addEventListener("click", function () {
+          isDarkMode = !isDarkMode;
+          document.body.classList.toggle("dark-mode", isDarkMode);
+        });
+
+      // 页面加载时初始化
+      window.addEventListener("load", function () {
+        updateSavedUrls();
+        const historyList = localStorage.getItem("apiHistory");
+        if (historyList) {
+          document.getElementById("history-list").innerHTML = historyList;
+        }
+      });
+    </script>
+  </body>
+</html>

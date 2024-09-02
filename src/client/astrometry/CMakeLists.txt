@@ -10,9 +10,6 @@ project(lithium.client.astrometry)
 # Add source files
 set(SOURCE_FILES
     astrometry.cpp
-
-    _component.cpp
-    _main.cpp
 )
 
 set(LIBS

@@ -33,12 +33,6 @@ TEST_F(ModuleLoaderTest, EnableDisableModule) {
     ASSERT_FALSE(loader->isModuleEnabled("testModule"));
 }
 
-TEST_F(ModuleLoaderTest, GetModuleFunctions) {
-    loader->loadModule("path/to/module.so", "testModule");
-    auto version = loader->getModuleVersion("testModule");
-    ASSERT_FALSE(version.empty());
-}
-
 TEST_F(ModuleLoaderTest, UnloadAllModules) {
     loader->loadModule("path/to/module.so", "testModule");
     ASSERT_TRUE(loader->unloadAllModules());

@@ -15,13 +15,32 @@
 #include <vector>
 
 namespace atom::utils {
-// Helper to determine if a type is serializable as plain bytes
+
+/**
+ * @brief Concept to determine if a type is serializable as plain bytes.
+ *
+ * This concept checks if a type is serializable by determining if it is
+ * arithmetic, an enumeration, a `std::string`, or if it has a `serialize`
+ * function available.
+ */
 template <typename T>
 concept Serializable =
     std::is_arithmetic_v<T> || std::is_enum_v<T> ||
     std::same_as<T, std::string> || requires(T a) { serialize(a); };
 
-// General serialize function for serializable types
+/**
+ * @brief Serializes a serializable type into a vector of bytes.
+ *
+ * This function converts the given data of a serializable type into a
+ * vector of bytes. The size of the vector is equal to the size of the
+ * type.
+ *
+ * @tparam T The type of the data to serialize, must satisfy the `Serializable`
+ * concept.
+ * @param data The data to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * data.
+ */
 template <Serializable T>
 std::vector<uint8_t> serialize(const T& data) {
     std::vector<uint8_t> bytes(sizeof(T));
@@ -29,7 +48,16 @@ std::vector<uint8_t> serialize(const T& data) {
     return bytes;
 }
 
-// Serialize std::string
+/**
+ * @brief Serializes a std::string into a vector of bytes.
+ *
+ * This function converts a `std::string` into a vector of bytes, including
+ * the size of the string followed by the string's data.
+ *
+ * @param str The string to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * string.
+ */
 inline std::vector<uint8_t> serialize(const std::string& str) {
     std::vector<uint8_t> bytes;
     size_t size = str.size();
@@ -39,7 +67,18 @@ inline std::vector<uint8_t> serialize(const std::string& str) {
     return bytes;
 }
 
-// Serialize std::vector
+/**
+ * @brief Serializes a std::vector into a vector of bytes.
+ *
+ * This function converts a `std::vector` into a vector of bytes, including
+ * the size of the vector followed by the serialized elements.
+ *
+ * @tparam T The type of elements in the vector, must satisfy the `Serializable`
+ * concept.
+ * @param vec The vector to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * vector.
+ */
 template <typename T>
 std::vector<uint8_t> serialize(const std::vector<T>& vec) {
     std::vector<uint8_t> bytes;
@@ -54,7 +93,18 @@ std::vector<uint8_t> serialize(const std::vector<T>& vec) {
     return bytes;
 }
 
-// Serialize std::list
+/**
+ * @brief Serializes a std::list into a vector of bytes.
+ *
+ * This function converts a `std::list` into a vector of bytes, including
+ * the size of the list followed by the serialized elements.
+ *
+ * @tparam T The type of elements in the list, must satisfy the `Serializable`
+ * concept.
+ * @param list The list to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * list.
+ */
 template <typename T>
 std::vector<uint8_t> serialize(const std::list<T>& list) {
     std::vector<uint8_t> bytes;
@@ -69,7 +119,20 @@ std::vector<uint8_t> serialize(const std::list<T>& list) {
     return bytes;
 }
 
-// Serialize std::map
+/**
+ * @brief Serializes a std::map into a vector of bytes.
+ *
+ * This function converts a `std::map` into a vector of bytes, including
+ * the size of the map followed by the serialized key-value pairs.
+ *
+ * @tparam Key The type of keys in the map, must satisfy the `Serializable`
+ * concept.
+ * @tparam Value The type of values in the map, must satisfy the `Serializable`
+ * concept.
+ * @param map The map to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * map.
+ */
 template <typename Key, typename Value>
 std::vector<uint8_t> serialize(const std::map<Key, Value>& map) {
     std::vector<uint8_t> bytes;
@@ -86,7 +149,19 @@ std::vector<uint8_t> serialize(const std::map<Key, Value>& map) {
     return bytes;
 }
 
-// Serialize std::optional
+/**
+ * @brief Serializes a std::optional into a vector of bytes.
+ *
+ * This function converts a `std::optional` into a vector of bytes, including
+ * a boolean indicating whether the optional has a value, followed by the
+ * serialized value if it exists.
+ *
+ * @tparam T The type of the value contained in the optional, must satisfy the
+ * `Serializable` concept.
+ * @param opt The optional to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * optional.
+ */
 template <typename T>
 std::vector<uint8_t> serialize(const std::optional<T>& opt) {
     std::vector<uint8_t> bytes;
@@ -101,7 +176,18 @@ std::vector<uint8_t> serialize(const std::optional<T>& opt) {
     return bytes;
 }
 
-// Serialize std::variant
+/**
+ * @brief Serializes a std::variant into a vector of bytes.
+ *
+ * This function converts a `std::variant` into a vector of bytes, including
+ * the index of the active alternative, followed by the serialized value.
+ *
+ * @tparam Ts The types of the alternatives in the variant, must satisfy the
+ * `Serializable` concept.
+ * @param var The variant to serialize.
+ * @return std::vector<uint8_t> A vector of bytes representing the serialized
+ * variant.
+ */
 template <typename... Ts>
 std::vector<uint8_t> serialize(const std::variant<Ts...>& var) {
     std::vector<uint8_t> bytes;
@@ -118,7 +204,20 @@ std::vector<uint8_t> serialize(const std::variant<Ts...>& var) {
     return bytes;
 }
 
-// Deserialize helper function
+/**
+ * @brief Deserializes a type from a span of bytes.
+ *
+ * This function extracts data of a serializable type from the given span of
+ * bytes, starting from the specified offset, and advances the offset.
+ *
+ * @tparam T The type of data to deserialize, must satisfy the `Serializable`
+ * concept.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return T The deserialized data.
+ * @throws std::runtime_error if the data is too short to contain the expected
+ * type.
+ */
 template <Serializable T>
 T deserialize(const std::span<const uint8_t>& bytes, size_t& offset) {
     if (bytes.size() < offset + sizeof(T)) {
@@ -131,7 +230,17 @@ T deserialize(const std::span<const uint8_t>& bytes, size_t& offset) {
     return data;
 }
 
-// Deserialize std::string
+/**
+ * @brief Deserializes a std::string from a span of bytes.
+ *
+ * This function extracts a `std::string` from the given span of bytes,
+ * starting from the specified offset. The string is preceded by its size.
+ *
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return std::string The deserialized string.
+ * @throws std::runtime_error if the size of the string or the data is invalid.
+ */
 std::string deserializeString(const std::span<const uint8_t>& bytes,
                               size_t& offset) {
     size_t size = deserialize<size_t>(bytes, offset);
@@ -143,7 +252,18 @@ std::string deserializeString(const std::span<const uint8_t>& bytes,
     return str;
 }
 
-// Deserialize std::vector
+/**
+ * @brief Deserializes a std::vector from a span of bytes.
+ *
+ * This function extracts a `std::vector` from the given span of bytes,
+ * starting from the specified offset. The vector is preceded by its size.
+ *
+ * @tparam T The type of elements in the vector, must satisfy the `Serializable`
+ * concept.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return std::vector<T> The deserialized vector.
+ */
 template <typename T>
 std::vector<T> deserializeVector(const std::span<const uint8_t>& bytes,
                                  size_t& offset) {
@@ -158,7 +278,18 @@ std::vector<T> deserializeVector(const std::span<const uint8_t>& bytes,
     return vec;
 }
 
-// Deserialize std::list
+/**
+ * @brief Deserializes a std::list from a span of bytes.
+ *
+ * This function extracts a `std::list` from the given span of bytes,
+ * starting from the specified offset. The list is preceded by its size.
+ *
+ * @tparam T The type of elements in the list, must satisfy the `Serializable`
+ * concept.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return std::list<T> The deserialized list.
+ */
 template <typename T>
 std::list<T> deserializeList(const std::span<const uint8_t>& bytes,
                              size_t& offset) {
@@ -172,7 +303,21 @@ std::list<T> deserializeList(const std::span<const uint8_t>& bytes,
     return list;
 }
 
-// Deserialize std::map
+/**
+ * @brief Deserializes a std::map from a span of bytes.
+ *
+ * This function extracts a `std::map` from the given span of bytes,
+ * starting from the specified offset. The map is preceded by its size,
+ * followed by serialized key-value pairs.
+ *
+ * @tparam Key The type of keys in the map, must satisfy the `Serializable`
+ * concept.
+ * @tparam Value The type of values in the map, must satisfy the `Serializable`
+ * concept.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return std::map<Key, Value> The deserialized map.
+ */
 template <typename Key, typename Value>
 std::map<Key, Value> deserializeMap(const std::span<const uint8_t>& bytes,
                                     size_t& offset) {
@@ -189,7 +334,19 @@ std::map<Key, Value> deserializeMap(const std::span<const uint8_t>& bytes,
     return map;
 }
 
-// Deserialize std::optional
+/**
+ * @brief Deserializes a std::optional from a span of bytes.
+ *
+ * This function extracts a `std::optional` from the given span of bytes,
+ * starting from the specified offset. It first reads a boolean indicating
+ * whether the optional has a value, followed by the value if it exists.
+ *
+ * @tparam T The type of the value contained in the optional, must satisfy the
+ * `Serializable` concept.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return std::optional<T> The deserialized optional.
+ */
 template <typename T>
 std::optional<T> deserializeOptional(const std::span<const uint8_t>& bytes,
                                      size_t& offset) {
@@ -200,8 +357,21 @@ std::optional<T> deserializeOptional(const std::span<const uint8_t>& bytes,
     return std::nullopt;
 }
 
-// Deserialize std::variant
-// Helper function to construct a variant from index and bytes
+/**
+ * @brief Helper function to construct a std::variant from bytes.
+ *
+ * This function constructs a `std::variant` from the given bytes and index
+ * of the active alternative. It uses the provided index sequence to deserialize
+ * the value based on the alternative index.
+ *
+ * @tparam Variant The type of the variant to construct.
+ * @tparam Is The index sequence for the variant alternatives.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @param index The index of the active alternative in the variant.
+ * @param is The index sequence.
+ * @return Variant The constructed variant.
+ */
 template <typename Variant, std::size_t... Is>
 Variant constructVariant(const std::span<const uint8_t>& bytes, size_t& offset,
                          size_t index, std::index_sequence<Is...>) {
@@ -217,7 +387,20 @@ Variant constructVariant(const std::span<const uint8_t>& bytes, size_t& offset,
     return var;
 }
 
-// Deserialize std::variant
+/**
+ * @brief Deserializes a std::variant from a span of bytes.
+ *
+ * This function extracts a `std::variant` from the given span of bytes,
+ * starting from the specified offset. It first reads the index of the active
+ * alternative, then deserializes the value based on the alternative index.
+ *
+ * @tparam Ts The types of the alternatives in the variant, must satisfy the
+ * `Serializable` concept.
+ * @param bytes The span of bytes containing the serialized data.
+ * @param offset The offset in the span from where to start deserializing.
+ * @return std::variant<Ts...> The deserialized variant.
+ * @throws std::runtime_error if the index of the variant is out of range.
+ */
 template <typename... Ts>
 std::variant<Ts...> deserializeVariant(const std::span<const uint8_t>& bytes,
                                        size_t& offset) {
@@ -229,7 +412,16 @@ std::variant<Ts...> deserializeVariant(const std::span<const uint8_t>& bytes,
         bytes, offset, index, std::index_sequence_for<Ts...>{});
 }
 
-// Save serialized data to a file
+/**
+ * @brief Saves serialized data to a file.
+ *
+ * This function writes the given vector of bytes to a file. If the file cannot
+ * be opened for writing, it throws a runtime error.
+ *
+ * @param data The vector of bytes to save.
+ * @param filename The name of the file to write to.
+ * @throws std::runtime_error if the file cannot be opened for writing.
+ */
 inline void saveToFile(const std::vector<uint8_t>& data,
                        const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
@@ -240,7 +432,16 @@ inline void saveToFile(const std::vector<uint8_t>& data,
     file.write(reinterpret_cast<const char*>(data.data()), data.size());
 }
 
-// Load serialized data from a file
+/**
+ * @brief Loads serialized data from a file.
+ *
+ * This function reads the contents of a file into a vector of bytes. If the
+ * file cannot be opened for reading, it throws a runtime error.
+ *
+ * @param filename The name of the file to read from.
+ * @return std::vector<uint8_t> A vector of bytes representing the loaded data.
+ * @throws std::runtime_error if the file cannot be opened for reading.
+ */
 inline std::vector<uint8_t> loadFromFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
@@ -256,4 +457,4 @@ inline std::vector<uint8_t> loadFromFile(const std::string& filename) {
 
 }  // namespace atom::utils
 
-#endif
+#endif  // ATOM_UTILS_TO_BYTE_HPP

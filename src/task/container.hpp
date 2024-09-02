@@ -1,16 +1,14 @@
-/*
- * container.hpp
+/**
+ * @file container.hpp
+ * @brief Task container class.
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file contains the definition of the task container class, which is used
+ * for managing tasks within the application.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-4-3
-
-Description: Task container class.
-
-**************************************************/
 
 #ifndef LITHIUM_TASK_CONTAINER_HPP
 #define LITHIUM_TASK_CONTAINER_HPP
@@ -26,8 +24,8 @@ Description: Task container class.
 #include <unordered_map>
 #endif
 
-#include "task.hpp"
 #include <shared_mutex>
+#include "task.hpp"
 
 #include "atom/type/json_fwd.hpp"
 
@@ -38,24 +36,25 @@ public:
 
     // Task management
     void addTask(const std::shared_ptr<Task> &task);
-    auto getTask(const std::string &name) -> std::optional<std::shared_ptr<Task>>;
+    auto getTask(const std::string &name)
+        -> std::optional<std::shared_ptr<Task>>;
     auto removeTask(const std::string &name) -> bool;
     auto getAllTasks() -> std::vector<std::shared_ptr<Task>>;
     auto getTaskCount() -> size_t;
     void clearTasks();
     auto findTasks(int priority,
-                                                       Task::Status status) -> std::vector<std::shared_ptr<Task>>;
+                   Task::Status status) -> std::vector<std::shared_ptr<Task>>;
     void sortTasks(
         const std::function<bool(const std::shared_ptr<Task> &,
                                  const std::shared_ptr<Task> &)> &cmp);
-    void batchAddTasks(
-        const std::vector<std::shared_ptr<Task>> &tasksToAdd);
+    void batchAddTasks(const std::vector<std::shared_ptr<Task>> &tasksToAdd);
     void batchRemoveTasks(const std::vector<std::string> &taskNamesToRemove);
     void batchModifyTasks(
         const std::function<void(std::shared_ptr<Task> &)> &modifyFunc);
 
     // Task parameters management
-    auto addOrUpdateTaskParams(const std::string &name, const json &params) -> bool;
+    auto addOrUpdateTaskParams(const std::string &name,
+                               const json &params) -> bool;
     auto insertTaskParams(const std::string &name, const json &params,
                           const int &position) -> bool;
     auto getTaskParams(const std::string &name) const -> std::optional<json>;

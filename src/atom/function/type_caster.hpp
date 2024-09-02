@@ -118,11 +118,55 @@ public:
         detail::getTypeRegistry()[typeid(T).name()] = userType<T>();
     }
 
+    template <typename EnumType>
+    void registerEnumValue(const std::string& enumName,
+                           const std::string& strValue, EnumType enumValue) {
+        if (!m_enumMaps_.contains(enumName)) {
+            m_enumMaps_[enumName] = std::unordered_map<std::string, EnumType>();
+        }
+
+        auto& enumMap =
+            std::any_cast<std::unordered_map<std::string, EnumType>&>(
+                m_enumMaps_[enumName]);
+
+        enumMap[strValue] = enumValue;
+    }
+
+    template <typename EnumType>
+    const std::unordered_map<std::string, EnumType>& getEnumMap(
+        const std::string& enumName) const {
+        return std::any_cast<const std::unordered_map<std::string, EnumType>&>(
+            m_enumMaps_.at(enumName));
+    }
+
+    template <typename EnumType>
+    auto enumToString(EnumType value,
+                      const std::string& enumName) -> std::string {
+        const auto& enumMap = getEnumMap<EnumType>(enumName);
+        for (const auto& [key, enumValue] : enumMap) {
+            if (enumValue == value) {
+                return key;
+            }
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum value");
+    }
+
+    template <typename EnumType>
+    EnumType stringToEnum(const std::string& str, const std::string& enumName) {
+        const auto& enumMap = getEnumMap<EnumType>(enumName);
+        auto it = enumMap.find(str);
+        if (it != enumMap.end()) {
+            return it->second;
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum string");
+    }
+
 private:
     std::unordered_map<TypeInfo, ConvertMap> conversions_;
     mutable std::unordered_map<std::string, std::vector<TypeInfo>>
         conversion_paths_cache_;
     std::unordered_map<std::string, TypeInfo> type_name_map_;
+    std::unordered_map<std::string, std::any> m_enumMaps_;
 
     void registerBuiltinTypes() {
         registerType<int>("int");
@@ -186,8 +230,7 @@ private:
     static auto getTypeInfo(const std::string& name)
         -> std::optional<TypeInfo> {
         auto& registry = detail::getTypeRegistry();
-        auto it = registry.find(name);
-        if (it != registry.end()) {
+        if (auto it = registry.find(name); it != registry.end()) {
             return it->second;
         }
         return std::nullopt;

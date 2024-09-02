@@ -1,78 +1,143 @@
-// optional_test.cpp
 #include "atom/type/optional.hpp"
 #include "gtest/gtest.h"
 
-class OptionalTest : public ::testing::Test {};
+using namespace atom::type;
 
-TEST_F(OptionalTest, DefaultConstructor) {
-    Optional<int> optional;
-    EXPECT_FALSE(static_cast<bool>(optional));
+// Test Fixture Class
+class OptionalTest : public ::testing::Test {
+protected:
+    Optional<int> optInt;
+    Optional<std::string> optStr;
+};
+
+// Test: 默认构造
+TEST_F(OptionalTest, DefaultConstruction) {
+    EXPECT_FALSE(optInt);
+    EXPECT_FALSE(optStr);
 }
 
-TEST_F(OptionalTest, ValueConstructor) {
-    Optional<int> optional(10);
-    EXPECT_TRUE(static_cast<bool>(optional));
-    EXPECT_EQ(optional.value(), 10);
+// Test: 使用值构造
+TEST_F(OptionalTest, ValueConstruction) {
+    Optional<int> opt(42);
+    EXPECT_TRUE(opt);
+    EXPECT_EQ(*opt, 42);
+
+    Optional<std::string> optStr("test");
+    EXPECT_TRUE(optStr);
+    EXPECT_EQ(*optStr, "test");
 }
 
-TEST_F(OptionalTest, MoveConstructor) {
-    Optional<int> optional1(10);
-    Optional<int> optional2(std::move(optional1));
-    EXPECT_TRUE(static_cast<bool>(optional2));
-    EXPECT_EQ(optional2.value(), 10);
-    EXPECT_FALSE(
-        static_cast<bool>(optional1));  // NOLINT(bugprone-use-after-move)
+// Test: 空构造
+TEST_F(OptionalTest, NulloptConstruction) {
+    Optional<int> opt(std::nullopt);
+    EXPECT_FALSE(opt);
 }
 
-TEST_F(OptionalTest, CopyConstructor) {
-    Optional<int> optional1(10);
-    Optional<int> optional2(optional1);
-    EXPECT_TRUE(static_cast<bool>(optional2));
-    EXPECT_EQ(optional2.value(), 10);
-    EXPECT_TRUE(static_cast<bool>(optional1));
-    EXPECT_EQ(optional1.value(), 10);
-}
-
-TEST_F(OptionalTest, Reset) {
-    Optional<int> optional(10);
-    EXPECT_TRUE(static_cast<bool>(optional));
-    optional.reset();
-    EXPECT_FALSE(static_cast<bool>(optional));
-}
-
+// Test: Emplace 方法
 TEST_F(OptionalTest, Emplace) {
-    Optional<int> optional;
-    optional.emplace(10);
-    EXPECT_TRUE(static_cast<bool>(optional));
-    EXPECT_EQ(optional.value(), 10);
+    optInt.emplace(100);
+    EXPECT_TRUE(optInt);
+    EXPECT_EQ(*optInt, 100);
+
+    optStr.emplace("hello");
+    EXPECT_TRUE(optStr);
+    EXPECT_EQ(*optStr, "hello");
 }
 
-TEST_F(OptionalTest, PointerAccess) {
-    Optional<int> optional(10);
-    ASSERT_TRUE(static_cast<bool>(optional));
-    EXPECT_EQ(*optional, 10);
-    EXPECT_EQ(optional.value(), 10);  // Ensure operator-> doesn't throw
-}
-
-TEST_F(OptionalTest, DereferenceAccess) {
-    Optional<int> optional(10);
-    EXPECT_EQ(*optional, 10);
-    EXPECT_EQ(optional.value(), 10);
-}
-
+// Test: Value_or 方法
 TEST_F(OptionalTest, ValueOr) {
-    Optional<int> optional;
-    EXPECT_EQ(optional.valueOr(20), 20);
-
-    Optional<int> optionalWithValue(10);
-    EXPECT_EQ(optionalWithValue.valueOr(20), 10);
+    EXPECT_EQ(optInt.value_or(99), 99);  // 默认值
+    optInt.emplace(50);
+    EXPECT_EQ(optInt.value_or(99), 50);  // 现有值
 }
 
-TEST_F(OptionalTest, Equality) {
-    Optional<int> optional1(10);
-    Optional<int> optional2(10);
-    Optional<int> optional3;
+// Test: Map 方法
+TEST_F(OptionalTest, Map) {
+    optStr.emplace("test");
+    auto optLength =
+        optStr.map([](const std::string& str) { return str.size(); });
+    EXPECT_TRUE(optLength);
+    EXPECT_EQ(*optLength, 4);
+}
 
-    EXPECT_EQ(optional1, optional2);
-    EXPECT_NE(optional1, optional3);
+// Test: Flat_map 方法
+TEST_F(OptionalTest, FlatMap) {
+    optStr.emplace("test");
+    auto optFirstChar =
+        optStr.flat_map([](const std::string& str) -> Optional<char> {
+            if (!str.empty()) {
+                return Optional<char>(str[0]);
+            }
+            return std::nullopt;
+        });
+    EXPECT_TRUE(optFirstChar);
+    EXPECT_EQ(*optFirstChar, 't');
+
+    Optional<std::string> optEmptyStr(std::nullopt);
+    auto optEmptyResult = optEmptyStr.flat_map(
+        []([[maybe_unused]] const std::string& str) -> Optional<int> {
+            return Optional<int>(std::nullopt);
+        });
+    EXPECT_FALSE(optEmptyResult);
+}
+
+// Test: Or_else 方法
+TEST_F(OptionalTest, OrElse) {
+    auto result = optStr.or_else([]() { return std::string("default"); });
+    EXPECT_EQ(result, "default");
+
+    optStr.emplace("value");
+    result = optStr.or_else([]() { return std::string("default"); });
+    EXPECT_EQ(result, "value");
+}
+
+// Test: Transform_or 方法
+TEST_F(OptionalTest, TransformOr) {
+    auto transformed = optStr.transform_or(
+        [](const std::string& str) { return "Transformed: " + str; },
+        "Default value");
+    EXPECT_EQ(transformed.value_or(""), "Default value");
+
+    optStr.emplace("data");
+    transformed = optStr.transform_or(
+        [](const std::string& str) { return "Transformed: " + str; },
+        "Default value");
+    EXPECT_EQ(transformed.value_or(""), "Transformed: data");
+}
+
+// Test: 移动语义
+TEST_F(OptionalTest, MoveSemantics) {
+    optStr.emplace("move");
+    Optional<std::string> movedStr(std::move(optStr));
+    EXPECT_FALSE(optStr);
+    EXPECT_TRUE(movedStr);
+    EXPECT_EQ(*movedStr, "move");
+}
+
+// Test: And_then 方法
+TEST_F(OptionalTest, AndThen) {
+    optStr.emplace("hello");
+    auto finalResult =
+        optStr.and_then([](const std::string& str) -> Optional<std::string> {
+            if (str == "hello") {
+                return Optional<std::string>("world");
+            }
+            return std::nullopt;
+        });
+    EXPECT_TRUE(finalResult);
+    EXPECT_EQ(*finalResult, "world");
+
+    auto emptyResult = optStr.and_then(
+        []([[maybe_unused]] const std::string& str) -> Optional<int> {
+            return std::nullopt;
+        });
+    EXPECT_FALSE(emptyResult);
+}
+
+// Test: Reset 方法
+TEST_F(OptionalTest, Reset) {
+    optInt.emplace(42);
+    EXPECT_TRUE(optInt);
+    optInt.reset();
+    EXPECT_FALSE(optInt);
 }

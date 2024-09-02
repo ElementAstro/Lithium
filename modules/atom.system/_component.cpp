@@ -46,10 +46,12 @@ SystemComponent::SystemComponent(const std::string &name) : Component(name) {
 
     def("user_groups", &getUserGroups, "user", "Get current user groups");
 
-    addVariable("platform", platform, "Platform", "os_name", "os");
-    addVariable("architecture", architecture, "Architecture", "os_arch", "os");
-    addVariable("os_version", os_version, "OS Version", "kernel_version", "os");
-    addVariable("compiler", compiler, "Compiler", "builder", "os");
+    addVariable("platform", ATOM_PLATFORM, "Platform", "os_name", "os");
+    addVariable("architecture", ATOM_ARCHITECTURE, "Architecture", "os_arch",
+                "os");
+    addVariable("os_version", ATOM_OS_VERSION, "OS Version", "kernel_version",
+                "os");
+    addVariable("compiler", ATOM_COMPILER, "Compiler", "builder", "os");
 
     def("make_pidwatcher", &SystemComponent::makePidWatcher,
         PointerSentinel(this), "os", "Make a PID watcher");

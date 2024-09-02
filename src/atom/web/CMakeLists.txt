@@ -13,7 +13,6 @@ project(atom-web C CXX)
 set(${PROJECT_NAME}_SOURCES
     address.cpp
     downloader.cpp
-    httpclient.cpp
     httplite.cpp
     httpparser.cpp
     utils.cpp
@@ -24,7 +23,6 @@ set(${PROJECT_NAME}_SOURCES
 set(${PROJECT_NAME}_HEADERS
     address.hpp
     downloader.hpp
-    httpclient.hpp
     httplite.hpp
     httpparser.hpp
     utils.hpp

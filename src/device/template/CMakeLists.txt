@@ -19,13 +19,13 @@ set(LITHIUM_DEVICE_TEMPLATE_VERSION_STRING "${LITHIUM_DEVICE_TEMPLATE_VERSION_MA
 
 # Sources and Headers
 set(LITHIUM_DEVICE_TEMPLATE_SOURCES
-    camera.cpp
     device.cpp
 )
 
 set(LITHIUM_DEVICE_TEMPLATE_HEADERS
     camera.hpp
     device.hpp
+    focuser.hpp
 )
 
 set(LITHIUM_DEVICE_TEMPLATE_LIBS

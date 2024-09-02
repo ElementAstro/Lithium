@@ -1,3 +1,4 @@
+#include "macro.hpp"
 #if defined(__GNUC__) || defined(__clang__)
 // Disable all warnings from gcc/clang:
 #pragma GCC diagnostic push
@@ -157,7 +158,7 @@ struct FileAbs {
     decltype(steady_clock::now()) last_check_time = steady_clock::now();
 };
 #else
-typedef FILE* FileAbs;
+using FileAbs = FILE*;
 #endif
 
 struct Callback {
@@ -168,7 +169,7 @@ struct Callback {
     close_handler_t close;
     flush_handler_t flush;
     unsigned indentation;
-};
+} ATOM_ALIGNAS(128);
 
 using CallbackVec = std::vector<Callback>;
 
@@ -227,7 +228,7 @@ static const bool s_terminal_has_color = []() {
     }
     return false;
 #else
-    if (!isatty(STDERR_FILENO)) {
+    if (isatty(STDERR_FILENO) == 0) {
         return false;
     }
     if (const char* term = getenv("TERM")) {
@@ -433,7 +434,7 @@ void syslog_flush(void* /*user_data*/) {}
 // ------------------------------------------------------------------------------
 // Helpers:
 
-Text::~Text() { free(_str); }
+Text::~Text() { free(str_); }
 
 #if LOGURU_USE_FMTLIB
 #if __cplusplus >= 202002L
@@ -906,10 +907,11 @@ bool add_file(const char* path_in, FileMode mode, Verbosity verbosity) {
 
         Search for LOGURU_SYSLOG to find and fix.
 */
-bool add_syslog(const char* app_name, Verbosity verbosity) {
+auto add_syslog(const char* app_name, Verbosity verbosity) -> bool {
     return add_syslog(app_name, verbosity, LOG_USER);
 }
-bool add_syslog(const char* app_name, Verbosity verbosity, int facility) {
+auto add_syslog(const char* app_name, Verbosity verbosity,
+                int facility) -> bool {
 #if LOGURU_SYSLOG
     if (app_name == nullptr) {
         app_name = argv0_filename();
@@ -952,7 +954,7 @@ void add_stack_cleanup(const char* find_this, const char* replace_with_this) {
         return;
     }
 
-    s_user_stack_cleanups.push_back(StringPair(find_this, replace_with_this));
+    s_user_stack_cleanups.emplace_back(find_this, replace_with_this);
 }
 
 static void on_callback_change() {
@@ -965,7 +967,7 @@ static void on_callback_change() {
 void add_callback(const char* id, log_handler_t callback, void* user_data,
                   Verbosity verbosity, close_handler_t on_close,
                   flush_handler_t on_flush) {
-    std::lock_guard<std::recursive_mutex> lock(s_mutex);
+    std::lock_guard lock(s_mutex);
     s_callbacks.push_back(
         Callback{id, callback, user_data, verbosity, on_close, on_flush, 0});
     on_callback_change();
@@ -973,13 +975,13 @@ void add_callback(const char* id, log_handler_t callback, void* user_data,
 
 // Returns a custom verbosity name if one is available, or nullptr.
 // See also set_verbosity_to_name_callback.
-const char* get_verbosity_name(Verbosity verbosity) {
-    auto name = s_verbosity_to_name_callback
-                    ? (*s_verbosity_to_name_callback)(verbosity)
-                    : nullptr;
+auto get_verbosity_name(Verbosity verbosity) -> const char* {
+    const auto* name = s_verbosity_to_name_callback
+                           ? (*s_verbosity_to_name_callback)(verbosity)
+                           : nullptr;
 
     // Use standard replacements if callback fails:
-    if (!name) {
+    if (name == nullptr) {
         if (verbosity <= Verbosity_FATAL) {
             name = "FATL";
         } else if (verbosity == Verbosity_ERROR) {
@@ -996,7 +998,7 @@ const char* get_verbosity_name(Verbosity verbosity) {
 
 // Returns Verbosity_INVALID if the name is not found.
 // See also set_name_to_verbosity_callback.
-Verbosity get_verbosity_from_name(const char* name) {
+auto get_verbosity_from_name(const char* name) -> Verbosity {
     auto verbosity = s_name_to_verbosity_callback
                          ? (*s_name_to_verbosity_callback)(name)
                          : Verbosity_INVALID;
@@ -1019,8 +1021,8 @@ Verbosity get_verbosity_from_name(const char* name) {
     return verbosity;
 }
 
-bool remove_callback(const char* id) {
-    std::lock_guard<std::recursive_mutex> lock(s_mutex);
+auto remove_callback(const char* id) -> bool {
+    std::lock_guard lock(s_mutex);
     auto it = std::find_if(begin(s_callbacks), end(s_callbacks),
                            [&](const Callback& c) { return c.id == id; });
     if (it != s_callbacks.end()) {
@@ -1030,17 +1032,15 @@ bool remove_callback(const char* id) {
         s_callbacks.erase(it);
         on_callback_change();
         return true;
-    } else {
-        LOG_F(ERROR, "Failed to locate callback with id '" LOGURU_FMT(s) "'",
-              id);
-        return false;
     }
+    LOG_F(ERROR, "Failed to locate callback with id '" LOGURU_FMT(s) "'", id);
+    return false;
 }
 
 void remove_all_callbacks() {
-    std::lock_guard<std::recursive_mutex> lock(s_mutex);
+    std::lock_guard lock(s_mutex);
     for (auto& callback : s_callbacks) {
-        if (callback.close) {
+        if (callback.close != nullptr) {
             callback.close(callback.user_data);
         }
     }
@@ -1049,7 +1049,7 @@ void remove_all_callbacks() {
 }
 
 // Returns the maximum of g_stderr_verbosity and all file/custom outputs.
-Verbosity current_verbosity_cutoff() {
+auto current_verbosity_cutoff() -> Verbosity {
     return g_stderr_verbosity > s_max_out_verbosity ? g_stderr_verbosity
                                                     : s_max_out_verbosity;
 }
@@ -1160,7 +1160,7 @@ void get_thread_name(char* buffer, unsigned long long length,
 // Stack traces
 
 #if LOGURU_STACKTRACES
-Text demangle(const char* name) {
+auto demangle(const char* name) -> Text {
     int status = -1;
     char* demangled = abi::__cxa_demangle(name, 0, 0, &status);
     Text result{status == 0 ? demangled : STRDUP(name)};
@@ -1222,47 +1222,51 @@ std::string prettify_stacktrace(const std::string& input) {
 }
 
 std::string stacktrace_as_stdstring(int skip) {
-    // From https://gist.github.com/fmela/591333
     void* callstack[128];
     const auto max_frames = sizeof(callstack) / sizeof(callstack[0]);
-    int num_frames = backtrace(callstack, max_frames);
-    char** symbols = backtrace_symbols(callstack, num_frames);
+    int numFrames = backtrace(callstack, max_frames);
 
-    std::string result;
+    // Using unique_ptr with custom deleter to manage memory safely
+    std::unique_ptr<char*, decltype(&free)> symbols(
+        backtrace_symbols(callstack, numFrames), free);
+
+    std::ostringstream oss;
+
     // Print stack traces so the most relevant ones are written last
-    // Rationale:
-    // http://yellerapp.com/posts/2015-01-22-upside-down-stacktraces.html
-    for (int i = num_frames - 1; i >= skip; --i) {
-        char buf[1024];
+    for (int i = numFrames - 1; i >= skip; --i) {
         Dl_info info;
-        if (dladdr(callstack[i], &info) && info.dli_sname) {
-            char* demangled = NULL;
-            int status = -1;
-            if (info.dli_sname[0] == '_') {
-                demangled = abi::__cxa_demangle(info.dli_sname, 0, 0, &status);
-            }
-            snprintf(buf, sizeof(buf), "%-3d %*p %s + %zd\n", i - skip,
-                     int(2 + sizeof(void*) * 2), callstack[i],
-                     status == 0           ? demangled
-                     : info.dli_sname == 0 ? symbols[i]
-                                           : info.dli_sname,
-                     static_cast<char*>(callstack[i]) -
-                         static_cast<char*>(info.dli_saddr));
-            free(demangled);
-        } else {
-            snprintf(buf, sizeof(buf), "%-3d %*p %s\n", i - skip,
-                     int(2 + sizeof(void*) * 2), callstack[i], symbols[i]);
-        }
-        result += buf;
-    }
-    free(symbols);
+        if ((dladdr(callstack[i], &info) != 0) && info.dli_sname) {
+            int status = 0;
+            std::unique_ptr<char, decltype(&free)> demangled(
+                info.dli_sname[0] == '_'
+                    ? abi::__cxa_demangle(info.dli_sname, nullptr, nullptr,
+                                          &status)
+                    : nullptr,
+                free);
 
-    if (num_frames == max_frames) {
+            oss << std::dec << i - skip << " " << callstack[i] << " "
+                << (status == 0 && demangled      ? demangled.get()
+                    : (info.dli_sname != nullptr) ? info.dli_sname
+                                                  : symbols.get()[i])
+                << " + "
+                << static_cast<char*>(callstack[i]) -
+                       static_cast<char*>(info.dli_saddr)
+                << '\n';
+        } else {
+            oss << std::dec << i - skip << " " << callstack[i] << " "
+                << symbols.get()[i] << '\n';
+        }
+    }
+
+    std::string result = oss.str();
+
+    if (numFrames == max_frames) {
         result = "[truncated]\n" + result;
     }
 
-    if (!result.empty() && result[result.size() - 1] == '\n') {
-        result.resize(result.size() - 1);
+    // Trim the trailing newline if present
+    if (!result.empty() && result.back() == '\n') {
+        result.pop_back();
     }
 
     return prettify_stacktrace(result);
@@ -1278,7 +1282,7 @@ std::string stacktrace_as_stdstring(int) {
 
 #endif  // LOGURU_STACKTRACES
 
-Text stacktrace(int skip) {
+auto stacktrace(int skip) -> Text {
     auto str = stacktrace_as_stdstring(skip + 1);
     return Text(STRDUP(str.c_str()));
 }
@@ -1350,30 +1354,30 @@ static void print_preamble(char* out_buff, size_t out_buff_size,
     if (!g_preamble) {
         return;
     }
-    long long ms_since_epoch =
+    long long msSinceEpoch =
         duration_cast<milliseconds>(system_clock::now().time_since_epoch())
             .count();
-    time_t sec_since_epoch = time_t(ms_since_epoch / 1000);
-    tm time_info;
-    localtime_r(&sec_since_epoch, &time_info);
+    time_t secSinceEpoch = time_t(msSinceEpoch / 1000);
+    tm timeInfo;
+    localtime_r(&secSinceEpoch, &timeInfo);
 
-    auto uptime_ms =
+    auto uptimeMs =
         duration_cast<milliseconds>(steady_clock::now() - s_start_time).count();
-    auto uptime_sec = static_cast<double>(uptime_ms) / 1000.0;
+    auto uptimeSec = static_cast<double>(uptimeMs) / 1000.0;
 
-    char thread_name[LOGURU_THREADNAME_WIDTH + 1] = {0};
-    get_thread_name(thread_name, LOGURU_THREADNAME_WIDTH + 1, true);
+    char threadName[LOGURU_THREADNAME_WIDTH + 1] = {0};
+    get_thread_name(threadName, LOGURU_THREADNAME_WIDTH + 1, true);
 
     if (s_strip_file_path) {
         file = filename(file);
     }
 
-    char level_buff[6];
-    const char* custom_level_name = get_verbosity_name(verbosity);
-    if (custom_level_name) {
-        snprintf(level_buff, sizeof(level_buff) - 1, "%s", custom_level_name);
+    char levelBuff[6];
+    const char* customLevelName = get_verbosity_name(verbosity);
+    if (customLevelName != nullptr) {
+        snprintf(levelBuff, sizeof(levelBuff) - 1, "%s", customLevelName);
     } else {
-        snprintf(level_buff, sizeof(level_buff) - 1, "% 4d",
+        snprintf(levelBuff, sizeof(levelBuff) - 1, "% 4d",
                  static_cast<int8_t>(verbosity));
     }
 
@@ -1381,8 +1385,8 @@ static void print_preamble(char* out_buff, size_t out_buff_size,
 
     if (g_preamble_date && pos < out_buff_size) {
         int bytes = snprintf(out_buff + pos, out_buff_size - pos,
-                             "%04d-%02d-%02d ", 1900 + time_info.tm_year,
-                             1 + time_info.tm_mon, time_info.tm_mday);
+                             "%04d-%02d-%02d ", 1900 + timeInfo.tm_year,
+                             1 + timeInfo.tm_mon, timeInfo.tm_mday);
         if (bytes > 0) {
             pos += bytes;
         }
@@ -1390,38 +1394,38 @@ static void print_preamble(char* out_buff, size_t out_buff_size,
     if (g_preamble_time && pos < out_buff_size) {
         int bytes =
             snprintf(out_buff + pos, out_buff_size - pos,
-                     "%02d:%02d:%02d.%03lld ", time_info.tm_hour,
-                     time_info.tm_min, time_info.tm_sec, ms_since_epoch % 1000);
+                     "%02d:%02d:%02d.%03lld ", timeInfo.tm_hour,
+                     timeInfo.tm_min, timeInfo.tm_sec, msSinceEpoch % 1000);
         if (bytes > 0) {
             pos += bytes;
         }
     }
     if (g_preamble_uptime && pos < out_buff_size) {
         int bytes = snprintf(out_buff + pos, out_buff_size - pos, "(%8.3fs) ",
-                             uptime_sec);
+                             uptimeSec);
         if (bytes > 0) {
             pos += bytes;
         }
     }
     if (g_preamble_thread && pos < out_buff_size) {
         int bytes = snprintf(out_buff + pos, out_buff_size - pos, "[%-*s]",
-                             LOGURU_THREADNAME_WIDTH, thread_name);
+                             LOGURU_THREADNAME_WIDTH, threadName);
         if (bytes > 0) {
             pos += bytes;
         }
     }
     if (g_preamble_file && pos < out_buff_size) {
-        char shortened_filename[LOGURU_FILENAME_WIDTH + 1];
-        snprintf(shortened_filename, LOGURU_FILENAME_WIDTH + 1, "%s", file);
+        char shortenedFilename[LOGURU_FILENAME_WIDTH + 1];
+        snprintf(shortenedFilename, LOGURU_FILENAME_WIDTH + 1, "%s", file);
         int bytes = snprintf(out_buff + pos, out_buff_size - pos, "%*s:%-5u ",
-                             LOGURU_FILENAME_WIDTH, shortened_filename, line);
+                             LOGURU_FILENAME_WIDTH, shortenedFilename, line);
         if (bytes > 0) {
             pos += bytes;
         }
     }
     if (g_preamble_verbose && pos < out_buff_size) {
         int bytes =
-            snprintf(out_buff + pos, out_buff_size - pos, "%4s", level_buff);
+            snprintf(out_buff + pos, out_buff_size - pos, "%4s", levelBuff);
         if (bytes > 0) {
             pos += bytes;
         }
@@ -1438,7 +1442,7 @@ static void print_preamble(char* out_buff, size_t out_buff_size,
 static void log_message(int stack_trace_skip, Message& message,
                         bool with_indentation, bool abort_if_fatal) {
     const auto verbosity = message.verbosity;
-    std::lock_guard<std::recursive_mutex> lock(s_mutex);
+    std::lock_guard lock(s_mutex);
 
     if (message.verbosity == Verbosity_FATAL) {
         auto st = loguru::stacktrace(stack_trace_skip + 2);
@@ -1499,7 +1503,7 @@ static void log_message(int stack_trace_skip, Message& message,
         }
     }
 
-    if (g_flush_interval_ms > 0 && !s_flush_thread) {
+    if (g_flush_interval_ms > 0 && (s_flush_thread == nullptr)) {
         s_flush_thread = new std::thread([]() {
             for (;;) {
                 if (s_needs_flushing) {
@@ -1514,7 +1518,7 @@ static void log_message(int stack_trace_skip, Message& message,
     if (message.verbosity == Verbosity_FATAL) {
         flush();
 
-        if (s_fatal_handler) {
+        if (s_fatal_handler != nullptr) {
             s_fatal_handler(message);
             flush();
         }
@@ -1535,10 +1539,10 @@ static void log_message(int stack_trace_skip, Message& message,
 void log_to_everywhere(int stack_trace_skip, Verbosity verbosity,
                        const char* file, unsigned line, const char* prefix,
                        const char* buff) {
-    char preamble_buff[LOGURU_PREAMBLE_WIDTH];
-    print_preamble(preamble_buff, sizeof(preamble_buff), verbosity, file, line);
+    char preambleBuff[LOGURU_PREAMBLE_WIDTH];
+    print_preamble(preambleBuff, sizeof(preambleBuff), verbosity, file, line);
     auto message =
-        Message{verbosity, file, line, preamble_buff, "", prefix, buff};
+        Message{verbosity, file, line, preambleBuff, "", prefix, buff};
     log_message(stack_trace_skip + 1, message, true, true);
 }
 
@@ -1599,10 +1603,10 @@ void raw_log(Verbosity verbosity, const char* file, unsigned line,
 #endif
 
 void flush() {
-    std::lock_guard<std::recursive_mutex> lock(s_mutex);
+    std::lock_guard lock(s_mutex);
     fflush(stderr);
     for (const auto& callback : s_callbacks) {
-        if (callback.flush) {
+        if (callback.flush != nullptr) {
             callback.flush(callback.user_data);
         }
     }
@@ -1625,8 +1629,8 @@ LogScopeRAII::LogScopeRAII(Verbosity verbosity, const char* file, unsigned line,
 }
 
 LogScopeRAII::~LogScopeRAII() {
-    if (_file) {
-        std::lock_guard<std::recursive_mutex> lock(s_mutex);
+    if (_file != nullptr) {
+        std::lock_guard lock(s_mutex);
         if (_indent_stderr && s_stderr_indentation > 0) {
             --s_stderr_indentation;
         }
@@ -1658,7 +1662,7 @@ LogScopeRAII::~LogScopeRAII() {
 
 void LogScopeRAII::Init(const char* format, va_list vlist) {
     if (_verbosity <= current_verbosity_cutoff()) {
-        std::lock_guard<std::recursive_mutex> lock(s_mutex);
+        std::lock_guard lock(s_mutex);
         _indent_stderr = (_verbosity <= g_stderr_verbosity);
         _start_time_ns = now_ns();
         vsnprintf(_name, sizeof(_name), format, vlist);

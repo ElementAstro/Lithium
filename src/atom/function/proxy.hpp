@@ -9,6 +9,8 @@
 #ifndef ATOM_META_PROXY_HPP
 #define ATOM_META_PROXY_HPP
 
+#include "config.h"
+
 #include <any>
 #include <chrono>
 #include <functional>
@@ -20,7 +22,6 @@
 #include "atom/async/async.hpp"
 #include "atom/macro.hpp"
 #include "function/type_info.hpp"
-#define ENABLE_DEBUG 1
 #if ENABLE_DEBUG
 #include <iostream>
 #endif

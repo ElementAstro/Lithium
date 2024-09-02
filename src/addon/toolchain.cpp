@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "atom/log/loguru.hpp"
+#include "macro.hpp"
 
 Toolchain::Toolchain(std::string name, std::string compiler,
                      std::string buildTool, std::string version,
@@ -104,7 +105,7 @@ void ToolchainManager::loadConfig(const std::string& filename) {
     std::ifstream file(filename);
     std::string toolchainName;
     while (std::getline(file, toolchainName)) {
-        selectToolchain(toolchainName);
+        ATOM_UNUSED_RESULT(selectToolchain(toolchainName));
     }
     file.close();
 }

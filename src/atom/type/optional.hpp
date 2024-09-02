@@ -15,335 +15,492 @@ Description: A simple implementation of optional. Using modern C++ features.
 #ifndef ATOM_TYPE_OPTIONAL_HPP
 #define ATOM_TYPE_OPTIONAL_HPP
 
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
+#include <compare>      // For spaceship operator
+#include <functional>   // For std::invoke
+#include <optional>     // For std::optional
+#include <stdexcept>    // For std::runtime_error
+#include <type_traits>  // For std::is_nothrow_move_constructible_v
+#include <utility>      // For std::forward
 
+namespace atom::type {
 /**
- * @brief A simple implementation of an optional type.
+ * @brief A simple optional wrapper around std::optional.
  *
- * This class template provides an optional container that may or may not
- * contain a value.
+ * This class provides a wrapper around `std::optional` to represent an optional
+ * value that may or may not be present. It supports basic operations such as
+ * accessing the contained value, resetting, and applying transformations.
  *
- * @tparam T The type of the object to manage.
+ * @tparam T The type of the contained value.
  */
 template <typename T>
 class Optional {
 private:
-    /// Storage for the managed object, aligned to T's alignment requirements.
-    using StorageType =
-        typename std::aligned_storage<sizeof(T), alignof(T)>::type;
-    StorageType storage_;
-    bool hasValue_;
+    std::optional<T> storage_;
 
 public:
     /**
-     * @brief Default constructor. Constructs an empty Optional.
+     * @brief Default constructor.
+     *
+     * Constructs an empty `Optional` object.
      */
-    Optional() noexcept : hasValue_(false) {}
+    Optional() noexcept = default;
 
     /**
-     * @brief Constructs an Optional with a value.
+     * @brief Constructor with std::nullopt_t.
      *
-     * @param value The value to store in the Optional.
+     * Constructs an empty `Optional` object using std::nullopt.
+     *
+     * @param nullopt A nullopt_t instance.
      */
-    explicit Optional(const T &value) {
-        new (&storage_) T(value);
-        hasValue_ = true;
-    }
+    Optional(std::nullopt_t) noexcept : storage_(std::nullopt) {}
 
     /**
-     * @brief Constructs an Optional with a moved value.
+     * @brief Constructor with a const reference.
      *
-     * @param value The value to move into the Optional.
+     * Constructs an `Optional` object containing the given value.
      *
-     * @note This constructor is noexcept if T's move constructor is noexcept.
+     * @param value The value to be contained.
      */
-    explicit Optional(T &&value) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
-        new (&storage_) T(std::move(value));
-        hasValue_ = true;
-    }
+    Optional(const T& value) : storage_(value) {}
+
+    /**
+     * @brief Constructor with an rvalue reference.
+     *
+     * Constructs an `Optional` object containing the given value, which is
+     * moved into the object.
+     *
+     * @param value The value to be moved into the object.
+     */
+    Optional(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>)
+        : storage_(std::move(value)) {}
 
     /**
      * @brief Copy constructor.
      *
-     * @param other The other Optional to copy from.
+     * Constructs an `Optional` object as a copy of another `Optional` object.
+     *
+     * @param other The other `Optional` object to copy from.
      */
-    Optional(const Optional &other) {
-        if (other.hasValue_) {
-            new (&storage_) T(other.value());
-            hasValue_ = true;
-        } else {
-            hasValue_ = false;
-        }
-    }
+    Optional(const Optional& other) = default;
 
     /**
      * @brief Move constructor.
      *
-     * @param other The other Optional to move from.
+     * Constructs an `Optional` object by moving from another `Optional` object.
+     * The moved-from object will be empty after the move.
      *
-     * @note This constructor is noexcept if T's move constructor is noexcept.
+     * @param other The other `Optional` object to move from.
      */
-    Optional(Optional &&other) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
-        if (other.hasValue_) {
-            new (&storage_) T(std::move(other.value()));
-            hasValue_ = true;
-        } else {
-            hasValue_ = false;
-        }
+    Optional(Optional&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        : storage_(std::move(other.storage_)) {
+        other.reset();  // Move the object to empty state
     }
 
     /**
-     * @brief Destructor. Destroys the contained value if it exists.
+     * @brief Destructor.
+     *
+     * Destroys the `Optional` object.
      */
-    ~Optional() { reset(); }
+    ~Optional() = default;
+
+    /**
+     * @brief Assignment operator with std::nullopt_t.
+     *
+     * Assigns an empty state to the `Optional` object.
+     *
+     * @param nullopt A nullopt_t instance.
+     * @return A reference to this `Optional` object.
+     */
+    Optional& operator=(std::nullopt_t) noexcept {
+        storage_ = std::nullopt;
+        return *this;
+    }
 
     /**
      * @brief Copy assignment operator.
      *
-     * @param other The other Optional to copy from.
-     * @return A reference to this Optional.
+     * Assigns the value of another `Optional` object to this `Optional` object.
+     *
+     * @param other The other `Optional` object to copy from.
+     * @return A reference to this `Optional` object.
      */
-    Optional &operator=(const Optional &other) {
-        if (this != &other) {
-            reset();
-            if (other.hasValue_) {
-                new (&storage_) T(other.value());
-                hasValue_ = true;
-            } else {
-                hasValue_ = false;
-            }
-        }
-        return *this;
-    }
+    Optional& operator=(const Optional& other) = default;
 
     /**
      * @brief Move assignment operator.
      *
-     * @param other The other Optional to move from.
-     * @return A reference to this Optional.
+     * Assigns the value of another `Optional` object to this `Optional` object
+     * by moving. The moved-from object will be empty after the move.
      *
-     * @note This operator is noexcept if T's move assignment operator is
-     * noexcept.
+     * @param other The other `Optional` object to move from.
+     * @return A reference to this `Optional` object.
      */
-    Optional &operator=(Optional &&other) noexcept(
-        std::is_nothrow_move_assignable<T>::value) {
+    Optional& operator=(Optional&& other) noexcept(
+        std::is_nothrow_move_assignable_v<T>) {
         if (this != &other) {
-            reset();
-            if (other.hasValue_) {
-                new (&storage_) T(std::move(other.value()));
-                hasValue_ = true;
-            } else {
-                hasValue_ = false;
-            }
+            storage_ = std::move(other.storage_);
+            other.reset();  // Move the object to empty state
         }
         return *this;
     }
 
     /**
-     * @brief Constructs the contained value in-place.
+     * @brief Assignment operator with a const reference.
      *
-     * @tparam Args The types of the arguments to pass to T's constructor.
-     * @param args The arguments to pass to T's constructor.
+     * Assigns a new value to the `Optional` object.
+     *
+     * @param value The new value to assign.
+     * @return A reference to this `Optional` object.
+     */
+    Optional& operator=(const T& value) {
+        storage_ = value;
+        return *this;
+    }
+
+    /**
+     * @brief Assignment operator with an rvalue reference.
+     *
+     * Assigns a new value to the `Optional` object, which is moved into the
+     * object.
+     *
+     * @param value The new value to move into the object.
+     * @return A reference to this `Optional` object.
+     */
+    Optional& operator=(T&& value) noexcept(
+        std::is_nothrow_move_assignable_v<T>) {
+        storage_ = std::move(value);
+        return *this;
+    }
+
+    /**
+     * @brief Constructs a new value in the `Optional` object.
+     *
+     * Constructs a new value in-place within the `Optional` object using the
+     * given arguments.
+     *
+     * @tparam Args The types of the arguments to forward to the constructor of
+     * T.
+     * @param args The arguments to forward.
+     * @return A reference to the newly constructed value.
      */
     template <typename... Args>
-    void emplace(Args &&...args) {
-        reset();
-        new (&storage_) T(std::forward<Args>(args)...);
-        hasValue_ = true;
+    T& emplace(Args&&... args) {
+        storage_.emplace(std::forward<Args>(args)...);
+        return *storage_;
     }
 
     /**
-     * @brief Provides pointer-like access to the contained value.
+     * @brief Checks if the `Optional` object contains a value.
+     *
+     * @return True if the `Optional` object contains a value, false otherwise.
+     */
+    constexpr explicit operator bool() const noexcept {
+        return storage_.has_value();
+    }
+
+    /**
+     * @brief Dereference operator for lvalue `Optional`.
+     *
+     * Accesses the contained value.
+     *
+     * @return A reference to the contained value.
+     * @throw std::runtime_error if the `Optional` object is empty.
+     */
+    T& operator*() & {
+        check_value();
+        return *storage_;
+    }
+
+    /**
+     * @brief Dereference operator for const lvalue `Optional`.
+     *
+     * Accesses the contained value.
+     *
+     * @return A const reference to the contained value.
+     * @throw std::runtime_error if the `Optional` object is empty.
+     */
+    const T& operator*() const& {
+        check_value();
+        return *storage_;
+    }
+
+    /**
+     * @brief Dereference operator for rvalue `Optional`.
+     *
+     * Accesses the contained value and moves it.
+     *
+     * @return An rvalue reference to the contained value.
+     * @throw std::runtime_error if the `Optional` object is empty.
+     */
+    T&& operator*() && {
+        check_value();
+        return std::move(*storage_);
+    }
+
+    /**
+     * @brief Member access operator for lvalue `Optional`.
+     *
+     * Accesses the contained value using the arrow operator.
      *
      * @return A pointer to the contained value.
-     *
-     * @throws std::runtime_error if the Optional has no value.
+     * @throw std::runtime_error if the `Optional` object is empty.
      */
-    T *operator->() {
-        if (!hasValue_) {
-            throw std::runtime_error("Optional has no value");
-        }
-        return reinterpret_cast<T *>(&storage_);
+    T* operator->() {
+        check_value();
+        return &(*storage_);
     }
 
     /**
-     * @brief Provides const pointer-like access to the contained value.
+     * @brief Member access operator for const lvalue `Optional`.
+     *
+     * Accesses the contained value using the arrow operator.
      *
      * @return A const pointer to the contained value.
-     *
-     * @throws std::runtime_error if the Optional has no value.
+     * @throw std::runtime_error if the `Optional` object is empty.
      */
-    const T *operator->() const {
-        if (!hasValue_) {
-            throw std::runtime_error("Optional has no value");
-        }
-        return reinterpret_cast<const T *>(&storage_);
+    const T* operator->() const {
+        check_value();
+        return &(*storage_);
     }
 
     /**
-     * @brief Dereferences the contained value.
+     * @brief Accesses the contained value.
      *
      * @return A reference to the contained value.
-     *
-     * @throws std::runtime_error if the Optional has no value.
+     * @throw std::runtime_error if the `Optional` object is empty.
      */
-    T &operator*() {
-        if (!hasValue_) {
-            throw std::runtime_error("Optional has no value");
-        }
-        return *reinterpret_cast<T *>(&storage_);
+    T& value() & {
+        check_value();
+        return *storage_;
     }
 
     /**
-     * @brief Dereferences the contained value.
+     * @brief Accesses the contained value for const lvalue `Optional`.
      *
      * @return A const reference to the contained value.
-     *
-     * @throws std::runtime_error if the Optional has no value.
+     * @throw std::runtime_error if the `Optional` object is empty.
      */
-    const T &operator*() const {
-        if (!hasValue_) {
-            throw std::runtime_error("Optional has no value");
-        }
-        return *reinterpret_cast<const T *>(&storage_);
+    const T& value() const& {
+        check_value();
+        return *storage_;
     }
 
     /**
-     * @brief Destroys the contained value if it exists.
+     * @brief Accesses the contained value and moves it.
+     *
+     * @return An rvalue reference to the contained value.
+     * @throw std::runtime_error if the `Optional` object is empty.
      */
-    void reset() noexcept {
-        if (hasValue_) {
-            reinterpret_cast<T *>(&storage_)->~T();
-            hasValue_ = false;
-        }
+    T&& value() && {
+        check_value();
+        return std::move(*storage_);
     }
 
     /**
-     * @brief Returns a reference to the contained value.
+     * @brief Returns the contained value or a default value.
      *
-     * @return A reference to the contained value.
-     *
-     * @throws std::runtime_error if the Optional has no value.
-     */
-    T &value() {
-        if (!hasValue_) {
-            throw std::runtime_error("Optional has no value");
-        }
-        return *reinterpret_cast<T *>(&storage_);
-    }
-
-    /**
-     * @brief Returns a const reference to the contained value.
-     *
-     * @return A const reference to the contained value.
-     *
-     * @throws std::runtime_error if the Optional has no value.
-     */
-    const T &value() const {
-        if (!hasValue_) {
-            throw std::runtime_error("Optional has no value");
-        }
-        return *reinterpret_cast<const T *>(&storage_);
-    }
-
-    /**
-     * @brief Checks whether the Optional contains a value.
-     *
-     * @return true if the Optional contains a value, false otherwise.
-     */
-    explicit operator bool() const noexcept { return hasValue_; }
-
-    /**
-     * @brief Equality operator.
-     *
-     * @param other The other Optional to compare with.
-     * @return true if both Optionals are equal, false otherwise.
-     */
-    bool operator==(const Optional &other) const {
-        if (hasValue_ != other.hasValue_) {
-            return false;
-        }
-        if (hasValue_) {
-            return value() == other.value();
-        }
-        return true;
-    }
-
-    /**
-     * @brief Inequality operator.
-     *
-     * @param other The other Optional to compare with.
-     * @return true if both Optionals are not equal, false otherwise.
-     */
-    bool operator!=(const Optional &other) const { return !(*this == other); }
-
-    /**
-     * @brief Returns the contained value if it exists, otherwise returns the
-     * provided default value.
-     *
-     * @param defaultValue The value to return if the Optional has no value.
-     * @return The contained value or the default value.
-     */
-    auto valueOr(const T &defaultValue) const -> T {
-        return hasValue_ ? value() : defaultValue;
-    }
-
-#if __cplusplus >= 201703L
-    /**
-     * @brief Returns the contained value if it exists, otherwise returns the
-     * provided default value.
+     * If the `Optional` object contains a value, it returns that value.
+     * Otherwise, it returns the provided default value.
      *
      * @tparam U The type of the default value.
-     * @param defaultValue The value to return if the Optional has no value.
-     * @return The contained value or the default value.
+     * @param default_value The default value to return if the `Optional` is
+     * empty.
+     * @return The contained value if present, otherwise the default value.
      */
     template <typename U>
-    auto valueOr(U &&defaultValue) const -> T {
-        return hasValue_ ? value()
-                         : static_cast<T>(std::forward<U>(defaultValue));
+    T value_or(U&& default_value) const& {
+        return storage_.value_or(std::forward<U>(default_value));
     }
 
     /**
-     * @brief Transforms the contained value using the provided function if it
-     * exists.
+     * @brief Returns the contained value or a default value (rvalue version).
      *
-     * @tparam F The type of the function to apply.
-     * @param f The function to apply to the contained value.
-     * @return An Optional containing the result of the function or an empty
-     * Optional.
+     * If the `Optional` object contains a value, it returns that value.
+     * Otherwise, it returns the provided default value.
+     *
+     * @tparam U The type of the default value.
+     * @param default_value The default value to return if the `Optional` is
+     * empty.
+     * @return The contained value if present, otherwise the default value.
      */
-    template <typename F>
-    auto map(F &&f) const -> Optional<decltype(f(value()))> {
-        using ReturnType = decltype(f(value()));
-        if (hasValue_) {
-            return Optional<ReturnType>(f(value()));
-        }
-        return Optional<ReturnType>();
+    template <typename U>
+    T value_or(U&& default_value) && {
+        return storage_.value_or(std::forward<U>(default_value));
     }
-#endif
 
-#if __cplusplus >= 202002L
     /**
-     * @brief Transforms the contained value using the provided function if it
-     * exists.
+     * @brief Resets the `Optional` object to an empty state.
      *
-     * @tparam F The type of the function to apply.
-     * @param f The function to apply to the contained value.
-     * @return The result of the function or an empty Optional.
+     * This function clears the contained value, if any, leaving the `Optional`
+     * object in an empty state.
+     */
+    void reset() noexcept { storage_.reset(); }
+
+    /**
+     * @brief Three-way comparison operator.
+     *
+     * Compares two `Optional` objects. This operator is defaulted, which means
+     * it will use the comparison of the contained values.
+     *
+     * @param other The other `Optional` object to compare to.
+     * @return A three-way comparison result.
+     */
+    auto operator<=>(const Optional&) const = default;
+
+    /**
+     * @brief Comparison with std::nullopt_t.
+     *
+     * Checks if the `Optional` object is equal to `std::nullopt`.
+     *
+     * @param nullopt A nullopt_t instance.
+     * @return True if the `Optional` object is empty, false otherwise.
+     */
+    bool operator==(std::nullopt_t) const noexcept {
+        return !storage_.has_value();
+    }
+
+    /**
+     * @brief Comparison with std::nullopt_t (three-way comparison).
+     *
+     * Compares the `Optional` object with `std::nullopt`.
+     *
+     * @param nullopt A nullopt_t instance.
+     * @return A three-way comparison result.
+     */
+    auto operator<=>(std::nullopt_t) const noexcept {
+        return storage_.has_value() ? std::strong_ordering::greater
+                                    : std::strong_ordering::equal;
+    }
+
+    /**
+     * @brief Applies a function to the contained value, if present.
+     *
+     * If the `Optional` object contains a value, applies the function to that
+     * value and returns a new `Optional` object with the result. Otherwise,
+     * returns an empty `Optional`.
+     *
+     * @tparam F The type of the function.
+     * @param f The function to apply.
+     * @return An `Optional` object containing the result of applying the
+     * function, or an empty `Optional`.
      */
     template <typename F>
-    auto andThen(F &&f) const -> decltype(f(value())) {
-        using ReturnType = decltype(f(value()));
-        if (hasValue_) {
-            return f(value());
-        }
-        return ReturnType();
+    auto map(F&& f) const -> Optional<std::invoke_result_t<F, T>> {
+        using ReturnType = std::invoke_result_t<F, T>;
+        return storage_.has_value() ? Optional<ReturnType>(std::invoke(
+                                          std::forward<F>(f), *storage_))
+                                    : std::nullopt;
     }
-#endif
+
+    /**
+     * @brief Applies a function to the contained value, if present.
+     *
+     * If the `Optional` object contains a value, applies the function to that
+     * value and returns the result.
+     *
+     * @tparam F The type of the function.
+     * @param f The function to apply.
+     * @return The result of applying the function, or a default-constructed
+     * value if the `Optional` is empty.
+     */
+    template <typename F>
+    auto and_then(F&& f) const -> std::invoke_result_t<F, T> {
+        if (storage_.has_value()) {
+            return std::invoke(std::forward<F>(f), *storage_);
+        }
+        return std::invoke_result_t<F, T>();
+    }
+
+    /**
+     * @brief Applies a function to the contained value and returns a new
+     * `Optional` with the result.
+     *
+     * This function is an alias for `map`.
+     *
+     * @tparam F The type of the function.
+     * @param f The function to apply.
+     * @return An `Optional` object containing the result of applying the
+     * function, or an empty `Optional`.
+     */
+    template <typename F>
+    auto transform(F&& f) const -> Optional<std::invoke_result_t<F, T>> {
+        return map(std::forward<F>(f));
+    }
+
+    /**
+     * @brief Returns the contained value or invokes a function to generate a
+     * default value.
+     *
+     * If the `Optional` object contains a value, returns that value.
+     * Otherwise, invokes the provided function to generate a default value.
+     *
+     * @tparam F The type of the function.
+     * @param f The function to invoke if the `Optional` is empty.
+     * @return The contained value if present, otherwise the result of invoking
+     * the function.
+     */
+    template <typename F>
+    auto or_else(F&& f) const -> T {
+        return storage_.has_value() ? *storage_
+                                    : std::invoke(std::forward<F>(f));
+    }
+
+    /**
+     * @brief Applies a function to the contained value and returns a new
+     * `Optional` with the result or a default value.
+     *
+     * If the `Optional` object contains a value, applies the function to that
+     * value and returns a new `Optional` with the result. Otherwise, returns a
+     * new `Optional` containing the default value.
+     *
+     * @tparam F The type of the function.
+     * @param f The function to apply if the `Optional` is not empty.
+     * @param default_value The default value to use if the `Optional` is empty.
+     * @return An `Optional` object containing the result of applying the
+     * function, or the default value.
+     */
+    template <typename F>
+    auto transform_or(F&& f, const T& default_value) const -> Optional<T> {
+        if (storage_.has_value()) {
+            return Optional<T>(std::invoke(std::forward<F>(f), *storage_));
+        }
+        return Optional<T>(default_value);
+    }
+
+    /**
+     * @brief Applies a function to the contained value and returns the result.
+     *
+     * If the `Optional` object contains a value, applies the function to that
+     * value and returns the result. Otherwise, returns a default-constructed
+     * value.
+     *
+     * @tparam F The type of the function.
+     * @param f The function to apply.
+     * @return The result of applying the function, or a default-constructed
+     * value if the `Optional` is empty.
+     */
+    template <typename F>
+    auto flat_map(F&& f) const -> std::invoke_result_t<F, T> {
+        if (storage_.has_value()) {
+            return std::invoke(std::forward<F>(f), *storage_);
+        }
+        return std::invoke_result_t<F, T>();
+    }
+
+private:
+    /**
+     * @brief Checks if the `Optional` object contains a value.
+     *
+     * Throws an exception if the `Optional` is empty.
+     *
+     * @throw std::runtime_error if the `Optional` object is empty.
+     */
+    void check_value() const {
+        if (!storage_.has_value()) {
+            throw std::runtime_error("Optional has no value");
+        }
+    }
 };
+}  // namespace atom::type
 
 #endif  // ATOM_TYPE_OPTIONAL_HPP

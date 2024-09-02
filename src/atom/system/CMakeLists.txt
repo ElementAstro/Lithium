@@ -25,7 +25,6 @@ set(ATOM_SYSTEM_SOURCES
     env.cpp
     lregistry.cpp
     pidwatcher.cpp
-    platform.cpp
     power.cpp
     process.cpp
     software.cpp

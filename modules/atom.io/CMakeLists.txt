@@ -19,22 +19,13 @@ set(ATOM_IO_BUILTIN_VERSION ${CMAKE_ATOM_IO_BUILTIN_VERSION_MAJOR}.${CMAKE_ATOM_
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    _main.cpp
-    _component.cpp
-)
-
-# Headers
-set(${PROJECT_NAME}_HEADERS
-)
-
-# Private Headers
-set(${PROJECT_NAME}_PRIVATE_HEADERS
-    _component.hpp
+    component.cpp
 )
 
 set(${PROJECT_NAME}_LIBS
     loguru
     atom-component
+    atom-error
     atom-io
     ${ZLIB_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -45,11 +36,8 @@ add_library(${PROJECT_NAME}_OBJECT OBJECT)
 set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 target_sources(${PROJECT_NAME}_OBJECT
-    PUBLIC
-    ${${PROJECT_NAME}_HEADERS}
     PRIVATE
     ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
 )
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
@@ -62,7 +50,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC .)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_ATOM_IO_BUILTIN_VERSION_STRING}
     SOVERSION ${ATOM_IO_BUILTIN_SOVERSION}
-    OUTPUT_NAME io
+    OUTPUT_NAME atom.io
 )
 
 install(TARGETS ${PROJECT_NAME}

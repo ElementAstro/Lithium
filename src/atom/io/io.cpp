@@ -15,20 +15,24 @@ Description: IO
 #include "io.hpp"
 
 #include <algorithm>
-#include <ctime>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <ranges>
 #include <regex>
+#include <string_view>
 #include <thread>
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
-#include "atom/utils/string.hpp"
-#include "macro.hpp"
 
-#if __cplusplus >= 202002L
-#include <format>
+#ifdef __linux
+#include <dirent.h>
+#include <sys/stat.h>
 #endif
+
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,16 +40,9 @@ const std::string PATH_SEPARATOR = "\\";
 const std::regex FOLDER_NAME_REGEX(R"(^[^\/?*:;{}\\]+[^\\]*$)");
 const std::regex FILE_NAME_REGEX("^[^\\/:*?\"<>|]+$");
 #else
-#include <limits.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 const std::regex FOLDER_NAME_REGEX("^[^/]+$");
 const std::regex FILE_NAME_REGEX("^[^/]+$");
 #endif
-
-namespace fs = std::filesystem;
-using json = nlohmann::json;
 
 #define ATOM_IO_CHECK_ARGUMENT(value)                              \
     if ((value).empty()) {                                         \
@@ -60,96 +57,45 @@ using json = nlohmann::json;
     }
 
 namespace atom::io {
+
 auto createDirectory(const std::string &path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
-        fs::create_directory(path);
-        return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+        return fs::create_directory(path);
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to create directory {}: {}", path, e.what());
+        return false;
     }
-    return false;
-}
-
-void createDirectory(const std::string &date, const std::string &rootDir) {
-    // Parameter validation
-    if (date.empty()) {
-        LOG_F(ERROR, "Error: Date cannot be empty");
-        return;
-    }
-
-    if (rootDir.empty()) {
-        LOG_F(ERROR, "Error: Root directory cannot be empty");
-        return;
-    }
-
-    auto tokens = atom::utils::splitString(date, '/');
-
-    // Create directories
-    fs::path currentDir = rootDir;
-    for (const auto &token : tokens) {
-        currentDir /= token;
-
-        if (!fs::is_directory(currentDir)) {
-            if (!fs::create_directory(currentDir)) {
-                LOG_F(ERROR, "Error: Failed to create directory - {}",
-                      currentDir.string());
-                return;
-            }
-        } else {
-            DLOG_F(INFO, "Directory already exists: {}", currentDir.string());
-        }
-    }
-    DLOG_F(INFO, "Directory creation completed: {}", currentDir.string());
 }
 
 auto createDirectoriesRecursive(
     const fs::path &basePath, const std::vector<std::string> &subdirs,
     const CreateDirectoriesOptions &options = {}) -> bool {
-    for (const auto &subdir : subdirs) {
-#if __cplusplus >= 202002L
-        std::string fullPath = std::format("{}/{}", basePath.string(), subdir);
-#else
-        std::string fullPath = basePath.string() + "/" + subdir;
-#endif
-
-        if (!options.filter(subdir)) {
+    for (const auto &subdir : subdirs | std::views::filter([&](const auto &s) {
+                                  return options.filter(s);
+                              })) {
+        auto fullPath = basePath / subdir;
+        if (fs::exists(fullPath) && fs::is_directory(fullPath)) {
             if (options.verbose) {
-                LOG_F(INFO, "Skipping directory (filtered out): {}", fullPath);
-            }
-            continue;
-        }
-        if (fs::exists(fullPath)) {
-            if (!fs::is_directory(fullPath)) {
-                LOG_F(ERROR, "Path exists but is not a directory: {}",
-                      fullPath);
-                return false;
-            }
-            if (options.verbose) {
-                LOG_F(INFO, "Directory already exists: {}", fullPath);
+                LOG_F(INFO, "Directory already exists: {}", fullPath.string());
             }
             continue;
         }
 
-        if (!options.dryRun) {
-            std::error_code ec;
-            if (!fs::create_directories(fullPath, ec)) {
-                LOG_F(ERROR, "Failed to create directory {}: {}", fullPath,
-                      ec.message());
-                return false;
-            }
+        if (!options.dryRun && !fs::create_directories(fullPath)) {
+            LOG_F(ERROR, "Failed to create directory {}", fullPath.string());
+            return false;
         }
 
         if (options.verbose) {
-            LOG_F(INFO, "Creating directory: {}", fullPath);
+            LOG_F(INFO, "Created directory: {}", fullPath.string());
         }
-        options.onCreate(fullPath);
+        options.onCreate(fullPath.string());
         if (options.delay > 0) {
             std::this_thread::sleep_for(
                 std::chrono::milliseconds(options.delay));
         }
     }
-
     return true;
 }
 
@@ -159,28 +105,22 @@ auto removeDirectory(const std::string &path) -> bool {
         fs::remove_all(path);
         DLOG_F(INFO, "Directory removed: {}", path);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to remove directory {}: {}", path, e.what());
+        return false;
     }
-    return false;
 }
 
 auto removeDirectoriesRecursive(
     const fs::path &basePath, const std::vector<std::string> &subdirs,
     const CreateDirectoriesOptions &options) -> bool {
-    for (const auto &subdir : subdirs) {
-        auto fullPath = (basePath / subdir).string();
-
-        if (!options.filter(subdir)) {
-            if (options.verbose) {
-                LOG_F(INFO, "Skipping directory (filtered out): {}", fullPath);
-            }
-            continue;
-        }
-
+    for (const auto &subdir : subdirs | std::views::filter([&](const auto &s) {
+                                  return options.filter(s);
+                              })) {
+        auto fullPath = basePath / subdir;
         if (!fs::exists(fullPath)) {
             if (options.verbose) {
-                LOG_F(INFO, "Directory does not exist: {}", fullPath);
+                LOG_F(INFO, "Directory does not exist: {}", fullPath.string());
             }
             continue;
         }
@@ -188,21 +128,20 @@ auto removeDirectoriesRecursive(
         try {
             fs::remove_all(fullPath);
             if (options.verbose) {
-                LOG_F(INFO, "Deleted directory: {}", fullPath);
+                LOG_F(INFO, "Deleted directory: {}", fullPath.string());
             }
-        } catch (const fs::filesystem_error &ex) {
-            LOG_F(ERROR, "Failed to delete directory: {}, error {}", fullPath,
-                  ex.what());
+        } catch (const fs::filesystem_error &e) {
+            LOG_F(ERROR, "Failed to delete directory {}: {}", fullPath.string(),
+                  e.what());
             return false;
         }
 
-        options.onDelete(fullPath);
+        options.onDelete(fullPath.string());
         if (options.delay > 0) {
             std::this_thread::sleep_for(
                 std::chrono::milliseconds(options.delay));
         }
     }
-
     return true;
 }
 
@@ -210,15 +149,7 @@ auto renameDirectory(const std::string &old_path,
                      const std::string &new_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
-    try {
-        fs::rename(old_path, new_path);
-        DLOG_F(INFO, "Directory renamed from {} to {}", old_path, new_path);
-        return true;
-    } catch (const std::filesystem::filesystem_error &e) {
-        LOG_F(ERROR, "Failed to rename directory from {} to {}: {}", old_path,
-              new_path, e.what());
-    }
-    return false;
+    return moveDirectory(old_path, new_path);
 }
 
 auto moveDirectory(const std::string &old_path,
@@ -229,11 +160,11 @@ auto moveDirectory(const std::string &old_path,
         fs::rename(old_path, new_path);
         DLOG_F(INFO, "Directory moved from {} to {}", old_path, new_path);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to move directory from {} to {}: {}", old_path,
               new_path, e.what());
+        return false;
     }
-    return false;
 }
 
 auto copyFile(const std::string &src_path,
@@ -244,26 +175,16 @@ auto copyFile(const std::string &src_path,
         fs::copy_file(src_path, dst_path);
         DLOG_F(INFO, "File copied from {} to {}", src_path, dst_path);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to copy file from {} to {}: {}", src_path,
               dst_path, e.what());
+        return false;
     }
-    return false;
 }
 
 auto moveFile(const std::string &src_path,
               const std::string &dst_path) -> bool {
-    ATOM_IO_CHECK_ARGUMENT(src_path);
-    ATOM_IO_CHECK_ARGUMENT(dst_path);
-    try {
-        fs::rename(src_path, dst_path);
-        DLOG_F(INFO, "File moved from {} to {}", src_path, dst_path);
-        return true;
-    } catch (const std::filesystem::filesystem_error &e) {
-        LOG_F(ERROR, "Failed to move file from {} to {}: {}", src_path,
-              dst_path, e.what());
-    }
-    return false;
+    return renameFile(src_path, dst_path);
 }
 
 auto renameFile(const std::string &old_path,
@@ -274,11 +195,11 @@ auto renameFile(const std::string &old_path,
         fs::rename(old_path, new_path);
         DLOG_F(INFO, "File renamed from {} to {}", old_path, new_path);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to rename file from {} to {}: {}", old_path,
               new_path, e.what());
+        return false;
     }
-    return false;
 }
 
 auto removeFile(const std::string &path) -> bool {
@@ -287,10 +208,10 @@ auto removeFile(const std::string &path) -> bool {
         fs::remove(path);
         DLOG_F(INFO, "File removed: {}", path);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to remove file {}: {}", path, e.what());
+        return false;
     }
-    return false;
 }
 
 auto createSymlink(const std::string &target_path,
@@ -302,29 +223,19 @@ auto createSymlink(const std::string &target_path,
         DLOG_F(INFO, "Symlink created from {} to {}", target_path,
                symlink_path);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to create symlink from {} to {}: {}", target_path,
               symlink_path, e.what());
+        return false;
     }
-    return false;
 }
 
-auto removeSymlink(const std::string &path) -> bool {
-    ATOM_IO_CHECK_ARGUMENT(path);
-    try {
-        fs::remove(path);
-        DLOG_F(INFO, "Symlink removed: {}", path);
-        return true;
-    } catch (const std::filesystem::filesystem_error &e) {
-        LOG_F(ERROR, "Failed to remove symlink {}: {}", path, e.what());
-    }
-    return false;
-}
+auto removeSymlink(const std::string &path) -> bool { return removeFile(path); }
 
 auto fileSize(const std::string &path) -> std::uintmax_t {
     try {
         return fs::file_size(path);
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to get file size of {}: {}", path, e.what());
         return 0;
     }
@@ -336,7 +247,6 @@ auto truncateFile(const std::string &path, std::streamsize size) -> bool {
     if (!file.is_open()) {
         return false;
     }
-
     file.seekp(size);
     file.put('\0');
     return true;
@@ -344,7 +254,7 @@ auto truncateFile(const std::string &path, std::streamsize size) -> bool {
 
 auto convertToLinuxPath(std::string_view windows_path) -> std::string {
     std::string linuxPath(windows_path);
-    std::replace(linuxPath.begin(), linuxPath.end(), '\\', '/');
+    std::ranges::replace(linuxPath, '\\', '/');
     if (linuxPath.length() >= 2 && linuxPath[1] == ':') {
         linuxPath[0] = std::tolower(linuxPath[0]);
     }
@@ -353,8 +263,8 @@ auto convertToLinuxPath(std::string_view windows_path) -> std::string {
 
 auto convertToWindowsPath(std::string_view linux_path) -> std::string {
     std::string windowsPath(linux_path);
-    std::replace(windowsPath.begin(), windowsPath.end(), '/', '\\');
-    if (windowsPath.length() >= 2 && (std::islower(windowsPath[0]) != 0) &&
+    std::ranges::replace(windowsPath, '/', '\\');
+    if (windowsPath.length() >= 2 && std::islower(windowsPath[0]) &&
         windowsPath[1] == ':') {
         windowsPath[0] = std::toupper(windowsPath[0]);
     }
@@ -363,11 +273,9 @@ auto convertToWindowsPath(std::string_view linux_path) -> std::string {
 
 auto normalizePath(std::string_view path) -> std::string {
     std::string normalizedPath(path);
-    char preferredSeparator = static_cast<char>(fs::path::preferred_separator);
-    std::replace(normalizedPath.begin(), normalizedPath.end(), '/',
-                 preferredSeparator);
-    std::replace(normalizedPath.begin(), normalizedPath.end(), '\\',
-                 preferredSeparator);
+    char preferredSeparator = fs::path::preferred_separator;
+    std::ranges::replace(normalizedPath, '/', preferredSeparator);
+    std::ranges::replace(normalizedPath, '\\', preferredSeparator);
     return normalizedPath;
 }
 
@@ -391,20 +299,15 @@ auto normPath(std::string_view raw_path) -> std::string {
             normalizedFsPath /= part;
         }
     }
-
     return normalizedFsPath.string().empty() ? "/" : normalizedFsPath.string();
 }
 
 void walk(const fs::path &root, bool recursive,
           const std::function<void(const fs::path &)> &callback) {
     for (const auto &entry : fs::directory_iterator(root)) {
-        if (fs::is_directory(entry)) {
-            callback(entry.path());
-            if (recursive) {
-                walk(entry.path(), recursive, callback);
-            }
-        } else {
-            callback(entry.path());
+        callback(entry.path());
+        if (recursive && fs::is_directory(entry)) {
+            walk(entry.path(), recursive, callback);
         }
     }
 }
@@ -413,7 +316,6 @@ auto buildJsonStructure(const fs::path &root, bool recursive) -> json {
     json folder = {{"path", root.generic_string()},
                    {"directories", json::array()},
                    {"files", json::array()}};
-
     walk(root, recursive, [&](const fs::path &entry) {
         if (fs::is_directory(entry)) {
             folder["directories"].push_back(
@@ -422,18 +324,15 @@ auto buildJsonStructure(const fs::path &root, bool recursive) -> json {
             folder["files"].push_back(entry.generic_string());
         }
     });
-
     return folder;
 }
 
 auto jwalk(const std::string &root) -> std::string {
     fs::path rootPath(root);
-    if (!isFolderExists(rootPath)) {
+    if (!isFolderExists(rootPath.string())) {
         return "";
     }
-
-    json folder = buildJsonStructure(rootPath, true);
-    return folder.dump();
+    return buildJsonStructure(rootPath, true).dump();
 }
 
 void fwalk(const fs::path &root,
@@ -452,46 +351,34 @@ auto isFileNameValid(const std::string &fileName) -> bool {
 }
 
 auto isFolderExists(const std::string &folderName) -> bool {
-    if (!isFolderNameValid(folderName)) {
-        return false;
-    }
-    return fs::exists(folderName) && fs::is_directory(folderName);
+    return isFolderNameValid(folderName) && fs::exists(folderName) &&
+           fs::is_directory(folderName);
 }
 
 auto isFileExists(const std::string &fileName) -> bool {
-    if (!isFileNameValid(fileName)) {
-        LOG_F(ERROR, "Invalid file name: {}", fileName);
-        return false;
-    }
-    return fs::exists(fileName) && fs::is_regular_file(fileName);
+    return isFileNameValid(fileName) && fs::exists(fileName) &&
+           fs::is_regular_file(fileName);
 }
 
 auto isFolderEmpty(const std::string &folderName) -> bool {
-    if (!isFolderExists(folderName)) {
+    if (!isFolderExists(folderName))
         return false;
-    }
-    fs::path directoryPath = folderName;
-    for (const auto &entry : fs::directory_iterator(directoryPath)) {
-        if (fs::is_regular_file(entry)) {
-            return true;
-        }
-    }
-    return false;
+    return fs::is_empty(folderName);
 }
 
 auto isAbsolutePath(const std::string &path) -> bool {
-    return std::filesystem::path(path).is_absolute();
+    return fs::path(path).is_absolute();
 }
 
 auto changeWorkingDirectory(const std::string &directoryPath) -> bool {
-    if (!isFolderNameValid(directoryPath) || !isFolderExists(directoryPath)) {
+    if (!isFolderExists(directoryPath)) {
         LOG_F(ERROR, "Directory does not exist: {}", directoryPath);
         return false;
     }
     try {
         fs::current_path(directoryPath);
         return true;
-    } catch (const std::filesystem::filesystem_error &e) {
+    } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to change working directory: {}", e.what());
         return false;
     }
@@ -509,31 +396,26 @@ auto getFileTimes(const std::string &filePath)
         return fileTimes;
     }
 
-    FILETIME createTime;
-    FILETIME modifyTime;
+    FILETIME createTime, modifyTime;
     FileTimeToLocalFileTime(&fileInfo.ftCreationTime, &createTime);
     FileTimeToLocalFileTime(&fileInfo.ftLastWriteTime, &modifyTime);
 
-    SYSTEMTIME createSysTime;
-    SYSTEMTIME modifySysTime;
+    SYSTEMTIME createSysTime, modifySysTime;
     FileTimeToSystemTime(&createTime, &createSysTime);
     FileTimeToSystemTime(&modifyTime, &modifySysTime);
 
-    std::array<char, 20> createTimeStr{};
-    std::array<char, 20> modifyTimeStr{};
-    ATOM_UNUSED_RESULT(std::snprintf(
-        createTimeStr.data(), createTimeStr.size(),
-        "%04d/%02d/%02d %02d:%02d:%02d", createSysTime.wYear,
-        createSysTime.wMonth, createSysTime.wDay, createSysTime.wHour,
-        createSysTime.wMinute, createSysTime.wSecond));
-    ATOM_UNUSED_RESULT(std::snprintf(
-        modifyTimeStr.data(), modifyTimeStr.size(),
-        "%04d/%02d/%02d %02d:%02d:%02d", modifySysTime.wYear,
-        modifySysTime.wMonth, modifySysTime.wDay, modifySysTime.wHour,
-        modifySysTime.wMinute, modifySysTime.wSecond));
+    char createTimeStr[20], modifyTimeStr[20];
+    std::snprintf(createTimeStr, sizeof(createTimeStr),
+                  "%04d/%02d/%02d %02d:%02d:%02d", createSysTime.wYear,
+                  createSysTime.wMonth, createSysTime.wDay, createSysTime.wHour,
+                  createSysTime.wMinute, createSysTime.wSecond);
+    std::snprintf(modifyTimeStr, sizeof(modifyTimeStr),
+                  "%04d/%02d/%02d %02d:%02d:%02d", modifySysTime.wYear,
+                  modifySysTime.wMonth, modifySysTime.wDay, modifySysTime.wHour,
+                  modifySysTime.wMinute, modifySysTime.wSecond);
 
-    fileTimes.first = std::string(createTimeStr.data());
-    fileTimes.second = std::string(modifyTimeStr.data());
+    fileTimes.first = createTimeStr;
+    fileTimes.second = modifyTimeStr;
 
 #else
     struct stat fileInfo;
@@ -542,13 +424,10 @@ auto getFileTimes(const std::string &filePath)
         return fileTimes;
     }
 
-    std::time_t createTime = fileInfo.st_ctime;
-    std::time_t modifyTime = fileInfo.st_mtime;
-
-    struct tm *createTimeTm = localtime(&createTime);
-    struct tm *modifyTimeTm = localtime(&modifyTime);
-
     char createTimeStr[20], modifyTimeStr[20];
+    auto *createTimeTm = localtime(&fileInfo.st_ctime);
+    auto *modifyTimeTm = localtime(&fileInfo.st_mtime);
+
     strftime(createTimeStr, sizeof(createTimeStr), "%Y/%m/%d %H:%M:%S",
              createTimeTm);
     strftime(modifyTimeStr, sizeof(modifyTimeStr), "%Y/%m/%d %H:%M:%S",
@@ -558,7 +437,6 @@ auto getFileTimes(const std::string &filePath)
     fileTimes.second = modifyTimeStr;
 
 #endif
-
     return fileTimes;
 }
 
@@ -566,28 +444,23 @@ auto checkFileTypeInFolder(const std::string &folderPath,
                            const std::string &fileType,
                            FileOption fileOption) -> std::vector<std::string> {
     std::vector<std::string> files;
-
     try {
-        for (const auto &entry :
-             std::filesystem::directory_iterator(folderPath)) {
+        for (const auto &entry : fs::directory_iterator(folderPath)) {
             if (entry.is_regular_file() &&
                 entry.path().extension() == fileType) {
-                if (fileOption == FileOption::PATH) {
-                    files.push_back(entry.path().string());
-                } else if (fileOption == FileOption::NAME) {
-                    files.push_back(entry.path().filename().string());
-                }
+                files.push_back(fileOption == FileOption::PATH
+                                    ? entry.path().string()
+                                    : entry.path().filename().string());
             }
         }
-    } catch (const std::filesystem::filesystem_error &ex) {
+    } catch (const fs::filesystem_error &ex) {
         LOG_F(ERROR, "Failed to check files in folder: {}", ex.what());
     }
-
     return files;
 }
 
 auto isExecutableFile(const std::string &fileName,
-                      [[maybe_unused]] const std::string &fileExt) -> bool {
+                      const std::string &fileExt = "") -> bool {
 #ifdef _WIN32
     fs::path filePath = fileName + fileExt;
 #else
@@ -595,26 +468,14 @@ auto isExecutableFile(const std::string &fileName,
 #endif
 
     DLOG_F(INFO, "Checking file '{}'.", filePath.string());
-
-    if (!fs::exists(filePath)) {
-        DLOG_F(WARNING, "The file '{}' does not exist.", filePath.string());
-        return false;
-    }
-
-    if (!fs::is_regular_file(filePath)) {
-        DLOG_F(WARNING, "The file '{}' is not a regular file.",
+    if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
+        DLOG_F(WARNING,
+               "The file '{}' is not a regular file or does not exist.",
                filePath.string());
         return false;
     }
 
-#ifdef _WIN32
-    if (GetFileAttributesA(filePath.string().c_str()) &
-        FILE_ATTRIBUTE_DIRECTORY) {
-        DLOG_F(WARNING, "The file '{}' is a directory, not an executable file.",
-               filePath.string());
-        return false;
-    }
-#else
+#ifndef _WIN32
     if ((fs::status(filePath).permissions() & fs::perms::owner_exec) ==
         fs::perms::none) {
         DLOG_F(WARNING, "The file '{}' is not executable.", filePath.string());
@@ -627,8 +488,7 @@ auto isExecutableFile(const std::string &fileName,
 }
 
 auto getFileSize(const std::string &filePath) -> std::size_t {
-    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
-    return file.tellg();
+    return fs::file_size(filePath);
 }
 
 auto calculateChunkSize(std::size_t fileSize, int numChunks) -> std::size_t {
@@ -643,16 +503,14 @@ void splitFile(const std::string &filePath, std::size_t chunkSize,
         return;
     }
 
-    std::size_t fileSize = getFileSize(filePath);
     char *buffer = new char[chunkSize];
+    std::size_t fileSize = getFileSize(filePath);
     int partNumber = 0;
+
     while (fileSize > 0) {
         std::ostringstream partFileName;
-        if (outputPattern.empty()) {
-            partFileName << filePath << ".part" << partNumber;
-        } else {
-            partFileName << outputPattern << partNumber;
-        }
+        partFileName << (outputPattern.empty() ? filePath : outputPattern)
+                     << ".part" << partNumber;
 
         std::ofstream outputFile(partFileName.str(), std::ios::binary);
         if (!outputFile) {
@@ -666,13 +524,11 @@ void splitFile(const std::string &filePath, std::size_t chunkSize,
         outputFile.write(buffer, bytesToRead);
 
         fileSize -= bytesToRead;
-        partNumber++;
+        ++partNumber;
     }
 
     delete[] buffer;
-    inputFile.close();
-
-    LOG_F(INFO, "File split completed into {} parts", partNumber);
+    LOG_F(INFO, "File split into {} parts.", partNumber);
 }
 
 void mergeFiles(const std::string &outputFilePath,

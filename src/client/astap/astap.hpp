@@ -1,6 +1,8 @@
 #ifndef LITHIUM_CLIENT_ASTAP_HPP
 #define LITHIUM_CLIENT_ASTAP_HPP
 
+#include "device/template/solver.hpp"
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -16,18 +18,25 @@ public:
     std::string error;
 };
 
-class AstapSolver {
+class AstapSolver : public AtomSolver {
 public:
     explicit AstapSolver(std::string name);
     ~AstapSolver();
 
-    auto connect(std::string_view solverPath) -> bool;
+    auto initialize() -> bool override;
 
-    auto disconnect() -> bool;
+    auto destroy() -> bool override;
 
-    auto reconnect() -> bool;
+    auto connect(const std::string& name, int timeout,
+                 int maxRetry) -> bool override;
 
-    auto isConnected() -> bool;
+    auto disconnect(bool force, int timeout, int maxRetry) -> bool override;
+
+    auto reconnect(int timeout, int maxRetry) -> bool override;
+
+    auto scan() -> std::vector<std::string> override;
+
+    auto isConnected() -> bool override;
 
     auto scanSolver() -> bool;
 

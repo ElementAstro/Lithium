@@ -7,9 +7,13 @@
 #include "atom/log/loguru.hpp"
 #include "atom/utils/qtimer.hpp"
 
-INDIFilterwheel::INDIFilterwheel(std::string name) : name_(name) {}
+#include "atom/components/component.hpp"
+#include "atom/components/registry.hpp"
 
-auto INDIFilterwheel::connect(const std::string &deviceName) -> bool {
+INDIFilterwheel::INDIFilterwheel(std::string name) : AtomFilterWheel(name) {}
+
+auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
+                              int maxRetry) -> bool {
     if (isConnected_.load()) {
         LOG_F(ERROR, "{} is already connected.", deviceName_);
         return false;
@@ -108,12 +112,43 @@ auto INDIFilterwheel::connect(const std::string &deviceName) -> bool {
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
+
+        device_.watchProperty(
+            "FILTER_SLOT",
+            [this](const INDI::PropertyNumber &property) {
+                if (property.isValid()) {
+                    LOG_F(INFO, "Current filter slot: {}",
+                          property[0].getValue());
+                    currentSlot_ = property[0].getValue();
+                    maxSlot_ = property[0].getMax();
+                    minSlot_ = property[0].getMin();
+                    currentSlotName_ =
+                        slotNames_[static_cast<int>(property[0].getValue())];
+                    LOG_F(INFO, "Current filter slot name: {}",
+                          currentSlotName_);
+                }
+            },
+            INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
+
+        device_.watchProperty(
+            "FILTER_NAME",
+            [this](const INDI::PropertyText &property) {
+                if (property.isValid()) {
+                    slotNames_.clear();
+                    for (const auto &filter : property) {
+                        LOG_F(INFO, "Filter name: {}", filter.getText());
+                        slotNames_.emplace_back(filter.getText());
+                    }
+                }
+            },
+            INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
     });
 
     return true;
 }
-auto INDIFilterwheel::disconnect() -> void {}
-auto INDIFilterwheel::reconnect() -> bool {}
+auto INDIFilterwheel::disconnect(bool force, int timeout,
+                                 int maxRetry) -> bool {}
+auto INDIFilterwheel::reconnect(int timeout, int maxRetry) -> bool {}
 
 auto INDIFilterwheel::watchAdditionalProperty() -> bool {}
 
@@ -173,3 +208,44 @@ auto INDIFilterwheel::setCFWSlotName(std::string_view name) -> bool {
     sendNewProperty(property);
     return true;
 }
+
+ATOM_MODULE(filterwheel_indi, [](Component &component) {
+    LOG_F(INFO, "Registering filterwheel_indi module...");
+    component.def("connect", &INDIFilterwheel::connect, "device",
+                  "Connect to a filterwheel device.");
+    component.def("disconnect", &INDIFilterwheel::disconnect, "device",
+                  "Disconnect from a filterwheel device.");
+    component.def("reconnect", &INDIFilterwheel::reconnect, "device",
+                  "Reconnect to a filterwheel device.");
+    component.def("scan", &INDIFilterwheel::scan,
+                  "Scan for filterwheel devices.");
+    component.def("is_connected", &INDIFilterwheel::isConnected,
+                  "Check if a filterwheel device is connected.");
+
+    component.def("initialize", &INDIFilterwheel::initialize, "device",
+                  "Initialize a filterwheel device.");
+    component.def("destroy", &INDIFilterwheel::destroy, "device",
+                  "Destroy a filterwheel device.");
+
+    component.def("get_position", &INDIFilterwheel::getCFWPosition,
+                  "device", "Get the current filter position.");
+    component.def("set_position", &INDIFilterwheel::setCFWPosition,
+                  "device", "Set the current filter position.");
+    component.def("get_slot_name", &INDIFilterwheel::getCFWSlotName,
+                  "device", "Get the current filter slot name.");
+    component.def("set_slot_name", &INDIFilterwheel::setCFWSlotName,
+                  "device", "Set the current filter slot name.");
+
+    component.def(
+        "create_instance",
+        [](const std::string &name) {
+            std::shared_ptr<AtomFilterWheel> instance =
+                std::make_shared<INDIFilterwheel>(name);
+            return instance;
+        },
+        "device", "Create a new filterwheel instance.");
+    component.defType<INDIFilterwheel>("filterwheel_indi", "device",
+                                       "Define a new filterwheel instance.");
+
+    LOG_F(INFO, "Registered filterwheel_indi module.");
+});

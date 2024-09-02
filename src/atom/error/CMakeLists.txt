@@ -10,7 +10,6 @@ cmake_minimum_required(VERSION 3.20)
 project(atom-error C CXX)
 
 list(APPEND ${PROJECT_NAME}_SOURCES
-    error_stack.cpp
     exception.cpp
     stacktrace.cpp
 )
@@ -18,13 +17,11 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     error_code.hpp
-    error_stack.hpp
     stacktrace.hpp
 )
 
 list(APPEND ${PROJECT_NAME}_LIBS
     loguru
-    atom-utils
 )
 
 if (LINUX)

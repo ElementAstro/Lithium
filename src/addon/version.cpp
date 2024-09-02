@@ -1,36 +1,58 @@
 #include "version.hpp"
 
-#include <iostream>
-#include <regex>
-#include <string>
-#include <utility>
+#include <charconv>
+
+#include "atom/error/exception.hpp"
 
 namespace lithium {
-Version::Version() : major(0), minor(0), patch(0) {}
 
-Version::Version(int maj, int min, int pat, std::string pre, std::string bld)
-    : major(maj),
-      minor(min),
-      patch(pat),
-      prerelease(std::move(pre)),
-      build(std::move(bld)) {}
-
-auto Version::parse(const std::string& versionStr) -> Version {
-    std::regex versionPattern(
-        R"((\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?)");
-    std::smatch match;
-    if (std::regex_match(versionStr, match, versionPattern)) {
-        int major = std::stoi(match[1].str());
-        int minor = std::stoi(match[2].str());
-        int patch = std::stoi(match[3].str());
-        std::string prerelease = match[4].matched ? match[4].str() : "";
-        std::string build = match[5].matched ? match[5].str() : "";
-        return {major, minor, patch, prerelease, build};
+constexpr auto parseInt(std::string_view str) -> int {
+    int result = 0;
+    auto [ptr, ec] =
+        std::from_chars(str.data(), str.data() + str.size(), result);
+    if (ec != std::errc()) {
+        THROW_INVALID_ARGUMENT("Invalid integer format");
     }
-    throw std::invalid_argument("Invalid version format");
+    return result;
 }
 
-auto Version::operator<(const Version& other) const -> bool {
+constexpr auto Version::parse(std::string_view versionStr) -> Version {
+    size_t pos = 0;
+    auto nextDot = versionStr.find('.', pos);
+    if (nextDot == std::string_view::npos) {
+        THROW_INVALID_ARGUMENT("Invalid version format");
+    }
+
+    int major = parseInt(versionStr.substr(pos, nextDot - pos));
+    pos = nextDot + 1;
+
+    nextDot = versionStr.find('.', pos);
+    if (nextDot == std::string_view::npos) {
+        THROW_INVALID_ARGUMENT("Invalid version format");
+    }
+
+    int minor = parseInt(versionStr.substr(pos, nextDot - pos));
+    pos = nextDot + 1;
+
+    auto nextDash = versionStr.find('-', pos);
+    auto nextPlus = versionStr.find('+', pos);
+    size_t endPos = std::min(nextDash, nextPlus);
+
+    int patch = parseInt(versionStr.substr(pos, endPos - pos));
+
+    std::string prerelease = (nextDash != std::string_view::npos)
+                                 ? std::string(versionStr.substr(
+                                       nextDash + 1, nextPlus - nextDash - 1))
+                                 : "";
+
+    std::string build = (nextPlus != std::string_view::npos)
+                            ? std::string(versionStr.substr(nextPlus + 1))
+                            : "";
+
+    return {major, minor, patch, prerelease, build};
+}
+
+constexpr auto Version::operator<(const Version& other) const -> bool {
     if (major != other.major) {
         return major < other.major;
     }
@@ -52,20 +74,17 @@ auto Version::operator<(const Version& other) const -> bool {
     return prerelease < other.prerelease;
 }
 
-auto Version::operator>(const Version& other) const -> bool {
+constexpr auto Version::operator>(const Version& other) const -> bool {
     return other < *this;
 }
-
-auto Version::operator==(const Version& other) const -> bool {
+constexpr auto Version::operator==(const Version& other) const -> bool {
     return major == other.major && minor == other.minor &&
            patch == other.patch && prerelease == other.prerelease;
 }
-
-auto Version::operator<=(const Version& other) const -> bool {
+constexpr auto Version::operator<=(const Version& other) const -> bool {
     return *this < other || *this == other;
 }
-
-auto Version::operator>=(const Version& other) const -> bool {
+constexpr auto Version::operator>=(const Version& other) const -> bool {
     return *this > other || *this == other;
 }
 
@@ -80,47 +99,52 @@ auto operator<<(std::ostream& os, const Version& version) -> std::ostream& {
     return os;
 }
 
-DateVersion::DateVersion(int y, int m, int d) : year(y), month(m), day(d) {}
-
-auto DateVersion::parse(const std::string& dateStr) -> DateVersion {
-    std::regex datePattern(R"((\d{4})-(\d{2})-(\d{2}))");
-    std::smatch match;
-    if (std::regex_match(dateStr, match, datePattern)) {
-        int year = std::stoi(match[1].str());
-        int month = std::stoi(match[2].str());
-        int day = std::stoi(match[3].str());
-        // Check if month and day are valid
-        if (month < 1 || month > 12 || day < 1 || day > 31) {
-            throw std::invalid_argument("Invalid date format");
-        }
-        return {year, month, day};
+constexpr auto DateVersion::parse(std::string_view dateStr) -> DateVersion {
+    size_t pos = 0;
+    auto nextDash = dateStr.find('-', pos);
+    if (nextDash == std::string_view::npos) {
+        THROW_INVALID_ARGUMENT("Invalid date format");
     }
-    throw std::invalid_argument("Invalid date format");
+
+    int year = parseInt(dateStr.substr(pos, nextDash - pos));
+    pos = nextDash + 1;
+
+    nextDash = dateStr.find('-', pos);
+    if (nextDash == std::string_view::npos) {
+        THROW_INVALID_ARGUMENT("Invalid date format");
+    }
+
+    int month = parseInt(dateStr.substr(pos, nextDash - pos));
+    int day = parseInt(dateStr.substr(nextDash + 1));
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+        THROW_INVALID_ARGUMENT("Invalid date values");
+    }
+
+    return {year, month, day};
 }
 
-auto DateVersion::operator<(const DateVersion& other) const -> bool {
+constexpr auto DateVersion::operator<(const DateVersion& other) const -> bool {
     if (year != other.year) {
         return year < other.year;
     }
+
     if (month != other.month) {
         return month < other.month;
     }
     return day < other.day;
 }
 
-auto DateVersion::operator>(const DateVersion& other) const -> bool {
+constexpr auto DateVersion::operator>(const DateVersion& other) const -> bool {
     return other < *this;
 }
-
-auto DateVersion::operator==(const DateVersion& other) const -> bool {
+constexpr auto DateVersion::operator==(const DateVersion& other) const -> bool {
     return year == other.year && month == other.month && day == other.day;
 }
-
-auto DateVersion::operator<=(const DateVersion& other) const -> bool {
+constexpr auto DateVersion::operator<=(const DateVersion& other) const -> bool {
     return *this < other || *this == other;
 }
-
-auto DateVersion::operator>=(const DateVersion& other) const -> bool {
+constexpr auto DateVersion::operator>=(const DateVersion& other) const -> bool {
     return *this > other || *this == other;
 }
 
@@ -132,7 +156,8 @@ auto operator<<(std::ostream& os, const DateVersion& version) -> std::ostream& {
 auto checkVersion(const Version& actualVersion,
                   const std::string& requiredVersionStr) -> bool {
     size_t opLength = 1;
-    if (requiredVersionStr[1] == '=' || requiredVersionStr[1] == '>') {
+    if (requiredVersionStr.size() > 1 &&
+        (requiredVersionStr[1] == '=' || requiredVersionStr[1] == '>')) {
         opLength = 2;
     }
 
@@ -144,7 +169,7 @@ auto checkVersion(const Version& actualVersion,
         requiredVersion = Version::parse(versionPart);
     } catch (const std::invalid_argument& e) {
         std::cerr << "Invalid version format: " << versionPart << std::endl;
-        throw;  // Rethrow or handle the error appropriately
+        throw;
     }
 
     if (op == "^") {
@@ -156,28 +181,24 @@ auto checkVersion(const Version& actualVersion,
                actualVersion.minor == requiredVersion.minor &&
                actualVersion >= requiredVersion;
     }
-    if (op == ">") {
+    if (op == ">")
         return actualVersion > requiredVersion;
-    }
-    if (op == "<") {
+    if (op == "<")
         return actualVersion < requiredVersion;
-    }
-    if (op == ">=") {
+    if (op == ">=")
         return actualVersion >= requiredVersion;
-    }
-    if (op == "<=") {
+    if (op == "<=")
         return actualVersion <= requiredVersion;
-    }
-    if (op == "=") {
+    if (op == "=")
         return actualVersion == requiredVersion;
-    }
+
     return actualVersion == requiredVersion;
 }
 
 auto checkDateVersion(const DateVersion& actualVersion,
                       const std::string& requiredVersionStr) -> bool {
     size_t opLength = 1;
-    if (requiredVersionStr[1] == '=') {
+    if (requiredVersionStr.size() > 1 && requiredVersionStr[1] == '=') {
         opLength = 2;
     }
 
@@ -185,21 +206,18 @@ auto checkDateVersion(const DateVersion& actualVersion,
     DateVersion requiredVersion =
         DateVersion::parse(requiredVersionStr.substr(opLength));
 
-    if (op == ">") {
+    if (op == ">")
         return actualVersion > requiredVersion;
-    }
-    if (op == "<") {
+    if (op == "<")
         return actualVersion < requiredVersion;
-    }
-    if (op == ">=") {
+    if (op == ">=")
         return actualVersion >= requiredVersion;
-    }
-    if (op == "<=") {
+    if (op == "<=")
         return actualVersion <= requiredVersion;
-    }
-    if (op == "=") {
+    if (op == "=")
         return actualVersion == requiredVersion;
-    }
-    throw std::invalid_argument("Invalid comparison operator");
+
+    THROW_INVALID_ARGUMENT("Invalid comparison operator");
 }
+
 }  // namespace lithium

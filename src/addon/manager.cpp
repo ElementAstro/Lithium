@@ -327,18 +327,39 @@ auto ComponentManager::loadComponent(const json& params) -> bool {
         LOG_F(ERROR, "Failed to load component entry: {}", componentName);
         return false;
     }
+    std::vector<std::string> dependencyVersions;
+    for (const auto& dependency :
+         impl_->componentInfos[componentName]["dependencies"]) {
+        dependencyVersions.push_back(dependency["version"].get<std::string>());
+    }
+    for (const auto& dependency : it->second->dependencies) {
+        if (!checkComponent(dependency, modulePath)) {
+            LOG_F(ERROR, "Failed to load dependency: {}", dependency);
+            return false;
+        }
+    }
     if (it->second->component_type == "shared") {
-        return loadSharedComponent(componentName, moduleName, modulePath,
-                                   it->second->func_name,
-                                   it->second->dependencies);
+        if (loadSharedComponent(componentName, moduleName, modulePath,
+                                it->second->func_name,
+                                it->second->dependencies)) {
+            updateDependencyGraph(
+                componentName, impl_->componentInfos[componentName]["version"],
+                it->second->dependencies, dependencyVersions);
+            return true;
+        }
+    } else if (it->second->component_type == "standalone") {
+        if (loadStandaloneComponent(componentName, moduleName, modulePath,
+                                    it->second->func_name,
+                                    it->second->dependencies)) {
+            updateDependencyGraph(
+                componentName, impl_->componentInfos[componentName]["version"],
+                it->second->dependencies, dependencyVersions);
+            return true;
+        }
+        LOG_F(ERROR, "Unknown component type: {}", componentName);
+        return false;
     }
-    if (it->second->component_type == "standalone") {
-        return loadStandaloneComponent(componentName, moduleName, modulePath,
-                                       it->second->func_name,
-                                       it->second->dependencies);
-    }
-    LOG_F(ERROR, "Unknown component type: {}", componentName);
-    return false;
+    return true;
 }
 
 auto ComponentManager::checkComponent(const std::string& module_name,
@@ -473,12 +494,14 @@ auto ComponentManager::unloadComponent(const json& params) -> bool {
     if (it->second->component_type == "shared") {
         if (!unloadSharedComponent(componentName, forced)) {
             LOG_F(ERROR, "Failed to unload component: {}", componentName);
+            impl_->dependencyGraph.removeNode(componentName);
             return false;
         }
     } else if (it->second->component_type == "standalone") {
         if (!unloadStandaloneComponent(componentName, forced)) {
             LOG_F(ERROR, "Failed to unload standalone component: {}",
                   componentName);
+            impl_->dependencyGraph.removeNode(componentName);
             return false;
         }
     }
@@ -601,9 +624,11 @@ auto ComponentManager::loadSharedComponent(
     auto moduleInitFunc = moduleLoader->getFunction<void()>(
         componentFullName, "initialize_registry");
     if (moduleInitFunc != nullptr) {
-        LOG_F(INFO, "Initializing registry for shared component: {}", componentFullName);
+        LOG_F(INFO, "Initializing registry for shared component: {}",
+              componentFullName);
         moduleInitFunc();
-        LOG_F(INFO, "Initialized registry for shared component: {}", componentFullName);
+        LOG_F(INFO, "Initialized registry for shared component: {}",
+              componentFullName);
     }
 
     if (auto component =
@@ -809,6 +834,72 @@ auto ComponentManager::reloadStandaloneComponent(
         return false;
     }
     return true;
+}
+
+void ComponentManager::updateDependencyGraph(
+    const std::string& component_name, const std::string& version,
+    const std::vector<std::string>& dependencies,
+    const std::vector<std::string>& dependencies_version) {
+    impl_->dependencyGraph.addNode(component_name, Version::parse(version));
+    for (auto i = 0; i < static_cast<int>(dependencies.size()); i++) {
+        impl_->dependencyGraph.addDependency(
+            component_name, dependencies[i],
+            Version::parse(dependencies_version[i]));
+    }
+}
+
+auto ComponentManager::savePackageLock(const std::string& filename) -> bool {
+    std::lock_guard lock(impl_->mutex);
+
+    json packageLock;
+    packageLock["name"] = "component-manager";
+    packageLock["version"] = "1.0.0";
+    packageLock["dependencies"] = json::object();
+
+    for (const auto& [component_name, component] : impl_->components) {
+        json componentInfo;
+        componentInfo["version"] =
+            impl_->componentInfos[component_name]["version"];
+        componentInfo["resolved"] =
+            impl_->componentInfos[component_name]["resolved"];
+        componentInfo["dependencies"] = json::object();
+
+        auto dependencies =
+            impl_->dependencyGraph.getAllDependencies(component_name);
+        for (const auto& dep : dependencies) {
+            componentInfo["dependencies"][dep] =
+                impl_->componentInfos[dep]["version"];
+        }
+
+        packageLock["dependencies"][component_name] = componentInfo;
+    }
+
+    try {
+        std::ofstream outFile(filename);
+        if (!outFile.is_open()) {
+            LOG_F(ERROR, "Failed to open file: {}", filename);
+            return false;
+        }
+        outFile << packageLock.dump(4);
+        outFile.close();
+        LOG_F(INFO, "Successfully saved package.lock to {}", filename);
+        return true;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Error writing package.lock: {}", e.what());
+        return false;
+    }
+}
+
+auto ComponentManager::printDependencyTree() {
+    LOG_F(INFO, "Dependency tree:");
+    for (const auto& [component, _] : impl_->components) {
+        LOG_F(INFO, "{} depends on:", component);
+        auto dependencies =
+            impl_->dependencyGraph.getAllDependencies(component);
+        for (const auto& dep : dependencies) {
+            LOG_F(INFO, "  {}", dep);
+        }
+    }
 }
 
 }  // namespace lithium

@@ -15,325 +15,265 @@ Description: Main Message Bus
 #ifndef ATOM_ASYNC_MESSAGE_BUS_HPP
 #define ATOM_ASYNC_MESSAGE_BUS_HPP
 
-#include <algorithm>
 #include <any>
-#include <atomic>
-#include <condition_variable>
+#include <chrono>
 #include <functional>
+#include <future>
 #include <mutex>
-#include <queue>
-#include <ranges>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <thread>
 #include <typeindex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#endif
-
-#include "atom/log/loguru.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::async {
-
 class MessageBus {
 public:
-    MessageBus() = default;
-
-    explicit MessageBus(const int &max_queue_size) {
-        maxMessageBusSize_.store(max_queue_size);
-    }
-
-    ~MessageBus() { stopAllProcessingThreads(); }
+    using Token = std::size_t;
 
     static auto createShared() -> std::shared_ptr<MessageBus> {
         return std::make_shared<MessageBus>();
     }
 
-    static auto createUnique() -> std::unique_ptr<MessageBus> {
-        return std::make_unique<MessageBus>();
+    // 发布消息（可延迟）
+    template <typename MessageType>
+    void publish(
+        const std::string& name, const MessageType& message,
+        std::optional<std::chrono::milliseconds> delay = std::nullopt) {
+        auto publishTask = [this, name, message]() {
+            std::shared_lock lock(mutex_);
+            std::unordered_set<Token> calledSubscribers;  // 记录已调用的订阅者
+
+            // 并行发布给直接匹配的订阅者
+            publishToSubscribers<MessageType>(name, message, calledSubscribers);
+
+            // 并行发布给命名空间匹配的订阅者
+            for (const auto& ns : namespaces_) {
+                if (name.find(ns + ".") ==
+                    0) {  // 命名空间匹配必须以 ns+点 开头
+                    publishToSubscribers<MessageType>(ns, message,
+                                                      calledSubscribers);
+                }
+            }
+
+            // 将消息记录到历史中
+            recordMessageHistory<MessageType>(name, message);
+        };
+
+        if (delay) {
+            std::jthread([delay, publishTask](std::stop_token stoken) {
+                if (std::this_thread::sleep_for(*delay);
+                    !stoken.stop_requested()) {
+                    publishTask();
+                }
+            }).detach();
+        } else {
+            publishTask();
+        }
     }
 
-    template <typename T>
-    void subscribe(const std::string &topic,
-                   std::function<void(const T &)> callback, int priority = 0,
-                   const std::string &namespace_ = "") {
-        std::string fullTopic = getFullTopic(topic, namespace_);
-        std::scoped_lock lock(subscribersLock_);
-        auto &topicSubscribers = subscribers_[fullTopic];
-        topicSubscribers.emplace_back(priority, std::move(callback));
-        std::ranges::sort(topicSubscribers, [](const auto &a, const auto &b) {
-            return a.first > b.first;
-        });
-
-        DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
+    template <typename MessageType>
+    void publishGlobal(const MessageType& message) {
+        std::shared_lock lock(mutex_);
+        for (const auto& subscribers : subscribers_) {
+            for (const auto& [name, _] : subscribers.second) {
+                publish(name, message);
+            }
+        }
     }
 
-    template <typename T>
-    void subscribeToNamespace(const std::string &namespaceName,
-                              std::function<void(const T &)> callback,
-                              int priority = 0) {
-        std::string topic = namespaceName + ".*";
-        subscribe<T>(topic, callback, priority, namespaceName);
+    // 订阅消息
+    template <typename MessageType>
+    auto subscribe(
+        const std::string& name,
+        std::function<void(const MessageType&)> handler, bool async = true,
+        bool once = false,
+        std::function<bool(const MessageType&)> filter =
+            [](const MessageType&) { return true; }) -> Token {
+        std::unique_lock lock(mutex_);
+        Token token = nextToken_++;
+        auto filterWrapper = [filter](const std::any& msg) {
+            return filter(std::any_cast<const MessageType&>(msg));
+        };
+        subscribers_[std::type_index(typeid(MessageType))][name].emplace_back(
+            Subscriber{std::move(handler), async, once, filterWrapper, token});
+        namespaces_.insert(name);  // 记录命名空间
+        return token;
     }
 
-    template <typename T>
-    void unsubscribe(const std::string &topic,
-                     std::function<void(const T &)> callback,
-                     const std::string &namespace_ = "") {
-        std::string fullTopic = getFullTopic(topic, namespace_);
-        std::scoped_lock lock(subscribersLock_);
-        auto it = subscribers_.find(fullTopic);
+    template <typename MessageType>
+    void unsubscribe(Token token) {
+        std::unique_lock lock(mutex_);
+        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
         if (it != subscribers_.end()) {
-            auto &topicSubscribers = it->second;
-            topicSubscribers.erase(
-                std::ranges::remove_if(topicSubscribers,
-                                       [&](const auto &subscriber) {
-                                           return subscriber.second.type() ==
-                                                  typeid(callback);
-                                       }),
-                topicSubscribers.end());
-
-            DLOG_F(INFO, "Unsubscribed from topic: {}", fullTopic);
-        }
-    }
-
-    template <typename T>
-    void unsubscribeFromNamespace(const std::string &namespaceName,
-                                  std::function<void(const T &)> callback) {
-        std::string topic = namespaceName + ".*";
-        unsubscribe<T>(topic, callback, namespaceName);
-    }
-
-    void unsubscribeAll(const std::string &namespace_ = "") {
-        std::string fullTopic = namespace_.empty() ? "*" : (namespace_ + "::*");
-        std::scoped_lock lock(subscribersLock_);
-        subscribers_.erase(fullTopic);
-        DLOG_F(INFO, "Unsubscribed from all topics");
-    }
-
-    template <typename T>
-    void publish(const std::string &topic, const T &message,
-                 const std::string &namespace_ = "") {
-        std::string fullTopic = getFullTopic(topic, namespace_);
-        {
-            std::scoped_lock lock(messageQueueLock_);
-            if (messageQueue_.size() >=
-                static_cast<size_t>(maxMessageBusSize_)) {
-                LOG_F(WARNING,
-                      "Message queue is full. Discarding oldest message.");
-                messageQueue_.pop();
+            for (auto& [name, subscribers_list] : it->second) {
+                removeSubscription(subscribers_list, token);
             }
-            messageQueue_.emplace(fullTopic, message);
         }
-        messageAvailableFlag_.notify_one();
-        DLOG_F(INFO, "Published message to topic: {}", fullTopic);
     }
 
-    template <typename T>
-    auto tryPublish(const std::string &topic, const T &message,
-                    const std::string &namespace_ = "",
-                    std::chrono::milliseconds timeout =
-                        std::chrono::milliseconds(100)) -> bool {
-        std::string fullTopic = getFullTopic(topic, namespace_);
-        {
-            std::unique_lock lock(messageQueueLock_);
-            if (messageQueueCondition_.wait_for(lock, timeout, [this] {
-                    return messageQueue_.size() <
-                           static_cast<size_t>(maxMessageBusSize_);
-                })) {
-                messageQueue_.emplace(fullTopic, message);
-                messageAvailableFlag_.notify_one();
-                DLOG_F(INFO, "Published message to topic: {}", fullTopic);
-                return true;
+    template <typename MessageType>
+    void unsubscribeAll(const std::string& name) {
+        std::unique_lock lock(mutex_);
+        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (it != subscribers_.end()) {
+            auto nameIt = it->second.find(name);
+            if (nameIt != it->second.end()) {
+                it->second.erase(nameIt);
             }
-            LOG_F(WARNING,
-                  "Failed to publish message to topic: {} due to timeout",
-                  fullTopic);
-            return false;
         }
     }
 
-    template <typename T>
-    auto tryReceive(T &outMessage, std::chrono::milliseconds timeout =
-                                       std::chrono::milliseconds(100)) -> bool {
-        std::unique_lock lock(waitingMutex_);
-        if (messageAvailableFlag_.wait_for(
-                lock, timeout, [this] { return !messageQueue_.empty(); })) {
-            std::scoped_lock messageLock(messageQueueLock_);
-            auto message = std::move(messageQueue_.front());
-            messageQueue_.pop();
-            outMessage = std::any_cast<T>(message.second);
-            return true;
+    template <typename MessageType>
+    auto getSubscriberCount(const std::string& name) -> std::size_t {
+        std::shared_lock lock(mutex_);
+        if (auto it = subscribers_.find(std::type_index(typeid(MessageType)));
+            it != subscribers_.end()) {
+            auto nameIt = it->second.find(name);
+            if (nameIt != it->second.end()) {
+                return nameIt->second.size();
+            }
         }
-        LOG_F(WARNING, "Failed to receive message due to timeout");
+        return 0;
+    }
+
+    template <typename MessageType>
+    auto getNamespaceSubscriberCount(const std::string& ns) -> std::size_t {
+        std::shared_lock lock(mutex_);
+        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
+        std::size_t count = 0;
+        if (it != subscribers_.end()) {
+            for (const auto& [name, subscribers_list] : it->second) {
+                if (name.find(ns + ".") == 0) {
+                    count += subscribers_list.size();
+                }
+            }
+        }
+        return count;
+    }
+
+    template <typename MessageType>
+    auto hasSubscriber(const std::string& name) -> bool {
+        std::shared_lock lock(mutex_);
+        if (auto it = subscribers_.find(std::type_index(typeid(MessageType)));
+            it != subscribers_.end()) {
+            auto nameIt = it->second.find(name);
+            return nameIt != it->second.end() && !nameIt->second.empty();
+        }
         return false;
     }
 
-    template <typename T>
-    void globalSubscribe(std::function<void(const T &)> callback) {
-        std::scoped_lock lock(globalSubscribersLock_);
-        globalSubscribers_.emplace_back(std::move(callback));
+    // 清空所有订阅者
+    void clearAllSubscribers() {
+        std::unique_lock lock(mutex_);
+        subscribers_.clear();
+        namespaces_.clear();
     }
 
-    template <typename T>
-    void globalUnsubscribe(std::function<void(const T &)> callback) {
-        std::scoped_lock lock(globalSubscribersLock_);
-        globalSubscribers_.erase(
-            std::ranges::remove_if(globalSubscribers_,
-                                   [&](const auto &subscriber) {
-                                       return subscriber.type() ==
-                                              typeid(callback);
-                                   }),
-            globalSubscribers_.end());
+    // 获取当前活动的命名空间列表
+    auto getActiveNamespaces() const -> std::vector<std::string> {
+        std::shared_lock lock(mutex_);
+        return {namespaces_.begin(), namespaces_.end()};
     }
 
-    template <typename T>
-    void startProcessingThread() {
-        std::type_index typeIndex = typeid(T);
-        if (processingThreads_.find(typeIndex) == processingThreads_.end()) {
-            processingThreads_.emplace(
-                typeIndex, std::jthread([this, typeIndex](
-                                            const std::stop_token &stopToken) {
-                    processMessages<T>(stopToken);
-                }));
+    // 获取消息历史
+    template <typename MessageType>
+    std::vector<MessageType> getMessageHistory(const std::string& name) const {
+        std::shared_lock lock(mutex_);
+        if (auto it =
+                messageHistory_.find(std::type_index(typeid(MessageType)));
+            it != messageHistory_.end()) {
+            auto nameIt = it->second.find(name);
+            if (nameIt != it->second.end()) {
+                std::vector<MessageType> history;
+                for (const auto& msg : nameIt->second) {
+                    history.push_back(std::any_cast<MessageType>(msg));
+                }
+                return history;
+            }
         }
-    }
-
-    template <typename T>
-    void stopProcessingThread() {
-        std::type_index typeIndex = typeid(T);
-        auto it = processingThreads_.find(typeIndex);
-        if (it != processingThreads_.end()) {
-            it->second.request_stop();
-            it->second.join();
-            processingThreads_.erase(it);
-            DLOG_F(INFO, "Processing thread for type {} stopped",
-                   typeid(T).name());
-        }
-    }
-
-    void stopAllProcessingThreads() {
-        for (auto &thread : processingThreads_) {
-            thread.second.request_stop();
-        }
-        for (auto &thread : processingThreads_) {
-            thread.second.join();
-        }
-        processingThreads_.clear();
-        DLOG_F(INFO, "All processing threads stopped");
+        static const std::vector<MessageType> EMPTY_HISTORY;
+        return EMPTY_HISTORY;
     }
 
 private:
-    using SubscriberCallback = std::any;
-    using SubscriberList = std::vector<std::pair<int, SubscriberCallback>>;
-    using SubscriberMap = std::unordered_map<std::string, SubscriberList>;
+    struct Subscriber {
+        std::any handler;
+        bool async;
+        bool once;
+        std::function<bool(const std::any&)> filter;
+        Token token;
+    } ATOM_ALIGNAS(64);
 
-    SubscriberMap subscribers_;
-    std::shared_mutex subscribersLock_;
-
-    using MessageQueue = std::queue<std::pair<std::string, std::any>>;
-    MessageQueue messageQueue_;
-    std::mutex messageQueueLock_;
-    std::condition_variable messageQueueCondition_;
-    std::condition_variable messageAvailableFlag_;
-    std::mutex waitingMutex_;
-
-    using ProcessingThread = std::jthread;
-    using ProcessingThreadMap =
-        std::unordered_map<std::type_index, ProcessingThread>;
-    ProcessingThreadMap processingThreads_;
-
-    std::atomic_int maxMessageBusSize_{1000};
-
-    using GlobalSubscriberList = std::vector<SubscriberCallback>;
-    GlobalSubscriberList globalSubscribers_;
-    std::shared_mutex globalSubscribersLock_;
-
-    auto getFullTopic(const std::string &topic,
-                      const std::string &namespace_) const -> std::string {
-        return namespace_.empty() ? topic : (namespace_ + "::" + topic);
-    }
-
-    template <typename T>
-    void processMessages(const std::stop_token &stopToken) {
-        while (!stopToken.stop_requested()) {
-            std::pair<std::string, std::any> message;
-            bool hasMessage = false;
-
-            {
-                std::unique_lock lock(waitingMutex_);
-                messageAvailableFlag_.wait(
-                    lock, [this] { return !messageQueue_.empty(); });
-                if (stopToken.stop_requested()) {
-                    break;
-                }
-                std::scoped_lock messageLock(messageQueueLock_);
-                if (!messageQueue_.empty()) {
-                    message = std::move(messageQueue_.front());
-                    messageQueue_.pop();
-                    hasMessage = true;
-                }
-            }
-
-            if (hasMessage) {
-                const std::string &topic = message.first;
-                const std::any &data = message.second;
-
-                // Process local subscribers
-                {
-                    std::shared_lock subscribersLock(subscribersLock_);
-                    auto it = subscribers_.find(topic);
-                    if (it != subscribers_.end()) {
-                        try {
-                            for (const auto &subscriber : it->second) {
-                                if (subscriber.second.type() ==
-                                    typeid(std::function<void(const T &)>)) {
-                                    std::any_cast<
-                                        std::function<void(const T &)>>(
-                                        subscriber.second)(
-                                        std::any_cast<const T &>(data));
-                                }
+    template <typename MessageType>
+    void publishToSubscribers(const std::string& name,
+                              const MessageType& message,
+                              std::unordered_set<Token>& calledSubscribers) {
+        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (it != subscribers_.end()) {
+            auto nameIt = it->second.find(name);
+            if (nameIt != it->second.end()) {
+                auto& subscribersList = nameIt->second;
+                for (auto& subscriber : subscribersList) {
+                    if (subscriber.filter(message) &&
+                        calledSubscribers.insert(subscriber.token).second) {
+                        auto handler = std::any_cast<
+                            std::function<void(const MessageType&)>>(
+                            subscriber.handler);
+                        if (handler) {
+                            if (subscriber.async) {
+                                std::async(std::launch::async, handler, message)
+                                    .get();
+                            } else {
+                                handler(message);
                             }
-                        } catch (const std::bad_any_cast &e) {
-                            LOG_F(ERROR, "Message type mismatch: {}", e.what());
-                        } catch (...) {
-                            LOG_F(ERROR,
-                                  "Unknown error occurred during message "
-                                  "processing");
+                            if (subscriber.once) {
+                                removeSubscription(subscribersList,
+                                                   subscriber.token);
+                            }
                         }
                     }
                 }
-
-                // Process global subscribers
-                {
-                    std::shared_lock globalLock(globalSubscribersLock_);
-                    try {
-                        for (const auto &subscriber : globalSubscribers_) {
-                            if (subscriber.type() ==
-                                typeid(std::function<void(const T &)>)) {
-                                std::any_cast<std::function<void(const T &)>>(
-                                    subscriber)(std::any_cast<const T &>(data));
-                            }
-                        }
-                    } catch (const std::bad_any_cast &e) {
-                        LOG_F(ERROR, "Global message type mismatch: {}",
-                              e.what());
-                    } catch (...) {
-                        LOG_F(ERROR,
-                              "Unknown error occurred during global message "
-                              "processing");
-                    }
-                }
-
-                DLOG_F(INFO, "Processed message on topic: {}", topic);
             }
         }
     }
-};
 
+    void removeSubscription(std::vector<Subscriber>& subscribers_list,
+                            Token token) {
+        subscribers_list.erase(
+            std::remove_if(
+                subscribers_list.begin(), subscribers_list.end(),
+                [token](const Subscriber& sub) { return sub.token == token; }),
+            subscribers_list.end());
+    }
+
+    template <typename MessageType>
+    void recordMessageHistory(const std::string& name,
+                              const MessageType& message) {
+        auto& history =
+            messageHistory_[std::type_index(typeid(MessageType))][name];
+        history.push_back(message);
+        if (history.size() > maxHistorySize_) {
+            history.erase(history.begin());
+        }
+    }
+
+    std::unordered_map<std::type_index,
+                       std::unordered_map<std::string, std::vector<Subscriber>>>
+        subscribers_;
+    std::unordered_map<std::type_index,
+                       std::unordered_map<std::string, std::vector<std::any>>>
+        messageHistory_;
+    std::unordered_set<std::string> namespaces_;
+    mutable std::shared_mutex mutex_;
+    Token nextToken_ = 0;
+    std::size_t maxHistorySize_ = 100;  // 最大保存的消息历史数量
+};
 }  // namespace atom::async
 
 #endif  // ATOM_ASYNC_MESSAGE_BUS_HPP

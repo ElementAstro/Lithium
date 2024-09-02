@@ -46,7 +46,7 @@ auto getSystemInfo() -> std::string {
     sss << "- Kernel version: " << osInfo.kernelVersion << std::endl;
     sss << "- Computer name: " << osInfo.computerName << std::endl;
     sss << "- Compiler: " << osInfo.compiler << std::endl;
-    sss << "- GUI: " << (hasGUI() ? "Yes" : "No") << std::endl;
+    sss << "- GUI: " << (ATOM_HAS_GUI() ? "Yes" : "No") << std::endl;
 
     sss << "CPU:" << std::endl;
     sss << "- Usage: " << getCurrentCpuUsage() << "%" << std::endl;

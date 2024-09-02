@@ -42,7 +42,7 @@ public:
     }
 
     PodVector(std::initializer_list<T> il)
-        : size_(il.size_()), capacity_(std::max(N, size_)) {
+        : size_(il.size()), capacity_(std::max(N, size_)) {
         data_ = static_cast<T*>(
             pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
         std::copy(il.begin(), il.end(), data_);
@@ -55,25 +55,25 @@ public:
     }
 
     PodVector(const PodVector& other)
-        : size_(other.size_), capacity_(other.capacity) {
+        : size_(other.size_), capacity_(other.capacity_) {
         data_ = static_cast<T*>(
             pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
-        std::memcpy(data_, other.data, SIZE_T * size_);
+        std::memcpy(data_, other.data_, SIZE_T * size_);
     }
 
     PodVector(PodVector&& other) noexcept
-        : size_(other.size_), capacity_(other.capacity), data_(other.data) {
+        : size_(other.size_), capacity_(other.capacity_), data_(other.data_) {
         other.data_ = nullptr;
     }
 
     auto operator=(PodVector&& other) noexcept -> PodVector& {
         if (this != &other) {
             if (data_ != nullptr) {
-                pool64_dealloc(data_);
+                pool64Dealloc(data_);
             }
             size_ = other.size_;
-            capacity_ = other.capacity;
-            data_ = other.data;
+            capacity_ = other.capacity_;
+            data_ = other.data_;
             other.data_ = nullptr;
         }
         return *this;
@@ -107,7 +107,7 @@ public:
             pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
         if (oldData != nullptr) {
             std::memcpy(data_, oldData, SIZE_T * size_);
-            pool64_dealloc(oldData);
+            pool64Dealloc(oldData);
         }
     }
 
@@ -120,30 +120,30 @@ public:
 
     void extend(const PodVector& other) {
         for (const auto& elem : other) {
-            push_back(elem);
+            pushBack(elem);
         }
     }
 
     void extend(const T* begin, const T* end) {
         for (auto it = begin; it != end; ++it) {
-            push_back(*it);
+            pushBack(*it);
         }
     }
 
     auto operator[](int index) -> T& { return data_[index]; }
     auto operator[](int index) const -> const T& { return data_[index]; }
 
-    auto begin() -> T* { return data; }
+    auto begin() -> T* { return data_; }
     auto end() -> T* { return data_ + size_; }
-    auto begin() const -> const T* { return data; }
+    auto begin() const -> const T* { return data_; }
     auto end() const -> const T* { return data_ + size_; }
     auto back() -> T& { return data_[size_ - 1]; }
     auto back() const -> const T& { return data_[size_ - 1]; }
 
     [[nodiscard]] auto empty() const -> bool { return size_ == 0; }
     [[nodiscard]] auto size() const -> int { return size_; }
-    auto data() -> T* { return data; }
-    const T* data() const { return data; }
+    auto data() -> T* { return data_; }
+    auto data() const -> const T* { return data_; }
     void clear() { size_ = 0; }
 
     template <typename ValueT>
@@ -184,7 +184,7 @@ public:
 
     ~PodVector() {
         if (data_ != nullptr) {
-            pool64_dealloc(data_);
+            pool64Dealloc(data_);
         }
     }
 
@@ -205,7 +205,7 @@ public:
     void pop() { vec_.pop_back(); }
     void clear() { vec_.clear(); }
     [[nodiscard]] auto empty() const -> bool { return vec_.empty(); }
-    auto size() const -> typename Container::size_type { return vec_.size_(); }
+    auto size() const -> typename Container::size_type { return vec_.size(); }
     auto top() -> T& { return vec_.back(); }
     auto top() const -> const T& { return vec_.back(); }
     auto popx() -> T {

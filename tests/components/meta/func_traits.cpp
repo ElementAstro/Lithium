@@ -7,7 +7,9 @@ using namespace atom::meta;
 int freeFunction(int a, double b) { return a + static_cast<int>(b); }
 
 struct TestClass {
-    auto memberFunction(int a, double b) -> int { return a + static_cast<int>(b); }
+    auto memberFunction(int a, double b) -> int {
+        return a + static_cast<int>(b);
+    }
     auto constMemberFunction(int a, double b) const -> int {
         return a + static_cast<int>(b);
     }
@@ -129,4 +131,59 @@ TEST(FunctionTraitsTest, FunctionReference) {
     static_assert(std::is_same_v<Traits::argument_t<1>, double>);
     static_assert(Traits::arity == 2);
     static_assert(!Traits::is_member_function);
+}
+
+// Example classes
+struct WithFoo {
+    void foo() {}
+    static void static_foo() {}
+};
+
+struct WithBar {
+    int bar(int, double) { return 42; }
+    static int static_foo(int) { return 42; }
+};
+
+struct WithConstFoo {
+    void foo() const {}
+};
+
+struct WithoutConstFoo {
+    void foo() {}
+};
+
+struct NoMethod {};
+
+DEFINE_HAS_METHOD(foo);
+DEFINE_HAS_METHOD(bar);
+DEFINE_HAS_STATIC_METHOD(static_foo);
+DEFINE_HAS_CONST_METHOD(foo);
+
+TEST(MemberFunctionDetection, NonStaticMemberFunctions) {
+    // Check for foo()
+    EXPECT_TRUE((has_foo<WithFoo, void>::value));
+    EXPECT_FALSE((has_foo<WithBar, void>::value));
+
+    // Check for bar(int, double)
+    EXPECT_TRUE((has_bar<WithBar, int, int, double>::value));
+    EXPECT_FALSE((has_bar<WithFoo, int, int, double>::value));
+
+    // Check for nonexistent methods
+    EXPECT_FALSE((has_foo<NoMethod, void>::value));
+}
+
+TEST(MemberFunctionDetection, StaticMemberFunctions) {
+    // Check for static_foo()
+    EXPECT_TRUE((has_static_static_foo<WithFoo, void>::value));
+    EXPECT_TRUE((has_static_static_foo<WithBar, int, int>::value));
+
+    // Check for nonexistent static methods
+    EXPECT_FALSE((has_static_static_foo<NoMethod, void>::value));
+}
+
+TEST(MemberFunctionDetection, ConstMemberFunctions) {
+    // Check for const foo()
+    EXPECT_TRUE((has_const_foo<WithConstFoo, void>::value));
+    EXPECT_FALSE((has_const_foo<WithoutConstFoo, void>::value));
+    EXPECT_FALSE((has_const_foo<NoMethod, void>::value));
 }

@@ -53,96 +53,79 @@ enum class UploadMode { CLIENT, LOCAL, BOTH, CLOUD };
 
 class AtomCamera : public AtomDriver {
 public:
-    /**
-     * @brief 构造函数
-     *
-     * @param name 摄像机名称
-     */
-    explicit AtomCamera(const std::string &name);
+    explicit AtomCamera(const std::string &name) : AtomDriver(name) {}
 
-    virtual ~AtomCamera();
+    virtual auto startExposure(const double &duration) -> bool = 0;
 
-    virtual auto connect(const std::string &deviceName, int timeout,
-                         int maxRetry) -> bool;
+    virtual auto abortExposure() -> bool = 0;
 
-    virtual auto disconnect(bool force, int timeout, int maxRetry) -> bool;
+    virtual auto getExposureStatus() -> bool = 0;
 
-    virtual auto reconnect(int timeout, int maxRetry) -> bool;
+    virtual auto getExposureResult() -> bool = 0;
 
-    virtual auto scan() -> std::vector<std::string>;
+    virtual auto saveExposureResult() -> bool = 0;
 
-    virtual auto isConnected() -> bool;
+    virtual auto startVideo() -> bool = 0;
 
-    virtual auto startExposure(const double &duration) -> bool;
+    virtual auto stopVideo() -> bool = 0;
 
-    virtual auto abortExposure() -> bool;
+    virtual auto getVideoStatus() -> bool = 0;
 
-    virtual auto getExposureStatus() -> bool;
+    virtual auto getVideoResult() -> bool = 0;
 
-    virtual auto getExposureResult() -> bool;
+    virtual auto saveVideoResult() -> bool = 0;
 
-    virtual auto saveExposureResult() -> bool;
+    virtual auto startCooling() -> bool = 0;
 
-    virtual auto startVideo() -> bool;
+    virtual auto stopCooling() -> bool = 0;
 
-    virtual auto stopVideo() -> bool;
-
-    virtual auto getVideoStatus() -> bool;
-
-    virtual auto getVideoResult() -> bool;
-
-    virtual auto saveVideoResult() -> bool;
-
-    virtual auto startCooling() -> bool;
-
-    virtual auto stopCooling() -> bool;
-
-    virtual auto getCoolingStatus() -> bool;
+    virtual auto getCoolingStatus() -> bool = 0;
 
     virtual auto isCoolingAvailable() -> bool;
 
-    virtual auto getTemperature() -> std::optional<double>;
+    virtual auto getTemperature() -> std::optional<double> = 0;
 
-    virtual auto getCoolingPower() -> bool;
+    virtual auto getCoolingPower() -> bool = 0;
 
-    virtual auto setTemperature(const double &temperature) -> bool;
+    virtual auto setTemperature(const double &temperature) -> bool = 0;
 
-    virtual auto setCoolingPower(const double &power) -> bool;
+    virtual auto setCoolingPower(const double &power) -> bool = 0;
 
-    virtual auto getGain() -> std::optional<double>;
+    virtual auto getGain() -> std::optional<double> = 0;
 
-    virtual auto setGain(const int &gain) -> bool;
+    virtual auto setGain(const int &gain) -> bool = 0;
 
-    virtual auto isGainAvailable() -> bool;
+    virtual auto isGainAvailable() -> bool = 0;
 
-    virtual auto getOffset() -> std::optional<double>;
+    virtual auto getOffset() -> std::optional<double> = 0;
 
-    virtual auto setOffset(const int &offset) -> bool;
+    virtual auto setOffset(const int &offset) -> bool = 0;
 
-    virtual auto isOffsetAvailable() -> bool;
+    virtual auto isOffsetAvailable() -> bool = 0;
 
-    virtual auto getISO() -> bool;
+    virtual auto getISO() -> bool = 0;
 
-    virtual auto setISO(const int &iso) -> bool;
+    virtual auto setISO(const int &iso) -> bool = 0;
 
-    virtual auto isISOAvailable() -> bool;
+    virtual auto isISOAvailable() -> bool = 0;
 
-    virtual auto getFrame() -> bool;
+    virtual auto getFrame() -> bool = 0;
 
     virtual auto setFrame(const int &x, const int &y, const int &w,
-                          const int &h) -> bool;
+                          const int &h) -> bool = 0;
 
-    virtual auto isFrameSettingAvailable() -> bool;
+    virtual auto isFrameSettingAvailable() -> bool = 0;
 
-    virtual auto getBinning() -> std::optional<std::tuple<int, int, int, int>>;
+    virtual auto getBinning()
+        -> std::optional<std::tuple<int, int, int, int>> = 0;
 
-    virtual auto setBinning(const int &hor, const int &ver) -> bool;
+    virtual auto setBinning(const int &hor, const int &ver) -> bool = 0;
 
-    virtual auto getFrameType() -> bool;
+    virtual auto getFrameType() -> bool = 0;
 
-    virtual auto setFrameType(FrameType type) -> bool;
+    virtual auto setFrameType(FrameType type) -> bool = 0;
 
-    virtual auto getUploadMode() -> bool;
+    virtual auto getUploadMode() -> bool = 0;
 
-    virtual auto setUploadMode(UploadMode mode) -> bool;
+    virtual auto setUploadMode(UploadMode mode) -> bool = 0;
 };

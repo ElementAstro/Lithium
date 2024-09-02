@@ -47,9 +47,9 @@ TEST_F(UdpClientTest, AsyncReceive) {
     auto future = promise.get_future();
 
     client_->setOnDataReceivedCallback(
-        [&](const std::vector<char>& data, const std::string& host, int port) {
-            promise.set_value(data);
-        });
+        [&](const std::vector<char>& data,
+            [[maybe_unused]] const std::string& host,
+            [[maybe_unused]] int port) { promise.set_value(data); });
 
     client_->startReceiving(1024);
 

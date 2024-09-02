@@ -1,3 +1,26 @@
+/**
+ * @file task.hpp
+ * @brief Definition of task management and state machine classes.
+ *
+ * This file defines classes for managing tasks and their states using a state
+ * machine. It includes:
+ * - `Event` and `State` base classes for handling events and state transitions.
+ * - `StateMachine` class for managing state transitions and handling events.
+ * - `TaskEvent` class for events specific to tasks.
+ * - `TaskState` and derived classes (`PendingState`, `RunningState`,
+ * `CompletedState`, `FailedState`) for representing different states of a task.
+ * - `Task` class for representing and managing a task, including status,
+ * progress, and custom functions.
+ *
+ * The `Task` class supports operations such as starting, running, completing,
+ * failing, and canceling tasks, along with handling timeouts and progress
+ * tracking.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ */
+
 #ifndef LITHIUM_TASK_TASK_HPP
 #define LITHIUM_TASK_TASK_HPP
 

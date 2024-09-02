@@ -37,7 +37,7 @@ auto delayMemInvoke(R (T::*func)(Args...), T *obj) {
 }
 
 template <typename R, typename T, typename... Args>
-auto delayCmemInvoke(R (T::*func)(Args...) const, const T *obj) {
+auto delayMemInvoke(R (T::*func)(Args...) const, const T *obj) {
     return [func, obj](Args... args) {
         return (obj->*func)(std::forward<Args>(args)...);
     };

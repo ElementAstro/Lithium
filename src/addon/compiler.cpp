@@ -1,10 +1,12 @@
 #include "compiler.hpp"
+#include "io/io.hpp"
 #include "toolchain.hpp"
 
 #include "utils/constant.hpp"
 
 #include <fstream>
 #include <functional>
+#include <ios>
 #include <unordered_map>
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
@@ -164,11 +166,41 @@ void CompilerImpl::createOutputDirectory(const fs::path &outputDir) {
 
 auto CompilerImpl::syntaxCheck(std::string_view code,
                                std::string_view compiler) -> bool {
-    std::string command = std::format("{} -fsyntax-only -xc++ -", compiler);
+    if (atom::io::isFileExists("temp_code.cpp")) {
+        if (!atom::io::removeFile("temp_code.cpp")) {
+            LOG_F(ERROR, "Failed to remove temp_code.cpp");
+            return false;
+        }
+    }
+    // Create a temporary file to store the code
+    std::string tempFileName = "temp_code.cpp";
+    {
+        std::ofstream tempFile(tempFileName, std::ios::trunc);
+        if (!tempFile) {
+            LOG_F(ERROR, "Failed to create temporary file for code");
+            return false;
+        }
+        tempFile << code;
+    }
+
+    // Format the command to invoke the compiler with syntax-only check
+    std::string command =
+        std::format("{} -fsyntax-only -x c++ {}", compiler, tempFileName);
     std::string output;
+
+    // Execute the command and process output
     output = atom::system::executeCommand(
-        command, false,
+        command,
+        false,  // No need for a shell
         [&](const std::string &line) { output += line + "\n"; });
+
+    // Clean up temporary file
+    if (!atom::io::removeFile("temp_code.cpp")) {
+        LOG_F(ERROR, "Failed to remove temp_code.cpp");
+        return false;
+    }
+
+    // Check the output for errors
     if (!output.empty()) {
         LOG_F(ERROR, "Syntax check failed:\n{}", output);
         return false;
@@ -182,8 +214,8 @@ auto CompilerImpl::compileCode(std::string_view code, std::string_view compiler,
     std::string command = std::format("{} {} -xc++ - -o {}", compiler,
                                       compileOptions, output.string());
     std::string compilationOutput;
-    compilationOutput = atom::system::executeCommand(
-        command, false,
+    compilationOutput = atom::system::executeCommandWithInput(
+        command, std::string(code),
         [&](const std::string &line) { compilationOutput += line + "\n"; });
     if (!compilationOutput.empty()) {
         LOG_F(ERROR, "Compilation failed:\n{}", compilationOutput);
@@ -203,189 +235,4 @@ void CompilerImpl::addCompileOptions(const std::string &options) {
 auto CompilerImpl::getAvailableCompilers() const -> std::vector<std::string> {
     return toolchainManager_.getAvailableCompilers();
 }
-
-void CppMemberGenerator::generate(const json &j, std::ostream &os) {
-    for (const auto &member : j) {
-        os << "    " << member["type"].get<std::string>() << " "
-           << member["name"].get<std::string>() << ";\n";
-    }
-}
-
-void CppConstructorGenerator::generate(const std::string &className,
-                                       const json &j, std::ostream &os) {
-    for (const auto &constructor : j) {
-        os << "    " << className << "(";
-        bool first = true;
-        for (const auto &param : constructor["parameters"]) {
-            if (!first)
-                os << ", ";
-            os << param["type"].get<std::string>() << " "
-               << param["name"].get<std::string>();
-            first = false;
-        }
-        os << ")";
-        if (!constructor["initializer_list"].empty()) {
-            os << " : ";
-            bool first_init = true;
-            for (const auto &init : constructor["initializer_list"]) {
-                if (!first_init)
-                    os << ", ";
-                os << init["member"].get<std::string>() << "("
-                   << init["value"].get<std::string>() << ")";
-                first_init = false;
-            }
-        }
-        os << " {\n";
-        for (const auto &param : constructor["parameters"]) {
-            os << "        this->" << param["name"].get<std::string>() << " = "
-               << param["name"].get<std::string>() << ";\n";
-        }
-        os << "    }\n";
-    }
-    if (j.empty()) {
-        os << "    " << className << "() = default;\n";
-    }
-}
-
-void CppMethodGenerator::generate(const json &j, std::ostream &os) {
-    for (const auto &method : j) {
-        os << "    ";
-        if (method.value("is_virtual", false)) {
-            os << "virtual ";
-        }
-        os << method["return_type"].get<std::string>() << " "
-           << method["name"].get<std::string>() << "(";
-        bool first = true;
-        for (const auto &param : method["parameters"]) {
-            if (!first)
-                os << ", ";
-            os << param["type"].get<std::string>() << " "
-               << param["name"].get<std::string>();
-            first = false;
-        }
-        os << ")";
-        if (method.value("is_const", false)) {
-            os << " const";
-        }
-        os << " {\n";
-        os << "        " << method["body"].get<std::string>() << "\n";
-        os << "    }\n";
-    }
-}
-
-void CppAccessorGenerator::generate(const json &j, std::ostream &os) {
-    for (const auto &accessor : j) {
-        os << "    " << accessor["type"].get<std::string>() << " "
-           << accessor["name"].get<std::string>() << "() const {\n";
-        os << "        return " << accessor["member"].get<std::string>()
-           << ";\n";
-        os << "    }\n";
-    }
-}
-
-void CppMutatorGenerator::generate(const json &j, std::ostream &os) {
-    for (const auto &mutator : j) {
-        os << "    void " << mutator["name"].get<std::string>() << "("
-           << mutator["parameter_type"].get<std::string>() << " value) {\n";
-        os << "        " << mutator["member"].get<std::string>()
-           << " = value;\n";
-        os << "    }\n";
-    }
-}
-
-void CppFriendFunctionGenerator::generate(const json &j, std::ostream &os) {
-    for (const auto &friendFunction : j) {
-        os << "    friend " << friendFunction["return_type"].get<std::string>()
-           << " " << friendFunction["name"].get<std::string>() << "(";
-        bool first = true;
-        for (const auto &param : friendFunction["parameters"]) {
-            if (!first) {
-                os << ", ";
-            }
-            os << param["type"].get<std::string>() << " "
-               << param["name"].get<std::string>();
-            first = false;
-        }
-        os << ");\n";
-    }
-}
-
-void CppOperatorOverloadGenerator::generate(const json &j, std::ostream &os) {
-    for (const auto &opOverload : j) {
-        os << "    " << opOverload["return_type"].get<std::string>()
-           << " operator" << opOverload["operator"].get<std::string>() << "(";
-        bool first = true;
-        for (const auto &param : opOverload["parameters"]) {
-            if (!first) {
-                os << ", ";
-            }
-            os << param["type"].get<std::string>() << " "
-               << param["name"].get<std::string>();
-            first = false;
-        }
-        os << ") {\n";
-        os << "        " << opOverload["body"].get<std::string>() << "\n";
-        os << "    }\n";
-    }
-}
-
-void CppClassGenerator::generate(const json &j, std::ostream &os) {
-    os << "// Auto-generated C++ class\n";
-    os << "// Generated by CppClassGenerator\n\n";
-
-    if (j.contains("namespace")) {
-        os << "namespace " << j["namespace"].get<std::string>() << " {\n\n";
-    }
-
-    if (j.contains("template_parameters")) {
-        os << "template <";
-        bool first = true;
-        for (const auto &param : j["template_parameters"]) {
-            if (!first) {
-                os << ", ";
-            }
-            os << "typename " << param.get<std::string>();
-            first = false;
-        }
-        os << ">\n";
-    }
-
-    std::string className = j["class_name"];
-    os << "class " << className;
-
-    if (j.contains("base_classes")) {
-        os << " : ";
-        bool first = true;
-        for (const auto &baseClass : j["base_classes"]) {
-            if (!first) {
-                os << ", ";
-            }
-            os << "public " << baseClass.get<std::string>();
-            first = false;
-        }
-    }
-
-    os << " {\npublic:\n";
-
-    CppMemberGenerator::generate(j["members"], os);
-    os << "\n";
-    CppConstructorGenerator::generate(className, j["constructors"], os);
-    os << "\n";
-    CppMethodGenerator::generate(j["methods"], os);
-    os << "\n";
-    CppAccessorGenerator::generate(j["accessors"], os);
-    os << "\n";
-    CppMutatorGenerator::generate(j["mutators"], os);
-    os << "\n";
-    CppFriendFunctionGenerator::generate(j["friend_functions"], os);
-    os << "\n";
-    CppOperatorOverloadGenerator::generate(j["operator_overloads"], os);
-
-    os << "};\n";
-
-    if (j.contains("namespace")) {
-        os << "\n} // namespace " << j["namespace"].get<std::string>() << "\n";
-    }
-}
-
 }  // namespace lithium

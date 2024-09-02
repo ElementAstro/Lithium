@@ -126,8 +126,3 @@ TEST(IndestructibleTest, StringWithIndestructible) {
     Indestructible<std::string> obj(std::in_place, "Hello, world!");
     EXPECT_EQ(obj.get(), "Hello, world!");
 }
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

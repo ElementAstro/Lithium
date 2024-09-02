@@ -31,7 +31,7 @@ TEST(InvokeTest, DelayMemInvoke) {
     EXPECT_EQ(delayedMultiply(4, 5), 20);
 
     const TestClass constObj;
-    auto delayedAddConst = delayCmemInvoke(&TestClass::addConst, &constObj);
+    auto delayedAddConst = delayMemInvoke(&TestClass::addConst, &constObj);
     EXPECT_EQ(delayedAddConst(5), 15);
 }
 

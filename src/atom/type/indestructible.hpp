@@ -240,4 +240,17 @@ struct Indestructible {
     constexpr operator const T&&() const&& { return std::move(object); }
 };
 
+template <class T>
+class destruction_guard {
+public:
+    explicit destruction_guard(T* p) noexcept : p_(p) {}
+    destruction_guard(const destruction_guard&) = delete;
+    ~destruction_guard() noexcept(std::is_nothrow_destructible_v<T>) {
+        std::destroy_at(p_);
+    }
+
+private:
+    T* p_;
+};
+
 #endif  // ATOM_TYPE_INDESTRUCTIBLE_HPP

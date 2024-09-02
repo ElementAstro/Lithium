@@ -61,6 +61,7 @@ void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
                           std::unordered_map<char, std::string>& huffmanCodes) {
     if (root == nullptr) {
         return;
+    }
     if (!root->left && !root->right) {
         huffmanCodes[root->data] = code;
     } else {

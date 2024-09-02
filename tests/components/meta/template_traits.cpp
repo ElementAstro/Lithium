@@ -68,21 +68,6 @@ TEST(TemplateTraitsTest, IsPartialSpecializationOfTest) {
         !is_partial_specialization_of_v<Wrapper<int>, PartialSpecialization>);
 }
 
-// Tests for is_class_template
-TEST(TemplateTraitsTest, IsClassTemplateTest) {
-    static_assert(is_class_template_v<Wrapper<int>>);
-    static_assert(!is_class_template_v<int>);
-}
-
-// Tests for is_variable_template
-template <auto... Values>
-struct VariableTemplate {};
-
-TEST(TemplateTraitsTest, IsVariableTemplateTest) {
-    static_assert(is_variable_template_v<VariableTemplate<1, 2, 3>>);
-    static_assert(!is_variable_template_v<int>);
-}
-
 // Tests for is_alias_template
 template <typename T>
 using AliasTemplate = Wrapper<T>;
@@ -101,20 +86,66 @@ TEST(TemplateTraitsTest, TemplateArgsAsTupleTest) {
     static_assert(std::is_same_v<Tuple2, std::tuple<int, double>>);
 }
 
-// Tests for template_args_as_value_tuple
-template <auto... Values>
-struct ValueTemplate {};
-
-TEST(TemplateTraitsTest, TemplateArgsAsValueTupleTest) {
-    using ValueTuple = template_args_as_value_tuple_t<ValueTemplate<1, 2, 3>>;
-    static_assert(
-        std::is_same_v<ValueTuple, std::tuple<std::integral_constant<int, 1>,
-                                              std::integral_constant<int, 2>,
-                                              std::integral_constant<int, 3>>>);
-}
-
 // Tests for count_occurrences
 TEST(TemplateTraitsTest, CountOccurrencesTest) {
     static_assert(count_occurrences_v<int, double, int, float, int> == 2);
     static_assert(count_occurrences_v<int, double, float, double> == 0);
+}
+
+struct WellFormedTuple {
+    using type = std::tuple<int, double>;
+};
+
+struct NotWellFormed {
+    // 不是一个元组
+};
+
+TEST(IsTupleLikeWellFormedTest, WellFormedTuple) {
+    static_assert(is_tuple_like_well_formed<WellFormedTuple::type>(),
+                  "WellFormedTuple should be tuple-like");
+}
+
+TEST(IsTupleLikeWellFormedTest, NotWellFormed) {
+    static_assert(!is_tuple_like_well_formed<NotWellFormed>(),
+                  "NotWellFormed should not be tuple-like");
+}
+
+struct Copyable {
+    Copyable() = default;
+    Copyable(const Copyable&) = default;
+    Copyable& operator=(const Copyable&) = default;
+    ~Copyable() = default;
+};
+
+struct NonCopyable {
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+    NonCopyable& operator=(const NonCopyable&) = delete;
+    ~NonCopyable() = default;
+};
+
+TEST(HasCopyabilityTest, Copyable) {
+    EXPECT_TRUE(has_copyability<Copyable>(constraint_level::nontrivial));
+    EXPECT_FALSE(has_copyability<NonCopyable>(constraint_level::nontrivial));
+}
+
+TEST(HasCopyabilityTest, NonCopyable) {
+    EXPECT_FALSE(has_copyability<NonCopyable>(constraint_level::nontrivial));
+}
+
+TEST(HasRelocatabilityTest, Copyable) {
+    EXPECT_TRUE(has_relocatability<Copyable>(constraint_level::nontrivial));
+}
+
+// TODO: FIX ME - make sure the test is correct!
+TEST(HasRelocatabilityTest, NonCopyable) {
+    EXPECT_FALSE(has_relocatability<NonCopyable>(constraint_level::nontrivial));
+}
+
+TEST(HasDestructibilityTest, Copyable) {
+    EXPECT_TRUE(has_destructibility<Copyable>(constraint_level::nontrivial));
+}
+
+TEST(HasDestructibilityTest, NonCopyable) {
+    EXPECT_TRUE(has_destructibility<NonCopyable>(constraint_level::nontrivial));
 }

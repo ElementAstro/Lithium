@@ -27,36 +27,33 @@ public:
         : oatpp::web::server::api::ApiController(objectMapper) {}
 
 public:
-    ENDPOINT_ASYNC("GET", "api/ws/room/{roomId}/", WS){
+    ENDPOINT_ASYNC("GET", "api/ws/room/{roomId}/", WS) {
+        ENDPOINT_ASYNC_INIT(WS);
 
-        ENDPOINT_ASYNC_INIT(WS)
+        Action act() override {
+            auto roomName = request->getPathVariable("roomId");
+            auto nickname = Nickname::random();
 
-            Action act() override{
+            OATPP_ASSERT_HTTP(nickname, Status::CODE_400,
+                              "No nickname specified.");
 
-                auto roomName = request->getPathVariable("roomId");
-    auto nickname = Nickname::random();
+            /* Websocket handshake */
+            auto response = oatpp::websocket::Handshaker::serversideHandshake(
+                request->getHeaders(), controller->websocketConnectionHandler);
 
-    OATPP_ASSERT_HTTP(nickname, Status::CODE_400, "No nickname specified.");
+            auto parameters = std::make_shared<
+                oatpp::network::ConnectionHandler::ParameterMap>();
 
-    /* Websocket handshake */
-    auto response = oatpp::websocket::Handshaker::serversideHandshake(
-        request->getHeaders(), controller->websocketConnectionHandler);
+            (*parameters)["roomName"] = roomName;
+            (*parameters)["nickname"] = nickname;
 
-    auto parameters =
-        std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
+            /* Set connection upgrade params */
+            response->setConnectionUpgradeParameters(parameters);
 
-    (*parameters)["roomName"] = roomName;
-    (*parameters)["nickname"] = nickname;
-
-    /* Set connection upgrade params */
-    response->setConnectionUpgradeParameters(parameters);
-
-    return _return(response);
-}
-}
-;
-}
-;
+            return _return(response);
+        }
+    };
+};
 
 #include OATPP_CODEGEN_END(ApiController)  /// <-- End Code-Gen
 

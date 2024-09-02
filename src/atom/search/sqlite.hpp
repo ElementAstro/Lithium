@@ -4,146 +4,141 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-12-6
-
-Description: Simple Sqilte3 wrapper
-
-**************************************************/
-
 #ifndef ATOM_SEARCH_SQLITE_HPP
 #define ATOM_SEARCH_SQLITE_HPP
 
-#include <sqlite3.h>
 #include <functional>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
 
 /**
  * @class SqliteDB
- * @brief 表示一个用于操作SQLite数据库的类
+ * @brief A class for managing SQLite database operations using the Pimpl design
+ * pattern.
  */
 class SqliteDB {
-private:
-    sqlite3 *db; /**< SQLite数据库连接对象 */
-
 public:
     /**
-     * @brief 构造函数
-     * @param dbPath 数据库文件的路径
+     * @brief Constructor
+     * @param dbPath Path to the database file
      */
-    SqliteDB(const char *dbPath);
+    explicit SqliteDB(std::string_view dbPath);
 
     /**
-     * @brief 析构函数
+     * @brief Destructor
      */
     ~SqliteDB();
 
     /**
-     * @brief 执行查询语句
-     * @param query 查询语句
-     * @return 执行是否成功
+     * @brief Execute a SQL query
+     * @param query SQL query string
+     * @return Whether the query was executed successfully
      */
-    bool executeQuery(const char *query);
+    bool executeQuery(std::string_view query);
 
     /**
-     * @brief 查询并获取数据
-     * @param query 查询语句
+     * @brief Query and retrieve data
+     * @param query SQL query string
      */
-    void selectData(const char *query);
+    void selectData(std::string_view query);
 
     /**
-     * @brief 获取整型值
-     * @param query 查询语句
-     * @return 整型值
+     * @brief Retrieve an integer value
+     * @param query SQL query string
+     * @return Optional integer value (empty if query fails)
      */
-    int getIntValue(const char *query);
+    std::optional<int> getIntValue(std::string_view query);
 
     /**
-     * @brief 获取浮点型值
-     * @param query 查询语句
-     * @return 浮点型值
+     * @brief Retrieve a floating-point value
+     * @param query SQL query string
+     * @return Optional double value (empty if query fails)
      */
-    double getDoubleValue(const char *query);
+    std::optional<double> getDoubleValue(std::string_view query);
 
     /**
-     * @brief 获取文本值
-     * @param query 查询语句
-     * @return 文本值
+     * @brief Retrieve a text value
+     * @param query SQL query string
+     * @return Optional text value (empty if query fails)
      */
-    const unsigned char *getTextValue(const char *query);
+    std::optional<std::string> getTextValue(std::string_view query);
 
     /**
-     * @brief 在查询结果中搜索指定的项
-     * @param query 查询语句
-     * @param searchTerm 要搜索的项
-     * @return 是否找到匹配项
+     * @brief Search for a specific item in the query results
+     * @param query SQL query string
+     * @param searchTerm Term to search for
+     * @return Whether a matching item was found
      */
-    bool searchData(const char *query, const char *searchTerm);
+    bool searchData(std::string_view query, std::string_view searchTerm);
 
     /**
-     * @brief 更新数据
-     * @param query 更新语句
-     * @return 更新是否成功
+     * @brief Update data in the database
+     * @param query SQL update statement
+     * @return Whether the update was successful
      */
-    bool updateData(const char *query);
+    bool updateData(std::string_view query);
 
     /**
-     * @brief 删除数据
-     * @param query 删除语句
-     * @return 删除是否成功
+     * @brief Delete data from the database
+     * @param query SQL delete statement
+     * @return Whether the delete was successful
      */
-    bool deleteData(const char *query);
+    bool deleteData(std::string_view query);
 
     /**
-     * @brief 开始数据库事务
-     * @return 是否成功开始事务
+     * @brief Begin a database transaction
+     * @return Whether the transaction was started successfully
      */
     bool beginTransaction();
 
     /**
-     * @brief 提交数据库事务
-     * @return 是否成功提交事务
+     * @brief Commit a database transaction
+     * @return Whether the transaction was committed successfully
      */
     bool commitTransaction();
 
     /**
-     * @brief 回滚数据库事务
-     * @return 是否成功回滚事务
+     * @brief Rollback a database transaction
+     * @return Whether the transaction was rolled back successfully
      */
     bool rollbackTransaction();
 
     /**
-     * @brief 处理SQLite错误
+     * @brief Validate data against a specified query condition
+     * @param query SQL query string
+     * @param validationQuery Validation condition query string
+     * @return Validation result
      */
-    void handleSQLError();
+    bool validateData(std::string_view query, std::string_view validationQuery);
 
     /**
-     * @brief 验证数据是否符合指定的查询条件
-     * @param query 查询语句
-     * @param validationQuery 验证条件语句
-     * @return 验证结果
+     * @brief Perform paginated data query and retrieval
+     * @param query SQL query string
+     * @param limit Number of records per page
+     * @param offset Offset for pagination
      */
-    bool validateData(const char *query, const char *validationQuery);
+    void selectDataWithPagination(std::string_view query, int limit,
+                                  int offset);
 
     /**
-     * @brief 分页查询并获取数据
-     * @param query 查询语句
-     * @param limit 每页记录数
-     * @param offset 偏移量
-     */
-    void selectDataWithPagination(const char *query, int limit, int offset);
-
-    /**
-     * @brief 设置错误消息回调函数
-     * @param errorCallback 错误消息回调函数
+     * @brief Set an error message callback function
+     * @param errorCallback Error message callback function
      */
     void setErrorMessageCallback(
-        const std::function<void(const char *)> &errorCallback);
+        const std::function<void(std::string_view)> &errorCallback);
 
 private:
-    std::function<void(const char *)> errorCallback =
-        [](const char *errorMessage) {};
+    class Impl;
+    std::unique_ptr<Impl> pImpl; /**< Pointer to implementation */
+    mutable std::mutex mtx;      /**< Mutex for thread safety */
+
+#if defined (TEST_F)
+// Allow Mock class to access private members for testing
+    friend class SqliteDBTest;
+#endif
 };
 
-#endif
+#endif  // ATOM_SEARCH_SQLITE_HPP

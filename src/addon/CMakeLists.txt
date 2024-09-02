@@ -23,6 +23,7 @@ set(PROJECT_SOURCES
     loader.cpp
     manager.cpp
     sandbox.cpp
+    toolchain.cpp
     version.cpp
 
     template/standalone.cpp
@@ -36,6 +37,10 @@ set(PROJECT_HEADERS
     loader.hpp
     manager.hpp
     sandbox.hpp
+    toolchain.hpp
+    version.hpp
+
+    template/standalone.hpp
 )
 
 # Required libraries for the project
@@ -44,6 +49,7 @@ set(PROJECT_LIBS
     atom-error
     atom-function
     atom-system
+    atom-utils
     loguru
     lithium-utils
     ${CMAKE_THREAD_LIBS_INIT}

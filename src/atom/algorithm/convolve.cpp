@@ -28,6 +28,27 @@ and deconvolution with optional OpenCL support.
 #include <CL/cl.h>
 #endif
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-compare"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+
+// Code that might generate warnings
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 #include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
@@ -523,3 +544,11 @@ auto applyGaussianFilter(const std::vector<std::vector<double>> &image,
 }
 
 }  // namespace atom::algorithm
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif

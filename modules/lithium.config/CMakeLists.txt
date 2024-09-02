@@ -23,6 +23,7 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_LIBS
     atom-component
+    atom-error
     lithium-config
     loguru
     ${CMAKE_THREAD_LIBS_INIT}

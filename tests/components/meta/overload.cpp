@@ -1,103 +1,145 @@
 #include "atom/function/overload.hpp"
 #include <gtest/gtest.h>
 
-class TestClass {
+class MyClass {
 public:
-    int func(int x) { return x + 1; }
-    int func(int x) const { return x + 2; }
-    int func(int x, double y) { return static_cast<int>(x + y); }
-    int func(int x, double y) const noexcept {
-        return static_cast<int>(x + y + 1);
+    // Non-const member function
+    void foo(int x) {
+        last_called = "foo(int)";
+        last_int = x;
     }
-    static int staticFunc(int x) { return x * 2; }
-    int funcNoexcept(int x) noexcept { return x * 3; }
-    int funcConstVolatile(int x) const volatile { return x * 4; }
+
+    // Const member function
+    void foo(double x) const {
+        last_called = "foo(double)";
+        last_double = x;
+    }
+
+    // Volatile member function
+    void foo(float x) volatile {
+        last_called = "foo(float)";
+        last_float = x;
+    }
+
+    // Const volatile member function
+    void foo(const char* x) const volatile {
+        last_called = "foo(const char*)";
+        last_string = x;
+    }
+
+    // Regular free-standing function
+    static void bar(int x) {
+        last_called = "bar(int)";
+        last_int = x;
+    }
+
+    // Static noexcept function
+    static void bar(double x) noexcept {
+        last_called = "bar(double)";
+        last_double = x;
+    }
+
+    static inline std::string last_called;
+    static inline int last_int;
+    static inline double last_double;
+    static inline float last_float;
+    static inline const char* last_string;
 };
 
-int globalFunc(int x) { return x + 5; }
-int globalFuncNoexcept(int x) noexcept { return x + 6; }
+// Test non-const member function
+TEST(OverloadCastTest, NonConstMemberFunction) {
+    MyClass obj;
+    auto non_const_foo = atom::meta::overload_cast<int>(&MyClass::foo);
+    (obj.*non_const_foo)(42);
 
-TEST(OverloadCastTest, MemberFunctionOverload) {
-    TestClass obj;
-
-    // Test non-const member function
-    auto nonConstFunc = atom::meta::overload_cast<int>(
-        static_cast<int (TestClass::*)(int)>(&TestClass::func));
-    EXPECT_EQ((obj.*nonConstFunc)(10), 11);
-
-    // Test const member function
-    auto constFunc = atom::meta::overload_cast<int>(
-        static_cast<int (TestClass::*)(int) const>(&TestClass::func));
-    EXPECT_EQ((static_cast<const TestClass*>(&obj)->*constFunc)(10), 12);
-
-    // Test member function with two arguments
-    auto twoArgsFunc = atom::meta::overload_cast<int, double>(
-        static_cast<int (TestClass::*)(int, double)>(&TestClass::func));
-    EXPECT_EQ((obj.*twoArgsFunc)(10, 2.5), 12);
-
-    // Test const noexcept member function with two arguments
-    auto constNoexceptFunc = atom::meta::overload_cast<int, double>(
-        static_cast<int (TestClass::*)(int, double) const noexcept>(
-            &TestClass::func));
-    EXPECT_EQ(
-        (static_cast<const TestClass*>(&obj)->*constNoexceptFunc)(10, 2.5), 13);
+    EXPECT_EQ(MyClass::last_called, "foo(int)");
+    EXPECT_EQ(MyClass::last_int, 42);
 }
 
-TEST(OverloadCastTest, StaticMemberFunction) {
-    // Test static member function
-    auto staticFunc = atom::meta::overload_cast<int>(
-        static_cast<int (*)(int)>(&TestClass::staticFunc));
-    EXPECT_EQ(staticFunc(5), 10);
+// Test const member function
+TEST(OverloadCastTest, ConstMemberFunction) {
+    const MyClass obj;
+    auto const_foo = atom::meta::overload_cast<double>(&MyClass::foo);
+    (obj.*const_foo)(3.14);
+
+    EXPECT_EQ(MyClass::last_called, "foo(double)");
+    EXPECT_DOUBLE_EQ(MyClass::last_double, 3.14);
 }
 
-TEST(OverloadCastTest, NoexceptMemberFunction) {
-    TestClass obj;
+// Test volatile member function
+TEST(OverloadCastTest, VolatileMemberFunction) {
+    volatile MyClass obj;
+    auto volatile_foo = atom::meta::overload_cast<float>(&MyClass::foo);
+    (obj.*volatile_foo)(5.67f);
 
-    // Test noexcept member function
-    auto noexceptFunc = atom::meta::overload_cast<int>(
-        static_cast<int (TestClass::*)(int) noexcept>(
-            &TestClass::funcNoexcept));
-    EXPECT_EQ((obj.*noexceptFunc)(7), 21);
+    EXPECT_EQ(MyClass::last_called, "foo(float)");
+    EXPECT_FLOAT_EQ(MyClass::last_float, 5.67f);
 }
 
-/* TODO: FIX ME
+// Test const volatile member function
 TEST(OverloadCastTest, ConstVolatileMemberFunction) {
-    volatile TestClass obj;
+    const volatile MyClass obj;
+    auto const_volatile_foo =
+        atom::meta::overload_cast<const char*>(&MyClass::foo);
+    (obj.*const_volatile_foo)("Test string");
 
-    // Test const volatile member function
-    auto constVolatileFunc = atom::meta::overload_cast<int>(
-        static_cast<int (TestClass::*)(int) const volatile>(
-            &TestClass::funcConstVolatile));
-    EXPECT_EQ((obj.*constVolatileFunc)(3), 12);
-}
-*/
-
-TEST(OverloadCastTest, GlobalFunction) {
-    // Test global function
-    auto globalFuncPtr =
-        atom::meta::overload_cast<int>(static_cast<int (*)(int)>(&globalFunc));
-    EXPECT_EQ(globalFuncPtr(15), 20);
-
-    // Test noexcept global function
-    auto globalFuncNoexceptPtr = atom::meta::overload_cast<int>(
-        static_cast<int (*)(int) noexcept>(&globalFuncNoexcept));
-    EXPECT_EQ(globalFuncNoexceptPtr(15), 21);
+    EXPECT_EQ(MyClass::last_called, "foo(const char*)");
+    EXPECT_STREQ(MyClass::last_string, "Test string");
 }
 
-TEST(OverloadCastTest, DifferentArgumentTypes) {
-    TestClass obj;
+// Test regular static function
+TEST(OverloadCastTest, StaticFunction) {
+    auto static_bar = atom::meta::overload_cast<int>(&MyClass::bar);
+    static_bar(100);
 
-    // Test member function with int and double arguments
-    auto funcIntDouble = atom::meta::overload_cast<int, double>(
-        static_cast<int (TestClass::*)(int, double)>(&TestClass::func));
-    EXPECT_EQ((obj.*funcIntDouble)(10, 1.5), 11);
+    EXPECT_EQ(MyClass::last_called, "bar(int)");
+    EXPECT_EQ(MyClass::last_int, 100);
 }
 
-TEST(OverloadCastTest, InvalidFunctionPointer) {
-    // Ensure the code compiles with invalid pointers and does not throw an
-    // exception
-    EXPECT_NO_THROW({
-        auto invalidFunc = atom::meta::overload_cast<int>(
-            static_cast<int (*)(int)>(&globalFuncNoexcept));
-    });
+// Test noexcept static function
+TEST(OverloadCastTest, StaticNoexceptFunction) {
+    auto static_noexcept_bar = atom::meta::overload_cast<double>(&MyClass::bar);
+    static_noexcept_bar(2.718);
+
+    EXPECT_EQ(MyClass::last_called, "bar(double)");
+    EXPECT_DOUBLE_EQ(MyClass::last_double, 2.718);
+}
+
+// Test that overload fails gracefully with incorrect signature
+TEST(OverloadCastTest, CorrectOverloadResolution) {
+    auto non_const_foo = atom::meta::overload_cast<int>(&MyClass::foo);
+    using ExpectedType = void (MyClass::*)(int);
+    EXPECT_TRUE((std::is_same_v<decltype(non_const_foo), ExpectedType>));
+
+    auto const_foo = atom::meta::overload_cast<double>(&MyClass::foo);
+    using ExpectedConstType = void (MyClass::*)(double) const;
+    EXPECT_TRUE((std::is_same_v<decltype(const_foo), ExpectedConstType>));
+
+    auto volatile_foo = atom::meta::overload_cast<float>(&MyClass::foo);
+    using ExpectedVolatileType = void (MyClass::*)(float) volatile;
+    EXPECT_TRUE((std::is_same_v<decltype(volatile_foo), ExpectedVolatileType>));
+
+    auto const_volatile_foo =
+        atom::meta::overload_cast<const char*>(&MyClass::foo);
+    using ExpectedConstVolatileType =
+        void (MyClass::*)(const char*) const volatile;
+    EXPECT_TRUE((std::is_same_v<decltype(const_volatile_foo),
+                                ExpectedConstVolatileType>));
+}
+
+// Test overloaded function on different types and ensure correctness
+TEST(OverloadCastTest, OverloadedFreeFunction) {
+    MyClass::last_called.clear();
+    MyClass::last_int = 0;
+
+    auto static_bar_int = atom::meta::overload_cast<int>(&MyClass::bar);
+    auto static_bar_double = atom::meta::overload_cast<double>(&MyClass::bar);
+
+    static_bar_int(200);
+    EXPECT_EQ(MyClass::last_called, "bar(int)");
+    EXPECT_EQ(MyClass::last_int, 200);
+
+    static_bar_double(3.14);
+    EXPECT_EQ(MyClass::last_called, "bar(double)");
+    EXPECT_DOUBLE_EQ(MyClass::last_double, 3.14);
 }

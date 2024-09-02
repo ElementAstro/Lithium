@@ -15,10 +15,9 @@ set(PROJECT_SOURCES
     generator.cpp
     loader.cpp
     manager.cpp
-    pool.cpp
+    sequencer.cpp
     singlepool.cpp
     task.cpp
-    tick.cpp
 )
 
 # Headers
@@ -27,14 +26,16 @@ set(PROJECT_HEADERS
     generator.hpp
     loader.hpp
     manager.hpp
-    pool.hpp
+    sequencer.hpp
     singlepool.hpp
-    tick.hpp
+    task.hpp
 )
 
 # Required libraries
 set(PROJECT_LIBS
     atom-component
+    atom-function
+    atom-utils
     atom-error
     loguru
     ${CMAKE_THREAD_LIBS_INIT}

@@ -22,127 +22,136 @@ Description: Trigger class for C++
 #include <future>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#else
-#include <unordered_map>
-#endif
-
 namespace atom::async {
+
 /**
- * @brief The Trigger class provides a mechanism to register callbacks for
- * specific events and trigger those callbacks when the events occur.
+ * @brief Concept to check if a type can be invoked with a given parameter type.
  *
- * @tparam ParamType The parameter type passed to the callback functions.
+ * This concept checks if a std::function taking a parameter of type ParamType
+ * is invocable with an instance of ParamType.
+ *
+ * @tparam ParamType The parameter type to check for.
  */
 template <typename ParamType>
+concept CallableWithParam = requires(ParamType p) {
+    std::invoke(std::declval<std::function<void(ParamType)>>(), p);
+};
+
+/**
+ * @brief A class for handling event-driven callbacks with parameter support.
+ *
+ * This class allows users to register, unregister, and trigger callbacks for
+ * different events, providing a mechanism to manage callbacks with priorities
+ * and delays.
+ *
+ * @tparam ParamType The type of parameter to be passed to the callbacks.
+ */
+template <typename ParamType>
+    requires CallableWithParam<ParamType>
 class Trigger {
 public:
-    using Callback = std::function<void(ParamType)>; /**< Type definition for
-                                                        callback functions. */
+    using Callback = std::function<void(ParamType)>;  ///< Type alias for the
+                                                      ///< callback function.
+
+    /// Enumeration for callback priority levels.
+    enum class CallbackPriority { High, Normal, Low };
 
     /**
-     * @brief Enumeration for defining the priority of callback functions.
-     */
-    enum class CallbackPriority {
-        High,   /**< High priority */
-        Normal, /**< Normal priority */
-        Low     /**< Low priority */
-    };
-
-    /**
-     * @brief Register a callback function for a specific event.
+     * @brief Registers a callback for a specified event.
      *
-     * @param event The name of the event.
-     * @param callback The callback function to be registered.
-     * @param priority The priority of the callback function (default:
-     * CallbackPriority::Normal).
+     * @param event The name of the event for which the callback is registered.
+     * @param callback The callback function to be executed when the event is
+     * triggered.
+     * @param priority The priority level of the callback (default is Normal).
      */
-    void registerCallback(const std::string &event, const Callback &callback,
+    void registerCallback(const std::string& event, Callback callback,
                           CallbackPriority priority = CallbackPriority::Normal);
 
     /**
-     * @brief Unregister a callback function for a specific event.
+     * @brief Unregisters a callback for a specified event.
      *
-     * @param event The name of the event.
-     * @param callback The callback function to be unregistered.
+     * @param event The name of the event from which the callback is
+     * unregistered.
+     * @param callback The callback function to be removed.
+     *
+     * If the callback is not registered for the event, no action is taken.
      */
-    void unregisterCallback(const std::string &event, const Callback &callback);
+    void unregisterCallback(const std::string& event, Callback callback);
 
     /**
-     * @brief Trigger the callback functions registered for a specific event.
+     * @brief Triggers the callbacks associated with a specified event.
      *
      * @param event The name of the event to trigger.
-     * @param param The parameter to be passed to the callback functions.
+     * @param param The parameter to be passed to the callbacks.
+     *
+     * All callbacks registered for the event are executed with the provided
+     * parameter.
      */
-    void trigger(const std::string &event, const ParamType &param);
+    void trigger(const std::string& event, const ParamType& param);
 
     /**
-     * @brief Schedule the triggering of an event with a specified delay.
+     * @brief Schedules a trigger for a specified event after a delay.
      *
-     * @param event The name of the event to schedule.
-     * @param param The parameter to be passed to the callback functions when
-     * the event is triggered.
-     * @param delay The delay in milliseconds before triggering the event.
+     * @param event The name of the event to trigger.
+     * @param param The parameter to be passed to the callbacks.
+     * @param delay The delay after which to trigger the event, specified in
+     * milliseconds.
      */
-    void scheduleTrigger(const std::string &event, const ParamType &param,
+    void scheduleTrigger(const std::string& event, const ParamType& param,
                          std::chrono::milliseconds delay);
 
     /**
-     * @brief Schedule the asynchronous triggering of an event.
+     * @brief Schedules an asynchronous trigger for a specified event.
      *
-     * @param event The name of the event to schedule.
-     * @param param The parameter to be passed to the callback functions when
-     * the event is triggered.
-     * @return A future object that can be used to track the completion of the
-     * asynchronous trigger.
+     * @param event The name of the event to trigger.
+     * @param param The parameter to be passed to the callbacks.
+     * @return A future representing the ongoing operation to trigger the event.
      */
-    auto scheduleAsyncTrigger(const std::string &event,
-                              const ParamType &param) -> std::future<void>;
+    auto scheduleAsyncTrigger(const std::string& event,
+                              const ParamType& param) -> std::future<void>;
 
     /**
-     * @brief Cancel the scheduled triggering of a specific event.
+     * @brief Cancels the scheduled trigger for a specified event.
      *
-     * @param event The name of the event to cancel.
+     * @param event The name of the event for which to cancel the trigger.
+     *
+     * This will prevent the execution of any scheduled callbacks for the event.
      */
-    void cancelTrigger(const std::string &event);
+    void cancelTrigger(const std::string& event);
 
     /**
-     * @brief Cancel the scheduled triggering of all events.
+     * @brief Cancels all scheduled triggers.
+     *
+     * This method clears all scheduled callbacks for any events.
      */
     void cancelAllTriggers();
 
 private:
-    std::mutex m_mutex_; /**< Mutex used to synchronize access to the callback
-                           data structure. */
-
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string,
-                     std::vector<std::pair<CallbackPriority, Callback>>>
-        m_callbacks_; /**< Hash map to store registered callbacks for events. */
-#else
+    std::mutex m_mutex_;  ///< Mutex for thread-safe access to the internal
+                          ///< callback structures.
     std::unordered_map<std::string,
                        std::vector<std::pair<CallbackPriority, Callback>>>
-        m_callbacks_; /**< Hash map to store registered callbacks for events. */
-#endif
+        m_callbacks_;  ///< Map of events to their callbacks and priorities.
 };
 
 template <typename ParamType>
-void Trigger<ParamType>::registerCallback(const std::string &event,
-                                          const Callback &callback,
+    requires CallableWithParam<ParamType>
+void Trigger<ParamType>::registerCallback(const std::string& event,
+                                          Callback callback,
                                           CallbackPriority priority) {
-    std::lock_guard lock(m_mutex_);
-    auto &callbacks = m_callbacks_[event];
-    auto pos = std::find_if(
-        callbacks.begin(), callbacks.end(),
-        [&](const std::pair<CallbackPriority, Callback> &cb) {
-            return cb.second.target_type() == callback.target_type() &&
-                   cb.second.template target<void(ParamType)>() ==
-                       callback.template target<void(ParamType)>();
-        });
-    if (pos != callbacks.end()) {
+    std::scoped_lock lock(m_mutex_);
+    auto& callbacks = m_callbacks_[event];
+    if (auto pos = std::ranges::find_if(
+            callbacks,
+            [&callback](const auto& cb) {
+                return cb.second.target_type() == callback.target_type() &&
+                       cb.second.template target<void(ParamType)>() ==
+                           callback.template target<void(ParamType)>();
+            });
+        pos != callbacks.end()) {
         pos->first = priority;
     } else {
         callbacks.emplace_back(priority, callback);
@@ -150,56 +159,54 @@ void Trigger<ParamType>::registerCallback(const std::string &event,
 }
 
 template <typename ParamType>
-void Trigger<ParamType>::unregisterCallback(const std::string &event,
-                                            const Callback &callback) {
-    std::lock_guard lock(m_mutex_);
-    auto &callbacks = m_callbacks_[event];
-    callbacks.erase(
-        std::remove_if(
-            callbacks.begin(), callbacks.end(),
-            [&](const std::pair<CallbackPriority, Callback> &cb) {
-                return cb.second.target_type() == callback.target_type() &&
-                       cb.second.template target<void(ParamType)>() ==
-                           callback.template target<void(ParamType)>();
-            }),
-        callbacks.end());
+    requires CallableWithParam<ParamType>
+void Trigger<ParamType>::unregisterCallback(const std::string& event,
+                                            Callback callback) {
+    std::scoped_lock lock(m_mutex_);
+    auto& callbacks = m_callbacks_[event];
+    std::erase_if(callbacks, [&callback](const auto& cb) {
+        return cb.second.target_type() == callback.target_type() &&
+               cb.second.template target<void(ParamType)>() ==
+                   callback.template target<void(ParamType)>();
+    });
 }
 
 template <typename ParamType>
-void Trigger<ParamType>::trigger(const std::string &event,
-                                 const ParamType &param) {
-    std::lock_guard lock(m_mutex_);
-    auto &callbacks = m_callbacks_[event];
-    std::sort(callbacks.begin(), callbacks.end(),
-              [](const std::pair<CallbackPriority, Callback> &cb1,
-                 const std::pair<CallbackPriority, Callback> &cb2) {
-                  return static_cast<int>(cb1.first) >
-                         static_cast<int>(cb2.first);
-              });
-    for (auto &callback : callbacks) {
+    requires CallableWithParam<ParamType>
+void Trigger<ParamType>::trigger(const std::string& event,
+                                 const ParamType& param) {
+    std::scoped_lock lock(m_mutex_);
+    auto& callbacks = m_callbacks_[event];
+    std::ranges::sort(callbacks, [](const auto& cb1, const auto& cb2) {
+        return static_cast<int>(cb1.first) > static_cast<int>(cb2.first);
+    });
+    for (auto& [priority, callback] : callbacks) {
         try {
-            callback.second(param);
-        } catch (std::exception &e) {
+            callback(param);
+        } catch (...) {
+            // Swallow exceptions in callbacks
         }
     }
 }
 
 template <typename ParamType>
-void Trigger<ParamType>::scheduleTrigger(const std::string &event,
-                                         const ParamType &param,
+    requires CallableWithParam<ParamType>
+void Trigger<ParamType>::scheduleTrigger(const std::string& event,
+                                         const ParamType& param,
                                          std::chrono::milliseconds delay) {
-    std::thread([this, event, param, delay]() {
+    std::jthread([this, event, param, delay]() {
         std::this_thread::sleep_for(delay);
         trigger(event, param);
     }).detach();
 }
 
 template <typename ParamType>
+    requires CallableWithParam<ParamType>
 auto Trigger<ParamType>::scheduleAsyncTrigger(
-    const std::string &event, const ParamType &param) -> std::future<void> {
+    const std::string& event, const ParamType& param) -> std::future<void> {
     auto promise = std::make_shared<std::promise<void>>();
     auto future = promise->get_future();
-    std::thread([this, event, param, promise]() mutable {
+    std::jthread([this, event, param, promise]() mutable {
         try {
             trigger(event, param);
             promise->set_value();
@@ -211,16 +218,19 @@ auto Trigger<ParamType>::scheduleAsyncTrigger(
 }
 
 template <typename ParamType>
-void Trigger<ParamType>::cancelTrigger(const std::string &event) {
-    std::lock_guard lock(m_mutex_);
+    requires CallableWithParam<ParamType>
+void Trigger<ParamType>::cancelTrigger(const std::string& event) {
+    std::scoped_lock lock(m_mutex_);
     m_callbacks_.erase(event);
 }
 
 template <typename ParamType>
+    requires CallableWithParam<ParamType>
 void Trigger<ParamType>::cancelAllTriggers() {
-    std::lock_guard lock(m_mutex_);
+    std::scoped_lock lock(m_mutex_);
     m_callbacks_.clear();
 }
+
 }  // namespace atom::async
 
-#endif
+#endif  // ATOM_ASYNC_TRIGGER_HPP

@@ -7,15 +7,15 @@
 
 namespace atom::utils {
 
-MyTimeZone::MyTimeZone() : timeZoneId("UTC"), offset(std::chrono::seconds(0)) {}
+QTimeZone::QTimeZone() : timeZoneId_("UTC"), offset_(std::chrono::seconds(0)) {}
 
-MyTimeZone::MyTimeZone(const std::string& timeZoneId) {
+QTimeZone::QTimeZone(const std::string& timeZoneId_) {
     auto availableIds = availableTimeZoneIds();
-    if (std::find(availableIds.begin(), availableIds.end(), timeZoneId) ==
+    if (std::find(availableIds.begin(), availableIds.end(), timeZoneId_) ==
         availableIds.end()) {
         throw std::invalid_argument("Invalid time zone ID");
     }
-    this->timeZoneId = timeZoneId;
+    this->timeZoneId_ = timeZoneId_;
 
     std::tm localTime = {};
     std::time_t currentTime = std::time(nullptr);
@@ -34,44 +34,44 @@ MyTimeZone::MyTimeZone(const std::string& timeZoneId) {
 
     auto localTimeT = std::mktime(&localTime);
     auto utcTimeT = std::mktime(&utcTime);
-    offset = std::chrono::seconds(localTimeT - utcTimeT);
+    offset_ = std::chrono::seconds(localTimeT - utcTimeT);
 }
 
-auto MyTimeZone::availableTimeZoneIds() -> std::vector<std::string> {
+auto QTimeZone::availableTimeZoneIds() -> std::vector<std::string> {
     return {"UTC", "PST", "EST", "CST", "MST"};
 }
 
-std::string MyTimeZone::id() const { return timeZoneId; }
+std::string QTimeZone::id() const { return timeZoneId_; }
 
-std::string MyTimeZone::displayName() const {
-    if (timeZoneId == "UTC") {
+std::string QTimeZone::displayName() const {
+    if (timeZoneId_ == "UTC") {
         return "Coordinated Universal Time";
     }
-    if (timeZoneId == "PST") {
+    if (timeZoneId_ == "PST") {
         return "Pacific Standard Time";
     }
-    if (timeZoneId == "EST") {
+    if (timeZoneId_ == "EST") {
         return "Eastern Standard Time";
     }
-    if (timeZoneId == "CST") {
+    if (timeZoneId_ == "CST") {
         return "Central Standard Time";
     }
-    if (timeZoneId == "MST") {
+    if (timeZoneId_ == "MST") {
         return "Mountain Standard Time";
     }
     return "";
 }
 
-auto MyTimeZone::isValid() const -> bool { return offset.has_value(); }
+auto QTimeZone::isValid() const -> bool { return offset_.has_value(); }
 
-auto MyTimeZone::offsetFromUtc(const MyDateTime& dateTime) const
+auto QTimeZone::offsetFromUtc(const QDateTime& dateTime) const
     -> std::chrono::seconds {
-    // Assuming MyDateTime has a method to return time_t representation
+    // Assuming QDateTime has a method to return time_t representation
     std::time_t currentTime = dateTime.toTimeT();
     std::tm utcTime = *gmtime(&currentTime);
 
     std::tm localTime = utcTime;
-    localTime.tm_sec += offset.value().count();
+    localTime.tm_sec += offset_.value().count();
     mktime(&localTime);
 
     // Implement DST check and adjustment if applicable
@@ -83,24 +83,24 @@ auto MyTimeZone::offsetFromUtc(const MyDateTime& dateTime) const
     return std::chrono::seconds(mktime(&localTime) - mktime(&utcTime));
 }
 
-auto MyTimeZone::standardTimeOffset() const -> std::chrono::seconds {
-    return offset.value_or(std::chrono::seconds(0));
+auto QTimeZone::standardTimeOffset() const -> std::chrono::seconds {
+    return offset_.value_or(std::chrono::seconds(0));
 }
 
-auto MyTimeZone::daylightTimeOffset() const -> std::chrono::seconds {
-    if (timeZoneId == "PST" || timeZoneId == "EST" || timeZoneId == "CST" ||
-        timeZoneId == "MST") {
+auto QTimeZone::daylightTimeOffset() const -> std::chrono::seconds {
+    if (timeZoneId_ == "PST" || timeZoneId_ == "EST" || timeZoneId_ == "CST" ||
+        timeZoneId_ == "MST") {
         return std::chrono::seconds(3600);  // 1 hour for these time zones
     }
     return std::chrono::seconds(0);
 }
 
-auto MyTimeZone::hasDaylightTime() const -> bool {
-    return timeZoneId == "PST" || timeZoneId == "EST" || timeZoneId == "CST" ||
-           timeZoneId == "MST";
+auto QTimeZone::hasDaylightTime() const -> bool {
+    return timeZoneId_ == "PST" || timeZoneId_ == "EST" ||
+           timeZoneId_ == "CST" || timeZoneId_ == "MST";
 }
 
-auto MyTimeZone::isDaylightTime(const MyDateTime& dateTime) const -> bool {
+auto QTimeZone::isDaylightTime(const QDateTime& dateTime) const -> bool {
     if (!hasDaylightTime())
         return false;
 

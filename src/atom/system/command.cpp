@@ -44,8 +44,12 @@ Description: Simple wrapper for executing commands.
 
 #include "atom/error/exception.hpp"
 #include "atom/system/process.hpp"
-#include "atom/utils/convert.hpp"
+
 #include "atom/utils/to_string.hpp"
+
+#ifdef _WIN32
+#include "atom/utils/convert.hpp"
+#endif
 
 namespace atom::system {
 
@@ -54,6 +58,7 @@ std::mutex envMutex;
 auto executeCommandInternal(
     const std::string &command, [[maybe_unused]] bool openTerminal,
     const std::function<void(const std::string &)> &processLine, int &status,
+    const std::string &input = "",  // 新增input参数
     const std::string &username = "", const std::string &domain = "",
     const std::string &password = "") -> std::string {
     if (command.empty()) {
@@ -94,14 +99,20 @@ auto executeCommandInternal(
         THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
                                      command + "'.");
     }
-    pipe.reset(_popen(command.c_str(), "r"));
+    pipe.reset(_popen(command.c_str(), "w"));
 #else  // 非Windows平台
-    pipe.reset(popen(command.c_str(), "r"));
+    pipe.reset(popen(command.c_str(), "w"));
 #endif
 
     if (!pipe) {
         THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
                                      command + "'.");
+    }
+
+    // 写入输入
+    if (!input.empty()) {
+        fwrite(input.c_str(), sizeof(char), input.size(), pipe.get());
+        fflush(pipe.get());
     }
 
     constexpr std::size_t BUFFER_SIZE = 4096;
@@ -263,6 +274,15 @@ auto executeCommandWithStatus(const std::string &command)
     std::string output =
         executeCommandInternal(command, false, nullptr, status);
     return {output, status};
+}
+
+auto executeCommandWithInput(const std::string &command,
+                             const std::string &input,
+                             const std::function<void(const std::string &)>
+                                 &processLine) -> std::string {
+    int status = 0;
+    return executeCommandInternal(command, /*openTerminal=*/false, processLine,
+                                  status, input);
 }
 
 void executeCommands(const std::vector<std::string> &commands) {

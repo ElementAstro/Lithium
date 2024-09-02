@@ -45,6 +45,15 @@ public:
         message_ = oss.str();
     }
 
+    template <typename... Args>
+    static void rethrowNested(Args &&...args) {
+        try {
+            throw;  // 捕获当前异常
+        } catch (...) {
+            std::throw_with_nested(Exception(std::forward<Args>(args)...));
+        }
+    }
+
     /**
      * @brief Returns a C-style string describing the exception.
      * @return A pointer to a string describing the exception.
@@ -98,6 +107,9 @@ private:
     throw atom::error::Exception(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                  ATOM_FUNC_NAME, __VA_ARGS__)
 
+#define THROW_NESTED_EXCEPTION(...)                                         \
+    atom::error::Exception::rethrowNested(__FILE__, __LINE__, __FUNCTION__, \
+                                          __VA_ARGS__)
 // Special Exception
 
 // -------------------------------------------------------------------
@@ -112,6 +124,10 @@ public:
 #define THROW_RUNTIME_ERROR(...)                                    \
     throw atom::error::RuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                     ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_NESTED_RUNTIME_ERROR(...)                                        \
+    atom::error::RuntimeError::rethrowNested(__FILE__, __LINE__, __FUNCTION__, \
+                                             __VA_ARGS__)
 
 class UnlawfulOperation : public Exception {
 public:

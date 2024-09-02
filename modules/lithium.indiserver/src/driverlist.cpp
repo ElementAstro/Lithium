@@ -48,7 +48,7 @@ auto parseDevicesFromPath(const std::string& path,
             XMLDocument doc;
 
             if (!loadXMLFile(entry.path().string(), doc)) {
-                LOG_F(ERROR, "Unable to load XML file: {}", entry.path());
+                LOG_F(ERROR, "Unable to load XML file: {}", entry.path().string());
                 continue;
             }
 

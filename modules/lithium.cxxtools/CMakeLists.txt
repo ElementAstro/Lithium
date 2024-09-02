@@ -33,6 +33,7 @@ set(SOURCE_FILES
 
 set(${PROJECT_NAME}_LIBS
     atom-component
+    atom-utils
     atom-error
     ${CMAKE_THREAD_LIBS_INIT}
     loguru

@@ -1,16 +1,16 @@
-/*
- * singlepool.hpp
+/**
+ * @file singlepool.cpp
+ * @brief Single-threaded pool for executing temporary tasks asynchronously.
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file defines a single-threaded pool designed to manage and execute
+ * temporary tasks asynchronously. The pool allows tasks to be enqueued and
+ * processed by a single worker thread, facilitating asynchronous execution
+ * without the overhead of managing multiple threads.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-4-3
-
-Description: Single thread pool for executing temporary tasks asynchronously.
-
-**************************************************/
 
 #include "singlepool.hpp"
 

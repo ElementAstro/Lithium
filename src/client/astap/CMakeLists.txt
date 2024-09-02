@@ -10,9 +10,6 @@ project(lithium.client.astap)
 # Add source files
 set(SOURCE_FILES
     astap.cpp
-
-    _component.cpp
-    _main.cpp
 )
 
 set(LIBS
@@ -34,8 +31,8 @@ target_include_directories(lithium.client.astap PUBLIC ${CMAKE_CURRENT_SOURCE_DI
 enable_testing()
 
 find_package(GTest REQUIRED)
-
+find_package(CFITSIO REQUIRED)
 find_package(GMock REQUIRED)
 
 add_executable(lithium.client.astap.test _test.cpp)
-target_link_libraries(lithium.client.astap.test lithium.client.astap GTest::GTest ${GMOCK_LIBRARY})
+target_link_libraries(lithium.client.astap.test lithium.client.astap GTest::GTest ${GMOCK_LIBRARY} ${CFITSIO_LIBRARY})

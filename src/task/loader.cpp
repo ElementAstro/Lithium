@@ -1,16 +1,14 @@
-/*
- * loader.cpp
+/**
+ * @file loader.cpp
+ * @brief JSON File Manager
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * This file provides functionality for managing JSON files, including
+ * loading, parsing, and possibly manipulating JSON data.
+ *
+ * @date 2023-04-03
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
  */
-
-/*************************************************
-
-Date: 2023-4-3
-
-Description: Json file manager
-
-**************************************************/
 
 #include "loader.hpp"
 

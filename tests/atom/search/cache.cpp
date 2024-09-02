@@ -1,155 +1,166 @@
-#include "atom/search/cache.hpp"
-
 #include <gtest/gtest.h>
+#include <chrono>
 #include <thread>
 
-struct TestStruct {
-    int id;
-    std::string name;
+#include "atom/search/cache.hpp"
 
-    bool operator==(const TestStruct &other) const {
-        return id == other.id && name == other.name;
-    }
-};
-
-std::string serializeTestStruct(const TestStruct &ts) {
-    return std::to_string(ts.id) + "," + ts.name;
-}
-
-TestStruct deserializeTestStruct(const std::string &str) {
-    auto pos = str.find(',');
-    int id = std::stoi(str.substr(0, pos));
-    std::string name = str.substr(pos + 1);
-    return {id, name};
-}
-
-json toJson(const TestStruct &ts) {
-    return json{{"id", ts.id}, {"name", ts.name}};
-}
-
-TestStruct fromJson(const json &j) {
-    return {j.at("id").get<int>(), j.at("name").get<std::string>()};
-}
+using namespace atom::search;
 
 class ResourceCacheTest : public ::testing::Test {
 protected:
-    ResourceCache<int> intCache;
-    ResourceCache<TestStruct> structCache;
+    void SetUp() override {
+        cache = new ResourceCache<int>(3);  // 最大缓存大小为 3
+    }
 
-    ResourceCacheTest() : intCache(3), structCache(3) {}
+    void TearDown() override { delete cache; }
 
-    void SetUp() override {}
-
-    void TearDown() override {}
+    ResourceCache<int> *cache;
 };
 
-TEST_F(ResourceCacheTest, InsertAndGetInt) {
-    intCache.insert("key1", 100, std::chrono::seconds(10));
-    EXPECT_TRUE(intCache.contains("key1"));
-    EXPECT_EQ(intCache.get("key1"), 100);
-}
-
-TEST_F(ResourceCacheTest, InsertAndGetStruct) {
-    TestStruct ts{1, "test"};
-    structCache.insert("key1", ts, std::chrono::seconds(10));
-    EXPECT_TRUE(structCache.contains("key1"));
-    EXPECT_EQ(structCache.get("key1"), ts);
+TEST_F(ResourceCacheTest, InsertAndGet) {
+    cache->insert("a", 1, std::chrono::seconds(10));
+    auto value = cache->get("a");
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), 1);
 }
 
 TEST_F(ResourceCacheTest, Expiration) {
-    std::cout << "Testing expiration..." << std::endl;
-    intCache.insert("key1", 100, std::chrono::seconds(1));
-    std::cout << "Sleeping for 2 seconds..." << std::endl;
+    cache->insert("b", 2, std::chrono::seconds(1));
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    std::cout << "Sleeping for 1 second..." << std::endl;
-    EXPECT_FALSE(intCache.contains("key1"));
+    auto value = cache->get("b");
+    EXPECT_FALSE(value.has_value());  // 元素应已过期
 }
 
 TEST_F(ResourceCacheTest, Eviction) {
-    intCache.insert("key1", 100, std::chrono::seconds(10));
-    intCache.insert("key2", 200, std::chrono::seconds(10));
-    intCache.insert("key3", 300, std::chrono::seconds(10));
-    intCache.insert("key4", 400,
-                    std::chrono::seconds(10));  // This should evict "key1"
-    EXPECT_FALSE(intCache.contains("key1"));
-    EXPECT_TRUE(intCache.contains("key4"));
+    cache->insert("a", 1, std::chrono::seconds(10));
+    cache->insert("b", 2, std::chrono::seconds(10));
+    cache->insert("c", 3, std::chrono::seconds(10));
+    cache->insert("d", 4, std::chrono::seconds(10));  // 插入新元素，应触发驱逐
+
+    EXPECT_FALSE(cache->contains("a"));  // "a" 是最早插入的，应被驱逐
+    EXPECT_TRUE(cache->contains("b"));
+    EXPECT_TRUE(cache->contains("c"));
+    EXPECT_TRUE(cache->contains("d"));
 }
 
-TEST_F(ResourceCacheTest, AsyncGet) {
-    intCache.insert("key1", 100, std::chrono::seconds(10));
-    auto future = intCache.asyncGet("key1");
-    EXPECT_EQ(future.get(), 100);
+TEST_F(ResourceCacheTest, ClearCache) {
+    cache->insert("a", 1, std::chrono::seconds(10));
+    cache->insert("b", 2, std::chrono::seconds(10));
+    cache->clear();
+
+    EXPECT_EQ(cache->size(), 0);
+    EXPECT_FALSE(cache->contains("a"));
+    EXPECT_FALSE(cache->contains("b"));
 }
 
-TEST_F(ResourceCacheTest, AsyncInsert) {
-    auto future = intCache.asyncInsert("key1", 100, std::chrono::seconds(10));
-    future.get();
-    EXPECT_TRUE(intCache.contains("key1"));
+TEST_F(ResourceCacheTest, AsyncInsertAndGet) {
+    auto futureInsert = cache->asyncInsert("e", 5, std::chrono::seconds(10));
+    futureInsert.wait();  // 等待异步插入完成
+
+    auto futureGet = cache->asyncGet("e");
+    auto value = futureGet.get();
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), 5);
 }
 
-TEST_F(ResourceCacheTest, Clear) {
-    intCache.insert("key1", 100, std::chrono::seconds(10));
-    intCache.clear();
-    EXPECT_FALSE(intCache.contains("key1"));
+TEST_F(ResourceCacheTest, BatchInsertAndRemove) {
+    std::vector<std::pair<std::string, int>> items = {
+        {"a", 1}, {"b", 2}, {"c", 3}};
+    cache->insertBatch(items, std::chrono::seconds(10));
+
+    EXPECT_TRUE(cache->contains("a"));
+    EXPECT_TRUE(cache->contains("b"));
+    EXPECT_TRUE(cache->contains("c"));
+
+    cache->removeBatch({"a", "b"});
+    EXPECT_FALSE(cache->contains("a"));
+    EXPECT_FALSE(cache->contains("b"));
+    EXPECT_TRUE(cache->contains("c"));
 }
 
-TEST_F(ResourceCacheTest, ReadFromFile) {
-    std::string filePath = "test_cache.txt";
-    std::ofstream outFile(filePath);
-    outFile << "key1:100\nkey2:200\n";
-    outFile.close();
+TEST_F(ResourceCacheTest, HandleDuplicateInserts) {
+    cache->insert("a", 1, std::chrono::seconds(10));
+    cache->insert("a", 2, std::chrono::seconds(10));  // 重复插入
 
-    intCache.readFromFile(
-        filePath, [](const std::string &str) { return std::stoi(str); });
-    EXPECT_TRUE(intCache.contains("key1"));
-    EXPECT_TRUE(intCache.contains("key2"));
-    EXPECT_EQ(intCache.get("key1"), 100);
-    EXPECT_EQ(intCache.get("key2"), 200);
+    auto value = cache->get("a");
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), 2);  // 值应被更新为 2
 }
 
-TEST_F(ResourceCacheTest, WriteToFile) {
-    std::string filePath = "test_cache_write.txt";
-    intCache.insert("key1", 100, std::chrono::seconds(10));
-    intCache.insert("key2", 200, std::chrono::seconds(10));
-    intCache.writeToFile(
-        filePath, [](const int &value) { return std::to_string(value); });
-
-    std::ifstream inFile(filePath);
-    std::string content((std::istreambuf_iterator<char>(inFile)),
-                        std::istreambuf_iterator<char>());
-    inFile.close();
-
-    EXPECT_TRUE(content.find("key1:100") != std::string::npos);
-    EXPECT_TRUE(content.find("key2:200") != std::string::npos);
+TEST_F(ResourceCacheTest, ZeroCapacityCache) {
+    ResourceCache<int> zeroCapacityCache(0);  // 测试容量为 0 的缓存
+    zeroCapacityCache.insert("a", 1, std::chrono::seconds(10));
+    EXPECT_EQ(zeroCapacityCache.size(), 0);  // 无法保存任何元素
+    EXPECT_FALSE(zeroCapacityCache.contains("a"));
 }
 
-TEST_F(ResourceCacheTest, ReadFromJsonFile) {
-    std::string filePath = "test_cache.json";
-    std::ofstream outFile(filePath);
-    outFile
-        << R"({"key1":{"id":1,"name":"test1"},"key2":{"id":2,"name":"test2"}})";
-    outFile.close();
+TEST_F(ResourceCacheTest, ConcurrentAccess) {
+    std::vector<std::thread> threads;
 
-    structCache.readFromJsonFile(filePath, fromJson);
-    EXPECT_TRUE(structCache.contains("key1"));
-    EXPECT_TRUE(structCache.contains("key2"));
-    EXPECT_EQ(structCache.get("key1"), (TestStruct{1, "test1"}));
-    EXPECT_EQ(structCache.get("key2"), (TestStruct{2, "test2"}));
+    // 并发插入
+    for (int i = 0; i < 100; ++i) {
+        threads.emplace_back([this, i]() {
+            cache->insert("key" + std::to_string(i), i,
+                          std::chrono::seconds(5));
+        });
+    }
+
+    // 等待所有线程完成
+    for (auto &thread : threads) {
+        thread.join();
+    }
+
+    // 并发获取
+    threads.clear();
+    for (int i = 0; i < 100; ++i) {
+        threads.emplace_back([this, i]() {
+            auto value = cache->get("key" + std::to_string(i));
+            if (value.has_value()) {
+                EXPECT_EQ(value.value(), i);
+            }
+        });
+    }
+
+    for (auto &thread : threads) {
+        thread.join();
+    }
 }
 
-TEST_F(ResourceCacheTest, WriteToJsonFile) {
-    std::string filePath = "test_cache_write.json";
-    structCache.insert("key1", {1, "test1"}, std::chrono::seconds(10));
-    structCache.insert("key2", {2, "test2"}, std::chrono::seconds(10));
-    structCache.writeToJsonFile(filePath, toJson);
+TEST_F(ResourceCacheTest, LoadFromFile) {
+    cache->insert("a", 1, std::chrono::seconds(10));
+    cache->insert("b", 2, std::chrono::seconds(10));
 
-    std::ifstream inFile(filePath);
-    std::string content((std::istreambuf_iterator<char>(inFile)),
-                        std::istreambuf_iterator<char>());
-    inFile.close();
+    // 写入文件
+    cache->writeToFile("cache_data.txt",
+                       [](const int &value) { return std::to_string(value); });
 
-    EXPECT_TRUE(content.find(R"("key1":{"id":1,"name":"test1"})") !=
-                std::string::npos);
-    EXPECT_TRUE(content.find(R"("key2":{"id":2,"name":"test2"})") !=
-                std::string::npos);
+    // 新建缓存并从文件加载
+    ResourceCache<int> newCache(3);
+    newCache.readFromFile("cache_data.txt", [](const std::string &str) {
+        return std::stoi(str);
+    });
+
+    EXPECT_TRUE(newCache.contains("a"));
+    EXPECT_TRUE(newCache.contains("b"));
+    auto value = newCache.get("a");
+    EXPECT_EQ(value.value(), 1);
+}
+
+TEST_F(ResourceCacheTest, LoadFromJsonFile) {
+    cache->insert("a", 1, std::chrono::seconds(10));
+    cache->insert("b", 2, std::chrono::seconds(10));
+
+    // 写入 JSON 文件
+    cache->writeToJsonFile("cache_data.json",
+                           [](const int &value) { return json(value); });
+
+    // 新建缓存并从 JSON 文件加载
+    ResourceCache<int> newCache(3);
+    newCache.readFromJsonFile("cache_data.json",
+                              [](const json &j) { return j.get<int>(); });
+
+    EXPECT_TRUE(newCache.contains("a"));
+    EXPECT_TRUE(newCache.contains("b"));
+    auto value = newCache.get("b");
+    EXPECT_EQ(value.value(), 2);
 }

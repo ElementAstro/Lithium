@@ -250,20 +250,21 @@ public:
     void applyVoid(Func func, Args&&... args) {
         std::visit(
             [&func, &args...](auto&& arg) {
-                if ATOM_CONSTEXPR (std::is_pointer_v<
-                                       std::decay_t<decltype(arg)>>) {
-                    func(*arg, std::forward<Args>(args)...);
-                } else if ATOM_CONSTEXPR (std::is_same_v<
-                                              std::decay_t<decltype(arg)>,
-                                              std::weak_ptr<T>>) {
+                using U = std::decay_t<decltype(arg)>;
+                if ATOM_CONSTEXPR (std::is_pointer_v<U>) {
+                    std::invoke(std::forward<Func>(func), arg,
+                                std::forward<Args>(args)...);
+                } else if ATOM_CONSTEXPR (std::is_same_v<U, std::weak_ptr<T>>) {
                     auto spt = arg.lock();
                     if (spt) {
-                        func(*spt.get(), std::forward<Args>(args)...);
+                        std::invoke(std::forward<Func>(func), spt.get(),
+                                    std::forward<Args>(args)...);
                     } else {
                         THROW_OBJ_NOT_EXIST("weak_ptr is expired");
                     }
                 } else {
-                    func(*arg.get(), std::forward<Args>(args)...);
+                    std::invoke(std::forward<Func>(func), arg.get(),
+                                std::forward<Args>(args)...);
                 }
             },
             ptr_);

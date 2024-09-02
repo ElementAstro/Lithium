@@ -16,6 +16,7 @@ Description: A simple but useful async worker manager
 #define ATOM_ASYNC_ASYNC_HPP
 
 #include <chrono>
+#include <cmath>
 #include <functional>
 #include <future>
 #include <memory>
@@ -195,20 +196,6 @@ private:
 };
 
 /**
- * @brief Async execution with retry.
- *
- * @tparam Func The type of the function to be executed asynchronously.
- * @tparam Args The types of the arguments to be passed to the function.
- * @param func The function to be executed asynchronously.
- * @param args The arguments to be passed to the function.
- * @return A shared pointer to the created AsyncWorker instance.
- */
-template <typename Func, typename... Args>
-auto asyncRetry(
-    Func &&func, int attemptsLeft, std::chrono::milliseconds delay,
-    Args &&...args) -> std::future<decltype(std::declval<Func>()(std::declval<Args>()...))>;
-
-/**
  * @brief Gets the result of the task with a timeout.
  *
  * @param future The future representing the asynchronous task.
@@ -217,7 +204,7 @@ auto asyncRetry(
  */
 template <typename ReturnType>
 auto getWithTimeout(std::future<ReturnType> &future,
-                          std::chrono::milliseconds timeout) -> ReturnType;
+                    std::chrono::milliseconds timeout) -> ReturnType;
 
 template <typename ResultType>
 template <typename Func, typename... Args>
@@ -338,62 +325,89 @@ void AsyncWorkerManager<ResultType>::cancel(
     worker->Cancel();
 }
 
-template <typename Func, typename... Args>
-    requires std::invocable<Func, Args...>
-[[nodiscard]] auto asyncRetry(Func &&func, int attemptsLeft,
-                              std::chrono::milliseconds delay, Args &&...args) {
-    using ReturnType = std::invoke_result_t<Func, Args...>;
-    static_assert(!std::is_void_v<ReturnType>, "Func must return a value");
+template <typename T>
+using EnableIfNotVoid = typename std::enable_if_t<!std::is_void_v<T>, T>;
 
-    if (attemptsLeft <= 1) {
-        // 最后一次尝试，直接执行
-        return std::async(std::launch::deferred, std::forward<Func>(func),
-                          std::forward<Args>(args)...);
-    }
+// Retry strategy enum for different backoff strategies
+enum class BackoffStrategy { FIXED, LINEAR, EXPONENTIAL };
 
-    // 尝试执行函数
+/**
+ * @brief Async execution with retry.
+ *
+ * @tparam Func The type of the function to be executed asynchronously.
+ * @tparam Args The types of the arguments to be passed to the function.
+ * @param func The function to be executed asynchronously.
+ * @param args The arguments to be passed to the function.
+ * @return A shared pointer to the created AsyncWorker instance.
+ */
+template <typename Func, typename Callback, typename ExceptionHandler,
+          typename CompleteHandler, typename... Args>
+auto asyncRetry(Func &&func, int attemptsLeft,
+                std::chrono::milliseconds initialDelay,
+                BackoffStrategy strategy,
+                std::chrono::milliseconds maxTotalDelay, Callback &&callback,
+                ExceptionHandler &&exceptionHandler,
+                CompleteHandler &&completeHandler, Args &&...args)
+    -> std::future<typename std::invoke_result_t<Func, Args...>> {
+    using ReturnType = typename std::invoke_result_t<Func, Args...>;
+
     auto attempt = std::async(std::launch::async, std::forward<Func>(func),
                               std::forward<Args>(args)...);
 
     try {
-        // 立即获取结果，如果有异常会在这里抛出
         if constexpr (std::is_same_v<ReturnType, void>) {
             attempt.get();
-            return std::async(std::launch::deferred, []() {});
+            callback();
+            completeHandler();
+            return std::async(std::launch::async, [] {});
         } else {
             auto result = attempt.get();
-            return std::async(std::launch::deferred,
+            callback();
+            completeHandler();
+            return std::async(std::launch::async,
                               [result = std::move(result)]() mutable {
                                   return std::move(result);
                               });
         }
-    } catch (...) {
-        if (attemptsLeft <= 1) {
-            // 所有尝试都失败，重新抛出最后一次的异常
+    } catch (const std::exception &e) {
+        exceptionHandler(e);  // Call custom exception handler
+
+        if (attemptsLeft <= 1 || maxTotalDelay.count() <= 0) {
+            completeHandler();  // Invoke complete handler on final failure
             throw;
-        }  // 等待一段时间后重试
-        std::this_thread::sleep_for(delay);
-        return asyncRetry(std::forward<Func>(func), attemptsLeft - 1, delay,
+        }
+
+        switch (strategy) {
+            case BackoffStrategy::LINEAR:
+                initialDelay *= 2;
+                break;
+            case BackoffStrategy::EXPONENTIAL:
+                initialDelay = std::chrono::milliseconds(static_cast<int>(
+                    initialDelay.count() * std::pow(2, (5 - attemptsLeft))));
+                break;
+            default:
+                break;
+        }
+
+        std::this_thread::sleep_for(initialDelay);
+
+        // Decrease the maximum total delay by the time spent in the last
+        // attempt
+        maxTotalDelay -= initialDelay;
+
+        return asyncRetry(std::forward<Func>(func), attemptsLeft - 1,
+                          initialDelay, strategy, maxTotalDelay,
+                          std::forward<Callback>(callback),
+                          std::forward<ExceptionHandler>(exceptionHandler),
+                          std::forward<CompleteHandler>(completeHandler),
                           std::forward<Args>(args)...);
     }
 }
 
-template <typename T>
-[[nodiscard]] auto getWithTimeout(std::future<T> &future,
-                                  std::chrono::milliseconds timeout) -> T {
-    static_assert(!std::is_void_v<T>, "T must not be void");
-
-    if (future.wait_for(timeout) == std::future_status::ready) {
-        return future.get();
-    }
-    THROW_TIMEOUT_EXCEPTION("Timeout occurred while waiting for future result");
-}
-
-template <typename T, typename Rep, typename Period>
-[[nodiscard]] auto getWithTimeout(
-    std::future<T> &future, std::chrono::duration<Rep, Period> timeout) -> T {
-    static_assert(!std::is_void_v<T>, "T must not be void");
-
+// getWithTimeout function for C++17
+template <typename T, typename Duration>
+auto getWithTimeout(std::future<T> &future,
+                    Duration timeout) -> EnableIfNotVoid<T> {
     if (future.wait_for(timeout) == std::future_status::ready) {
         return future.get();
     }

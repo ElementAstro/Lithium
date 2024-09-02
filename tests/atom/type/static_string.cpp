@@ -2,58 +2,99 @@
 
 #include "atom/type/static_string.hpp"
 
-TEST(StaticStringTest, SizeTest) {
-    StaticString s("hello");
-    ASSERT_EQ(s.size(), 5);
+// Testing default constructor
+TEST(StaticStringTest, DefaultConstructor) {
+    StaticString<10> str;
+    EXPECT_EQ(str.size(), 0);
+    EXPECT_STREQ(str.cStr(), "");
 }
 
-TEST(StaticStringTest, CStrTest) {
-    StaticString s("world");
-    ASSERT_STREQ(s.cStr(), "world");
+// Testing string initialization
+TEST(StaticStringTest, StringInitialization) {
+    StaticString<5> str("Hello");
+    EXPECT_EQ(str.size(), 5);
+    EXPECT_STREQ(str.cStr(), "Hello");
 }
 
-TEST(StaticStringTest, BeginTest) {
-    StaticString s("test");
-    ASSERT_EQ(*s.begin(), 't');
+// Testing edge case of empty string
+TEST(StaticStringTest, EmptyStringInitialization) {
+    StaticString<0> str("");
+    EXPECT_EQ(str.size(), 0);
+    EXPECT_STREQ(str.cStr(), "");
 }
 
-TEST(StaticStringTest, EndTest) {
-    StaticString s("end");
-    ASSERT_EQ(*(s.end() - 1), 'd');
+// Testing string comparison
+TEST(StaticStringTest, StringComparison) {
+    StaticString<5> str1("Hello");
+    StaticString<5> str2("Hello");
+    StaticString<5> str3("World");
+
+    EXPECT_TRUE(str1 == str2);
+    EXPECT_FALSE(str1 == str3);
+    EXPECT_TRUE(str1 != str3);
 }
 
-TEST(StaticStringTest, EqualityTest) {
-    StaticString s1("equal");
-    std::string s2 = "equal";
-    ASSERT_TRUE(s1 == s2);
+// Testing string addition with character
+TEST(StaticStringTest, AdditionWithCharacter) {
+    StaticString<4> str("Hell");
+    str += 'o';
+    EXPECT_STREQ(str.cStr(), "Hello");
 }
 
-TEST(StaticStringTest, InequalityTest) {
-    StaticString s1("inequal");
-    std::string s2 = "equal";
-    ASSERT_TRUE(s1 != s2);
+// Testing string addition to produce new StaticString
+TEST(StaticStringTest, AdditionWithCharacterProducesNewString) {
+    StaticString<4> str("Hell");
+    auto new_str = str + 'o';
+    EXPECT_STREQ(new_str.cStr(), "Hello");
+    EXPECT_EQ(new_str.size(), 5);
 }
 
-TEST(StaticStringTest, LessThanTest) {
-    StaticString s1("less");
-    std::string s2 = "more";
-    ASSERT_TRUE(s1 < s2);
+// Testing string concatenation between two StaticString objects
+TEST(StaticStringTest, ConcatenationOfTwoStaticStrings) {
+    StaticString<5> str1("Hello");
+    StaticString<5> str2("World");
+    auto result = str1 + str2;
+
+    EXPECT_EQ(result.size(), 10);
+    EXPECT_STREQ(result.cStr(), "HelloWorld");
 }
 
-TEST(StaticStringTest, LessThanOrEqualToTest) {
-    StaticString s1("less=");
-    std::string s2 = "less=";
-    ASSERT_TRUE(s1 <= s2);
+// Testing string comparison operators
+TEST(StaticStringTest, StringComparisonOperators) {
+    StaticString<5> str1("Apple");
+    StaticString<6> str2("Banana");
+    StaticString<5> str3("Apple");
+
+    EXPECT_LT(str1, str2);
+    EXPECT_LE(str1, str2);
+    EXPECT_LE(str1, str3);
+    EXPECT_GT(str2, str1);
+    EXPECT_GE(str2, str1);
+    EXPECT_GE(str3, str1);
 }
 
-TEST(StaticStringTest, GreaterThanTest) {
-    StaticString s1("greater");
-    std::string s2 = "less";
-    ASSERT_TRUE(s1 > s2);
+// Testing edge case of adding a character to a full StaticString
+TEST(StaticStringTest, AddCharacterToFullStaticString) {
+    StaticString<5> str("Hello");
+    str += '!';
+    EXPECT_STREQ(str.cStr(), "Hello");
+    EXPECT_EQ(str.size(), 5);
 }
 
-TEST(StaticStringTest, GreaterThanOrEqualToTest) {
-    StaticString s1("greater=");
-    std::string s2 = "greater=";
-    ASSERT_TRUE(s1 >= s2);
+// Testing concatenation that would overflow the buffer
+TEST(StaticStringTest, ConcatenationWithOverflow) {
+    StaticString<5> str1("Hello");
+    StaticString<3> str2("!!!");
+    auto result = str1 + str2;
+
+    EXPECT_EQ(result.size(), 8);
+    EXPECT_STREQ(result.cStr(), "Hello!!!");
+}
+
+// Testing comparison with std::string_view
+TEST(StaticStringTest, ComparisonWithStringView) {
+    StaticString<5> str("Hello");
+    std::string_view sv("Hello");
+    EXPECT_TRUE(str == sv);
+    EXPECT_FALSE(str != sv);
 }

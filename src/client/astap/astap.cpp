@@ -1,20 +1,25 @@
 #include "astap.hpp"
 
+#include "atom/components/component.hpp"
+#include "atom/components/registry.hpp"
+
 #include "atom/async/async.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/software.hpp"
+#include "device/template/solver.hpp"
 #include "macro.hpp"
 
 #include <fitsio.h>
+#include <chrono>
+#include <cmath>
 #include <optional>
 #include <string_view>
 #include <utility>
 
-AstapSolver::AstapSolver(std::string name) : name_(std::move(name)) {
+AstapSolver::AstapSolver(std::string name) : AtomSolver(std::move(name)) {
     DLOG_F(INFO, "Initializing Astap Solver...");
-    // Max: 当我们创建对象时，会自动扫描一次解析器的位置
     if (!scanSolver()) {
         LOG_F(ERROR, "Failed to execute {}: Astap not installed",
               ATOM_FUNC_NAME);
@@ -24,116 +29,127 @@ AstapSolver::AstapSolver(std::string name) : name_(std::move(name)) {
 
 AstapSolver::~AstapSolver() { DLOG_F(INFO, "Destroying Astap Solver..."); }
 
-auto AstapSolver::connect(std::string_view solverPath) -> bool {
-    if (solverPath.empty()) {
+[[nodiscard]]
+auto AstapSolver::initialize() -> bool {
+    DLOG_F(INFO, "Initializing Astap Solver...");
+    return scanSolver();
+}
+
+[[nodiscard]]
+auto AstapSolver::destroy() -> bool {
+    DLOG_F(INFO, "Destroying Astap Solver...");
+    // 添加必要的资源清理操作
+    return true;
+}
+
+[[nodiscard]]
+auto AstapSolver::connect(const std::string &name, int timeout,
+                          int maxRetry) -> bool {
+    if (name.empty() || !atom::io::isFileNameValid(name) ||
+        !atom::io::isFileExists(name)) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;
     }
+
     DLOG_F(INFO, "Connecting to Astap Solver...");
-    if (!atom::io::isFileNameValid(solverPath.data()) ||
-        !atom::io::isFileExists(solverPath.data())) {
-        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
-              ATOM_FUNC_NAME);
-        return false;
-    }
-    solverPath_ = solverPath;
+    solverPath_ = name;
     DLOG_F(INFO, "Connected to Astap Solver");
     return true;
 }
 
-auto AstapSolver::disconnect() -> bool {
+[[nodiscard]]
+auto AstapSolver::disconnect(bool /*force*/, int /*timeout*/,
+                             int /*maxRetry*/) -> bool {
     DLOG_F(INFO, "Disconnecting from Astap Solver...");
     solverPath_.clear();
     DLOG_F(INFO, "Disconnected from Astap Solver");
     return true;
 }
 
-auto AstapSolver::reconnect() -> bool {
+[[nodiscard]]
+auto AstapSolver::reconnect(int timeout, int maxRetry) -> bool {
     DLOG_F(INFO, "Reconnecting to Astap Solver...");
-    std::string currentPath = solverPath_;
-    if (!disconnect()) {
-        return false;
-    }
-    if (!connect(currentPath)) {
-        return false;
-    }
-    DLOG_F(INFO, "Reconnected to Astap Solver");
-    return true;
+    return disconnect(true, timeout, maxRetry) &&
+           connect(solverPath_, timeout, maxRetry);
 }
 
-auto AstapSolver::isConnected() -> bool { return !solverPath_.empty(); }
+[[nodiscard]]
+auto AstapSolver::isConnected() -> bool {
+    return !solverPath_.empty();
+}
 
+[[nodiscard]]
 auto AstapSolver::scanSolver() -> bool {
     DLOG_F(INFO, "Scanning Astap Solver...");
     if (isConnected()) {
         LOG_F(WARNING, "Solver is already connected");
+        return true;
     }
+
     auto isAstapCli = atom::system::checkSoftwareInstalled("astap-cli");
     if (!isAstapCli) {
         LOG_F(ERROR, "Failed to execute {}: Astap CLI not installed",
               ATOM_FUNC_NAME);
         return false;
     }
+
     auto astapCliPath = atom::system::getAppPath("astap-cli");
     if (!atom::io::isExecutableFile(astapCliPath, "astap-cli")) {
         LOG_F(ERROR, "Failed to execute {}: Astap not installed",
               ATOM_FUNC_NAME);
         return false;
     }
-    solverPath_ = astapCliPath;
 
+    solverPath_ = astapCliPath;
     solverVersion_ = atom::system::getAppVersion(astapCliPath);
     if (solverVersion_.empty()) {
-        LOG_F(ERROR, "Failed to execute {}: Astap version not got",
+        LOG_F(ERROR, "Failed to execute {}: Astap version not retrieved",
               ATOM_FUNC_NAME);
         return false;
     }
+
     LOG_F(INFO, "Current Astap version: {}", solverVersion_);
     return true;
 }
 
+[[nodiscard]]
 auto AstapSolver::solveImage(std::string_view image,
                              std::optional<std::string_view> target_ra,
                              std::optional<std::string_view> target_dec,
                              std::optional<double> fov, bool update,
                              int timeout, int debug) -> bool {
     DLOG_F(INFO, "Solving Image {}...", image);
+
     if (!isConnected()) {
         LOG_F(ERROR, "Failed to execute {}: Not Connected", ATOM_FUNC_NAME);
         return false;
     }
+
     if (!atom::io::isFileNameValid(image.data()) ||
         !atom::io::isFileExists(image.data())) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;
     }
+
     SolveResult result;
     try {
         std::ostringstream command;
-        command << solverPath_ << " -f " << image.data();
+        command << solverPath_ << " -f " << image;
 
-        if (target_ra.has_value()) {
-            command << " -ra " << target_ra.value();
-        }
-        if (target_dec.has_value()) {
-            command << " -dec " << target_dec.value();
-        }
-        if (fov.has_value()) {
-            command << " -fov " << fov.value();
-        }
-
-        if (update) {
+        if (target_ra)
+            command << " -ra " << *target_ra;
+        if (target_dec)
+            command << " -dec " << *target_dec;
+        if (fov)
+            command << " -fov " << *fov;
+        if (update)
             command << " -update";
-        }
-        if (timeout != 0) {
+        if (timeout)
             command << " -timeout " << timeout;
-        }
-
-        if (debug != 0) {
+        if (debug)
             command << " -debug";
-        }
 
         LOG_F(INFO, "Executing command: {}", command.str());
 
@@ -141,7 +157,14 @@ auto AstapSolver::solveImage(std::string_view image,
             [](const std::string &cmd) -> std::string {
                 return atom::system::executeCommand(cmd, false);
             },
-            3, std::chrono::seconds(5), command.str());
+            3, std::chrono::milliseconds(5000),
+            atom::async::BackoffStrategy::EXPONENTIAL,
+            std::chrono::milliseconds(timeout * 1000),
+            [] { LOG_F(INFO, "Retrying command..."); },
+            [](const std::exception &e) {
+                LOG_F(ERROR, "Exception: {}", e.what());
+            },
+            [] { LOG_F(INFO, "Retry complete."); }, command.str());
 
         auto startTime = std::chrono::system_clock::now();
         while (ret.wait_for(std::chrono::seconds(1)) !=
@@ -176,7 +199,7 @@ auto AstapSolver::solveImage(std::string_view image,
 
 auto AstapSolver::getSolveResult(std::string_view image) -> SolveResult {
     DLOG_F(INFO, "Getting Solve Result...");
-    return readSolveResult(image.data());
+    return readSolveResult(image);
 }
 
 auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
@@ -189,13 +212,8 @@ auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
         return retStruct;
     }
 
-    double solvedRa;
-    double solvedDec;
-    double xPixelArcsec;
-    double yPixelArcsec;
-    double rotation;
-    double xPixelSize;
-    double yPixelSize;
+    double solvedRa, solvedDec, xPixelArcsec, yPixelArcsec, rotation;
+    double xPixelSize, yPixelSize;
     char comment[FLEN_COMMENT];
 
     fits_read_key(fptr, TDOUBLE, "CRVAL1", &solvedRa, comment, &status);
@@ -203,7 +221,7 @@ auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
     fits_read_key(fptr, TDOUBLE, "CDELT1", &xPixelArcsec, comment, &status);
     fits_read_key(fptr, TDOUBLE, "CDELT2", &yPixelArcsec, comment, &status);
     fits_read_key(fptr, TDOUBLE, "CROTA1", &rotation, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "XPIXSZ", &xPixelSize, comment, &status);
+    fits_read_key(fptr, TDOUBLE, "X    PIXSZ", &xPixelSize, comment, &status);
     fits_read_key(fptr, TDOUBLE, "YPIXSZ", &yPixelSize, comment, &status);
 
     fits_close_file(fptr, &status);
@@ -215,11 +233,48 @@ auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
     retStruct.ra = std::to_string(solvedRa);
     retStruct.dec = std::to_string(solvedDec);
     retStruct.rotation = std::to_string(rotation);
+
     double xFocalLength = xPixelSize / xPixelArcsec * 206.625;
     double yFocalLength = yPixelSize / yPixelArcsec * 206.625;
+
     retStruct.fovX = xFocalLength;
     retStruct.fovY = yFocalLength;
     retStruct.fovAvg = (xFocalLength + yFocalLength) / 2.0;
 
     return retStruct;
 }
+
+ATOM_MODULE(solver_astap, [](Component &component) {
+    LOG_F(INFO, "Registering solver_astap module...");
+
+    component.def("connect", &AstapSolver::connect, "main",
+                  "Connect to astap solver");
+    component.def("disconnect", &AstapSolver::disconnect, "main",
+                  "Disconnect from astap solver");
+    component.def("reconnect", &AstapSolver::reconnect, "main",
+                  "Reconnect to astap solver");
+    component.def("isConnected", &AstapSolver::isConnected, "main",
+                  "Check if astap solver is connected");
+    component.def("scanSolver", &AstapSolver::scanSolver, "main",
+                  "Scan for astap solver");
+    component.def("solveImage", &AstapSolver::solveImage, "main",
+                  "Solve image");
+    component.def("getSolveResult", &AstapSolver::getSolveResult, "main",
+                  "Get solve result");
+
+    component.addVariable("astap.instance", "Astap solver instance");
+    component.defType<AstapSolver>("astap");
+
+    component.def(
+        "create_instance",
+        [](const std::string &name) {
+            std::shared_ptr<AtomSolver> instance =
+                std::make_shared<AstapSolver>(name);
+            return instance;
+        },
+        "device", "Create a new camera instance.");
+    component.defType<AstapSolver>("solver.astap", "device",
+                                   "Define a new solver instance.");
+
+    LOG_F(INFO, "Registered solver_astap module.");
+});

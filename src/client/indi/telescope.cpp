@@ -10,6 +10,10 @@
 
 INDITelescope::INDITelescope(std::string name) : AtomTelescope(name) {}
 
+auto INDITelescope::initialize() -> bool { return true; }
+
+auto INDITelescope::destroy() -> bool { return true; }
+
 auto INDITelescope::connect(const std::string &deviceName, int timeout,
                             int maxRetry) -> bool {
     if (isConnected_.load()) {
@@ -123,7 +127,8 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             "BAUD_RATE",
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
-                    for (int i = 0; i < property.size(); i++) {
+                    for (int i = 0; i < static_cast<int>(property.size());
+                         i++) {
                         if (property[i].getState() == ISS_ON) {
                             LOG_F(INFO, "Baud rate is {}",
                                   property[i].getLabel());
@@ -178,7 +183,8 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             "TELESCOPE_TRACK_MODE",
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
-                    for (int i = 0; i < property.size(); i++) {
+                    for (int i = 0; i < static_cast<int>(property.size());
+                         i++) {
                         if (property[i].getState() == ISS_ON) {
                             LOG_F(INFO, "Track mode is {}",
                                   property[i].getLabel());
@@ -195,8 +201,8 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     trackRateRA_ = property[0].getValue();
                     trackRateDEC_ = property[1].getValue();
-                    LOG_F(INFO, "Track rate RA: {}", trackRateRA_);
-                    LOG_F(INFO, "Track rate DEC: {}", trackRateDEC_);
+                    LOG_F(INFO, "Track rate RA: {}", trackRateRA_.load());
+                    LOG_F(INFO, "Track rate DEC: {}", trackRateDEC_.load());
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
@@ -269,8 +275,9 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             "TELESCOPE_PARK_OPTION",
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
-                    for (int i = 0; i < property.size(); i++) {
-                        if (i == property.size() - 1) {
+                    for (int i = 0; i < static_cast<int>(property.size());
+                         i++) {
+                        if (i == static_cast<int>(property.size()) - 1) {
                             parkOption_ = ParkOptions::NONE;
                         }
                         if (property[i].getState() == ISS_ON) {
@@ -309,9 +316,10 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
             "TELESCOPE_SLEW_RATE",
             [this](const INDI::PropertySwitch &property) {
                 if (property.isValid()) {
-                    totalSlewRate_ = property.size();
-                    for (int i = 0; i < property.size(); i++) {
-                        if (i == property.size() - 1) {
+                    totalSlewRate_ = static_cast<int>(property.size());
+                    for (int i = 0; i < static_cast<int>(property.size());
+                         i++) {
+                        if (i == static_cast<int>(property.size()) - 1) {
                             slewRate_ = SlewRate::NONE;
                         }
                         if (property[i].getState() == ISS_ON) {
@@ -370,8 +378,8 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                 if (property.isValid()) {
                     targetSlewRA_ = property[0].getValue();
                     targetSlewDEC_ = property[1].getValue();
-                    LOG_F(INFO, "Target slew RA: {}", targetSlewRA_);
-                    LOG_F(INFO, "Target slew DEC: {}", targetSlewDEC_);
+                    LOG_F(INFO, "Target slew RA: {}", targetSlewRA_.load());
+                    LOG_F(INFO, "Target slew DEC: {}", targetSlewDEC_.load());
                 }
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);

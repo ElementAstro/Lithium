@@ -1,5 +1,8 @@
 #include <functional>
+#include <type_traits>
 
+#include "atom/function/concept.hpp"
+#include "atom/error/exception.hpp"
 #include "rjson.hpp"
 #include "ryaml.hpp"
 
@@ -94,14 +97,14 @@ struct Reflectable {
                              obj.*(field.member) = field.reflect_type.from_json(
                                  it->second.as_object());
                          } else {
-                             throw std::runtime_error(
+                             THROW_INVALID_ARGUMENT(
                                  "Unsupported type for field: " +
                                  std::string(field.name));
                          }
                          if constexpr (requires { field.validator; }) {
                              if (field.validator &&
                                  !field.validator(obj.*(field.member))) {
-                                 throw std::runtime_error(
+                                 THROW_INVALID_ARGUMENT(
                                      "Validation failed for field: " +
                                      std::string(field.name));
                              }
@@ -110,7 +113,7 @@ struct Reflectable {
                          if (!field.required) {
                              obj.*(field.member) = field.default_value;
                          } else {
-                             throw std::runtime_error(
+                             THROW_INVALID_ARGUMENT(
                                  "Missing required field: " +
                                  std::string(field.name));
                          }
@@ -160,7 +163,7 @@ struct Reflectable {
                          j[field.name] = JsonValue(
                              field.reflect_type.to_json(obj.*(field.member)));
                      } else {
-                         throw std::runtime_error(
+                         THROW_INVALID_ARGUMENT(
                              "Unsupported type for field: " +
                              std::string(field.name));
                      }
@@ -184,50 +187,75 @@ struct Reflectable {
                          if constexpr (std::is_same_v<MemberType,
                                                       std::string>) {
                              obj.*(field.member) = it->second.as_string();
-                         } else if constexpr (std::is_same_v<MemberType, int>) {
+                         } else if constexpr (Number<MemberType>) {
                              obj.*(field.member) =
                                  static_cast<int>(it->second.as_number());
                          } else if constexpr (std::is_same_v<MemberType,
-                                                             double>) {
-                             obj.*(field.member) = it->second.as_number();
-                         } else if constexpr (std::is_same_v<MemberType,
                                                              bool>) {
                              obj.*(field.member) = it->second.as_bool();
-                         } else if constexpr (std::is_same_v<
-                                                  MemberType,
-                                                  std::vector<std::string>>) {
+                         } else if constexpr (String<MemberType>) {
                              for (const auto& item : it->second.as_array()) {
                                  (obj.*(field.member))
                                      .push_back(item.as_string());
                              }
-                         } else if constexpr (std::is_same_v<
-                                                  MemberType,
-                                                  std::vector<int>>) {
-                             for (const auto& item : it->second.as_array()) {
-                                 (obj.*(field.member))
-                                     .push_back(
-                                         static_cast<int>(item.as_number()));
+                         } else if constexpr (Container<MemberType>) {
+                             if constexpr (Number<typename MemberType::
+                                                      value_type>) {
+                                 for (const auto& item :
+                                      it->second.as_array()) {
+                                     (obj.*(field.member))
+                                         .push_back(
+                                             static_cast<typename MemberType::
+                                                             value_type>(
+                                                 item.as_number()));
+                                 }
+                             } else if constexpr (String<typename MemberType::
+                                                             value_type>) {
+                                 for (const auto& item :
+                                      it->second.as_array()) {
+                                     (obj.*(field.member))
+                                         .push_back(item.as_string());
+                                 }
+                             } else if constexpr (
+                                 std::is_same_v<typename MemberType::value_type,
+                                                bool>) {
+                                 for (const auto& item :
+                                      it->second.as_array()) {
+                                     (obj.*(field.member))
+                                         .push_back(item.as_bool());
+                                 }
                              }
-                         } else if constexpr (std::is_same_v<
-                                                  MemberType,
-                                                  std::vector<double>>) {
-                             for (const auto& item : it->second.as_array()) {
-                                 (obj.*(field.member))
-                                     .push_back(item.as_number());
+                         } else if constexpr (AssociativeContainer<
+                                                  MemberType>) {
+                             if constexpr (Number<typename MemberType::
+                                                      mapped_type>) {
+                                 for (const auto& item :
+                                      it->second.as_object()) {
+                                     (obj.*(field.member))[item.first] =
+                                         static_cast<
+                                             typename MemberType::mapped_type>(
+                                             item.second.as_number());
+                                 }
+                             } else if constexpr (String<typename MemberType::
+                                                             mapped_type>) {
+                                 for (const auto& item :
+                                      it->second.as_object()) {
+                                     (obj.*(field.member))[item.first] =
+                                         item.second.as_string();
+                                 }
                              }
                          } else if constexpr (std::is_class_v<MemberType>) {
-                             // 处理复杂对象反射
                              obj.*(field.member) = field.reflect_type.from_yaml(
                                  it->second.as_object());
                          } else {
-                             throw std::runtime_error(
+                             THROW_INVALID_ARGUMENT(
                                  "Unsupported type for field: " +
                                  std::string(field.name));
                          }
                          if constexpr (requires { field.validator; }) {
                              if (field.validator &&
                                  !field.validator(obj.*(field.member))) {
-                                 throw std::runtime_error(
+                                 THROW_INVALID_ARGUMENT(
                                      "Validation failed for field: " +
                                      std::string(field.name));
                              }
@@ -236,7 +264,7 @@ struct Reflectable {
                          if (!field.required) {
                              obj.*(field.member) = field.default_value;
                          } else {
-                             throw std::runtime_error(
+                             THROW_INVALID_ARGUMENT(
                                  "Missing required field: " +
                                  std::string(field.name));
                          }
@@ -285,7 +313,7 @@ struct Reflectable {
                          y[field.name] = YamlValue(
                              field.reflect_type.to_yaml(obj.*(field.member)));
                      } else {
-                         throw std::runtime_error(
+                         THROW_INVALID_ARGUMENT(
                              "Unsupported type for field: " +
                              std::string(field.name));
                      }

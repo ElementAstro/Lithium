@@ -1,133 +1,105 @@
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-#include <future>
+#include "stellarium.hpp"
+
+#include <asio.hpp>
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include <string>
+#include <sstream>
+#include <stdexcept>
 
-using namespace boost::asio;
-using tcp = ip::tcp;
+using asio::ip::tcp;
 using json = nlohmann::json;
 
-class Stellarium {
-private:
-    std::string baseUrl;
-    io_context context;
-
+class Stellarium::Impl {
 public:
-    Stellarium(const std::string& host, const std::string& port) {
-        baseUrl = "http://" + host + ":" + port;
+    Impl(const std::string& host, const std::string& port)
+        : baseUrl_("http://" + host + ":" + port), context_() {}
+
+    std::future<json> getSite() {
+        return std::async(std::launch::async, [this]() {
+            return fetchJson("/api/main/status")["location"];
+        });
     }
 
-    std::string Get(const std::string& route) {
-        tcp::resolver resolver(context);
-        tcp::resolver::results_type endpoints =
-            resolver.resolve(baseUrl, "http");
+    std::future<json> getTarget() {
+        return std::async(std::launch::async, [this]() {
+            return fetchJson("/api/objects/info?format=json");
+        });
+    }
 
-        tcp::socket socket(context);
-        connect(socket, endpoints);
+    std::future<double> getRotationAngle() {
+        return std::async(std::launch::async, [this]() {
+            json response = fetchJson("/api/stelproperty/list?format=json");
+
+            bool isOcularsCcdEnabled =
+                response["Oculars.enableCCD"]["value"].get<bool>();
+            if (!isOcularsCcdEnabled) {
+                return std::numeric_limits<double>::quiet_NaN();
+            }
+
+            double angle = response["Oculars.selectedCCDRotationAngle"]["value"]
+                               .get<double>();
+            return 360.0 - angle;  // Reverse angle
+        });
+    }
+
+private:
+    std::string baseUrl_;
+    asio::io_context context_;
+
+    json fetchJson(const std::string& route) {
+        std::string response = get(route);
+        return json::parse(response);
+    }
+
+    std::string get(const std::string& route) {
+        tcp::resolver resolver(context_);
+        tcp::resolver::results_type endpoints =
+            resolver.resolve(baseUrl_, "http");
+
+        tcp::socket socket(context_);
+        asio::connect(socket, endpoints);
 
         std::string request = "GET " + route +
                               " HTTP/1.1\r\n"
                               "Host: " +
-                              baseUrl +
+                              baseUrl_ +
                               "\r\n"
                               "Connection: close\r\n\r\n";
 
-        write(socket, buffer(request));
+        asio::write(socket, asio::buffer(request));
 
-        boost::asio::streambuf response;
-        read_until(socket, response, "\r\n");
+        asio::streambuf response;
+        asio::read_until(socket, response, "\r\n");
 
-        std::istream response_stream(&response);
-        std::string http_version;
-        unsigned int status_code;
-        response_stream >> http_version >> status_code;
+        std::istream responseStream(&response);
+        std::string httpVersion;
+        unsigned int statusCode;
+        responseStream >> httpVersion >> statusCode;
 
-        if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
+        if (!responseStream || httpVersion.substr(0, 5) != "HTTP/") {
             throw std::runtime_error("Invalid response");
         }
 
-        if (status_code != 200) {
+        if (statusCode != 200) {
             throw std::runtime_error("Request failed with status code " +
-                                     std::to_string(status_code));
+                                     std::to_string(statusCode));
         }
 
-        std::ostringstream response_data;
-        response_data << &response;
-        return response_data.str();
-    }
-
-    std::future<json> GetSite() {
-        return std::async(std::launch::async, [this]() {
-            try {
-                std::string response = Get("/api/main/status");
-                json jobj = json::parse(response);
-                json location = jobj["location"];
-                return location;
-            } catch (const std::exception& ex) {
-                std::cerr << "Error: " << ex.what() << std::endl;
-                throw;
-            }
-        });
-    }
-
-    std::future<json> GetTarget() {
-        return std::async(std::launch::async, [this]() {
-            try {
-                std::string response = Get("/api/objects/info?format=json");
-                json jobj = json::parse(response);
-                return jobj;
-            } catch (const std::exception& ex) {
-                std::cerr << "Error: " << ex.what() << std::endl;
-                throw;
-            }
-        });
-    }
-
-    std::future<double> GetRotationAngle() {
-        return std::async(std::launch::async, [this]() {
-            try {
-                std::string response =
-                    Get("/api/stelproperty/list?format=json");
-                json jobj = json::parse(response);
-
-                bool isOcularsCcdEnabled =
-                    jobj["Oculars.enableCCD"]["value"].get<bool>();
-                if (!isOcularsCcdEnabled) {
-                    return std::numeric_limits<double>::quiet_NaN();
-                }
-
-                double angle = jobj["Oculars.selectedCCDRotationAngle"]["value"]
-                                   .get<double>();
-                return 360.0 - angle;  // Reverse angle
-            } catch (const std::exception& ex) {
-                std::cerr << "Error: " << ex.what() << std::endl;
-                throw;
-            }
-        });
+        std::ostringstream responseData;
+        responseData << &response;
+        return responseData.str();
     }
 };
 
-int main() {
-    Stellarium stellarium("localhost", "8090");
+Stellarium::Stellarium(const std::string& host, const std::string& port)
+    : pimpl_(std::make_unique<Impl>(host, port)) {}
 
-    try {
-        auto siteFuture = stellarium.GetSite();
-        auto targetFuture = stellarium.GetTarget();
-        auto rotationAngleFuture = stellarium.GetRotationAngle();
+Stellarium::~Stellarium() = default;
 
-        auto site = siteFuture.get();
-        auto target = targetFuture.get();
-        auto rotationAngle = rotationAngleFuture.get();
+std::future<json> Stellarium::getSite() { return pimpl_->getSite(); }
 
-        std::cout << "Site Location: " << site.dump() << std::endl;
-        std::cout << "Target Info: " << target.dump() << std::endl;
-        std::cout << "Rotation Angle: " << rotationAngle << " degrees"
-                  << std::endl;
-    } catch (const std::exception& ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
-    }
+std::future<json> Stellarium::getTarget() { return pimpl_->getTarget(); }
 
-    return 0;
+std::future<double> Stellarium::getRotationAngle() {
+    return pimpl_->getRotationAngle();
 }

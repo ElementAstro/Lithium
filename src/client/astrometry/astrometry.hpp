@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 class SolveResult {
 public:
@@ -29,7 +30,7 @@ public:
 
     auto isConnected() -> bool;
 
-    auto scanSolver() -> bool;
+    auto scanSolver() -> std::vector<std::string>;
 
     auto solveImage(std::string_view image,
                     std::optional<std::string_view> target_ra,
@@ -40,8 +41,9 @@ public:
 
     auto getSolveResult(std::string_view image) -> SolveResult;
 
-private:
     auto readSolveResult(const std::string& ouput) -> SolveResult;
+
+private:
 
     std::string name_;
     std::string solverPath_;

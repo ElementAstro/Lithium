@@ -1,74 +1,48 @@
-#include <boost/asio.hpp>
+#include "c2a.hpp"
+
+#include <asio.hpp>
 #include <iostream>
-#include <nlohmann/json.hpp>
-#include <string>
-#include <thread>
+#include <sstream>
 
-using namespace boost::asio;
-using ip::tcp;
-using json = nlohmann::json;
+using asio::ip::tcp;
 
-// Structure to represent celestial coordinates
-struct Coordinates {
-    double ra;   // Right Ascension
-    double dec;  // Declination
+// Coordinates
+Coordinates::Coordinates(double ra, double dec) : ra(ra), dec(dec) {}
 
-    Coordinates(double ra, double dec) : ra(ra), dec(dec) {}
-};
+// DeepSkyObject
+DeepSkyObject::DeepSkyObject(const std::string& name, const Coordinates& coords)
+    : name(name), coords(coords) {}
 
-// Structure to represent a deep sky object
-struct DeepSkyObject {
-    std::string name;
-    Coordinates coords;
+// Location
+Location::Location(double lat, double lon, double elev)
+    : latitude(lat), longitude(lon), elevation(elev) {}
 
-    DeepSkyObject(const std::string& name, const Coordinates& coords)
-        : name(name), coords(coords) {}
-};
+// PlanetariumException
+PlanetariumException::PlanetariumException(const std::string& msg)
+    : message(msg) {}
 
-// Structure to represent a location
-struct Location {
-    double latitude;
-    double longitude;
-    double elevation;
+const char* PlanetariumException::what() const noexcept {
+    return message.c_str();
+}
 
-    Location(double lat, double lon, double elev)
-        : latitude(lat), longitude(lon), elevation(elev) {}
-};
-
-// Exception class for planetarium errors
-class PlanetariumException : public std::exception {
-    std::string message;
-
+// C2A Implementation
+class C2A::Impl {
 public:
-    PlanetariumException(const std::string& msg) : message(msg) {}
+    Impl(const std::string& addr, int port) : address(addr), port(port) {}
 
-    const char* what() const noexcept override { return message.c_str(); }
-};
-
-// The main C2A class equivalent in C++
-class C2A {
-private:
-    std::string address;
-    int port;
-    io_context context;
-
-public:
-    C2A(const std::string& addr, int port) : address(addr), port(port) {}
-
-    // Method to get the target from C2A
-    DeepSkyObject GetTarget() {
+    DeepSkyObject getTarget() {
         try {
             tcp::socket socket(context);
             tcp::resolver resolver(context);
             auto endpoints = resolver.resolve(address, std::to_string(port));
-            connect(socket, endpoints);
+            asio::connect(socket, endpoints);
 
-            std::string command = "GetRa;GetDe;\r\n";
-            write(socket, buffer(command));
+            const std::string command = "GetRa;GetDe;\r\n";
+            asio::write(socket, asio::buffer(command));
 
-            std::string response = ReadResponse(socket);
+            const auto response = readResponse(socket);
             if (!response.empty()) {
-                auto coords = ParseCoordinates(response);
+                const auto coords = parseCoordinates(response);
                 return DeepSkyObject("Target", coords);
             } else {
                 throw PlanetariumException(
@@ -80,20 +54,19 @@ public:
         }
     }
 
-    // Method to get the site location from C2A
-    Location GetSite() {
+    Location getSite() {
         try {
             tcp::socket socket(context);
             tcp::resolver resolver(context);
             auto endpoints = resolver.resolve(address, std::to_string(port));
-            connect(socket, endpoints);
+            asio::connect(socket, endpoints);
 
-            std::string command = "GetLatitude;GetLongitude;\r\n";
-            write(socket, buffer(command));
+            const std::string command = "GetLatitude;GetLongitude;\r\n";
+            asio::write(socket, asio::buffer(command));
 
-            std::string response = ReadResponse(socket);
+            const auto response = readResponse(socket);
             if (!response.empty()) {
-                return ParseLocation(response);
+                return parseLocation(response);
             } else {
                 throw PlanetariumException(
                     "Failed to get site location from C2A.");
@@ -105,19 +78,21 @@ public:
     }
 
 private:
-    // Helper method to read response from the server
-    std::string ReadResponse(tcp::socket& socket) {
-        boost::asio::streambuf buf;
-        boost::asio::read_until(socket, buf, "\r\n");
-        std::istream response_stream(&buf);
+    std::string address;
+    int port;
+    asio::io_context context;
+
+    std::string readResponse(tcp::socket& socket) {
+        asio::streambuf buf;
+        asio::read_until(socket, buf, "\r\n");
+        std::istream responseStream(&buf);
         std::string response;
-        std::getline(response_stream, response);
+        std::getline(responseStream, response);
         return response;
     }
 
-    // Helper method to parse coordinates from response
-    Coordinates ParseCoordinates(const std::string& response) {
-        auto tokens = SplitResponse(response, ';');
+    Coordinates parseCoordinates(const std::string& response) {
+        const auto tokens = splitResponse(response, ';');
         if (tokens.size() < 2) {
             throw PlanetariumException("Invalid response format.");
         }
@@ -128,9 +103,8 @@ private:
         return Coordinates(ra, dec);
     }
 
-    // Helper method to parse location from response
-    Location ParseLocation(const std::string& response) {
-        auto tokens = SplitResponse(response, ';');
+    Location parseLocation(const std::string& response) {
+        const auto tokens = splitResponse(response, ';');
         if (tokens.size() < 2) {
             throw PlanetariumException("Invalid response format.");
         }
@@ -141,8 +115,7 @@ private:
         return Location(latitude, longitude, 0.0);
     }
 
-    // Helper method to split response string
-    std::vector<std::string> SplitResponse(const std::string& response,
+    std::vector<std::string> splitResponse(const std::string& response,
                                            char delimiter) {
         std::vector<std::string> tokens;
         std::string token;
@@ -156,20 +129,12 @@ private:
     }
 };
 
-int main() {
-    // Example usage of the C2A class
-    try {
-        C2A c2a("localhost", 8080);
-        auto target = c2a.GetTarget();
-        std::cout << "Target RA: " << target.coords.ra
-                  << ", Dec: " << target.coords.dec << std::endl;
+// C2A public interface
+C2A::C2A(const std::string& addr, int port)
+    : pimpl(std::make_unique<Impl>(addr, port)) {}
 
-        auto site = c2a.GetSite();
-        std::cout << "Site Latitude: " << site.latitude
-                  << ", Longitude: " << site.longitude << std::endl;
-    } catch (const std::exception& ex) {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
+C2A::~C2A() = default;
 
-    return 0;
-}
+DeepSkyObject C2A::getTarget() { return pimpl->getTarget(); }
+
+Location C2A::getSite() { return pimpl->getSite(); }

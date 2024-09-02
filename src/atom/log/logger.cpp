@@ -111,12 +111,12 @@ void LoggerManager::Impl::uploadFile(const std::string &filePath) {
     curl.setRequestBody(encryptedContent);
 
     curl.setOnErrorCallback([](CURLcode error) {
-        LOG_F(ERROR, "Failed to upload file: curl error code %d", error);
+        LOG_F(ERROR, "Failed to upload file: curl error code {}", static_cast<int>(error));
     });
 
     curl.setOnResponseCallback([](const std::string &response) {
-        DLOG_F(INFO, "File uploaded successfully. Server response: %s",
-               response.c_str());
+        DLOG_F(INFO, "File uploaded successfully. Server response: {}",
+               response);
     });
 
     curl.performRequest();
@@ -169,8 +169,8 @@ std::string LoggerManager::Impl::encryptFileContent(
 }
 
 std::string LoggerManager::Impl::getErrorType(std::string_view errorMessage) {
-    auto startPos = errorMessage.find("[");
-    auto endPos = errorMessage.find("]");
+    auto startPos = errorMessage.find('[');
+    auto endPos = errorMessage.find(']');
     if (startPos != std::string::npos && endPos != std::string::npos &&
         endPos > startPos) {
         return std::string(

@@ -308,7 +308,7 @@ public:
                  const std::string& description = "");
 
     template <typename EnumType>
-    void defEnum(std::string_view name,
+    void defEnum(const std::string& name,
                  const std::unordered_map<std::string, EnumType>& enumMap);
 
     template <typename SourceType, typename DestinationType>
@@ -858,12 +858,12 @@ void Component::defConstructor(const std::string& name,
 
 template <typename EnumType>
 void Component::defEnum(
-    std::string_view name,
+    const std::string& name,
     const std::unordered_map<std::string, EnumType>& enumMap) {
     m_TypeCaster_->registerType<EnumType>(std::string(name));
 
     for (const auto& [key, value] : enumMap) {
-        m_TypeCaster_->registerEnumValue(name, key, value);
+        m_TypeCaster_->registerEnumValue<EnumType>(name, key, value);
     }
 
     defConversion<EnumType, std::string>(

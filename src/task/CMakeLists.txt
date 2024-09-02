@@ -35,6 +35,7 @@ set(PROJECT_HEADERS
 set(PROJECT_LIBS
     atom-component
     atom-function
+    atom-utils
     atom-error
     loguru
     ${CMAKE_THREAD_LIBS_INIT}

@@ -2,7 +2,6 @@
 #include "atom/components/registry.hpp"
 
 #include "atom/error/error_code.hpp"
-#include "atom/error/error_stack.hpp"
 
 #include "atom/log/loguru.hpp"
 
@@ -44,20 +43,5 @@ ATOM_MODULE(atom_io, [](Component &component) {
             {"CoolingError", DeviceError::CoolingError},
             {"Busy", DeviceError::Busy},
         });
-
-    component.def("insert_error", &ErrorStack::insertError, "error",
-                  "Insert an error into the error stack.");
-    component.def("set_filters", &ErrorStack::setFilteredModules, "error",
-                  "Set filters.");
-    component.def("clear_filters", &ErrorStack::clearFilteredModules, "error",
-                  " Clear filters.");
-    component.def("get_filtered_errors", &ErrorStack::getFilteredErrorsByModule,
-                  "error", "Get filtered errors by module.");
-    component.def("print_filtered_error_stack",
-                  &ErrorStack::printFilteredErrorStack, "error",
-                  "Print filtered error stack.");
-    component.def("get_compressed_errors", &ErrorStack::getCompressedErrors,
-                  "error", "Get compressed errors.");
-
     DLOG_F(INFO, "Loaded module {}", component.getName());
 });

@@ -27,9 +27,9 @@ public:
     explicit INDICamera(std::string name);
     ~INDICamera() override = default;
 
-     auto initialize() -> bool override = 0;
+    auto initialize() -> bool override = 0;
 
-     auto destroy() -> bool override = 0;
+    auto destroy() -> bool override = 0;
 
     auto connect(const std::string &deviceName, int timeout,
                  int maxRetry) -> bool override;

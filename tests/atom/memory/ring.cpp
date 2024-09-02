@@ -1,6 +1,7 @@
 #include "atom/memory/ring.hpp"
 #include <gtest/gtest.h>
 
+#include "atom/macro.hpp"
 
 // 测试构造函数
 TEST(RingBufferTest, Constructor) {
@@ -61,7 +62,7 @@ TEST(RingBufferTest, Empty) {
     EXPECT_TRUE(buffer.empty());
     buffer.push(1);
     EXPECT_FALSE(buffer.empty());
-    buffer.pop();
+    ATOM_UNUSED_RESULT(buffer.pop());
     EXPECT_TRUE(buffer.empty());
 }
 
@@ -73,8 +74,8 @@ TEST(RingBufferTest, Size) {
     buffer.push(2);
     buffer.push(3);
     EXPECT_EQ(buffer.size(), 3);
-    buffer.pop();
-    buffer.pop();
+    ATOM_UNUSED_RESULT(buffer.pop());
+    ATOM_UNUSED_RESULT(buffer.pop());
     EXPECT_EQ(buffer.size(), 1);
 }
 
@@ -160,8 +161,8 @@ TEST(RingBufferTest, Resize) {
     buffer.push(4);
     buffer.push(5);
     EXPECT_EQ(buffer.size(), 5);
-    buffer.pop();
-    buffer.pop();
+    ATOM_UNUSED_RESULT(buffer.pop());
+    ATOM_UNUSED_RESULT(buffer.pop());
     EXPECT_EQ(buffer.size(), 3);
 }
 

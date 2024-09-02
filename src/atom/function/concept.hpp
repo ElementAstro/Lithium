@@ -22,11 +22,6 @@
 // Function
 // -----------------------------------------------------------------------------
 
-template <typename T>
-concept Function = requires(T t) {
-    { t() } -> std::same_as<void>;
-};
-
 // Checks if a type can be invoked with specified argument types
 template <typename F, typename... Args>
 concept Invocable = requires(F f, Args&&... args) {
@@ -164,6 +159,9 @@ concept SignedInteger = std::is_integral_v<T> && std::is_signed_v<T>;
 template <typename T>
 concept UnsignedInteger = std::is_integral_v<T> && std::is_unsigned_v<T>;
 
+template <typename T>
+concept Number = Arithmetic<T> || Integral<T> || FloatingPoint<T>;
+
 #if __has_include(<complex>)
 #include <complex>
 // Checks if a type is a complex number (in <complex> header)
@@ -193,6 +191,14 @@ concept Char32 = std::is_same_v<T, char32_t>;
 // Checks if a type is any character type
 template <typename T>
 concept AnyChar = Char<T> || WChar<T> || Char16<T> || Char32<T>;
+
+template <typename T>
+concept String = requires(T x) {
+    { x.size() } -> std::convertible_to<std::size_t>;
+    { x.empty() } -> std::convertible_to<bool>;
+    { x.begin() } -> std::convertible_to<typename T::iterator>;
+    { x.end() } -> std::convertible_to<typename T::iterator>;
+};
 
 // Checks if a type is an enum
 template <typename T>

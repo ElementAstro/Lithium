@@ -15,6 +15,10 @@ public:
     explicit INDIFocuser(std::string name);
     ~INDIFocuser() override = default;
 
+    auto initialize() -> bool override;
+
+    auto destroy() -> bool override;
+
     auto connect(const std::string &deviceName, int timeout,
                  int maxRetry) -> bool override;
 

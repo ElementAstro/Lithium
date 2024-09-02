@@ -1,64 +1,55 @@
-#include <iostream>
-#include <string>
-#include <stdexcept>
-#include <system_error>
-#include <sstream>
-#include <vector>
+#include "skyx.hpp"
+
 #include <asio.hpp>
 #include <future>
+#include <iostream>
 #include <nlohmann/json.hpp>
+#include <sstream>
+#include <stdexcept>
 
 using asio::ip::tcp;
 using json = nlohmann::json;
 
-class TheSkyX {
-private:
-    std::string address;
-    int port;
-    bool useSelectedObject;
-
+class TheSkyX::Impl {
 public:
-    TheSkyX(const std::string& addr, int prt, bool useObj)
-        : address(addr), port(prt), useSelectedObject(useObj) {}
+    Impl(const std::string& addr, int prt, bool useObj)
+        : address_(addr), port_(prt), useSelectedObject_(useObj) {}
 
-    std::string Name() const {
-        return "TheSkyX";
-    }
+    std::string name() const { return "TheSkyX"; }
 
-    bool CanGetRotationAngle() const {
-        return true;
-    }
+    bool canGetRotationAngle() const { return true; }
 
-    std::future<json> GetTarget() {
+    std::future<json> getTarget() {
         return std::async(std::launch::async, [this]() {
-            if (useSelectedObject) {
-                return GetSelectedObject();
-            } else {
-                return GetSkyChartCenter();
-            }
+            return useSelectedObject_ ? getSelectedObject()
+                                      : getSkyChartCenter();
         });
     }
 
-    std::future<json> GetSite() {
-        return std::async(std::launch::async, [this]() {
-            return QueryLocation();
-        });
+    std::future<json> getSite() {
+        return std::async(std::launch::async,
+                          [this]() { return queryLocation(); });
     }
 
-    std::future<double> GetRotationAngle() {
+    std::future<double> getRotationAngle() {
         return std::async(std::launch::async, [this]() -> double {
-            if (useSelectedObject) return std::numeric_limits<double>::quiet_NaN();
-            return QueryRotationAngle();
+            if (useSelectedObject_)
+                return std::numeric_limits<double>::quiet_NaN();
+            return queryRotationAngle();
         });
     }
 
 private:
-    json SendQuery(const std::string& script) {
-        asio::io_context io_context;
-        tcp::resolver resolver(io_context);
-        tcp::socket socket(io_context);
+    std::string address_;
+    int port_;
+    bool useSelectedObject_;
 
-        auto endpoints = resolver.resolve(address, std::to_string(port));
+    json sendQuery(const std::string& script) {
+        asio::io_context ioContext;
+        tcp::resolver resolver(ioContext);
+        tcp::socket socket(ioContext);
+
+        auto endpoints = resolver.resolve(address_, std::to_string(port_));
         asio::connect(socket, endpoints);
 
         asio::write(socket, asio::buffer(script));
@@ -66,14 +57,14 @@ private:
         asio::streambuf response;
         asio::read_until(socket, response, "|");
 
-        std::istream response_stream(&response);
+        std::istream responseStream(&response);
         std::string reply;
-        std::getline(response_stream, reply);
+        std::getline(responseStream, reply);
 
         return json::parse(reply);
     }
 
-    json GetSelectedObject() {
+    json getSelectedObject() {
         std::string script = R"(
             var Out = "";
             var Target56 = 0;
@@ -88,10 +79,10 @@ private:
             Out = String(Target56) + "," + String(Target57) + "," + String(Name0);
         )";
 
-        return SendQuery(script);
+        return sendQuery(script);
     }
 
-    json GetSkyChartCenter() {
+    json getSkyChartCenter() {
         std::string script = R"(
             var Out = "";
             var chartRA = 0;
@@ -101,10 +92,10 @@ private:
             Out = String(chartRA) + "," + String(chartDec);
         )";
 
-        return SendQuery(script);
+        return sendQuery(script);
     }
 
-    json QueryLocation() {
+    json queryLocation() {
         std::string script = R"(
             var Out = "";
             var Lat = 0;
@@ -119,10 +110,10 @@ private:
             Out = String(Lat) + "," + String(Long) + "," + String(Elevation);
         )";
 
-        return SendQuery(script);
+        return sendQuery(script);
     }
 
-    double QueryRotationAngle() {
+    double queryRotationAngle() {
         std::string script = R"(
             var angle = NaN;
             var fov = sky6MyFOVs;
@@ -142,7 +133,29 @@ private:
             Out = String(angle);
         )";
 
-        auto response = SendQuery(script);
-        return response.is_number() ? response.get<double>() : std::numeric_limits<double>::quiet_NaN();
+        auto response = sendQuery(script);
+        return response.is_number() ? response.get<double>()
+                                    : std::numeric_limits<double>::quiet_NaN();
     }
 };
+
+// TheSkyX public interface implementation
+
+TheSkyX::TheSkyX(const std::string& addr, int prt, bool useObj)
+    : pimpl_(std::make_unique<Impl>(addr, prt, useObj)) {}
+
+TheSkyX::~TheSkyX() = default;
+
+std::string TheSkyX::name() const { return pimpl_->name(); }
+
+bool TheSkyX::canGetRotationAngle() const {
+    return pimpl_->canGetRotationAngle();
+}
+
+std::future<json> TheSkyX::getTarget() { return pimpl_->getTarget(); }
+
+std::future<json> TheSkyX::getSite() { return pimpl_->getSite(); }
+
+std::future<double> TheSkyX::getRotationAngle() {
+    return pimpl_->getRotationAngle();
+}

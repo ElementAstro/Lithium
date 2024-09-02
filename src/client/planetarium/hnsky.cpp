@@ -1,4 +1,6 @@
-#include <boost/asio.hpp>
+#include "hnsky.hpp"
+#include <asio.hpp>
+#include <cmath>
 #include <future>
 #include <iostream>
 #include <sstream>
@@ -6,30 +8,16 @@
 #include <string>
 #include <vector>
 
-class HNSKY {
+using tcp = asio::ip::tcp;
+
+class HNSKY::Impl {
 public:
-    HNSKY(const std::string& address, int port)
-        : address(address), port(port), io_context(), socket(io_context) {}
+    Impl(const std::string& address, int port)
+        : address_(address), port_(port), socket_(ioContext_) {}
 
     std::string getName() const { return "HNSKY"; }
 
     bool canGetRotationAngle() const { return false; }
-
-    struct Coordinates {
-        double ra;
-        double dec;
-    };
-
-    struct DeepSkyObject {
-        std::string name;
-        Coordinates coordinates;
-    };
-
-    struct Location {
-        double latitude;
-        double longitude;
-        double elevation;
-    };
 
     std::future<DeepSkyObject> getTarget() {
         return std::async([this]() {
@@ -73,30 +61,30 @@ public:
     }
 
 private:
-    std::string address;
-    int port;
-    boost::asio::io_context io_context;
-    boost::asio::ip::tcp::socket socket;
+    std::string address_;
+    int port_;
+    asio::io_context ioContext_;
+    tcp::socket socket_;
 
     void connect() {
-        boost::asio::ip::tcp::resolver resolver(io_context);
-        boost::asio::connect(socket,
-                             resolver.resolve(address, std::to_string(port)));
+        tcp::resolver resolver(ioContext_);
+        asio::connect(socket_,
+                      resolver.resolve(address_, std::to_string(port_)));
     }
 
     std::string sendCommand(const std::string& command) {
         connect();
-        boost::asio::write(socket, boost::asio::buffer(command));
+        asio::write(socket_, asio::buffer(command));
 
-        boost::asio::streambuf response;
-        boost::asio::read_until(socket, response, "\r\n");
+        asio::streambuf response;
+        asio::read_until(socket_, response, "\r\n");
 
-        std::istream response_stream(&response);
-        std::string response_string;
-        std::getline(response_stream, response_string);
-        socket.close();
+        std::istream responseStream(&response);
+        std::string responseString;
+        std::getline(responseStream, responseString);
+        socket_.close();
 
-        return response_string;
+        return responseString;
     }
 
     std::vector<std::string> splitString(const std::string& s, char delimiter) {
@@ -109,27 +97,30 @@ private:
         return tokens;
     }
 
-    double radianToHour(double radian) { return radian * 12.0 / M_PI; }
+    double radianToHour(double radian) const { return radian * 12.0 / M_PI; }
 
-    double radianToDegree(double radian) { return radian * 180.0 / M_PI; }
+    double radianToDegree(double radian) const { return radian * 180.0 / M_PI; }
 };
 
-int main() {
-    // Example usage
-    HNSKY hnsky("127.0.0.1", 12345);
+// HNSKY public interface implementation
 
-    try {
-        auto target = hnsky.getTarget().get();
-        std::cout << "Target Name: " << target.name << std::endl;
-        std::cout << "RA: " << target.coordinates.ra
-                  << ", Dec: " << target.coordinates.dec << std::endl;
+HNSKY::HNSKY(const std::string& address, int port)
+    : pimpl_(std::make_unique<Impl>(address, port)) {}
 
-        auto location = hnsky.getSite().get();
-        std::cout << "Latitude: " << location.latitude
-                  << ", Longitude: " << location.longitude << std::endl;
-    } catch (const std::exception& ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
-    }
+HNSKY::~HNSKY() = default;
 
-    return 0;
+std::string HNSKY::getName() const { return pimpl_->getName(); }
+
+bool HNSKY::canGetRotationAngle() const {
+    return pimpl_->canGetRotationAngle();
+}
+
+std::future<HNSKY::DeepSkyObject> HNSKY::getTarget() {
+    return pimpl_->getTarget();
+}
+
+std::future<HNSKY::Location> HNSKY::getSite() { return pimpl_->getSite(); }
+
+std::future<double> HNSKY::getRotationAngle() {
+    return pimpl_->getRotationAngle();
 }

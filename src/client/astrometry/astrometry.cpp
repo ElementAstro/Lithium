@@ -57,6 +57,12 @@ bool AstrometrySolver::reconnect() {
 
 bool AstrometrySolver::isConnected() { return !solverPath_.empty(); }
 
+auto AstrometrySolver::scanSolver() -> std::vector<std::string> {
+    return atom::io::checkFileTypeInFolder(
+        "/usr/bin", "astrometry.net-solver",
+        atom::io::FileOption::NAME);
+}
+
 bool AstrometrySolver::solveImage(
     std::string_view image, std::optional<std::string_view> target_ra,
     std::optional<std::string_view> target_dec, std::optional<double> radius,

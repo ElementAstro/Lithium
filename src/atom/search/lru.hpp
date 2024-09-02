@@ -233,16 +233,16 @@ void ThreadSafeLRUCache<Key, Value>::put(
     std::optional<std::chrono::seconds> ttl) {
     std::unique_lock lock(mutex_);
     auto it = cache_items_map_.find(key);
-    auto expiry_time = ttl ? Clock::now() + *ttl : TimePoint::max();
+    auto expiryTime = ttl ? Clock::now() + *ttl : TimePoint::max();
 
     if (it != cache_items_map_.end()) {
         cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_,
                                  it->second.iterator);
         it->second.value = value;
-        it->second.expiry_time = expiry_time;
+        it->second.expiryTime = expiryTime;
     } else {
         cache_items_list_.emplace_front(key, value);
-        cache_items_map_[key] = {value, expiry_time, cache_items_list_.begin()};
+        cache_items_map_[key] = {value, expiryTime, cache_items_list_.begin()};
 
         if (cache_items_map_.size() > max_size_) {
             auto last = cache_items_list_.end();
@@ -403,7 +403,7 @@ void ThreadSafeLRUCache<Key, Value>::load_from_file(
 
 template <typename Key, typename Value>
 bool ThreadSafeLRUCache<Key, Value>::is_expired(const CacheItem& item) const {
-    return Clock::now() > item.expiry_time;
+    return Clock::now() > item.expiryTime;
 }
 
 }  // namespace atom::search

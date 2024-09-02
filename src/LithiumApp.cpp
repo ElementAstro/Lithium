@@ -33,7 +33,6 @@ Description: Lithium App Enter
 #include "script/manager.hpp"
 
 #include "atom/components/dispatch.hpp"
-#include "atom/error/error_stack.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
@@ -144,8 +143,6 @@ LithiumApp::LithiumApp() : Component("lithium.main") {
 }
 
 LithiumApp::~LithiumApp() {
-    m_messagebus_.lock()->unsubscribeAll();
-    m_messagebus_.lock()->stopAllProcessingThreads();
 }
 
 auto LithiumApp::createShared() -> std::shared_ptr<LithiumApp> {

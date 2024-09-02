@@ -10,6 +10,14 @@
 
 INDIFocuser::INDIFocuser(std::string name) : AtomFocuser(name) {}
 
+auto INDIFocuser::initialize() -> bool {
+    return true;
+}
+
+auto INDIFocuser::destroy() -> bool {
+    return true;
+}
+
 auto INDIFocuser::connect(const std::string &deviceName, int timeout,
                           int maxRetry) -> bool {
     if (isConnected_.load()) {

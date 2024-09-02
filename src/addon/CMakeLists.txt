@@ -49,6 +49,7 @@ set(PROJECT_LIBS
     atom-error
     atom-function
     atom-system
+    atom-utils
     loguru
     lithium-utils
     ${CMAKE_THREAD_LIBS_INIT}

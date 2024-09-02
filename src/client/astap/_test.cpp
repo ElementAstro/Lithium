@@ -61,38 +61,38 @@ protected:
 TEST_F(AstapSolverTest, Initialization) { ASSERT_TRUE(solver != nullptr); }
 
 TEST_F(AstapSolverTest, ConnectWithInvalidPath) {
-    ASSERT_FALSE(solver->connect(""));
-    ASSERT_FALSE(solver->connect("invalid/path"));
+    ASSERT_FALSE(solver->connect("", 10, 1));
+    ASSERT_FALSE(solver->connect("invalid/path", 10, 1));
 }
 
 TEST_F(AstapSolverTest, ConnectWithValidPath) {
     // Mock a valid path to the solver
-    ASSERT_TRUE(solver->connect("/usr/local/bin/astap-cli"));
+    ASSERT_TRUE(solver->connect("/usr/local/bin/astap-cli", 10, 1));
 }
 
 TEST_F(AstapSolverTest, Disconnect) {
-    solver->connect("/usr/local/bin/astap-cli");
+    solver->connect("/usr/local/bin/astap-cli", 10, 1);
     ASSERT_TRUE(solver->isConnected());
-    solver->disconnect();
+    solver->disconnect(true, 10, 1);
     ASSERT_FALSE(solver->isConnected());
 }
 
 TEST_F(AstapSolverTest, ScanSolver) { ASSERT_TRUE(solver->scanSolver()); }
 
 TEST_F(AstapSolverTest, SolveImageSuccess) {
-    solver->connect("/usr/local/bin/astap-cli");
+    solver->connect("/usr/local/bin/astap-cli", 10, 1);
     ASSERT_TRUE(
         solver->solveImage(testFitsFile, "10.0", "20.0", 0.5, false, 10, 0));
 }
 
 TEST_F(AstapSolverTest, SolveImageFailure) {
-    solver->connect("/usr/local/bin/astap-cli");
+    solver->connect("/usr/local/bin/astap-cli", 10, 1);
     ASSERT_FALSE(solver->solveImage("non_existent_file.fits", "10.0", "20.0",
                                     0.5, false, 10, 0));
 }
 
 TEST_F(AstapSolverTest, ReadSolveResult) {
-    solver->connect("/usr/local/bin/astap-cli");
+    solver->connect("/usr/local/bin/astap-cli", 10, 1);
     solver->solveImage(testFitsFile, "10.0", "20.0", 0.5, false, 10, 0);
     auto result = solver->getSolveResult(testFitsFile);
     ASSERT_EQ(result.ra, "10.0");

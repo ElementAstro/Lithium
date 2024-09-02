@@ -139,6 +139,28 @@ public:
             m_enumMaps_.at(enumName));
     }
 
+    template <typename EnumType>
+    auto enumToString(EnumType value,
+                      const std::string& enumName) -> std::string {
+        const auto& enumMap = getEnumMap<EnumType>(enumName);
+        for (const auto& [key, enumValue] : enumMap) {
+            if (enumValue == value) {
+                return key;
+            }
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum value");
+    }
+
+    template <typename EnumType>
+    EnumType stringToEnum(const std::string& str, const std::string& enumName) {
+        const auto& enumMap = getEnumMap<EnumType>(enumName);
+        auto it = enumMap.find(str);
+        if (it != enumMap.end()) {
+            return it->second;
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum string");
+    }
+
 private:
     std::unordered_map<TypeInfo, ConvertMap> conversions_;
     mutable std::unordered_map<std::string, std::vector<TypeInfo>>
@@ -212,28 +234,6 @@ private:
             return it->second;
         }
         return std::nullopt;
-    }
-
-    template <typename EnumType>
-    auto enumToString(EnumType value,
-                      std::string_view enumName) -> std::string {
-        const auto& enumMap = getEnumMap<EnumType>(enumName);
-        for (const auto& [key, enumValue] : enumMap) {
-            if (enumValue == value) {
-                return key;
-            }
-        }
-        THROW_INVALID_ARGUMENT("Invalid enum value");
-    }
-
-    template <typename EnumType>
-    EnumType stringToEnum(const std::string& str, std::string_view enumName) {
-        const auto& enumMap = getEnumMap<EnumType>(enumName);
-        auto it = enumMap.find(str);
-        if (it != enumMap.end()) {
-            return it->second;
-        }
-        THROW_INVALID_ARGUMENT("Invalid enum string");
     }
 };
 

@@ -36,6 +36,10 @@ class MessageBus {
 public:
     using Token = std::size_t;
 
+    static auto createShared() -> std::shared_ptr<MessageBus> {
+        return std::make_shared<MessageBus>();
+    }
+
     // 发布消息（可延迟）
     template <typename MessageType>
     void publish(

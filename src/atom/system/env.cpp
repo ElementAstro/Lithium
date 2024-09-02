@@ -305,9 +305,10 @@ auto Env::listVariables() -> std::vector<std::string> {
     }
 #else
     std::vector<std::string> vars;
-    extern char **environ;
-    for (char **env = environ; *env != nullptr; ++env) {
+    char **env = environ;
+    while (*env != nullptr) {
         vars.emplace_back(*env);
+        ++env;
     }
 #endif
     return vars;

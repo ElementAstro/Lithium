@@ -13,6 +13,7 @@ project(atom-utils C CXX)
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
     convert.cpp
+    error_stack.cpp
     qdatetime.cpp
     qprocess.cpp
     qtimer.cpp
@@ -30,6 +31,7 @@ set(${PROJECT_NAME}_HEADERS
     aes.hpp
     argsview.hpp
     convert.hpp
+    error_stack.hpp
     qdatetime.hpp
     qprocess.hpp
     qtimer.hpp
@@ -45,6 +47,7 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_LIBS
     atom-io
+    atom-error
     loguru
     tinyxml2
     OpenSSL::SSL

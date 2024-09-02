@@ -71,7 +71,7 @@ TEST_F(AstrometrySolverTest, SolveImageSuccess) {
     ASSERT_NEAR(result.fovX, 1.0, 0.1);
     ASSERT_NEAR(result.fovY, 1.0, 0.1);
     ASSERT_NEAR(result.fovAvg, 1.0, 0.1);
-    ASSERT_NEAR(result.rotation, 180.0, 0.1);
+    ASSERT_NEAR(std::stod(result.rotation), 180.0, 0.1);
 }
 
 TEST_F(AstrometrySolverTest, SolveImageFailure) {
@@ -87,5 +87,5 @@ TEST_F(AstrometrySolverTest, ReadSolveResult) {
     ASSERT_NEAR(result.fovX, 1.0, 0.1);
     ASSERT_NEAR(result.fovY, 1.0, 0.1);
     ASSERT_NEAR(result.fovAvg, 1.0, 0.1);
-    ASSERT_NEAR(result.rotation, 180.0, 0.1);
+    ASSERT_NEAR(std::stod(result.rotation), 180.0, 0.1);
 }

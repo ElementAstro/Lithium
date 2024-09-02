@@ -31,10 +31,10 @@ endfunction()
 # Add source files for each module and create targets
 
 # Camera module
-set(CAMERA_SOURCES
-    camera.cpp
-)
-create_indi_module(lithium.client.camera_indi "${CAMERA_SOURCES}")
+#set(CAMERA_SOURCES
+#    camera.cpp
+#)
+#create_indi_module(lithium.client.camera_indi "${CAMERA_SOURCES}")
 
 # Telescope module
 set(TELESCOPE_SOURCES

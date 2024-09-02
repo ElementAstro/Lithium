@@ -1,59 +1,19 @@
-#include <iostream>
-#include <string>
-#include <regex>
-#include <boost/asio.hpp>
-#include <future>
+#include "cdc.hpp"
+
 #include <fmt/core.h>
-#include <nlohmann/json.hpp>
+#include <asio.hpp>
+#include <iostream>
+#include <regex>
 
-using namespace boost::asio;
-using tcp = ip::tcp;
+using tcp = asio::ip::tcp;
 
-class CartesDuCiel {
-private:
-    std::string address;
-    int port;
-    io_context io_context_;
-    tcp::socket socket_{io_context_};
-
-    std::string sendQuery(const std::string& command) {
-        try {
-            tcp::resolver resolver(io_context_);
-            tcp::resolver::results_type endpoints = resolver.resolve(address, std::to_string(port));
-            connect(socket_, endpoints);
-
-            write(socket_, buffer(command));
-
-            boost::asio::streambuf response_buf;
-            read_until(socket_, response_buf, "\r\n");
-            std::istream response_stream(&response_buf);
-            std::string response;
-            std::getline(response_stream, response);
-            return response;
-        } catch (const std::exception& e) {
-            fmt::print("Error: {}\n", e.what());
-            return "";
-        }
-    }
-
-    std::optional<std::pair<double, double>> extractCoordinates(const std::string& response) {
-        std::regex ra_pattern(R"(([0-9]{1,2})(h|:)([0-9]{1,2})(m|:)?([0-9]{1,2}(\.[0-9]+)?)?(s|:))");
-        std::regex dec_pattern(R"([\+|-]([0-9]{1,2})(d|:)([0-9]{1,2})(m|:)?([0-9]{1,2}(\.[0-9]+)?)?(s|:))");
-
-        std::smatch ra_match, dec_match;
-        if (std::regex_search(response, ra_match, ra_pattern) && std::regex_search(response, dec_match, dec_pattern)) {
-            double ra = std::stod(ra_match.str());
-            double dec = std::stod(dec_match.str());
-            return std::make_pair(ra, dec);
-        } else {
-            return std::nullopt;
-        }
-    }
-
+class CartesDuCiel::Impl {
 public:
-    CartesDuCiel(const std::string& addr, int prt) : address(addr), port(prt), socket_(io_context_) {}
+    Impl(const std::string& addr, int prt)
+        : address_(addr), port_(prt), socket_(ioContext_) {}
 
-    std::optional<std::pair<std::string, std::pair<double, double>>> getTarget() {
+    std::optional<std::pair<std::string, std::pair<double, double>>>
+    getTarget() {
         try {
             std::string response = sendQuery("GETSELECTEDOBJECT\r\n");
             if (response.starts_with("OK!")) {
@@ -69,15 +29,14 @@ public:
         }
     }
 
-    std::optional<std::pair<std::string, std::pair<double, double>>> getView() {
+    std::optional<std::pair<double, double>> getSite() {
         try {
-            std::string ra_response = sendQuery("GETRA F\r\n");
-            std::string dec_response = sendQuery("GETDEC F\r\n");
-
-            if (ra_response.starts_with("OK!") && dec_response.starts_with("OK!")) {
-                double ra = std::stod(ra_response.substr(3));
-                double dec = std::stod(dec_response.substr(3));
-                return std::make_pair("DeepSkyObject", std::make_pair(ra, dec));
+            std::string response = sendQuery("GETOBS\r\n");
+            if (response.starts_with("OK!")) {
+                auto latLong = extractLatLong(response);
+                if (latLong) {
+                    return latLong;
+                }
             }
             return std::nullopt;
         } catch (const std::exception& e) {
@@ -86,20 +45,76 @@ public:
         }
     }
 
-    std::optional<std::pair<double, double>> getSite() {
-        try {
-            std::string response = sendQuery("GETOBS\r\n");
-            if (response.starts_with("OK!")) {
-                // Example parsing; adjust regex for real-world format
-                std::regex lat_pattern(R"((?<=LAT:)[\+|-]([0-9]{1,2}):([0-9]{1,2})?)");
-                std::regex lon_pattern(R"((?<=LON:)[\+|-]([0-9]{1,3}):([0-9]{1,2})?)");
+private:
+    std::string address_;
+    int port_;
+    asio::io_context ioContext_;
+    tcp::socket socket_;
 
-                std::smatch lat_match, lon_match;
-                if (std::regex_search(response, lat_match, lat_pattern) && std::regex_search(response, lon_match, lon_pattern)) {
-                    double latitude = std::stod(lat_match.str());
-                    double longitude = std::stod(lon_match.str());
-                    return std::make_pair(latitude, longitude);
-                }
+    std::string sendQuery(const std::string& command) {
+        try {
+            tcp::resolver resolver(ioContext_);
+            auto endpoints = resolver.resolve(address_, std::to_string(port_));
+            asio::connect(socket_, endpoints);
+
+            asio::write(socket_, asio::buffer(command));
+
+            asio::streambuf responseBuf;
+            asio::read_until(socket_, responseBuf, "\r\n");
+            std::istream responseStream(&responseBuf);
+            std::string response;
+            std::getline(responseStream, response);
+            return response;
+        } catch (const std::exception& e) {
+            fmt::print("Error: {}\n", e.what());
+            return "";
+        }
+    }
+
+    std::optional<std::pair<double, double>> extractCoordinates(
+        const std::string& response) {
+        std::regex raPattern(
+            R"(([0-9]{1,2})(h|:)([0-9]{1,2})(m|:)?([0-9]{1,2}(\.[0-9]+)?)?(s|:))");
+        std::regex decPattern(
+            R"([\+|-]([0-9]{1,2})(d|:)([0-9]{1,2})(m|:)?([0-9]{1,2}(\.[0-9]+)?)?(s|:))");
+
+        std::smatch raMatch, decMatch;
+        if (std::regex_search(response, raMatch, raPattern) &&
+            std::regex_search(response, decMatch, decPattern)) {
+            double ra = std::stod(raMatch.str());
+            double dec = std::stod(decMatch.str());
+            return std::make_pair(ra, dec);
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    std::optional<std::pair<double, double>> extractLatLong(
+        const std::string& response) {
+        std::regex latPattern(R"((?<=LAT:)[\+|-]([0-9]{1,2}):([0-9]{1,2})?)");
+        std::regex lonPattern(R"((?<=LON:)[\+|-]([0-9]{1,3}):([0-9]{1,2})?)");
+
+        std::smatch latMatch, lonMatch;
+        if (std::regex_search(response, latMatch, latPattern) &&
+            std::regex_search(response, lonMatch, lonPattern)) {
+            double latitude = std::stod(latMatch.str());
+            double longitude = std::stod(lonMatch.str());
+            return std::make_pair(latitude, longitude);
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    std::optional<std::pair<std::string, std::pair<double, double>>> getView() {
+        try {
+            std::string raResponse = sendQuery("GETRA F\r\n");
+            std::string decResponse = sendQuery("GETDEC F\r\n");
+
+            if (raResponse.starts_with("OK!") &&
+                decResponse.starts_with("OK!")) {
+                double ra = std::stod(raResponse.substr(3));
+                double dec = std::stod(decResponse.substr(3));
+                return std::make_pair("DeepSkyObject", std::make_pair(ra, dec));
             }
             return std::nullopt;
         } catch (const std::exception& e) {
@@ -109,22 +124,16 @@ public:
     }
 };
 
-int main() {
-    CartesDuCiel cdc("localhost", 3292);
+CartesDuCiel::CartesDuCiel(const std::string& addr, int prt)
+    : pimpl_(std::make_unique<Impl>(addr, prt)) {}
 
-    auto target = cdc.getTarget();
-    if (target) {
-        fmt::print("Target: {} - RA: {}, Dec: {}\n", target->first, target->second.first, target->second.second);
-    } else {
-        fmt::print("No target selected or error occurred.\n");
-    }
+CartesDuCiel::~CartesDuCiel() = default;
 
-    auto site = cdc.getSite();
-    if (site) {
-        fmt::print("Site - Latitude: {}, Longitude: {}\n", site->first, site->second);
-    } else {
-        fmt::print("Failed to get site information.\n");
-    }
+std::optional<std::pair<std::string, std::pair<double, double>>>
+CartesDuCiel::getTarget() {
+    return pimpl_->getTarget();
+}
 
-    return 0;
+std::optional<std::pair<double, double>> CartesDuCiel::getSite() {
+    return pimpl_->getSite();
 }

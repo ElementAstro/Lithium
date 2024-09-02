@@ -13,7 +13,6 @@ Description: Better Exception Library
 **************************************************/
 
 #include "exception.hpp"
-#include "atom/utils/time.hpp"
 
 #include <chrono>
 #include <cstdio>
@@ -28,7 +27,6 @@ namespace atom::error {
 auto Exception::what() const noexcept -> const char* {
     if (full_message_.empty()) {
         std::ostringstream oss;
-        oss << "[" << utils::getChinaTimestampString() << "] ";
         oss << "Exception at " << file_ << ":" << line_ << " in " << func_
             << "()";
         oss << " (thread " << thread_id_ << ")";

@@ -22,7 +22,7 @@ public:
 
     bool connect(const std::string& host = "localhost", const std::string& port = DEFAULT_GPSD_PORT);
     bool disconnect();
-    
+
     std::optional<GPSData> updateGPS();
 
     // Getter methods for GPS data
@@ -36,6 +36,6 @@ public:
 private:
     std::unique_ptr<gpsmm> gps;
     GPSData latestData;
-    
+
     double calculatePolarisHourAngle(const gps_data_t* gpsData);
 };

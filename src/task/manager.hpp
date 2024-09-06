@@ -21,6 +21,7 @@
 #ifndef LITHIUM_TASK_INTERPRETER_HPP
 #define LITHIUM_TASK_INTERPRETER_HPP
 
+#include <coroutine>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -36,6 +37,56 @@ enum class VariableType { NUMBER, STRING, BOOLEAN, JSON, UNKNOWN };
 
 auto determineType(const json& value) -> VariableType;
 
+class TaskCoroutine {
+public:
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    TaskCoroutine(handle_type h) : coro(h) {}
+    TaskCoroutine(const TaskCoroutine&) = delete;
+    TaskCoroutine& operator=(const TaskCoroutine&) = delete;
+    TaskCoroutine(TaskCoroutine&& other) noexcept : coro(other.coro) {
+        other.coro = nullptr;
+    }
+    TaskCoroutine& operator=(TaskCoroutine&& other) noexcept {
+        if (this != &other) {
+            if (coro)
+                coro.destroy();
+            coro = other.coro;
+            other.coro = nullptr;
+        }
+        return *this;
+    }
+    ~TaskCoroutine() {
+        if (coro)
+            coro.destroy();
+    }
+
+    bool resume() {
+        if (!coro || coro.done())
+            return false;
+        coro.resume();
+        return !coro.done();
+    }
+
+    bool done() const { return !coro || coro.done(); }
+
+    handle_type handle() const { return coro; }
+
+    struct promise_type {
+        TaskCoroutine get_return_object() {
+            return TaskCoroutine(handle_type::from_promise(*this));
+        }
+        std::suspend_never initial_suspend() { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+        void return_void() {}
+        void unhandled_exception() { std::terminate(); }
+    };
+
+private:
+    handle_type coro;
+};
+
 class TaskInterpreterImpl;
 
 class TaskInterpreter {
@@ -43,13 +94,18 @@ public:
     TaskInterpreter();
     ~TaskInterpreter();
 
+    TaskInterpreter(const TaskInterpreter&) = delete;
+    auto operator=(const TaskInterpreter&) -> TaskInterpreter& = delete;
+    TaskInterpreter(TaskInterpreter&&) noexcept = default;
+    auto operator=(TaskInterpreter&&) noexcept -> TaskInterpreter& = default;
+
     static auto createShared() -> std::shared_ptr<TaskInterpreter>;
 
     void loadScript(const std::string& name, const json& script);
     void unloadScript(const std::string& name);
 
-    [[nodiscard]] auto hasScript(const std::string& name) const -> bool;
-    [[nodiscard]] auto getScript(const std::string& name) const
+    [[nodiscard]] auto hasScript(const std::string& name) const noexcept -> bool;
+    [[nodiscard]] auto getScript(const std::string& name) const noexcept
         -> std::optional<json>;
 
     void registerFunction(const std::string& name,
@@ -116,15 +172,36 @@ private:
     void executeBroadcastEvent(const json& step);
     void executeListenEvent(const json& step, size_t& idx);
 
+    auto executeCoroutine(const json& step) -> TaskCoroutine;
+    void resumeCoroutine(const std::string& coroutineName);
+    void executeTransaction(const json& step, size_t& idx, const json& script);
+    void executeRollback(const json& step);
+    void executeCommit(const json& step);
+    void executeAtomicOperation(const json& step);
+
     auto evaluate(const json& value) -> json;
     auto evaluateExpression(const std::string& expr) -> json;
-    auto precedence(char op) -> int;
+    auto precedence(char op) noexcept -> int;
 
     void throwCustomError(const std::string& name);
     void handleException(const std::string& scriptName,
                          const std::exception& e);
 
     std::unique_ptr<TaskInterpreterImpl> impl_;
+
+    template <typename T>
+    auto getAtomicPtr(std::atomic<std::shared_ptr<T>>& atomic_ptr) const {
+        return std::atomic_load(&atomic_ptr);
+    }
+
+    template <typename T>
+    void updateAtomicPtr(std::atomic<std::shared_ptr<T>>& atomic_ptr,
+                         const std::function<void(T&)>& update_func) {
+        auto currentPtr = getAtomicPtr(atomic_ptr);
+        auto newPtr = std::make_shared<T>(*currentPtr);
+        update_func(*newPtr);
+        std::atomic_store(&atomic_ptr, newPtr);
+    }
 };
 
 }  // namespace lithium

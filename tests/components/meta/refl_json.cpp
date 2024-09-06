@@ -45,7 +45,7 @@ TEST_F(ReflectableTest, FromJsonSuccess) {
 TEST_F(ReflectableTest, FromJsonMissingRequiredField) {
     json j = R"({"age": 25})"_json;  // Missing "name" field
 
-    EXPECT_THROW(reflectable.from_json(j), atom::error::InvalidArgument);
+    EXPECT_THROW(reflectable.from_json(j), atom::error::MissingArgument);
 }
 
 // Test for validation failure

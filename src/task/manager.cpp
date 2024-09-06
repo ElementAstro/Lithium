@@ -31,6 +31,7 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <ranges>
 #include <shared_mutex>
 #include <stack>
 #include <string>
@@ -105,6 +106,9 @@ public:
 
     std::shared_ptr<TaskGenerator> taskGenerator_;
     std::shared_ptr<atom::async::ThreadPool<>> threadPool_;
+
+    std::unordered_map<std::string, std::coroutine_handle<>> coroutines;
+    std::vector<std::function<void()>> transactionRollbackActions;
 };
 
 TaskInterpreter::TaskInterpreter()
@@ -138,9 +142,8 @@ auto TaskInterpreter::createShared() -> std::shared_ptr<TaskInterpreter> {
 }
 
 void TaskInterpreter::loadScript(const std::string& name, const json& script) {
-#if ENABLE_DEBUG
     LOG_F(INFO, "Loading script: {} with {}", name, script.dump());
-#endif
+
     std::unique_lock lock(impl_->mtx_);
     impl_->scripts_[name] = script.contains("steps") ? script["steps"] : script;
     lock.unlock();
@@ -157,7 +160,7 @@ void TaskInterpreter::loadScript(const std::string& name, const json& script) {
                   header.contains("author")
                       ? header["author"].get<std::string>()
                       : "unknown");
-            // 存储头部信息
+
             impl_->scriptHeaders_[name] = header;
             if (header.contains("auto_execute") &&
                 header["auto_execute"].is_boolean() &&
@@ -178,12 +181,13 @@ void TaskInterpreter::unloadScript(const std::string& name) {
     impl_->scripts_.erase(name);
 }
 
-auto TaskInterpreter::hasScript(const std::string& name) const -> bool {
+auto TaskInterpreter::hasScript(const std::string& name) const noexcept
+    -> bool {
     std::shared_lock lock(impl_->mtx_);
     return impl_->scripts_.contains(name);
 }
 
-auto TaskInterpreter::getScript(const std::string& name) const
+auto TaskInterpreter::getScript(const std::string& name) const noexcept
     -> std::optional<json> {
     std::shared_lock lock(impl_->mtx_);
     if (impl_->scripts_.contains(name)) {
@@ -267,11 +271,13 @@ auto TaskInterpreter::getVariable(const std::string& name) const -> json {
 void TaskInterpreter::parseLabels(const json& script) {
     std::unique_lock lock(impl_->mtx_);
     LOG_F(INFO, "Parsing labels...");
-    for (size_t i = 0; i < script.size(); ++i) {
-        if (script[i].contains("label")) {
-            impl_->labels_[script[i]["label"]] = i;
-        }
-    }
+    std::for_each(script.begin(), script.end(),
+                  [this, index = 0](const auto& item) mutable {
+                      if (item.contains("label")) {
+                          impl_->labels_[item["label"]] = index;
+                      }
+                      ++index;
+                  });
 }
 
 void TaskInterpreter::execute(const std::string& scriptName) {
@@ -295,10 +301,19 @@ void TaskInterpreter::execute(const std::string& scriptName) {
 
             size_t i = 0;
             while (i < script.size() && !impl_->stopRequested_) {
-                if (!executeStep(script[i], i, script)) {
+                const auto& step = script[i];
+                if (step.contains("type") && step["type"] == "coroutine") {
+                    if (!step.contains("name") || !step["name"].is_string()) {
+                        throw std::runtime_error(
+                            "Coroutine step must have a 'name' field");
+                    }
+                    std::string coroutineName = step["name"];
+                    auto handle = executeCoroutine(step).handle();
+                    impl_->coroutines[coroutineName] = handle;
+                } else if (!executeStep(step, i, script)) {
                     break;
                 }
-                i++;
+                ++i;
             }
         } catch (...) {
             exPtr = std::current_exception();
@@ -1182,13 +1197,14 @@ void TaskInterpreter::executeContinue(const json& /*step*/, size_t& idx) {
     idx = std::numeric_limits<size_t>::max() - 1;  // Skip to the next iteration
 }
 
-void TaskInterpreter::executeSteps(const json& steps, size_t& idx,
-                                   const json& script) {
-    for (const auto& step : steps) {
-        if (!executeStep(step, idx, script)) {
-            break;
-        }
-    }
+void TaskInterpreter::executeSteps(const nlohmann::json& steps, size_t& idx,
+                                   const nlohmann::json& script) {
+    auto stepView =
+        steps | std::views::take_while([this, &idx, &script](const auto& step) {
+            return !impl_->stopRequested_ && executeStep(step, idx, script);
+        });
+
+    std::ranges::for_each(stepView, [](const auto&) {});
 }
 
 void TaskInterpreter::executeMessage(const json& step) {
@@ -1405,25 +1421,126 @@ void TaskInterpreter::executeRetry(const json& step, size_t& idx,
     }
 }
 
+void TaskInterpreter::executeTransaction(const json& step, size_t& idx,
+                                         const json& script) {
+    impl_->transactionRollbackActions.clear();
+    try {
+        executeSteps(step["steps"], idx, script);
+        executeCommit(step);
+    } catch (...) {
+        executeRollback(step);
+        throw;
+    }
+}
+
+void TaskInterpreter::executeRollback(const json& step) {
+    for (auto& transactionRollbackAction :
+         std::ranges::reverse_view(impl_->transactionRollbackActions)) {
+        transactionRollbackAction();
+    }
+    impl_->transactionRollbackActions.clear();
+}
+
+void TaskInterpreter::executeCommit(const json& step) {
+    impl_->transactionRollbackActions.clear();
+}
+
+void TaskInterpreter::executeAtomicOperation(const json& step) {
+    std::atomic_flag lock = ATOMIC_FLAG_INIT;
+    while (lock.test_and_set(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+    try {
+        size_t idx = 0;
+        executeSteps(step["steps"], idx, step);
+    } catch (...) {
+        lock.clear(std::memory_order_release);
+        throw;
+    }
+    lock.clear(std::memory_order_release);
+}
+
+auto TaskInterpreter::executeCoroutine(const json& step) -> TaskCoroutine {
+    if (!step.contains("steps") || !step["steps"].is_array()) {
+        THROW_MISSING_ARGUMENT("Coroutine step must contain a 'steps' array");
+    }
+
+    for (const auto& subStep : step["steps"]) {
+        if (subStep.contains("type")) {
+            std::string stepType = subStep["type"];
+
+            if (stepType == "async") {
+                // Execute async step
+                auto future =
+                    std::async(std::launch::async, [this, &subStep]() {
+                        size_t idx = 0;
+                        executeStep(subStep, idx, subStep);
+                    });
+
+                // Yield control back to the caller
+                co_await std::suspend_always{};
+
+                // Wait for the async operation to complete
+                future.wait();
+            } else if (stepType == "delay") {
+                if (!subStep.contains("duration") ||
+                    !subStep["duration"].is_number()) {
+                    THROW_MISSING_ARGUMENT(
+                        "Delay step must contain a 'duration' number");
+                }
+
+                int duration = subStep["duration"].get<int>();
+
+                // Start the delay
+                auto start = std::chrono::steady_clock::now();
+
+                // Yield control back to the caller
+                co_await std::suspend_always{};
+
+                // Resume and check if the delay has passed
+                while (std::chrono::steady_clock::now() - start <
+                       std::chrono::milliseconds(duration)) {
+                    co_await std::suspend_always{};
+                }
+            } else {
+                // Execute regular step
+                size_t idx = 0;
+                executeStep(subStep, idx, subStep);
+            }
+        }
+    }
+
+    co_return;
+}
+
+// Helper method to resume a coroutine
+void TaskInterpreter::resumeCoroutine(const std::string& coroutineName) {
+    auto it = impl_->coroutines.find(coroutineName);
+    if (it != impl_->coroutines.end() && !it->second.done()) {
+        it->second.resume();
+    }
+}
+
 auto TaskInterpreter::evaluate(const json& value) -> json {
     if (value.is_string()) {
         std::string valStr = value.get<std::string>();
 
-        // 检查是否是变量
-        if (impl_->variables_.contains(valStr)) {
+        if (impl_->variables_.contains(std::string(valStr))) {
             std::shared_lock lock(impl_->mtx_);
-            return impl_->variables_.at(valStr).second;
+            return impl_->variables_.at(std::string(valStr)).second;
         }
 
-        // 检查是否是表达式
-        if (valStr.find_first_of("+-*/%^!&|<=>") != std::string::npos) {
-            return evaluateExpression(valStr);  // 解析并评估表达式
+        if (std::ranges::any_of(std::array{'+', '-', '*', '/', '%', '^', '!',
+                                           '&', '|', '<', '=', '>'},
+                                [&valStr](char op) {
+                                    return valStr.find(op) !=
+                                           std::string_view::npos;
+                                })) {
+            return evaluateExpression(valStr);
         }
 
-        // 检查是否是 $ 开头的运算符表达式
-        if (valStr.starts_with("$")) {
-            return evaluateExpression(
-                valStr.substr(1));  // 去掉 $ 前缀后评估表达式
+        if (valStr.starts_with('$')) {
+            return evaluateExpression(valStr.substr(1));
         }
     }
 
@@ -1571,10 +1688,33 @@ auto TaskInterpreter::evaluate(const json& value) -> json {
 }
 
 auto TaskInterpreter::evaluateExpression(const std::string& expr) -> json {
-    std::istringstream iss(expr);
+    std::vector<std::string> tokens;
     std::stack<char> operators;
     std::stack<double> operands;
-    std::string token;
+
+    // Tokenize the expression
+    size_t start = 0;
+    for (size_t i = 0; i < expr.size(); ++i) {
+        if (std::isspace(expr[i])) {
+            if (start != i) {
+                tokens.push_back(expr.substr(start, i - start));
+            }
+            start = i + 1;
+        } else if (expr[i] == '(' || expr[i] == ')' || expr[i] == '+' ||
+                   expr[i] == '-' || expr[i] == '*' || expr[i] == '/' ||
+                   expr[i] == '%' || expr[i] == '^' || expr[i] == '<' ||
+                   expr[i] == '>' || expr[i] == '=' || expr[i] == '!' ||
+                   expr[i] == '&' || expr[i] == '|') {
+            if (start != i) {
+                tokens.push_back(expr.substr(start, i - start));
+            }
+            tokens.push_back(expr.substr(i, 1));
+            start = i + 1;
+        }
+    }
+    if (start < expr.size()) {
+        tokens.push_back(expr.substr(start));
+    }
 
     auto applyOperator = [](char op, double a, double b) -> double {
         switch (op) {
@@ -1585,17 +1725,13 @@ auto TaskInterpreter::evaluateExpression(const std::string& expr) -> json {
             case '*':
                 return a * b;
             case '/':
-                if (b != 0) {
-                    return a / b;
-                } else {
-                    THROW_INVALID_ARGUMENT("Division by zero.");
-                }
+                if (b == 0)
+                    throw std::runtime_error("Division by zero");
+                return a / b;
             case '%':
-                if (b != 0) {
-                    return std::fmod(a, b);
-                } else {
-                    THROW_INVALID_ARGUMENT("Modulo by zero.");
-                }
+                if (b == 0)
+                    throw std::runtime_error("Modulo by zero");
+                return std::fmod(a, b);
             case '^':
                 return std::pow(a, b);
             case '<':
@@ -1613,30 +1749,21 @@ auto TaskInterpreter::evaluateExpression(const std::string& expr) -> json {
                 return static_cast<double>(static_cast<bool>(a) ||
                                            static_cast<bool>(b));
             default:
-                THROW_RUNTIME_ERROR("Unknown operator.");
+                throw std::runtime_error("Unknown operator");
         }
     };
 
-    while (iss >> token) {
-        // 处理数字和变量
-        if ((std::isdigit(token[0]) != 0) || token[0] == '.') {
-            operands.push(std::stod(token));
-        } else if (impl_->variables_.contains(token)) {
-            operands.push(impl_->variables_.at(token).second.get<double>());
-        } else if (token == "+" || token == "-" || token == "*" ||
-                   token == "/" || token == "%" || token == "^" ||
-                   token == "<" || token == ">" || token == "==" ||
-                   token == "!=" || token == "&&" || token == "||") {
-            // 处理操作符
+    for (const auto& token : tokens) {
+        if (token.size() == 1 &&
+            std::string("+-*/%^<>=!&|").find(token[0]) != std::string::npos) {
             while (!operators.empty() &&
                    precedence(operators.top()) >= precedence(token[0])) {
                 double b = operands.top();
                 operands.pop();
                 double a = operands.top();
                 operands.pop();
-                char op = operators.top();
+                operands.push(applyOperator(operators.top(), a, b));
                 operators.pop();
-                operands.push(applyOperator(op, a, b));
             }
             operators.push(token[0]);
         } else if (token == "(") {
@@ -1647,38 +1774,57 @@ auto TaskInterpreter::evaluateExpression(const std::string& expr) -> json {
                 operands.pop();
                 double a = operands.top();
                 operands.pop();
-                char op = operators.top();
+                operands.push(applyOperator(operators.top(), a, b));
                 operators.pop();
-                operands.push(applyOperator(op, a, b));
             }
-            if (operators.empty() || operators.top() != '(') {
-                THROW_INVALID_ARGUMENT("Mismatched parentheses.");
+            if (operators.empty()) {
+                throw std::runtime_error("Mismatched parentheses");
             }
-            operators.pop();  // 移除左括号
+            operators.pop();  // Remove '('
         } else {
-            THROW_INVALID_ARGUMENT("Invalid token in expression: " + token);
+            // Parse number or variable
+            if (token[0] == '$') {
+                // Variable
+                std::string varName(token.substr(1));
+                std::shared_lock lock(impl_->mtx_);
+                if (impl_->variables_.contains(varName)) {
+                    operands.push(
+                        impl_->variables_.at(varName).second.get<double>());
+                } else {
+                    throw std::runtime_error("Undefined variable: " + varName);
+                }
+            } else {
+                // Number
+                double value;
+                auto [ptr, ec] = std::from_chars(
+                    token.data(), token.data() + token.size(), value);
+                if (ec == std::errc()) {
+                    operands.push(value);
+                } else {
+                    throw std::runtime_error("Invalid token: " +
+                                             std::string(token));
+                }
+            }
         }
     }
 
-    // 处理剩余操作符
     while (!operators.empty()) {
         double b = operands.top();
         operands.pop();
         double a = operands.top();
         operands.pop();
-        char op = operators.top();
+        operands.push(applyOperator(operators.top(), a, b));
         operators.pop();
-        operands.push(applyOperator(op, a, b));
     }
 
     if (operands.size() != 1) {
-        THROW_INVALID_ARGUMENT("Invalid expression: " + expr);
+        throw std::runtime_error("Invalid expression");
     }
 
     return operands.top();
 }
 
-auto TaskInterpreter::precedence(char op) -> int {
+auto TaskInterpreter::precedence(char op) noexcept -> int {
     switch (op) {
         case '+':
         case '-':

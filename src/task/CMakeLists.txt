@@ -15,7 +15,6 @@ set(PROJECT_SOURCES
     generator.cpp
     loader.cpp
     manager.cpp
-    sequencer.cpp
     singlepool.cpp
     task.cpp
 )
@@ -26,7 +25,6 @@ set(PROJECT_HEADERS
     generator.hpp
     loader.hpp
     manager.hpp
-    sequencer.hpp
     singlepool.hpp
     task.hpp
 )

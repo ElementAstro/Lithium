@@ -14,11 +14,11 @@ std::vector<double> applyNoiseReduction(const std::vector<double>& data) {
 
 bool isOutlier(double value, const std::vector<double>& data) {
     if (data.size() < 2) return false;
-    
+
     double mean = std::accumulate(data.begin(), data.end(), 0.0) / data.size();
     double sq_sum = std::inner_product(data.begin(), data.end(), data.begin(), 0.0);
     double stdev = std::sqrt(sq_sum / data.size() - mean * mean);
-    
+
     return std::abs(value - mean) > 3 * stdev;
 }
 

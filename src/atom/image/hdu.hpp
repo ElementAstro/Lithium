@@ -64,4 +64,3 @@ private:
     template <typename T>
     void initializeData();
 };
-

@@ -19,7 +19,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str = Depends(get_c
     try:
         # Start a background task for handling heartbeats
         heartbeat_task = asyncio.create_task(handle_heartbeat(client_id, websocket))
-        
+
         while True:
             data = await websocket.receive_text()
             await process_message(client_id, data)

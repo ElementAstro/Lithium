@@ -14,17 +14,38 @@
 
 namespace atom::meta {
 
+/*!
+ * \brief A struct that can be converted to any type.
+ */
 struct Any {
+    /*!
+     * \brief Constexpr conversion operator to any type.
+     * \tparam T The type to convert to.
+     * \return An instance of type T.
+     */
     template <typename T>
     consteval operator T() const noexcept;
 };
 
+/*!
+ * \brief Checks if a type T is constructible with braces.
+ * \tparam T The type to check.
+ * \tparam I The index sequence.
+ * \param[in] std::index_sequence<I...> The index sequence.
+ * \return True if T is constructible with braces, false otherwise.
+ */
 template <typename T, std::size_t... I>
 consteval auto isBracesConstructible(std::index_sequence<I...>) noexcept
     -> bool {
     return requires { T{((void)I, std::declval<Any>())...}; };
 }
 
+/*!
+ * \brief Recursively counts the number of fields in a type T.
+ * \tparam T The type to count fields in.
+ * \tparam N The current count of fields.
+ * \return The number of fields in type T.
+ */
 template <typename T, std::size_t N = 0>
 consteval auto fieldCount() noexcept -> std::size_t {
     if constexpr (!isBracesConstructible<T>(
@@ -35,9 +56,18 @@ consteval auto fieldCount() noexcept -> std::size_t {
     }
 }
 
+/*!
+ * \brief A template struct to hold type information.
+ * \tparam T The type to hold information for.
+ */
 template <typename T>
 struct TypeInfo;
 
+/*!
+ * \brief Gets the number of fields in a type T.
+ * \tparam T The type to get the field count for.
+ * \return The number of fields in type T.
+ */
 template <typename T>
 consteval auto fieldCountOf() noexcept -> std::size_t {
     if constexpr (std::is_aggregate_v<T>) {
@@ -51,7 +81,12 @@ consteval auto fieldCountOf() noexcept -> std::size_t {
     }
 }
 
-// Overload for arrays
+/*!
+ * \brief Gets the number of elements in an array.
+ * \tparam T The type of the array elements.
+ * \tparam N The number of elements in the array.
+ * \return The number of elements in the array.
+ */
 template <typename T, std::size_t N>
 consteval auto fieldCountOf() noexcept -> std::size_t {
     return N;

@@ -1,6 +1,7 @@
 #include "version.hpp"
 
 #include <charconv>
+#include <format>
 
 #include "atom/error/exception.hpp"
 
@@ -50,6 +51,18 @@ constexpr auto Version::parse(std::string_view versionStr) -> Version {
                             : "";
 
     return {major, minor, patch, prerelease, build};
+}
+
+auto Version::toString() const -> std::string {
+    auto result = std::format("{}.{}.{}", major, minor, patch);
+    if (!prerelease.empty()) {
+        result += "-" + prerelease;
+    }
+    if (!build.empty()) {
+        result += "+" + build;
+    }
+
+    return result;
 }
 
 constexpr auto Version::operator<(const Version& other) const -> bool {

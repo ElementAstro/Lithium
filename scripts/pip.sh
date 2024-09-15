@@ -30,6 +30,9 @@ update_python_packages() {
 
     echo "Updated packages: ${updated_packages[*]}"
     echo "Failed packages: ${failed_packages[*]}"
+
+    # Return updated and failed packages as a string
+    echo "${updated_packages[*]}|${failed_packages[*]}"
 }
 
 # Function to generate update report
@@ -94,9 +97,9 @@ done
 update_result=$(update_python_packages "${EXCLUDED_PACKAGES[@]}")
 
 # Extract updated and failed packages from the result
-IFS=$'\n' read -rd '' -a lines <<< "$update_result"
-updated_packages=($(echo "${lines[0]}" | cut -d ':' -f2))
-failed_packages=($(echo "${lines[1]}" | cut -d ':' -f2))
+IFS='|' read -r updated_str failed_str <<< "$update_result"
+IFS=' ' read -r -a updated_packages <<< "$updated_str"
+IFS=' ' read -r -a failed_packages <<< "$failed_str"
 
 echo "Update completed."
 echo "Total packages updated: ${#updated_packages[@]}"

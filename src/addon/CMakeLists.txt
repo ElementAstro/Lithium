@@ -13,7 +13,9 @@ project(lithium-addons VERSION 1.0.0 LANGUAGES C CXX)
 # Author: Max Qian
 # License: GPL3
 
+if (NOT MINGW OR NOT WIN32)
 find_package(Seccomp REQUIRED)
+endif()
 
 # Project sources
 set(PROJECT_SOURCES

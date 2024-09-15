@@ -1,8 +1,11 @@
+#ifndef ATOM_TYPE_RTYPE_HPP
+#define ATOM_TYPE_RTYPE_HPP
+
 #include <functional>
 #include <type_traits>
 
-#include "atom/function/concept.hpp"
 #include "atom/error/exception.hpp"
+#include "atom/function/concept.hpp"
 #include "rjson.hpp"
 #include "ryaml.hpp"
 
@@ -58,39 +61,25 @@ struct Reflectable {
                          typename std::decay_t<decltype(field)>::member_type;
 
                      if (it != j.end()) {
-                         if constexpr (std::is_same_v<MemberType,
-                                                      std::string>) {
+                         if constexpr (String<MemberType> || Char<MemberType>) {
                              obj.*(field.member) = it->second.as_string();
-                         } else if constexpr (std::is_same_v<MemberType, int>) {
+                         } else if constexpr (Number<MemberType>) {
                              obj.*(field.member) =
                                  static_cast<int>(it->second.as_number());
                          } else if constexpr (std::is_same_v<MemberType,
-                                                             double>) {
-                             obj.*(field.member) = it->second.as_number();
-                         } else if constexpr (std::is_same_v<MemberType,
                                                              bool>) {
                              obj.*(field.member) = it->second.as_bool();
-                         } else if constexpr (std::is_same_v<
-                                                  MemberType,
-                                                  std::vector<std::string>>) {
+                         } else if constexpr (StringContainer<MemberType>) {
                              for (const auto& item : it->second.as_array()) {
                                  (obj.*(field.member))
                                      .push_back(item.as_string());
                              }
-                         } else if constexpr (std::is_same_v<
-                                                  MemberType,
-                                                  std::vector<int>>) {
+                         } else if constexpr (NumberContainer<MemberType>) {
                              for (const auto& item : it->second.as_array()) {
                                  (obj.*(field.member))
                                      .push_back(
-                                         static_cast<int>(item.as_number()));
-                             }
-                         } else if constexpr (std::is_same_v<
-                                                  MemberType,
-                                                  std::vector<double>>) {
-                             for (const auto& item : it->second.as_array()) {
-                                 (obj.*(field.member))
-                                     .push_back(item.as_number());
+                                         static_cast<MemberType::value_type>(
+                                             item.as_number()));
                              }
                          } else if constexpr (std::is_class_v<MemberType>) {
                              // 处理复杂对象反射
@@ -113,9 +102,8 @@ struct Reflectable {
                          if (!field.required) {
                              obj.*(field.member) = field.default_value;
                          } else {
-                             THROW_INVALID_ARGUMENT(
-                                 "Missing required field: " +
-                                 std::string(field.name));
+                             THROW_INVALID_ARGUMENT("Missing required field: " +
+                                                    std::string(field.name));
                          }
                      }
                  }()),
@@ -132,30 +120,24 @@ struct Reflectable {
                 (([&] {
                      using MemberType =
                          typename std::decay_t<decltype(field)>::member_type;
-                     if constexpr (std::is_same_v<MemberType, std::string>) {
+                     if constexpr (String<MemberType> || Char<MemberType>) {
                          j[field.name] = JsonValue(obj.*(field.member));
-                     } else if constexpr (std::is_same_v<MemberType, int> ||
-                                          std::is_same_v<MemberType, double>) {
+                     } else if constexpr (Number<MemberType>) {
                          j[field.name] = JsonValue(
-                             static_cast<double>(obj.*(field.member)));
+                             static_cast<MemberType>(obj.*(field.member)));
                      } else if constexpr (std::is_same_v<MemberType, bool>) {
                          j[field.name] = JsonValue(obj.*(field.member));
-                     } else if constexpr (std::is_same_v<
-                                              MemberType,
-                                              std::vector<std::string>>) {
+                     } else if constexpr (StringContainer<MemberType>) {
                          JsonArray arr;
                          for (const auto& item : obj.*(field.member)) {
                              arr.push_back(JsonValue(item));
                          }
                          j[field.name] = JsonValue(arr);
-                     } else if constexpr (std::is_same_v<MemberType,
-                                                         std::vector<int>> ||
-                                          std::is_same_v<MemberType,
-                                                         std::vector<double>>) {
+                     } else if constexpr (NumberContainer<MemberType>) {
                          JsonArray arr;
                          for (const auto& item : obj.*(field.member)) {
-                             arr.push_back(
-                                 JsonValue(static_cast<double>(item)));
+                             arr.push_back(JsonValue(
+                                 static_cast<MemberType::value_type>(item)));
                          }
                          j[field.name] = JsonValue(arr);
                      } else if constexpr (std::is_class_v<MemberType>) {
@@ -163,9 +145,8 @@ struct Reflectable {
                          j[field.name] = JsonValue(
                              field.reflect_type.to_json(obj.*(field.member)));
                      } else {
-                         THROW_INVALID_ARGUMENT(
-                             "Unsupported type for field: " +
-                             std::string(field.name));
+                         THROW_INVALID_ARGUMENT("Unsupported type for field: " +
+                                                std::string(field.name));
                      }
                  }()),
                  ...);
@@ -184,8 +165,7 @@ struct Reflectable {
                          typename std::decay_t<decltype(field)>::member_type;
 
                      if (it != y.end()) {
-                         if constexpr (std::is_same_v<MemberType,
-                                                      std::string>) {
+                         if constexpr (String<MemberType> || Char<MemberType>) {
                              obj.*(field.member) = it->second.as_string();
                          } else if constexpr (Number<MemberType>) {
                              obj.*(field.member) =
@@ -193,7 +173,7 @@ struct Reflectable {
                          } else if constexpr (std::is_same_v<MemberType,
                                                              bool>) {
                              obj.*(field.member) = it->second.as_bool();
-                         } else if constexpr (String<MemberType>) {
+                         } else if constexpr (StringContainer<MemberType>) {
                              for (const auto& item : it->second.as_array()) {
                                  (obj.*(field.member))
                                      .push_back(item.as_string());
@@ -264,9 +244,8 @@ struct Reflectable {
                          if (!field.required) {
                              obj.*(field.member) = field.default_value;
                          } else {
-                             THROW_INVALID_ARGUMENT(
-                                 "Missing required field: " +
-                                 std::string(field.name));
+                             THROW_INVALID_ARGUMENT("Missing required field: " +
+                                                    std::string(field.name));
                          }
                      }
                  }()),
@@ -313,9 +292,8 @@ struct Reflectable {
                          y[field.name] = YamlValue(
                              field.reflect_type.to_yaml(obj.*(field.member)));
                      } else {
-                         THROW_INVALID_ARGUMENT(
-                             "Unsupported type for field: " +
-                             std::string(field.name));
+                         THROW_INVALID_ARGUMENT("Unsupported type for field: " +
+                                                std::string(field.name));
                      }
                  }()),
                  ...);
@@ -345,3 +323,5 @@ auto make_field(const char* name, const char* description,
                                                     reflect_type);
 }
 }  // namespace atom::type
+
+#endif

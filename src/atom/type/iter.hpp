@@ -42,9 +42,9 @@ public:
 
     explicit PointerIterator(IteratorT it) : it_(std::move(it)) {}
 
-    value_type operator*() const { return &*it_; }
+    auto operator*() const -> value_type { return &*it_; }
 
-    PointerIterator& operator++() {
+    auto operator++() -> PointerIterator& {
         ++it_;
         return *this;
     }

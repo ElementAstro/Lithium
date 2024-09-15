@@ -1,791 +1,419 @@
-void MainWindow::InitPHD2()
-{
-    isGuideCapture = true;
+#include "shared.hpp"
 
-    cmdPHD2 = new QProcess();
-    cmdPHD2->start("pkill phd2");
-    cmdPHD2->waitForStarted();
-    cmdPHD2->waitForFinished();
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <cstring>
+#include <format>
+#include <iostream>
+#include <mutex>
+#include <stdexcept>
+#include <thread>
 
-    key_phd = ftok("../", 2015);
-    key_phd = 0x90;
+using namespace std::literals;
 
-    if (key_phd == -1)
-    {
-        qDebug("ftok_phd");
+class PHDSharedMemoryClient::Impl {
+public:
+    Impl() { initSharedMemory(); }
+
+    ~Impl() {
+        if (sharedMemory_) {
+            shmdt(sharedMemory_);
+        }
     }
 
-    // build the shared memory
-    system("ipcs -m"); // 查看共享内存
-    shmid_phd = shmget(key_phd, BUFSZ_PHD, IPC_CREAT | 0666);
-    if (shmid_phd < 0)
-    {
-        qDebug("main.cpp | main | shared memory phd shmget ERROR");
-        exit(-1);
+    void initSharedMemory() {
+        key_t key = ftok("../", 2015);
+        if (key == -1) {
+            throw std::runtime_error("Failed to create key for shared memory");
+        }
+
+        shmid_ = shmget(key, 4096, IPC_CREAT | 0666);
+        if (shmid_ < 0) {
+            throw std::runtime_error("Failed to get shared memory");
+        }
+
+        sharedMemory_ = static_cast<char*>(shmat(shmid_, nullptr, 0));
+        if (sharedMemory_ == nullptr) {
+            throw std::runtime_error("Failed to attach shared memory");
+        }
     }
 
-    // 映射
-    sharedmemory_phd = (char *)shmat(shmid_phd, NULL, 0);
-    if (sharedmemory_phd == NULL)
-    {
-        qDebug("main.cpp | main | shared memor phd map ERROR");
-        exit(-1);
+    bool sendCommand(unsigned int vendCommand) {
+        constexpr unsigned int baseAddress = 0x03;
+
+        std::memset(sharedMemory_, 0, 1024);
+
+        sharedMemory_[1] = msb(vendCommand);
+        sharedMemory_[2] = lsb(vendCommand);
+        sharedMemory_[0] = 0x01;  // enable command
+
+        return waitForResponse(500ms);
     }
 
-    // 读共享内存区数据
-    qDebug("data_phd = [%s]\n", sharedmemory_phd);
-
-    cmdPHD2->start("phd2");
-
-    QElapsedTimer t;
-    t.start();
-    while (t.elapsed() < 10000)
-    {
-        usleep(10000);
-        qApp->processEvents();
-        if (connectPHD() == true)
-            break;
-    }
-}
-
-bool MainWindow::connectPHD(void)
-{
-    QString versionName = "";
-    call_phd_GetVersion(versionName);
-
-    qDebug() << "QSCOPE|connectPHD|version:" << versionName;
-    if (versionName != "")
-    {
-        // init stellarium operation
-        return true;
-    }
-    else
-    {
-        qDebug() << "QSCOPE|connectPHD|error:there is no openPHD2 running";
-        return false;
-    }
-}
-
-bool MainWindow::call_phd_GetVersion(QString &versionName)
-{
-    unsigned int baseAddress;
-    unsigned int vendcommand;
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
-
-    baseAddress = 0x03;
-    vendcommand = 0x01;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    }
-
-    if (t.elapsed() >= 500)
-    {
-        versionName = "";
-        return false;
-    }
-    else
-    {
-        unsigned char addr = 0;
-        uint16_t length;
-        memcpy(&length, sharedmemory_phd + baseAddress + addr, sizeof(uint16_t));
-        addr = addr + sizeof(uint16_t);
-        // qDebug()<<length;
-
-        if (length > 0 && length < 1024)
-        {
-            for (int i = 0; i < length; i++)
-            {
-                versionName.append(sharedmemory_phd[baseAddress + addr + i]);
+    bool waitForResponse(std::chrono::milliseconds timeout) {
+        auto start = std::chrono::steady_clock::now();
+        while (sharedMemory_[0] == 0x01) {
+            if (std::chrono::steady_clock::now() - start > timeout) {
+                return false;
             }
-            return true;
-            // qDebug()<<versionName;
+            std::this_thread::sleep_for(1ms);
         }
-        else
-        {
-            versionName = "";
-            return false;
-        }
-    }
-}
-
-uint32_t MainWindow::call_phd_StartLooping(void)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
-
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
-
-    baseAddress = 0x03;
-    vendcommand = 0x03;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    }
-    if (t.elapsed() >= 500)
-        return false; // timeout
-    else
         return true;
-}
-
-uint32_t MainWindow::call_phd_StopLooping(void)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
-
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
-
-    baseAddress = 0x03;
-    vendcommand = 0x04;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
     }
-    if (t.elapsed() >= 500)
-        return false; // timeout
-    else
-        return true;
-}
 
-uint32_t MainWindow::call_phd_AutoFindStar(void)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
-
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
-
-    baseAddress = 0x03;
-    vendcommand = 0x05;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
+    static unsigned char msb(unsigned int value) {
+        return static_cast<unsigned char>((value >> 8) & 0xFF);
     }
-    if (t.elapsed() >= 500)
-        return false; // timeout
-    else
-        return true;
-}
 
-uint32_t MainWindow::call_phd_StartGuiding(void)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
-
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
-
-    baseAddress = 0x03;
-    vendcommand = 0x06;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
+    static unsigned char lsb(unsigned int value) {
+        return static_cast<unsigned char>(value & 0xFF);
     }
-    if (t.elapsed() >= 500)
-        return false; // timeout
-    else
+
+    int shmid_;
+    char* sharedMemory_;
+    std::mutex mutex_;
+
+    // Additional member variables for new functions
+    double starX_ = 0.0;
+    double starY_ = 0.0;
+    double rmsError_ = 0.0;
+};
+
+PHDSharedMemoryClient::PHDSharedMemoryClient()
+    : pImpl(std::make_unique<Impl>()) {}
+
+PHDSharedMemoryClient::~PHDSharedMemoryClient() = default;
+
+PHDSharedMemoryClient::PHDSharedMemoryClient(PHDSharedMemoryClient&&) noexcept =
+    default;
+PHDSharedMemoryClient& PHDSharedMemoryClient::operator=(
+    PHDSharedMemoryClient&&) noexcept = default;
+
+bool PHDSharedMemoryClient::connectPHD() {
+    std::string versionName;
+    if (call_phd_GetVersion(versionName)) {
+        std::cout << "QSCOPE|connectPHD|version: " << versionName << std::endl;
         return true;
+    } else {
+        std::cout << "QSCOPE|connectPHD|error: there is no openPHD2 running"
+                  << std::endl;
+        return false;
+    }
 }
 
-uint32_t MainWindow::call_phd_checkStatus(unsigned char &status)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
+bool PHDSharedMemoryClient::call_phd_GetVersion(std::string& versionName) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand = 0x01;
 
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
+    std::memset(pImpl->sharedMemory_, 0, 1024);
 
-    baseAddress = 0x03;
-    vendcommand = 0x07;
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
 
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
+    if (!pImpl->waitForResponse(500ms)) {
+        versionName.clear();
+        return false;
+    }
 
-    sharedmemory_phd[0] = 0x01; // enable command
+    unsigned char addr = 0;
+    uint16_t length;
+    std::memcpy(&length, pImpl->sharedMemory_ + baseAddress + addr,
+                sizeof(uint16_t));
+    addr += sizeof(uint16_t);
 
-    // wait stellarium finished this task
-    QElapsedTimer t;
-    t.start();
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    } // wait stellarium run end
+    if (length > 0 && length < 1024) {
+        versionName.assign(pImpl->sharedMemory_ + baseAddress + addr, length);
+        return true;
+    } else {
+        versionName.clear();
+        return false;
+    }
+}
 
-    if (t.elapsed() >= 500)
-    {
-        // timeout
+bool PHDSharedMemoryClient::call_phd_StartLooping() {
+    return pImpl->sendCommand(0x03);
+}
+
+bool PHDSharedMemoryClient::call_phd_StopLooping() {
+    return pImpl->sendCommand(0x04);
+}
+
+bool PHDSharedMemoryClient::call_phd_AutoFindStar() {
+    return pImpl->sendCommand(0x05);
+}
+
+bool PHDSharedMemoryClient::call_phd_StartGuiding() {
+    return pImpl->sendCommand(0x06);
+}
+
+bool PHDSharedMemoryClient::call_phd_checkStatus(unsigned char& status) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand = 0x07;
+
+    std::memset(pImpl->sharedMemory_, 0, 1024);
+
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
+
+    if (!pImpl->waitForResponse(500ms)) {
         status = 0;
         return false;
     }
 
-    else
-    {
-        status = sharedmemory_phd[3];
-        return true;
-    }
+    status = pImpl->sharedMemory_[3];
+    return true;
 }
 
-uint32_t MainWindow::call_phd_setExposureTime(unsigned int expTime)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
-    qDebug() << "call_phd_setExposureTime" << expTime;
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
+bool PHDSharedMemoryClient::call_phd_setExposureTime(unsigned int expTime) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand = 0x0b;
 
-    baseAddress = 0x03;
-    vendcommand = 0x0b;
+    std::memset(pImpl->sharedMemory_, 0, 1024);
 
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
 
+    std::memcpy(pImpl->sharedMemory_ + baseAddress, &expTime,
+                sizeof(unsigned int));
+
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
+
+    return pImpl->waitForResponse(500ms);
+}
+
+bool PHDSharedMemoryClient::call_phd_whichCamera(const std::string& camera) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand = 0x0d;
+
+    std::memset(pImpl->sharedMemory_, 0, 1024);
+
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
+
+    int length = camera.length() + 1;
     unsigned char addr = 0;
-    memcpy(sharedmemory_phd + baseAddress + addr, &expTime, sizeof(unsigned int));
-    addr = addr + sizeof(unsigned int);
 
-    sharedmemory_phd[0] = 0x01; // enable command
+    std::memcpy(pImpl->sharedMemory_ + baseAddress + addr, &length,
+                sizeof(int));
+    addr += sizeof(int);
+    std::memcpy(pImpl->sharedMemory_ + baseAddress + addr, camera.c_str(),
+                length);
 
-    // wait stellarium finished this task
-    QElapsedTimer t;
-    t.start();
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
 
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    } // wait stellarium run end
-
-    if (t.elapsed() >= 500)
-        return QHYCCD_ERROR; // timeout
-    else
-        return QHYCCD_SUCCESS;
+    return pImpl->waitForResponse(500ms);
 }
 
-uint32_t MainWindow::call_phd_whichCamera(std::string Camera)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
+bool PHDSharedMemoryClient::call_phd_ChackControlStatus(int sdk_num) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand = 0x0e;
 
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
+    std::memset(pImpl->sharedMemory_, 0, 1024);
 
-    baseAddress = 0x03;
-    vendcommand = 0x0d;
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
 
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
+    std::memcpy(pImpl->sharedMemory_ + baseAddress, &sdk_num, sizeof(int));
 
-    sharedmemory_phd[0] = 0x01; // enable command
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
 
-    int length = Camera.length() + 1;
-
-    unsigned char addr = 0;
-    // memcpy(sharedmemory_phd + baseAddress + addr, &index, sizeof(int));
-    // addr = addr + sizeof(int);
-    memcpy(sharedmemory_phd + baseAddress + addr, &length, sizeof(int));
-    addr = addr + sizeof(int);
-    memcpy(sharedmemory_phd + baseAddress + addr, Camera.c_str(), length);
-    addr = addr + length;
-
-    // wait stellarium finished this task
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    } // wait stellarium run end
-
-    if (t.elapsed() >= 500)
-        return QHYCCD_ERROR; // timeout
-    else
-        return QHYCCD_SUCCESS;
+    return pImpl->waitForResponse(500ms);
 }
 
-uint32_t MainWindow::call_phd_ChackControlStatus(int sdk_num)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
-
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
-
-    baseAddress = 0x03;
-    vendcommand = 0x0e;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    unsigned char addr = 0;
-    memcpy(sharedmemory_phd + baseAddress + addr, &sdk_num, sizeof(int));
-    addr = addr + sizeof(int);
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    }
-    if (t.elapsed() >= 500)
-        return false; // timeout
-    else
-        return true;
+bool PHDSharedMemoryClient::call_phd_ClearCalibration() {
+    return pImpl->sendCommand(0x02);
 }
 
-uint32_t MainWindow::call_phd_ClearCalibration(void)
-{
-    unsigned int vendcommand;
-    unsigned int baseAddress;
+void PHDSharedMemoryClient::showPHDData() {
+    std::lock_guard<std::mutex> lock(pImpl->mutex_);
 
-    bzero(sharedmemory_phd, 1024); // 共享内存清空
+    if (pImpl->sharedMemory_[2047] != 0x02)
+        return;
 
-    baseAddress = 0x03;
-    vendcommand = 0x02;
-
-    sharedmemory_phd[1] = Tools::MSB(vendcommand);
-    sharedmemory_phd[2] = Tools::LSB(vendcommand);
-
-    sharedmemory_phd[0] = 0x01; // enable command
-
-    QElapsedTimer t;
-    t.start();
-
-    while (sharedmemory_phd[0] == 0x01 && t.elapsed() < 500)
-    {
-        // QCoreApplication::processEvents();
-    }
-    if (t.elapsed() >= 500)
-        return false; // timeout
-    else
-        return true;
-}
-
-void MainWindow::ShowPHDdata()
-{
-    unsigned int currentPHDSizeX = 1;
-    unsigned int currentPHDSizeY = 1;
-    unsigned int bitDepth = 1;
-
-    unsigned char guideDataIndicator;
-    unsigned int guideDataIndicatorAddress;
-    double dRa, dDec, SNR, MASS, RMSErrorX, RMSErrorY, RMSErrorTotal, PixelRatio;
+    unsigned int currentPHDSizeX, currentPHDSizeY;
+    unsigned char bitDepth;
+    double dRa, dDec, SNR, MASS, RMSErrorX, RMSErrorY, RMSErrorTotal,
+        PixelRatio;
     int RADUR, DECDUR;
     char RADIR, DECDIR;
-    unsigned char LossAlert;
+    bool StarLostAlert, InGuiding;
 
-    double StarX;
-    double StarY;
-    bool isSelected;
+    unsigned int mem_offset = 1024;
+    std::memcpy(&currentPHDSizeX, pImpl->sharedMemory_ + mem_offset,
+                sizeof(unsigned int));
+    mem_offset += sizeof(unsigned int);
+    std::memcpy(&currentPHDSizeY, pImpl->sharedMemory_ + mem_offset,
+                sizeof(unsigned int));
+    mem_offset += sizeof(unsigned int);
+    std::memcpy(&bitDepth, pImpl->sharedMemory_ + mem_offset,
+                sizeof(unsigned char));
+    mem_offset += sizeof(unsigned char);
 
-    bool showLockedCross;
-    double LockedPositionX;
-    double LockedPositionY;
+    // Skip sdk_num, sdk_direction, sdk_duration
+    mem_offset += 3 * sizeof(int);
 
-    unsigned char MultiStarNumber;
-    unsigned short MultiStarX[32];
-    unsigned short MultiStarY[32];
+    // Guide error data
+    mem_offset += sizeof(unsigned char);  // guideDataIndicator
+    std::memcpy(&dRa, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&dDec, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&SNR, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&MASS, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&RADUR, pImpl->sharedMemory_ + mem_offset, sizeof(int));
+    mem_offset += sizeof(int);
+    std::memcpy(&DECDUR, pImpl->sharedMemory_ + mem_offset, sizeof(int));
+    mem_offset += sizeof(int);
+    std::memcpy(&RADIR, pImpl->sharedMemory_ + mem_offset, sizeof(char));
+    mem_offset += sizeof(char);
+    std::memcpy(&DECDIR, pImpl->sharedMemory_ + mem_offset, sizeof(char));
+    mem_offset += sizeof(char);
+    std::memcpy(&RMSErrorX, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&RMSErrorY, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&RMSErrorTotal, pImpl->sharedMemory_ + mem_offset,
+                sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&PixelRatio, pImpl->sharedMemory_ + mem_offset, sizeof(double));
+    mem_offset += sizeof(double);
+    std::memcpy(&StarLostAlert, pImpl->sharedMemory_ + mem_offset,
+                sizeof(bool));
+    mem_offset += sizeof(bool);
+    std::memcpy(&InGuiding, pImpl->sharedMemory_ + mem_offset, sizeof(bool));
 
-    unsigned int mem_offset;
-    int sdk_direction = 0;
-    int sdk_duration = 0;
-    int sdk_num;
-    int zero = 0;
+    // Update member variables
+    pImpl->starX_ = dRa;
+    pImpl->starY_ = dDec;
+    pImpl->rmsError_ = RMSErrorTotal;
 
-    bool StarLostAlert = false;
+    // Process and use the data as needed
+    std::cout << std::format("RMSErrorX: {:.3f}, RMSErrorY: {:.3f}", RMSErrorX,
+                             RMSErrorY)
+              << std::endl;
 
-    if (sharedmemory_phd[2047] != 0x02)
-        return; // if there is no image comes, return
+    // Clear the data indicator
+    pImpl->sharedMemory_[2047] = 0x00;
+}
 
-    mem_offset = 1024;
-    // guide image dimention data
-    memcpy(&currentPHDSizeX, sharedmemory_phd + mem_offset, sizeof(unsigned int));
-    mem_offset = mem_offset + sizeof(unsigned int);
-    memcpy(&currentPHDSizeY, sharedmemory_phd + mem_offset, sizeof(unsigned int));
-    mem_offset = mem_offset + sizeof(unsigned int);
-    memcpy(&bitDepth, sharedmemory_phd + mem_offset, sizeof(unsigned char));
-    mem_offset = mem_offset + sizeof(unsigned char);
+void PHDSharedMemoryClient::controlGuide(int direction, int duration) {
+    // Implement the guide control logic here
+    // This might involve sending commands to the mount or updating shared
+    // memory
+    std::cout << std::format("ControlGuide: Direction={}, Duration={}",
+                             direction, duration)
+              << std::endl;
 
-    mem_offset = mem_offset + sizeof(int); // &sdk_num
-    mem_offset = mem_offset + sizeof(int); // &sdk_direction
-    mem_offset = mem_offset + sizeof(int); // &sdk_duration
+    // Example implementation (you may need to adjust this based on your
+    // specific requirements):
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand =
+        0x0F;  // Assuming 0x0F is the command for guide control
 
-    guideDataIndicatorAddress = mem_offset;
+    std::memset(pImpl->sharedMemory_, 0, 1024);
 
-    // guide error data
-    guideDataIndicator = sharedmemory_phd[guideDataIndicatorAddress];
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
 
-    mem_offset = mem_offset + sizeof(unsigned char);
-    memcpy(&dRa, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&dDec, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&SNR, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&MASS, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
+    std::memcpy(pImpl->sharedMemory_ + baseAddress, &direction, sizeof(int));
+    std::memcpy(pImpl->sharedMemory_ + baseAddress + sizeof(int), &duration,
+                sizeof(int));
 
-    memcpy(&RADUR, sharedmemory_phd + mem_offset, sizeof(int));
-    mem_offset = mem_offset + sizeof(int);
-    memcpy(&DECDUR, sharedmemory_phd + mem_offset, sizeof(int));
-    mem_offset = mem_offset + sizeof(int);
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
 
-    memcpy(&RADIR, sharedmemory_phd + mem_offset, sizeof(char));
-    mem_offset = mem_offset + sizeof(char);
-    memcpy(&DECDIR, sharedmemory_phd + mem_offset, sizeof(char));
-    mem_offset = mem_offset + sizeof(char);
+    pImpl->waitForResponse(500ms);
+}
 
-    memcpy(&RMSErrorX, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&RMSErrorY, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&RMSErrorTotal, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&PixelRatio, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&StarLostAlert, sharedmemory_phd + mem_offset, sizeof(bool));
-    mem_offset = mem_offset + sizeof(bool);
-    memcpy(&InGuiding, sharedmemory_phd + mem_offset, sizeof(bool));
-    mem_offset = mem_offset + sizeof(bool);
+void PHDSharedMemoryClient::getPHD2ControlInstruct() {
+    std::lock_guard<std::mutex> lock(pImpl->mutex_);
 
-    mem_offset = 1024 + 200;
-    memcpy(&isSelected, sharedmemory_phd + mem_offset, sizeof(bool));
-    mem_offset = mem_offset + sizeof(bool);
-    memcpy(&StarX, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&StarY, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&showLockedCross, sharedmemory_phd + mem_offset, sizeof(bool));
-    mem_offset = mem_offset + sizeof(bool);
-    memcpy(&LockedPositionX, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&LockedPositionY, sharedmemory_phd + mem_offset, sizeof(double));
-    mem_offset = mem_offset + sizeof(double);
-    memcpy(&MultiStarNumber, sharedmemory_phd + mem_offset, sizeof(unsigned char));
-    mem_offset = mem_offset + sizeof(unsigned char);
-    memcpy(MultiStarX, sharedmemory_phd + mem_offset, sizeof(MultiStarX));
-    mem_offset = mem_offset + sizeof(MultiStarX);
-    memcpy(MultiStarY, sharedmemory_phd + mem_offset, sizeof(MultiStarY));
-    mem_offset = mem_offset + sizeof(MultiStarY);
+    unsigned int mem_offset =
+        1024 + 2 * sizeof(unsigned int) + sizeof(unsigned char);
 
-    sharedmemory_phd[guideDataIndicatorAddress] = 0x00; // have been read back
+    int controlInstruct = 0;
+    std::memcpy(&controlInstruct, pImpl->sharedMemory_ + mem_offset,
+                sizeof(int));
 
-    glPHD_isSelected = isSelected;
-    glPHD_StarX = StarX;
-    glPHD_StarY = StarY;
-    glPHD_CurrentImageSizeX = currentPHDSizeX;
-    glPHD_CurrentImageSizeY = currentPHDSizeY;
-    glPHD_LockPositionX = LockedPositionX;
-    glPHD_LockPositionY = LockedPositionY;
-    glPHD_ShowLockCross = showLockedCross;
+    int sdk_num = (controlInstruct >> 24) & 0xFFF;
+    int sdk_direction = (controlInstruct >> 12) & 0xFFF;
+    int sdk_duration = controlInstruct & 0xFFF;
 
-    glPHD_Stars.clear();
-    for (int i = 0; i < MultiStarNumber; i++)
-    {
-        if (i > 30)
-            break;
-        QPoint p;
-        p.setX(MultiStarX[i]);
-        p.setY(MultiStarY[i]);
-        glPHD_Stars.push_back(p);
+    if (sdk_num != 0) {
+        std::cout
+            << std::format(
+                   "PHD2ControlTelescope: num={}, direction={}, duration={}",
+                   sdk_num, sdk_direction, sdk_duration)
+            << std::endl;
     }
 
-    if (glPHD_StarX != 0 && glPHD_StarY != 0)
-        glPHD_StartGuide = true;
+    if (sdk_duration != 0) {
+        controlGuide(sdk_direction, sdk_duration);
 
-    unsigned int byteCount;
-    byteCount = currentPHDSizeX * currentPHDSizeY * (bitDepth / 8);
+        int zero = 0;
+        std::memcpy(pImpl->sharedMemory_ + mem_offset, &zero, sizeof(int));
 
-    mem_offset = 2048;
-
-    unsigned char m = sharedmemory_phd[2047];
-
-    if (sharedmemory_phd[2047] == 0x02 && bitDepth > 0 && currentPHDSizeX > 0 && currentPHDSizeY > 0)
-    {
-        // 导星过程中的数据
-        // qDebug() << guideDataIndicator << "dRa:" << dRa << "dDec:" << dDec
-        //          << "rmsX:" << RMSErrorX << "rmsY:" << RMSErrorY
-        //          << "rmsTotal:" << RMSErrorTotal << "SNR:" << SNR;
-                unsigned char phdstatu;
-        call_phd_checkStatus(phdstatu);
-
-        if (dRa != 0 && dDec != 0)
-        {
-            QPointF tmp;
-            tmp.setX(-dRa * PixelRatio);
-            tmp.setY(dDec * PixelRatio);
-            glPHD_rmsdate.append(tmp);
-            //   m_pToolbarWidget->guiderLabel->Series_err->append(-dRa * PixelRatio, -dDec * PixelRatio);
-            emit wsThread->sendMessageToClient("AddScatterChartData:" + QString::number(-dRa * PixelRatio) + ":" + QString::number(-dDec * PixelRatio));
-
-            // 曲线的数值
-            // qDebug() << "Ra|Dec: " << -dRa * PixelRatio << "," << dDec * PixelRatio;
-
-            // 图像中的小绿框
-            if (InGuiding == true)
-            {
-                // m_pToolbarWidget->LabelMainStarBox->setStyleSheet("QLabel{border:2px solid rgb(0,255,0);border-radius:3px;background-color:transparent;}");
-                // m_pToolbarWidget->LabelCrossX->setStyleSheet("QLabel{border:1px solid rgb(0,255,0);border-radius:3px;background-color:transparent;}");
-                // m_pToolbarWidget->LabelCrossY->setStyleSheet("QLabel{border:1px solid rgb(0,255,0);border-radius:3px;background-color:transparent;}");
-                emit wsThread->sendMessageToClient("InGuiding");
-            }
-            else
-            {
-                // m_pToolbarWidget->LabelMainStarBox->setStyleSheet("QLabel{border:2px solid rgb(255,255,0);border-radius:3px;background-color:transparent;}");
-                // m_pToolbarWidget->LabelCrossX->setStyleSheet("QLabel{border:1px solid rgb(255,255,0);border-radius:3px;background-color:transparent;}");
-                // m_pToolbarWidget->LabelCrossY->setStyleSheet("QLabel{border:1px solid rgb(255,255,0);border-radius:3px;background-color:transparent;}");
-                emit wsThread->sendMessageToClient("InCalibration");
-            }
-
-            if (StarLostAlert == true)
-            {
-                // m_pToolbarWidget->LabelMainStarBox->setStyleSheet("QLabel{border:2px solid rgb(255,0,0);border-radius:3px;background-color:transparent;}");
-                // m_pToolbarWidget->LabelCrossX->setStyleSheet("QLabel{border:1px solid rgb(255,0,0);border-radius:3px;background-color:transparent;}");
-                // m_pToolbarWidget->LabelCrossY->setStyleSheet("QLabel{border:1px solid rgb(255,0,0);border-radius:3px;background-color:transparent;}");
-                emit wsThread->sendMessageToClient("StarLostAlert");
-            }
-
-            emit wsThread->sendMessageToClient("AddRMSErrorData:" + QString::number(RMSErrorX, 'f', 3) + ":" + QString::number(RMSErrorX, 'f', 3));
-        }
-        // m_pToolbarWidget->guiderLabel->RMSErrorX_value->setPlainText(QString::number(RMSErrorX, 'f', 3));
-        // m_pToolbarWidget->guiderLabel->RMSErrorY_value->setPlainText(QString::number(RMSErrorY, 'f', 3));
-
-        // m_pToolbarWidget->guiderLabel->GuiderDataRA->clear();
-        // m_pToolbarWidget->guiderLabel->GuiderDataDEC->clear();
-
-        for (int i = 0; i < glPHD_rmsdate.size(); i++)
-        {
-            //   m_pToolbarWidget->guiderLabel->GuiderDataRA ->append(i, glPHD_rmsdate[i].x());
-            //   m_pToolbarWidget->guiderLabel->GuiderDataDEC->append(i, glPHD_rmsdate[i].y());
-            if (i == glPHD_rmsdate.size() - 1)
-            {
-                emit wsThread->sendMessageToClient("AddLineChartData:" + QString::number(i) + ":" + QString::number(glPHD_rmsdate[i].x()) + ":" + QString::number(glPHD_rmsdate[i].y()));
-                if (i > 50)
-                {
-                    // m_pToolbarWidget->guiderLabel->AxisX_Graph->setRange(i-100,i);
-                    emit wsThread->sendMessageToClient("SetLineChartRange:" + QString::number(i - 50) + ":" + QString::number(i));
-                }
-            }
-        }
-
-        unsigned char *srcData = new unsigned char[byteCount];
-        mem_offset = 2048;
-
-        memcpy(srcData, sharedmemory_phd + mem_offset, byteCount);
-        sharedmemory_phd[2047] = 0x00; // 0x00= image has been read
-
-        cv::Mat img8;
-        cv::Mat PHDImg;
-
-        img8.create(currentPHDSizeY, currentPHDSizeX, CV_8UC1);
-
-        if (bitDepth == 16)
-            PHDImg.create(currentPHDSizeY, currentPHDSizeX, CV_16UC1);
-        else
-            PHDImg.create(currentPHDSizeY, currentPHDSizeX, CV_8UC1);
-
-        PHDImg.data = srcData;
-
-        uint16_t B = 0;
-        uint16_t W = 65535;
-
-        cv::Mat image_raw8;
-        image_raw8.create(PHDImg.rows, PHDImg.cols, CV_8UC1);
-
-        if (AutoStretch == true)
-        {
-            Tools::GetAutoStretch(PHDImg, 0, B, W);
-        }
-        else
-        {
-            B = 0;
-            W = 65535;
-        }
-
-        Tools::Bit16To8_Stretch(PHDImg, image_raw8, B, W);
-
-        saveGuiderImageAsJPG(image_raw8);
-
-        // saveGuiderImageAsJPG(PHDImg);
-
-        // refreshGuideImage(PHDImg, "MONO");
-
-        int centerX = glPHD_StarX; // Replace with your X coordinate
-        int centerY = glPHD_StarY; // Replace with your Y coordinate
-
-        int cropSize = 20; // Size of the cropped region
-
-        // Calculate crop region
-        int startX = std::max(0, centerX - cropSize / 2);
-        int startY = std::max(0, centerY - cropSize / 2);
-        int endX = std::min(PHDImg.cols - 1, centerX + cropSize / 2);
-        int endY = std::min(PHDImg.rows - 1, centerY + cropSize / 2);
-
-        // Crop the image using OpenCV's ROI (Region of Interest) functionality
-        cv::Rect cropRegion(startX, startY, endX - startX + 1, endY - startY + 1);
-        cv::Mat croppedImage = PHDImg(cropRegion).clone();
-
-        // strechShowImage(croppedImage, m_pToolbarWidget->guiderLabel->ImageLable,m_pToolbarWidget->histogramLabel->hisLabel,"MONO",false,false,0,0,65535,1.0,1.7,100,false);
-        // m_pToolbarWidget->guiderLabel->ImageLable->setScaledContents(true);
-
-        delete[] srcData;
-        img8.release();
-        PHDImg.release();
+        call_phd_ChackControlStatus(sdk_num);
     }
 }
 
-void MainWindow::ControlGuide(int Direction, int Duration)
-{
-    qDebug() << "\033[32m"
-             << "ControlGuide: "
-             << "\033[0m" << Direction << "," << Duration;
-    switch (Direction)
-    {
-    case 1:
-    {
-        if (dpMount != NULL)
-        {
-            indi_Client->setTelescopeGuideNS(dpMount, Direction, Duration);
-        }
-        break;
-    }
-    case 0:
-    {
-        if (dpMount != NULL)
-        {
-            indi_Client->setTelescopeGuideNS(dpMount, Direction, Duration);
-        }
-        break;
-    }
-    case 2:
-    {
-        if (dpMount != NULL)
-        {
-            indi_Client->setTelescopeGuideWE(dpMount, Direction, Duration);
-        }
-        break;
-    }
-    case 3:
-    {
-        if (dpMount != NULL)
-        {
-            indi_Client->setTelescopeGuideWE(dpMount, Direction, Duration);
-        }
-        break;
-    }
-    default:
-        break; //
-    }
+// New functions implementation
+
+bool PHDSharedMemoryClient::startCalibration() {
+    constexpr unsigned int vendCommand =
+        0x10;  // Assuming 0x10 is the command for starting calibration
+    return pImpl->sendCommand(vendCommand);
 }
 
-void MainWindow::getTimeNow(int index)
-{
-    // 获取当前时间点
-    auto now = std::chrono::system_clock::now();
-
-    // 将当前时间点转换为毫秒
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-
-    // 将毫秒时间戳转换为时间类型（std::time_t）
-    std::time_t time_now = ms / 1000; // 将毫秒转换为秒
-
-    // 使用 std::strftime 函数将时间格式化为字符串
-    char buffer[80];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S",
-                  std::localtime(&time_now));
-
-    // 添加毫秒部分
-    std::string formatted_time = buffer + std::to_string(ms % 1000);
-
-    // 打印带有当前时间的输出
-    // std::cout << "TIME(ms): " << formatted_time << "," << index << std::endl;
+bool PHDSharedMemoryClient::abortCalibration() {
+    constexpr unsigned int vendCommand =
+        0x11;  // Assuming 0x11 is the command for aborting calibration
+    return pImpl->sendCommand(vendCommand);
 }
 
-void MainWindow::onPHDControlGuideTimeout()
-{
-    GetPHD2ControlInstruct();
+bool PHDSharedMemoryClient::dither(double pixels) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand =
+        0x12;  // Assuming 0x12 is the command for dithering
+
+    std::memset(pImpl->sharedMemory_, 0, 1024);
+
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
+
+    std::memcpy(pImpl->sharedMemory_ + baseAddress, &pixels, sizeof(double));
+
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
+
+    return pImpl->waitForResponse(500ms);
 }
 
-void MainWindow::GetPHD2ControlInstruct()
-{
-    std::lock_guard<std::mutex> lock(receiveMutex);
+bool PHDSharedMemoryClient::setLockPosition(double x, double y) {
+    constexpr unsigned int baseAddress = 0x03;
+    constexpr unsigned int vendCommand =
+        0x13;  // Assuming 0x13 is the command for setting lock position
 
-    unsigned int mem_offset;
+    std::memset(pImpl->sharedMemory_, 0, 1024);
 
-    int sdk_direction = 0;
-    int sdk_duration = 0;
-    int sdk_num = 0;
-    int zero = 0;
-    mem_offset = 1024;
+    pImpl->sharedMemory_[1] = Impl::msb(vendCommand);
+    pImpl->sharedMemory_[2] = Impl::lsb(vendCommand);
 
-    mem_offset = mem_offset + sizeof(unsigned int);
-    mem_offset = mem_offset + sizeof(unsigned int);
-    mem_offset = mem_offset + sizeof(unsigned char);
+    std::memcpy(pImpl->sharedMemory_ + baseAddress, &x, sizeof(double));
+    std::memcpy(pImpl->sharedMemory_ + baseAddress + sizeof(double), &y,
+                sizeof(double));
 
-    int ControlInstruct = 0;
+    pImpl->sharedMemory_[0] = 0x01;  // enable command
 
-    memcpy(&ControlInstruct, sharedmemory_phd + mem_offset, sizeof(int));
-    int mem_offset_sdk_num = mem_offset;
-    mem_offset = mem_offset + sizeof(int);
+    return pImpl->waitForResponse(500ms);
+}
 
-    sdk_num = (ControlInstruct >> 24) & 0xFFF;       // 取前12位
-    sdk_direction = (ControlInstruct >> 12) & 0xFFF; // 取中间12位
-    sdk_duration = ControlInstruct & 0xFFF;          // 取后12位
+std::pair<double, double> PHDSharedMemoryClient::getStarPosition() const {
+    return {pImpl->starX_, pImpl->starY_};
+}
 
-    if (sdk_num != 0)
-    {
-        getTimeNow(sdk_num);
-        std::cout << "\033[31m"
-                  << "PHD2ControlTelescope: "
-                  << "\033[0m" << sdk_num << "," << sdk_direction << ","
-                  << sdk_duration << std::endl;
-    }
-    if (sdk_duration != 0)
-    {
-        MainWindow::ControlGuide(sdk_direction, sdk_duration);
-
-        memcpy(sharedmemory_phd + mem_offset_sdk_num, &zero, sizeof(int));
-
-        call_phd_ChackControlStatus(sdk_num); // set pFrame->ControlStatus = 0;
-    }
+double PHDSharedMemoryClient::getGuideRMSError() const {
+    return pImpl->rmsError_;
 }

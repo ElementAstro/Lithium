@@ -4,68 +4,120 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-4-9
-
-Description: Downloader
-
-**************************************************/
-
 #include "downloader.hpp"
 
+#include <curl/curl.h>
+#include <atomic>
 #include <chrono>
 #include <fstream>
+#include <mutex>
+#include <queue>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
-#include "cpp_httplib/httplib.h"
+#include "macro.hpp"
 
 namespace atom::web {
-DownloadManager::DownloadManager(const std::string &task_file)
-    : task_file_(task_file) {
-    try {
-        std::ifstream infile(task_file_);
-        if (!infile) {
-            LOG_F(ERROR, "Failed to open task file {}", task_file_);
-            THROW_EXCEPTION("Failed to open task file.");
+
+class DownloadManager::Impl {
+public:
+    explicit Impl(std::string task_file);
+    ~Impl();
+
+    void addTask(const std::string& url, const std::string& filepath,
+                 int priority);
+    auto removeTask(size_t index) -> bool;
+    void start(size_t thread_count, size_t download_speed);
+    void pauseTask(size_t index);
+    void resumeTask(size_t index);
+    void cancelTask(size_t index);
+    auto getDownloadedBytes(size_t index) -> size_t;
+    void setThreadCount(size_t thread_count);
+    void setMaxRetries(size_t retries);
+    void onDownloadComplete(const std::function<void(size_t)>& callback);
+    void onProgressUpdate(const std::function<void(size_t, double)>& callback);
+
+    struct DownloadTask {
+        std::string url;
+        std::string filepath;
+        bool completed{false};
+        bool paused{false};
+        bool cancelled{false};
+        size_t downloadedBytes{0};
+        int priority{0};
+        size_t retries{0};
+    } ATOM_ALIGNAS(128);
+
+private:
+    auto getNextTaskIndex() -> std::optional<size_t>;
+    auto getNextTask() -> std::optional<DownloadTask>;
+    void downloadTask(DownloadTask& task, size_t download_speed);
+    void run(size_t download_speed);
+    void saveTaskListToFile();
+
+    std::string task_file_;
+    std::vector<DownloadTask> tasks_;
+    std::priority_queue<DownloadTask> task_queue_;
+    std::mutex mutex_;
+    std::atomic<bool> running_{false};
+    std::chrono::system_clock::time_point start_time_;
+    size_t max_retries_{3};
+    size_t thread_count_;
+    std::function<void(size_t)> on_complete_;
+    std::function<void(size_t, double)> on_progress_;
+};
+
+// 写入回调函数，带进度监控
+auto writeDataWithProgress(void* buffer, size_t size, size_t nmemb,
+                           void* userp) -> size_t {
+    auto* taskInfo = static_cast<DownloadManager::Impl::DownloadTask*>(userp);
+    size_t bytesWritten = size * nmemb;
+    taskInfo->downloadedBytes += bytesWritten;
+
+    return bytesWritten;
+}
+
+DownloadManager::Impl::Impl(std::string task_file)
+    : task_file_(std::move(task_file)),
+      thread_count_(std::thread::hardware_concurrency()) {
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+
+    // 读取任务列表
+    std::ifstream infile(task_file_);
+    if (!infile) {
+        LOG_F(ERROR, "Failed to open task file {}", task_file_);
+        THROW_EXCEPTION("Failed to open task file.");
+    }
+    while (infile >> std::ws && !infile.eof()) {
+        std::string url;
+        std::string filepath;
+        infile >> url >> filepath;
+        if (!url.empty() && !filepath.empty()) {
+            tasks_.emplace_back(url, filepath);
         }
-        while (infile >> std::ws && !infile.eof()) {
-            std::string url;
-            std::string filepath;
-            infile >> url >> filepath;
-            if (!url.empty() && !filepath.empty()) {
-                tasks_.push_back({url, filepath});
-            }
-        }
-        infile.close();
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error: {}", e.what());
-        THROW_EXCEPTION("Error: ", e.what());
     }
 }
 
-DownloadManager::~DownloadManager() { save_task_list_to_file(); }
-
-void DownloadManager::add_task(const std::string &url,
-                               const std::string &filepath, int priority) {
-    try {
-        std::ofstream outfile(task_file_, std::ios_base::app);
-        if (!outfile) {
-            LOG_F(ERROR, "Failed to open task file {}", task_file_);
-            THROW_EXCEPTION("Failed to open task file.");
-        }
-        outfile << url << " " << filepath << std::endl;
-        outfile.close();
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error: {}", e.what());
-        THROW_EXCEPTION("Error: ", e.what());
-    }
-    tasks_.push_back({url, filepath, false, false, 0, priority});
+DownloadManager::Impl::~Impl() {
+    saveTaskListToFile();
+    curl_global_cleanup();
 }
 
-bool DownloadManager::remove_task(size_t index) {
+void DownloadManager::Impl::addTask(const std::string& url,
+                                    const std::string& filepath, int priority) {
+    std::ofstream outfile(task_file_, std::ios_base::app);
+    if (!outfile) {
+        LOG_F(ERROR, "Failed to open task file {}", task_file_);
+        THROW_FAIL_TO_OPEN_FILE("Failed to open task file.");
+    }
+    outfile << url << " " << filepath << std::endl;
+    tasks_.push_back({url, filepath, false, false, false, 0, priority});
+}
+
+auto DownloadManager::Impl::removeTask(size_t index) -> bool {
     if (index >= tasks_.size()) {
         return false;
     }
@@ -73,182 +125,225 @@ bool DownloadManager::remove_task(size_t index) {
     return true;
 }
 
-void DownloadManager::start(size_t thread_count, size_t download_speed) {
+void DownloadManager::Impl::cancelTask(size_t index) {
+    if (index >= tasks_.size()) {
+        return;
+    }
+    tasks_[index].cancelled = true;
+    tasks_[index].paused = true;  // 停止该任务的下载
+}
+
+void DownloadManager::Impl::start(size_t thread_count, size_t download_speed) {
     running_ = true;
-#if _cplusplus >= 202002L
     std::vector<std::jthread> threads;
-#else
-    std::vector<std::thread> threads;
-#endif
-    for (size_t i = 0; i < thread_count; ++i) {
-        threads.emplace_back(&DownloadManager::run, this, download_speed);
+    thread_count_ = thread_count;
+    for (size_t i = 0; i < thread_count_; ++i) {
+        threads.emplace_back(&DownloadManager::Impl::run, this, download_speed);
     }
-    for (auto &thread : threads) {
-        thread.join();
+
+    for (auto& thread : threads) {
+        thread.join();  // 等待所有线程完成
     }
 }
 
-void DownloadManager::pause_task(size_t index) {
+void DownloadManager::Impl::pauseTask(size_t index) {
     if (index >= tasks_.size()) {
-        LOG_F(ERROR, "Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds for pause_task.");
         return;
     }
-
     tasks_[index].paused = true;
-    DLOG_F(INFO, "Paused task {} - {}", tasks_[index].url,
-           tasks_[index].filepath);
 }
 
-void DownloadManager::resume_task(size_t index) {
+void DownloadManager::Impl::resumeTask(size_t index) {
     if (index >= tasks_.size()) {
-        LOG_F(ERROR, "Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds for resume_task.");
         return;
     }
-
     tasks_[index].paused = false;
-
-    // 如果任务未完成，则重新下载
-    if (!tasks_[index].completed) {
-        DLOG_F(INFO, "Resumed task {} - {}", tasks_[index].url,
-               tasks_[index].filepath);
-    }
 }
 
-size_t DownloadManager::get_downloaded_bytes(size_t index) {
+auto DownloadManager::Impl::getDownloadedBytes(size_t index) -> size_t {
     if (index >= tasks_.size()) {
-        LOG_F(ERROR, "Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds for get_downloaded_bytes.");
         return 0;
     }
-
-    return tasks_[index].downloaded_bytes;
+    return tasks_[index].downloadedBytes;
 }
 
-std::optional<size_t> DownloadManager::get_next_task_index() {
-    std::unique_lock<std::mutex> lock(mutex_);
+void DownloadManager::Impl::setThreadCount(size_t thread_count) {
+    thread_count_ = thread_count;
+}
+
+void DownloadManager::Impl::setMaxRetries(size_t retries) {
+    max_retries_ = retries;
+}
+
+void DownloadManager::Impl::onDownloadComplete(
+    const std::function<void(size_t)>& callback) {
+    on_complete_ = callback;
+}
+
+void DownloadManager::Impl::onProgressUpdate(
+    const std::function<void(size_t, double)>& callback) {
+    on_progress_ = callback;
+}
+
+auto DownloadManager::Impl::getNextTaskIndex() -> std::optional<size_t> {
+    std::unique_lock lock(mutex_);
     for (size_t i = 0; i < tasks_.size(); ++i) {
-        if (!tasks_[i].completed && !tasks_[i].paused) {
+        if (!tasks_[i].completed && !tasks_[i].paused && !tasks_[i].cancelled) {
             return i;
         }
     }
     return std::nullopt;
 }
 
-std::optional<DownloadTask> DownloadManager::get_next_task() {
-    std::unique_lock<std::mutex> lock(mutex_);
+auto
+DownloadManager::Impl::getNextTask() -> std::optional<DownloadManager::Impl::DownloadTask> {
+    std::unique_lock lock(mutex_);
     if (!task_queue_.empty()) {
         auto task = task_queue_.top();
         task_queue_.pop();
         return task;
     }
 
-    auto index = get_next_task_index();
-    if (index) {
+    if (auto index = getNextTaskIndex(); index) {
         return tasks_[*index];
     }
 
     return std::nullopt;
 }
 
-void DownloadManager::run(size_t download_speed) {
+void DownloadManager::Impl::run(size_t download_speed) {
     while (running_) {
-        auto task = get_next_task();
-        if (!task) {
-            break;
+        auto taskOpt = getNextTask();
+        if (!taskOpt) {
+            break;  // 没有任务可执行时退出
         }
+        auto& task = *taskOpt;
 
-        if (task->completed || task->paused) {
+        if (task.completed || task.paused || task.cancelled) {
             continue;
         }
+
+        // 记录任务开始的时间
         start_time_ = std::chrono::system_clock::now();
-        download_task(*task, download_speed);
+
+        // 处理下载任务
+        downloadTask(task, download_speed);
+
+        if (task.completed && on_complete_) {
+            on_complete_(task.priority);  // 下载完成后触发回调
+        }
     }
 }
 
-void DownloadManager::download_task(DownloadTask &task, size_t download_speed) {
-    httplib::Client cli(task.url);
-    auto res = cli.Get("/");
-    if (!res || res->status != 200) {
-        LOG_F(ERROR, "Failed to download {}", task.url);
+void DownloadManager::Impl::downloadTask(DownloadTask& task,
+                                         size_t download_speed) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        LOG_F(ERROR, "Failed to initialize curl for {}", task.url);
         return;
     }
 
-    std::ofstream outfile(task.filepath,
-                          std::ofstream::binary | std::ofstream::app);
+    std::ofstream outfile(task.filepath, std::ios::binary | std::ios::app);
     if (!outfile) {
         LOG_F(ERROR, "Failed to open file {}", task.filepath);
+        curl_easy_cleanup(curl);
         return;
     }
 
-    // 断点续传：从已经下载的字节数开始写入文件
-    outfile.seekp(task.downloaded_bytes);
+    // 设置 URL
+    curl_easy_setopt(curl, CURLOPT_URL, task.url.c_str());
 
-    constexpr size_t kBufferSize = 1024 * 1024;  // 1MB 缓存
-    size_t buffer_size = kBufferSize;
+    // 设置写入数据回调函数
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeDataWithProgress);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &task);
+
+    // 设置断点续传
+    curl_easy_setopt(curl, CURLOPT_RESUME_FROM, task.downloadedBytes);
+
+    // 设置下载速度限制
     if (download_speed > 0) {
-        // 如果有下载速度限制，根据时间计算出当前应该下载的字节数
-        auto bytes_per_ms = static_cast<double>(download_speed) / 1000.0;
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::system_clock::now() - start_time_)
-                              .count();
-        auto bytes_to_download =
-            static_cast<size_t>(elapsed_ms * bytes_per_ms) -
-            task.downloaded_bytes;
-        if (bytes_to_download < buffer_size) {
-            buffer_size = bytes_to_download;
+        curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE,
+                         static_cast<curl_off_t>(download_speed));
+    }
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        LOG_F(ERROR, "Download failed: {}", curl_easy_strerror(res));
+
+        // 错误处理，重试机制
+        if (task.retries < max_retries_) {
+            LOG_F(INFO, "Retrying task {} ({} retries left)", task.url,
+                  max_retries_ - task.retries);
+            task.retries++;
+            downloadTask(task, download_speed);  // 重试下载任务
+        } else {
+            LOG_F(ERROR, "Max retries reached for task {}", task.url);
+        }
+    } else {
+        double totalSize;
+        curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD, &totalSize);
+        task.downloadedBytes += static_cast<size_t>(totalSize);
+        task.completed = true;
+
+        // 下载进度更新回调
+        if (on_progress_) {
+            double progress =
+                static_cast<double>(task.downloadedBytes) / totalSize * 100.0;
+            on_progress_(task.priority, progress);  // 传递任务索引和进度百分比
         }
     }
 
-    size_t total_bytes_read = 0;
+    curl_easy_cleanup(curl);
+}
 
-    while (!res->body.empty() && !task.completed && !task.paused) {
-        size_t bytes_to_write = res->body.size() - task.downloaded_bytes;
-        if (bytes_to_write > buffer_size) {
-            bytes_to_write = buffer_size;
-        }
-
-        outfile.write(res->body.c_str() + task.downloaded_bytes,
-                      bytes_to_write);
-        auto bytes_written =
-            static_cast<size_t>(outfile.tellp()) - task.downloaded_bytes;
-        task.downloaded_bytes += bytes_written;
-        total_bytes_read += bytes_written;
-
-        // 下载速度控制：根据需要下载的字节数和已经下载的字节数计算出需要等待的时间
-        if (download_speed > 0) {
-            auto bytes_per_ms = static_cast<double>(download_speed) / 1000.0;
-            auto elapsed_ms =
-                static_cast<double>(total_bytes_read) / bytes_per_ms;
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(static_cast<long long>(elapsed_ms)));
-        }
-
-        // 如果下载完成，则标记任务为已完成
-        if (task.downloaded_bytes >= res->body.size()) {
-            task.completed = true;
-        }
+void DownloadManager::Impl::saveTaskListToFile() {
+    std::ofstream outfile(task_file_);
+    if (!outfile) {
+        LOG_F(ERROR, "Failed to open task file {}", task_file_);
+        return;
     }
 
-    outfile.close();
-
-    if (task.completed) {
-        DLOG_F(INFO, "Downloaded file {}", task.filepath);
+    for (const auto& task : tasks_) {
+        outfile << task.url << " " << task.filepath << std::endl;
     }
 }
 
-void DownloadManager::save_task_list_to_file() {
-    try {
-        std::ofstream outfile(task_file_);
-        if (!outfile) {
-            DLOG_F(INFO, "Failed to open task file {}", task_file_);
-            throw std::runtime_error("Failed to open task file.");
-        }
-        for (const auto &task : tasks_) {
-            outfile << task.url << " " << task.filepath << std::endl;
-        }
-        outfile.close();
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Error: {}", e.what());
-        THROW_EXCEPTION("Error: ", e.what());
-    }
+// DownloadManager public functions
+DownloadManager::DownloadManager(const std::string& task_file)
+    : impl_(std::make_unique<Impl>(task_file)) {}
+DownloadManager::~DownloadManager() = default;
+void DownloadManager::add_task(const std::string& url,
+                               const std::string& filepath, int priority) {
+    impl_->addTask(url, filepath, priority);
 }
+auto DownloadManager::remove_task(size_t index) -> bool {
+    return impl_->removeTask(index);
+}
+void DownloadManager::start(size_t thread_count, size_t download_speed) {
+    impl_->start(thread_count, download_speed);
+}
+void DownloadManager::pause_task(size_t index) { impl_->pauseTask(index); }
+void DownloadManager::resume_task(size_t index) { impl_->resumeTask(index); }
+auto DownloadManager::get_downloaded_bytes(size_t index) -> size_t {
+    return impl_->getDownloadedBytes(index);
+}
+void DownloadManager::cancel_task(size_t index) { impl_->cancelTask(index); }
+void DownloadManager::set_thread_count(size_t thread_count) {
+    impl_->setThreadCount(thread_count);
+}
+void DownloadManager::set_max_retries(size_t retries) {
+    impl_->setMaxRetries(retries);
+}
+void DownloadManager::on_download_complete(
+    const std::function<void(size_t)>& callback) {
+    impl_->onDownloadComplete(callback);
+}
+void DownloadManager::on_progress_update(
+    const std::function<void(size_t, double)>& callback) {
+    impl_->onProgressUpdate(callback);
+}
+
 }  // namespace atom::web

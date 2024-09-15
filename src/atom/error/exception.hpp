@@ -107,10 +107,9 @@ private:
     throw atom::error::Exception(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                  ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_NESTED_EXCEPTION(...)                                         \
-    atom::error::Exception::rethrowNested(__FILE__, __LINE__, __FUNCTION__, \
-                                          __VA_ARGS__)
-// Special Exception
+#define THROW_NESTED_EXCEPTION(...)                                       \
+    atom::error::Exception::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                          ATOM_FUNC_NAME, __VA_ARGS__)
 
 // -------------------------------------------------------------------
 // Common
@@ -125,9 +124,18 @@ public:
     throw atom::error::RuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                     ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_NESTED_RUNTIME_ERROR(...)                                        \
-    atom::error::RuntimeError::rethrowNested(__FILE__, __LINE__, __FUNCTION__, \
-                                             __VA_ARGS__)
+#define THROW_NESTED_RUNTIME_ERROR(...)                                      \
+    atom::error::RuntimeError::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                             ATOM_FUNC_NAME, __VA_ARGS__)
+
+class LogicError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_LOGIC_ERROR(...)                                    \
+    throw atom::error::LogicError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                  ATOM_FUNC_NAME, __VA_ARGS__)
 
 class UnlawfulOperation : public Exception {
 public:
@@ -321,14 +329,68 @@ public:
     throw atom::error::FailToCloseFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                        ATOM_FUNC_NAME, __VA_ARGS__)
 
-class FailToLoadDll : public Exception {
+class FailToCreateFile : public Exception {
 public:
     using Exception::Exception;
 };
 
+#define THROW_FAIL_TO_CREATE_FILE(...)                                  \
+    throw atom::error::FailToCreateFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                        ATOM_FUNC_NAME, __VA_ARGS__)
+
+class FailToDeleteFile : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_DELETE_FILE(...)                                  \
+    throw atom::error::FailToDeleteFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                        ATOM_FUNC_NAME, __VA_ARGS__)
+
+class FailToCopyFile : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_COPY_FILE(...)                                  \
+    throw atom::error::FailToCopyFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                      ATOM_FUNC_NAME, __VA_ARGS__)
+
+class FailToMoveFile : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_MOVE_FILE(...)                                  \
+    throw atom::error::FailToMoveFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                      ATOM_FUNC_NAME, __VA_ARGS__)
+
+class FailToReadFile : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_READ_FILE(...)                                  \
+    throw atom::error::FailToReadFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                      ATOM_FUNC_NAME, __VA_ARGS__)
+
+class FailToWriteFile : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_WRITE_FILE(...)                                  \
+    throw atom::error::FailToWriteFile(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                       ATOM_FUNC_NAME, __VA_ARGS__)
+
 // -------------------------------------------------------------------
 // Dynamic Library
 // -------------------------------------------------------------------
+
+class FailToLoadDll : public Exception {
+public:
+    using Exception::Exception;
+};
 
 #define THROW_FAIL_TO_LOAD_DLL(...)                                  \
     throw atom::error::FailToLoadDll(ATOM_FILE_NAME, ATOM_FILE_LINE, \

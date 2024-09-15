@@ -1,11 +1,7 @@
 #ifndef LITHIUM_ADDON_SVNMANAGERIMPL_HPP
 #define LITHIUM_ADDON_SVNMANAGERIMPL_HPP
 
-#include <string>
-#include <vector>
-
 #include "svn.hpp"
-
 #include <svn_client.h>
 
 namespace lithium {
@@ -14,13 +10,21 @@ public:
     Impl(const std::string& repoPath);
     ~Impl();
 
-    bool checkout(const std::string& url, const std::string& revision);
+    bool initRepository();
+    bool cloneRepository(const std::string& url);
+    bool createBranch(const std::string& branchName);
+    bool checkoutBranch(const std::string& branchName);
+    bool mergeBranch(const std::string& branchName);
     bool addFile(const std::string& filePath);
     bool commitChanges(const std::string& message);
-    bool update();
-    bool createBranch(const std::string& branchName);
-    bool mergeBranch(const std::string& branchName);
-    std::vector<std::string> getLog(int limit);
+    bool pull(const std::string& remoteName, const std::string& branchName);
+    bool push(const std::string& remoteName, const std::string& branchName);
+    std::vector<CommitInfo> getLog(int limit);
+    std::optional<std::string> getCurrentBranch();
+    std::vector<std::string> getBranches();
+    std::vector<std::pair<std::string, std::string>> getStatus();
+    bool revertCommit(const std::string& commitId);
+    bool createTag(const std::string& tagName, const std::string& message);
 
 private:
     std::string repoPath;

@@ -1,20 +1,27 @@
 #ifndef LITHIUM_ADDON_COMPILER_ANALYSIS_HPP
 #define LITHIUM_ADDON_COMPILER_ANALYSIS_HPP
 
-#include <mutex>
-#include <regex>
+#include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "atom/type/json_fwd.hpp"
+using json = nlohmann::json;
+
+#include "macro.hpp"
 
 namespace lithium {
 
-using json = nlohmann::json;
-
+/**
+ * @enum MessageType
+ * @brief Represents the type of a compiler message.
+ */
 enum class MessageType { ERROR, WARNING, NOTE, UNKNOWN };
 
+/**
+ * @struct Message
+ * @brief Holds information about a single compiler message.
+ */
 struct Message {
     MessageType type;
     std::string file;
@@ -28,11 +35,27 @@ struct Message {
 
     Message(MessageType t, std::string f, int l, int c, std::string code,
             std::string func, std::string msg, std::string ctx);
-};
+} ATOM_ALIGNAS(128);
 
+/**
+ * @class CompilerOutputParser
+ * @brief Parses compiler output and generates reports.
+ *
+ * Uses regular expressions to parse compiler messages from various compilers,
+ * supports both single-threaded and multi-threaded parsing.
+ */
 class CompilerOutputParser {
 public:
     CompilerOutputParser();
+    ~CompilerOutputParser();
+
+    // Delete copy constructor and copy assignment to avoid copying state
+    CompilerOutputParser(const CompilerOutputParser&) = delete;
+    CompilerOutputParser& operator=(const CompilerOutputParser&) = delete;
+
+    // Enable move semantics
+    CompilerOutputParser(CompilerOutputParser&&) noexcept;
+    CompilerOutputParser& operator=(CompilerOutputParser&&) noexcept;
 
     void parseLine(const std::string& line);
     void parseFile(const std::string& filename);
@@ -44,19 +67,10 @@ public:
                                const std::string& pattern);
 
 private:
-    std::vector<Message> messages_;
-    std::unordered_map<MessageType, int> counts_;
-    mutable std::unordered_map<std::string, std::regex> regexPatterns_;
-    mutable std::mutex mutex_;
-    std::string currentContext_;
-    std::regex includePattern_;
-    std::smatch includeMatch_;
-
-    void initRegexPatterns();
-    MessageType determineType(const std::string& typeStr) const;
-    std::string toString(MessageType type) const;
+    class Impl;                   // Forward declaration of implementation class
+    std::unique_ptr<Impl> pImpl;  // PIMPL idiom, pointer to implementation
 };
 
 }  // namespace lithium
 
-#endif
+#endif  // LITHIUM_ADDON_COMPILER_ANALYSIS_HPP

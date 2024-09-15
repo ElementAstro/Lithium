@@ -8,25 +8,25 @@
 
 Date: 2023-11-10
 
-Description: StackTrace
+Description: Enhanced StackTrace with more details
 
 **************************************************/
 
 #ifndef ATOM_ERROR_STACKTRACE_HPP
 #define ATOM_ERROR_STACKTRACE_HPP
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 namespace atom::error {
 
 /**
  * @brief Class for capturing and representing a stack trace.
  *
- * This class provides functionality to capture the stack trace of the current
- * execution context and represent it as a string. It supports different
- * implementations for different operating systems.
+ * This class captures the stack trace of the current
+ * execution context and represents it as a string, including
+ * file names, line numbers, and symbols if available.
  */
 class StackTrace {
 public:
@@ -56,7 +56,11 @@ private:
 #ifdef _WIN32
     std::vector<void*> frames_; /**< Vector to store stack frames on Windows. */
 #elif defined(__APPLE__) || defined(__linux__)
-    std::unique_ptr<char*, decltype(&free)> symbols_{nullptr, &free}; /**< Pointer to store stack symbols on macOS or Linux. */
+    std::unique_ptr<char*, decltype(&free)> symbols_{
+        nullptr,
+        &free}; /**< Pointer to store stack symbols on macOS or Linux. */
+    std::vector<void*>
+        frames_;         /**< Vector to store raw stack frame pointers. */
     int num_frames_ = 0; /**< Number of stack frames captured. */
 #endif
 };

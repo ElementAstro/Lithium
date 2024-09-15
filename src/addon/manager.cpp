@@ -70,20 +70,17 @@ public:
     std::string modulePath;
     DependencyGraph dependencyGraph;
     std::mutex mutex;
-
-    ComponentManagerImpl() = default;
-    ~ComponentManagerImpl() = default;
 };
 
 ComponentManager::ComponentManager()
     : impl_(std::make_unique<ComponentManagerImpl>()) {
     impl_->moduleLoader =
-        GetWeakPtr<ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
-    impl_->env = GetWeakPtr<atom::utils::Env>(constants::LITHIUM_UTILS_ENV);
+        GetWeakPtr<ModuleLoader>(Constants::LITHIUM_MODULE_LOADER);
+    impl_->env = GetWeakPtr<atom::utils::Env>(Constants::LITHIUM_UTILS_ENV);
     impl_->addonManager =
-        GetWeakPtr<AddonManager>(constants::LITHIUM_ADDON_MANAGER);
+        GetWeakPtr<AddonManager>(Constants::LITHIUM_ADDON_MANAGER);
     impl_->processManager = GetWeakPtr<atom::system::ProcessManager>(
-        constants::LITHIUM_PROCESS_MANAGER);
+        Constants::LITHIUM_PROCESS_MANAGER);
     impl_->sandbox = std::make_unique<Sandbox>();
     impl_->compiler = std::make_unique<Compiler>();
 
@@ -117,8 +114,8 @@ auto ComponentManager::initialize() -> bool {
         return false;
     }
 
-    impl_->modulePath = envLock->getEnv(constants::ENV_VAR_MODULE_PATH,
-                                        constants::MODULE_FOLDER);
+    impl_->modulePath = envLock->getEnv(Constants::ENV_VAR_MODULE_PATH,
+                                        Constants::MODULE_FOLDER);
 
     for (const auto& dir : getQualifiedSubDirs(impl_->modulePath)) {
         LOG_F(INFO, "Found module: {}", dir);
@@ -182,7 +179,7 @@ auto ComponentManager::initialize() -> bool {
             auto dependencies =
                 componentInfo.value("dependencies", std::vector<std::string>{});
             auto modulePath =
-                path / (componentName + std::string(constants::LIB_EXTENSION));
+                path / (componentName + std::string(Constants::LIB_EXTENSION));
             std::string componentFullName;
             componentFullName.reserve(addonName.length() +
                                       componentName.length() +
@@ -263,15 +260,15 @@ auto ComponentManager::getQualifiedSubDirs(const std::string& path)
                 LOG_F(INFO, "Checking directory: {}", entry.path().string());
                 auto files = getFilesInDir(entry.path().string());
                 for (const auto& fileName : files) {
-                    if (fileName == constants::PACKAGE_NAME) {
+                    if (fileName == Constants::PACKAGE_NAME) {
                         hasJson = true;
                     } else if (fileName.size() > 4 &&
 #ifdef _WIN32
                                fileName.substr(fileName.size() - 4) ==
-                                   constants::LIB_EXTENSION
+                                   Constants::LIB_EXTENSION
 #else
                                fileName.substr(fileName.size() - 3) ==
-                                   constants::LIB_EXTENSION
+                                   Constants::LIB_EXTENSION
 #endif
                     ) {
                         hasLib = true;
@@ -376,8 +373,8 @@ auto ComponentManager::checkComponent(const std::string& module_name,
         return false;
     }
 
-    if (!std::filesystem::exists(module_path + constants::PATH_SEPARATOR +
-                                 constants::PACKAGE_NAME)) {
+    if (!std::filesystem::exists(module_path + Constants::PATH_SEPARATOR +
+                                 Constants::PACKAGE_NAME)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
@@ -388,7 +385,7 @@ auto ComponentManager::checkComponent(const std::string& module_name,
                            [&](const std::string& fileName) {
                                return fileName.size() > 4 &&
                                       fileName.substr(fileName.size() - 4) ==
-                                          constants::LIB_EXTENSION;
+                                          Constants::LIB_EXTENSION;
                            });
 
     if (it == files.end()) {
@@ -399,7 +396,7 @@ auto ComponentManager::checkComponent(const std::string& module_name,
     }
 
     if (moduleLoader &&
-        !moduleLoader->loadModule(module_path + constants::PATH_SEPARATOR + *it,
+        !moduleLoader->loadModule(module_path + Constants::PATH_SEPARATOR + *it,
                                   module_name)) {
         LOG_F(ERROR, "Failed to load module: {}'s library {}", module_name,
               module_path);
@@ -411,7 +408,7 @@ auto ComponentManager::checkComponent(const std::string& module_name,
 auto ComponentManager::loadComponentInfo(
     const std::string& module_path, const std::string& component_name) -> bool {
     std::string filePath =
-        module_path + constants::PATH_SEPARATOR + constants::PACKAGE_NAME;
+        module_path + Constants::PATH_SEPARATOR + Constants::PACKAGE_NAME;
 
     if (!std::filesystem::exists(filePath)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
@@ -601,7 +598,7 @@ auto ComponentManager::loadSharedComponent(
 #else
         atom::utils::replaceString(module_path, "\\", "/")
 #endif
-        + constants::PATH_SEPARATOR + component_name + constants::LIB_EXTENSION;
+        + Constants::PATH_SEPARATOR + component_name + Constants::LIB_EXTENSION;
 
     auto moduleLoader = impl_->moduleLoader.lock();
     if (!moduleLoader) {
@@ -762,8 +759,8 @@ auto ComponentManager::loadStandaloneComponent(
             return false;
         }
     }
-    auto componentFullPath = module_path + constants::PATH_SEPARATOR +
-                             component_name + constants::EXECUTABLE_EXTENSION;
+    auto componentFullPath = module_path + Constants::PATH_SEPARATOR +
+                             component_name + Constants::EXECUTABLE_EXTENSION;
     auto standaloneComponent =
         std::make_shared<StandAloneComponent>(component_name);
     standaloneComponent->startLocalDriver(componentFullPath);

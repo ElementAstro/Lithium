@@ -1,336 +1,236 @@
 #include "elf.hpp"
 
-#include <fcntl.h>
-#include <gelf.h>
-#include <libelf.h>
-#include <unistd.h>
-#include <cstring>
+#include <elf.h>
+#include <algorithm>
+#include <fstream>
+#include <stdexcept>
 
-#include "atom/log/loguru.hpp"
-#include "atom/macro.hpp"
+#include "atom/error/exception.hpp"
 
 namespace lithium {
-// Define your structures
-struct ElfHeader {
-    uint16_t type;
-    uint16_t machine;
-    uint32_t version;
-    uint64_t entry;
-    uint64_t phoff;
-    uint64_t shoff;
-    uint32_t flags;
-    uint16_t ehsize;
-    uint16_t phentsize;
-    uint16_t phnum;
-    uint16_t shentsize;
-    uint16_t shnum;
-    uint16_t shstrndx;
-} ATOM_ALIGNAS(64);
 
-struct ProgramHeader {
-    uint32_t type;
-    uint64_t offset;
-    uint64_t vaddr;
-    uint64_t paddr;
-    uint64_t filesz;
-    uint64_t memsz;
-    uint32_t flags;
-    uint64_t align;
-} ATOM_ALIGNAS(64);
-
-struct SectionHeader {
-    std::string name;
-    uint32_t type{};
-    uint64_t flags{};
-    uint64_t addr{};
-    uint64_t offset{};
-    uint64_t size{};
-    uint32_t link{};
-    uint32_t info{};
-    uint64_t addralign{};
-    uint64_t entsize{};
-} ATOM_ALIGNAS(128);
-
-struct Symbol {
-    std::string name;
-    uint64_t value{};
-    uint64_t size{};
-    unsigned char bind{};
-    unsigned char type{};
-    uint16_t shndx{};
-} ATOM_ALIGNAS(64);
-
-struct DynamicEntry {
-    uint64_t tag;
-    union {
-        uint64_t val;
-        uint64_t ptr;
-    } dUn;
-} ATOM_ALIGNAS(16);
-
-struct RelocationEntry {
-    uint64_t offset;
-    uint64_t info;
-    int64_t addend;
-} ATOM_ALIGNAS(32);
-
-// Forward declaration of the implementation class
 class ElfParser::Impl {
 public:
-    explicit Impl(const char* file);
-    ~Impl();
+    explicit Impl(std::string_view file) : filePath_(file) {}
 
-    auto initialize() -> bool;
-    void cleanup();
-    auto parse() -> bool;
-    [[nodiscard]] auto getElfHeader() const -> ElfHeader;
-    [[nodiscard]] auto getProgramHeaders() const -> std::vector<ProgramHeader>;
-    [[nodiscard]] auto getSectionHeaders() const -> std::vector<SectionHeader>;
-    [[nodiscard]] auto getSymbolTable() const -> std::vector<Symbol>;
-    [[nodiscard]] auto getDynamicEntries() const -> std::vector<DynamicEntry>;
-    [[nodiscard]] auto getRelocationEntries() const -> std::vector<RelocationEntry>;
+    auto parse() -> bool {
+        std::ifstream file(filePath_, std::ios::binary);
+        if (!file) {
+            return false;
+        }
+
+        file.seekg(0, std::ios::end);
+        fileSize_ = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        fileContent_.resize(fileSize_);
+        file.read(reinterpret_cast<char*>(fileContent_.data()), fileSize_);
+
+        return parseElfHeader() && parseProgramHeaders() &&
+               parseSectionHeaders() && parseSymbolTable();
+    }
+
+    [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader> { return elfHeader_; }
+
+    [[nodiscard]] auto getProgramHeaders() const -> std::span<const ProgramHeader> {
+        return programHeaders_;
+    }
+
+    [[nodiscard]] auto getSectionHeaders() const -> std::span<const SectionHeader> {
+        return sectionHeaders_;
+    }
+
+    [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol> { return symbolTable_; }
+
+    [[nodiscard]] auto findSymbolByName(std::string_view name) const -> std::optional<Symbol> {
+        auto it = std::ranges::find_if(symbolTable_, [name](const auto& symbol) {
+            return symbol.name == name;
+        });
+        if (it != symbolTable_.end()) {
+            return *it;
+        }
+        return std::nullopt;
+    }
+
+    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const -> std::optional<Symbol> {
+        auto it = std::ranges::find_if(
+            symbolTable_,
+            [address](const auto& symbol) { return symbol.value == address; });
+        if (it != symbolTable_.end()) {
+            return *it;
+        }
+        return std::nullopt;
+    }
+
+    [[nodiscard]] auto findSection(std::string_view name) const -> std::optional<SectionHeader> {
+        auto it = std::ranges::find_if(
+            sectionHeaders_,
+            [name](const auto& section) { return section.name == name; });
+        if (it != sectionHeaders_.end()) {
+            return *it;
+        }
+        return std::nullopt;
+    }
+
+    [[nodiscard]] auto getSectionData(const SectionHeader& section) const -> std::vector<uint8_t> {
+        if (section.offset + section.size > fileSize_) {
+            THROW_OUT_OF_RANGE("Section data out of bounds");
+        }
+        return {fileContent_.begin() + section.offset,
+                fileContent_.begin() + section.offset + section.size};
+    }
 
 private:
-    const char* filePath_;
-    int fd_{};
-    Elf* elf_{};
-    GElf_Ehdr ehdr_;
+    std::string filePath_;
+    std::vector<uint8_t> fileContent_;
+    size_t fileSize_{};
+
+    std::optional<ElfHeader> elfHeader_;
+    std::vector<ProgramHeader> programHeaders_;
+    std::vector<SectionHeader> sectionHeaders_;
+    std::vector<Symbol> symbolTable_;
+
+    auto parseElfHeader() -> bool {
+        if (fileSize_ < sizeof(Elf64_Ehdr)) {
+            return false;
+        }
+
+        const auto* ehdr =
+            reinterpret_cast<const Elf64_Ehdr*>(fileContent_.data());
+        elfHeader_ = ElfHeader{.type = ehdr->e_type,
+                              .machine = ehdr->e_machine,
+                              .version = ehdr->e_version,
+                              .entry = ehdr->e_entry,
+                              .phoff = ehdr->e_phoff,
+                              .shoff = ehdr->e_shoff,
+                              .flags = ehdr->e_flags,
+                              .ehsize = ehdr->e_ehsize,
+                              .phentsize = ehdr->e_phentsize,
+                              .phnum = ehdr->e_phnum,
+                              .shentsize = ehdr->e_shentsize,
+                              .shnum = ehdr->e_shnum,
+                              .shstrndx = ehdr->e_shstrndx};
+
+        return true;
+    }
+
+    auto parseProgramHeaders() -> bool {
+        if (!elfHeader_) {
+            return false;
+        }
+
+        const auto* phdr = reinterpret_cast<const Elf64_Phdr*>(
+            fileContent_.data() + elfHeader_->phoff);
+        for (uint16_t i = 0; i < elfHeader_->phnum; ++i) {
+            programHeaders_.push_back(ProgramHeader{.type = phdr[i].p_type,
+                                                   .offset = phdr[i].p_offset,
+                                                   .vaddr = phdr[i].p_vaddr,
+                                                   .paddr = phdr[i].p_paddr,
+                                                   .filesz = phdr[i].p_filesz,
+                                                   .memsz = phdr[i].p_memsz,
+                                                   .flags = phdr[i].p_flags,
+                                                   .align = phdr[i].p_align});
+        }
+
+        return true;
+    }
+
+    auto parseSectionHeaders() -> bool {
+        if (!elfHeader_) {
+            return false;
+        }
+
+        const auto* shdr = reinterpret_cast<const Elf64_Shdr*>(
+            fileContent_.data() + elfHeader_->shoff);
+        const auto* strtab = reinterpret_cast<const char*>(
+            fileContent_.data() + shdr[elfHeader_->shstrndx].sh_offset);
+
+        for (uint16_t i = 0; i < elfHeader_->shnum; ++i) {
+            sectionHeaders_.push_back(
+                SectionHeader{.name = std::string(strtab + shdr[i].sh_name),
+                              .type = shdr[i].sh_type,
+                              .flags = shdr[i].sh_flags,
+                              .addr = shdr[i].sh_addr,
+                              .offset = shdr[i].sh_offset,
+                              .size = shdr[i].sh_size,
+                              .link = shdr[i].sh_link,
+                              .info = shdr[i].sh_info,
+                              .addralign = shdr[i].sh_addralign,
+                              .entsize = shdr[i].sh_entsize});
+        }
+
+        return true;
+    }
+
+    auto parseSymbolTable() -> bool {
+        auto symtabSection = std::ranges::find_if(
+            sectionHeaders_,
+            [](const auto& section) { return section.type == SHT_SYMTAB; });
+
+        if (symtabSection == sectionHeaders_.end()) {
+            return true;  // No symbol table, but not an error
+        }
+
+        const auto* symtab = reinterpret_cast<const Elf64_Sym*>(
+            fileContent_.data() + symtabSection->offset);
+        size_t numSymbols = symtabSection->size / sizeof(Elf64_Sym);
+
+        const auto* strtab = reinterpret_cast<const char*>(
+            fileContent_.data() + sectionHeaders_[symtabSection->link].offset);
+
+        for (size_t i = 0; i < numSymbols; ++i) {
+            symbolTable_.push_back(
+                Symbol{.name = std::string(strtab + symtab[i].st_name),
+                       .value = symtab[i].st_value,
+                       .size = symtab[i].st_size,
+                       .bind = ELF64_ST_BIND(symtab[i].st_info),
+                       .type = ELF64_ST_TYPE(symtab[i].st_info),
+                       .shndx = symtab[i].st_shndx});
+        }
+
+        return true;
+    }
 };
 
-// Implementation of the `Impl` class methods
-ElfParser::Impl::Impl(const char* file) : filePath_(file) {}
+// ElfParser method implementations
+ElfParser::ElfParser(std::string_view file)
+    : pImpl(std::make_unique<Impl>(file)) {}
 
-ElfParser::Impl::~Impl() { cleanup(); }
+ElfParser::~ElfParser() = default;
 
-auto ElfParser::Impl::initialize() -> bool {
-    if (elf_version(EV_CURRENT) == EV_NONE) {
-        LOG_F(ERROR, "ELF library initialization failed: {}", elf_errmsg(-1));
-        return false;
-    }
+auto ElfParser::parse() -> bool { return pImpl->parse(); }
 
-    fd_ = open(filePath_, O_RDONLY, 0);
-    if (fd_ < 0) {
-        LOG_F(ERROR, "Failed to open ELF file: {}", filePath_);
-        return false;
-    }
-
-    elf_ = elf_begin(fd_, ELF_C_READ, nullptr);
-    if (elf_ == nullptr) {
-        LOG_F(ERROR, "elf_begin() failed: {}", elf_errmsg(-1));
-        close(fd_);
-        fd_ = -1;
-        return false;
-    }
-
-    if (gelf_getehdr(elf_, &ehdr_) == nullptr) {
-        LOG_F(ERROR, "gelf_getehdr() failed: {}", elf_errmsg(-1));
-        elf_end(elf_);
-        elf_ = nullptr;
-        close(fd_);
-        fd_ = -1;
-        return false;
-    }
-
-    return true;
+auto ElfParser::getElfHeader() const -> std::optional<ElfHeader> {
+    return pImpl->getElfHeader();
 }
 
-void ElfParser::Impl::cleanup() {
-    if (elf_ != nullptr) {
-        elf_end(elf_);
-        elf_ = nullptr;
-    }
-    if (fd_ >= 0) {
-        close(fd_);
-        fd_ = -1;
-    }
-}
-
-auto ElfParser::Impl::parse() -> bool { return initialize(); }
-
-auto ElfParser::Impl::getElfHeader() const -> ElfHeader {
-    ElfHeader header{};
-    header.type = ehdr_.e_type;
-    header.machine = ehdr_.e_machine;
-    header.version = ehdr_.e_version;
-    header.entry = ehdr_.e_entry;
-    header.phoff = ehdr_.e_phoff;
-    header.shoff = ehdr_.e_shoff;
-    header.flags = ehdr_.e_flags;
-    header.ehsize = ehdr_.e_ehsize;
-    header.phentsize = ehdr_.e_phentsize;
-    header.phnum = ehdr_.e_phnum;
-    header.shentsize = ehdr_.e_shentsize;
-    header.shnum = ehdr_.e_shnum;
-    header.shstrndx = ehdr_.e_shstrndx;
-    return header;
-}
-
-auto ElfParser::Impl::getProgramHeaders() const -> std::vector<ProgramHeader> {
-    std::vector<ProgramHeader> headers;
-    for (size_t i = 0; i < ehdr_.e_phnum; ++i) {
-        GElf_Phdr phdr;
-        if (gelf_getphdr(elf_, i, &phdr) != &phdr) {
-            LOG_F(ERROR, "gelf_getphdr() failed: {}", elf_errmsg(-1));
-            continue;
-        }
-        ProgramHeader header;
-        header.type = phdr.p_type;
-        header.offset = phdr.p_offset;
-        header.vaddr = phdr.p_vaddr;
-        header.paddr = phdr.p_paddr;
-        header.filesz = phdr.p_filesz;
-        header.memsz = phdr.p_memsz;
-        header.flags = phdr.p_flags;
-        header.align = phdr.p_align;
-        headers.push_back(header);
-    }
-    return headers;
-}
-
-auto ElfParser::Impl::getSectionHeaders() const -> std::vector<SectionHeader> {
-    std::vector<SectionHeader> headers;
-    for (size_t i = 0; i < ehdr_.e_shnum; ++i) {
-        GElf_Shdr shdr;
-        if (gelf_getshdr(elf_getscn(elf_, i), &shdr) != &shdr) {
-            LOG_F(ERROR, "gelf_getshdr() failed: {}", elf_errmsg(-1));
-            continue;
-        }
-        SectionHeader header;
-        header.name = elf_strptr(elf_, ehdr_.e_shstrndx, shdr.sh_name);
-        header.type = shdr.sh_type;
-        header.flags = shdr.sh_flags;
-        header.addr = shdr.sh_addr;
-        header.offset = shdr.sh_offset;
-        header.size = shdr.sh_size;
-        header.link = shdr.sh_link;
-        header.info = shdr.sh_info;
-        header.addralign = shdr.sh_addralign;
-        header.entsize = shdr.sh_entsize;
-        headers.push_back(header);
-    }
-    return headers;
-}
-
-std::vector<Symbol> ElfParser::Impl::getSymbolTable() const {
-    std::vector<Symbol> symbols;
-    size_t shnum;
-    elf_getshdrnum(elf_, &shnum);
-
-    for (size_t i = 0; i < shnum; ++i) {
-        Elf_Scn* scn = elf_getscn(elf_, i);
-        GElf_Shdr shdr;
-        gelf_getshdr(scn, &shdr);
-
-        if (shdr.sh_type == SHT_SYMTAB || shdr.sh_type == SHT_DYNSYM) {
-            Elf_Data* data = elf_getdata(scn, nullptr);
-            size_t symbolCount = shdr.sh_size / shdr.sh_entsize;
-
-            for (size_t j = 0; j < symbolCount; ++j) {
-                GElf_Sym sym;
-                gelf_getsym(data, j, &sym);
-                Symbol symbol;
-                symbol.name = elf_strptr(elf_, shdr.sh_link, sym.st_name);
-                symbol.value = sym.st_value;
-                symbol.size = sym.st_size;
-                symbol.bind = GELF_ST_BIND(sym.st_info);
-                symbol.type = GELF_ST_TYPE(sym.st_info);
-                symbol.shndx = sym.st_shndx;
-                symbols.push_back(symbol);
-            }
-        }
-    }
-    return symbols;
-}
-
-auto ElfParser::Impl::getDynamicEntries() const -> std::vector<DynamicEntry> {
-    std::vector<DynamicEntry> entries;
-    size_t shnum;
-    elf_getshdrnum(elf_, &shnum);
-
-    for (size_t i = 0; i < shnum; ++i) {
-        Elf_Scn* scn = elf_getscn(elf_, i);
-        GElf_Shdr shdr;
-        gelf_getshdr(scn, &shdr);
-
-        if (shdr.sh_type == SHT_DYNAMIC) {
-            Elf_Data* data = elf_getdata(scn, nullptr);
-            size_t entryCount = shdr.sh_size / shdr.sh_entsize;
-
-            for (size_t j = 0; j < entryCount; ++j) {
-                GElf_Dyn dyn;
-                gelf_getdyn(data, j, &dyn);
-                DynamicEntry entry;
-                entry.tag = dyn.d_tag;
-                entry.dUn.val = dyn.d_un.d_val;
-                entries.push_back(entry);
-            }
-        }
-    }
-    return entries;
-}
-
-std::vector<RelocationEntry> ElfParser::Impl::getRelocationEntries() const {
-    std::vector<RelocationEntry> entries;
-    size_t shnum;
-    elf_getshdrnum(elf_, &shnum);
-
-    for (size_t i = 0; i < shnum; ++i) {
-        Elf_Scn* scn = elf_getscn(elf_, i);
-        GElf_Shdr shdr;
-        gelf_getshdr(scn, &shdr);
-
-        if (shdr.sh_type == SHT_RELA || shdr.sh_type == SHT_REL) {
-            Elf_Data* data = elf_getdata(scn, nullptr);
-            size_t entryCount = shdr.sh_size / shdr.sh_entsize;
-
-            for (size_t j = 0; j < entryCount; ++j) {
-                RelocationEntry entry;
-                if (shdr.sh_type == SHT_RELA) {
-                    GElf_Rela rela;
-                    gelf_getrela(data, j, &rela);
-                    entry.offset = rela.r_offset;
-                    entry.info = rela.r_info;
-                    entry.addend = rela.r_addend;
-                } else {
-                    GElf_Rel rel;
-                    gelf_getrel(data, j, &rel);
-                    entry.offset = rel.r_offset;
-                    entry.info = rel.r_info;
-                    entry.addend = 0;  // REL doesn't have addend
-                }
-                entries.push_back(entry);
-            }
-        }
-    }
-    return entries;
-}
-
-// Define the public `ElfParser` class methods
-ElfParser::ElfParser(const char* file)
-    : pImpl(std::make_unique<ElfParser::Impl>(file)) {}
-
-bool ElfParser::parse() { return pImpl->parse(); }
-
-ElfHeader ElfParser::getElfHeader() const { return pImpl->getElfHeader(); }
-
-std::vector<ProgramHeader> ElfParser::getProgramHeaders() const {
+auto ElfParser::getProgramHeaders() const -> std::span<const ProgramHeader> {
     return pImpl->getProgramHeaders();
 }
 
-std::vector<SectionHeader> ElfParser::getSectionHeaders() const {
+auto ElfParser::getSectionHeaders() const -> std::span<const SectionHeader> {
     return pImpl->getSectionHeaders();
 }
 
-std::vector<Symbol> ElfParser::getSymbolTable() const {
+auto ElfParser::getSymbolTable() const -> std::span<const Symbol> {
     return pImpl->getSymbolTable();
 }
 
-std::vector<DynamicEntry> ElfParser::getDynamicEntries() const {
-    return pImpl->getDynamicEntries();
+auto ElfParser::findSymbolByName(std::string_view name) const -> std::optional<Symbol> {
+    return pImpl->findSymbolByName(name);
 }
 
-std::vector<RelocationEntry> ElfParser::getRelocationEntries() const {
-    return pImpl->getRelocationEntries();
+auto ElfParser::findSymbolByAddress(uint64_t address) const -> std::optional<Symbol> {
+    return pImpl->findSymbolByAddress(address);
 }
 
+auto ElfParser::findSection(
+    std::string_view name) const -> std::optional<SectionHeader> {
+    return pImpl->findSection(name);
+}
+
+auto ElfParser::getSectionData(
+    const SectionHeader& section) const -> std::vector<uint8_t> {
+    return pImpl->getSectionData(section);
+}
 }  // namespace lithium

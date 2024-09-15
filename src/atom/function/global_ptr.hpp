@@ -31,6 +31,14 @@
 #define GetPtrOrCreate \
     GlobalSharedPtrManager::getInstance().getOrCreateSharedPtr
 
+#define GET_OR_CREATE_PTR(variable, type, constant, ...)                     \
+    if (auto ptr = GetPtrOrCreate<type>(                                     \
+            constant, [] { return std::make_shared<type>(__VA_ARGS__); })) { \
+        variable = ptr;                                                      \
+    } else {                                                                 \
+        THROW_UNLAWFUL_OPERATION("Failed to create " #type ".");             \
+    }
+
 /**
  * @brief The GlobalSharedPtrManager class manages a collection of shared
  * pointers and weak pointers. It provides functions to add, remove, and

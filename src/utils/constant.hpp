@@ -18,86 +18,73 @@ Description: Constants for Lithium
 #include <string>
 #include <vector>
 
-class constants {
+#include "atom/algorithm/hash.hpp"
+
+#define DEFINE_CONSTANT(name, value) static constexpr const char* name = value;
+
+#define DEFINE_LITHIUM_CONSTANT(name)                     \
+    static constexpr const char* name = "lithium." #name; \
+    static constexpr unsigned int name##_hash = hash(name);
+
+class Constants {
 public:
 #ifdef _WIN32
 #if defined(__MINGW32__) || defined(__MINGW64__)
-    static constexpr const char* PATH_SEPARATOR = "/";
+    DEFINE_CONSTANT(PATH_SEPARATOR, "/");
 #else
-    static constexpr const char* PATH_SEPARATOR = "\\";
+    DEFINE_CONSTANT(PATH_SEPARATOR, "\\");
 #endif
-    static constexpr const char* LIB_EXTENSION = ".dll";
-    static constexpr const char* EXECUTABLE_EXTENSION = ".exe";
+    DEFINE_CONSTANT(LIB_EXTENSION, ".dll")
+    DEFINE_CONSTANT(EXECUTABLE_EXTENSION, ".exe")
 #elif defined(__APPLE__)
-    static constexpr const char* PATH_SEPARATOR = "/";
-    static constexpr const char* LIB_EXTENSION = ".dylib";
-    static constexpr const char* EXECUTABLE_EXTENSION = "";
+    DEFINE_CONSTANT(PATH_SEPARATOR, "/")
+    DEFINE_CONSTANT(LIB_EXTENSION, ".dylib")
+    DEFINE_CONSTANT(EXECUTABLE_EXTENSION, "")
 #else
-    static constexpr const char* PATH_SEPARATOR = "/";
-    static constexpr const char* LIB_EXTENSION = ".so";
-    static constexpr const char* EXECUTABLE_EXTENSION = "";
+    DEFINE_CONSTANT(PATH_SEPARATOR, "/")
+    DEFINE_CONSTANT(LIB_EXTENSION, ".so")
+    DEFINE_CONSTANT(EXECUTABLE_EXTENSION, "")
 #endif
 
     // Package info
-    static constexpr const char* PACKAGE_NAME = "package.json";
-    static constexpr const char* PACKAGE_NAME_SHORT = "lithium";
-    static constexpr const char* PACKAGE_VERSION = "0.1.0";
-
-    // Module info
-#ifdef _WIN32
-#if defined(__MINGW32__) || defined(__MINGW64__)
-    static constexpr const char* MODULE_FOLDER = "./modules";
-    static constexpr const char* COMPILER = "g++";
-    static constexpr const char* TASK_FOLDER = "./tasks";
-#else
-    static constexpr const char* MODULE_FOLDER = ".\\modules";
-    static constexpr const char* COMPILER = "cl.exe";
-    static constexpr const char* TASK_FOLDER = ".\\tasks";
-#endif
-#elif defined(__APPLE__)
-    static constexpr const char* MODULE_FOLDER = "./modules";
-    static constexpr const char* COMPILER = "clang++";
-    static constexpr const char* TASK_FOLDER = "./tasks";
-#else
-    static constexpr const char* MODULE_FOLDER = "./modules";
-    static constexpr const char* COMPILER = "g++";
-    static constexpr const char* TASK_FOLDER = "./tasks";
-#endif
+    DEFINE_CONSTANT(PACKAGE_NAME, "package.json")
+    DEFINE_CONSTANT(PACKAGE_NAME_SHORT, "lithium")
+    DEFINE_CONSTANT(PACKAGE_AUTHOR, "Max Qian")
+    DEFINE_CONSTANT(PACKAGE_AUTHOR_EMAIL, "astro_air@126.com")
+    DEFINE_CONSTANT(PACKAGE_LICENSE, "AGPL-3")
+    DEFINE_CONSTANT(PACKAGE_VERSION, "0.1.0")
 
     static std::vector<std::string> COMMON_COMPILERS;
     static std::vector<std::string> COMPILER_PATHS;
 
     // Env info
-    static constexpr const char* ENV_VAR_MODULE_PATH = "LITHIUM_MODULE_PATH";
+    DEFINE_CONSTANT(ENV_VAR_MODULE_PATH, "LITHIUM_MODULE_PATH")
 
-    // Inside Module Identifiers
-    static constexpr const char* LITHIUM_COMPONENT_MANAGER =
-        "lithium.addon.manager";
-    static constexpr const char* LITHIUM_MODULE_LOADER = "lithium.addon.loader";
-    static constexpr const char* LITHIUM_ADDON_MANAGER = "lithium.addon.addon";
-    static constexpr const char* LITHIUM_UTILS_ENV = "lithium.utils.env";
+    DEFINE_LITHIUM_CONSTANT(CONFIG_MANAGER)
 
-    static constexpr const char* LITHIUM_PROCESS_MANAGER =
-        "lithium.system.process";
+    DEFINE_LITHIUM_CONSTANT(COMPONENT_MANAGER)
+    DEFINE_LITHIUM_CONSTANT(MODULE_LOADER)
+    DEFINE_LITHIUM_CONSTANT(ADDON_MANAGER)
+    DEFINE_LITHIUM_CONSTANT(ENVIRONMENT)
 
-    static constexpr const char* LITHIUM_DEVICE_LOADER =
-        "lithium.device.loader";
-    static constexpr const char* LITHIUM_DEVICE_MANAGER =
-        "lithium.device.manager";
+    DEFINE_LITHIUM_CONSTANT(PROCESS_MANAGER)
+    DEFINE_LITHIUM_CONSTANT(DEVICE_LOADER)
+    DEFINE_LITHIUM_CONSTANT(DEVICE_MANAGER)
+
+    DEFINE_LITHIUM_CONSTANT(TASK_CONTAINER)
+    DEFINE_LITHIUM_CONSTANT(TASK_SCHEDULER)
+    DEFINE_LITHIUM_CONSTANT(TASK_POOL)
+    DEFINE_LITHIUM_CONSTANT(TASK_LIST)
+    DEFINE_LITHIUM_CONSTANT(TASK_GENERATOR)
+    DEFINE_LITHIUM_CONSTANT(TASK_MANAGER)
+
+    DEFINE_LITHIUM_CONSTANT(APP)
+    DEFINE_LITHIUM_CONSTANT(EVENTLOOP)
+    DEFINE_LITHIUM_CONSTANT(DISPATCHER)
+    DEFINE_LITHIUM_CONSTANT(EXECUTOR)
 
     static std::vector<std::string> LITHIUM_RESOURCES;
     static std::vector<std::string_view> LITHIUM_RESOURCES_SHA256;
-
-    // Task
-    static constexpr const char* LITIHUM_TASK_MANAGER = "lithium.task.manager";
-    static constexpr const char* LITHIUM_TASK_CONTAINER =
-        "lithium.task.container";
-    static constexpr const char* LITHIUM_TASK_POOL = "lithium.task.pool";
-    static constexpr const char* LITHIUM_TASK_LIST = "lithium.task.list";
-    static constexpr const char* LITHIUM_TASK_GENERATOR =
-        "lithium.task.generator";
-
-    static constexpr const char* LITHIUM_COMMAND = "lithium.command";
 };
 
 #endif  // LITHIUM_UTILS_CONSTANTS_HPP

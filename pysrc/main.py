@@ -9,6 +9,8 @@ from config.config import config
 from app.connection_manager import ConnectionManager
 from app.plugin_manager import load_plugins, start_plugin_watcher, stop_plugin_watcher, update_plugin, install_plugin, get_plugin_info, check_plugin_dependencies
 
+from router import websocket
+
 # 配置 loguru 日志系统
 logger.add("server.log", level="DEBUG", format="{time} {level} {message}", rotation="10 MB")
 
@@ -70,28 +72,6 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
         )
     logger.info(f"Authenticated user: {credentials.username}")
     return credentials.username
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, username: str = Depends(get_current_username)):
-    """
-    WebSocket endpoint for handling client connections.
-    """
-    client_id = await manager.connect(websocket)
-    await manager.broadcast(f'{{"type": "Server_msg", "message": "Client {client_id} connected"}}')
-
-    try:
-        async with websocket:
-            while True:
-                data = await websocket.receive_text()
-                logger.info(f"Received message from {client_id}: {data}")
-                await manager.broadcast(data)
-    except WebSocketDisconnect:
-        manager.disconnect(client_id)
-        await manager.broadcast(f'{{"type": "Server_msg", "message": "Client {client_id} disconnected"}}')
-    except Exception as e:
-        logger.error(f"Unexpected error with client {client_id}: {e}")
-        manager.disconnect(client_id)
-        await manager.broadcast(f'{{"type": "Server_msg", "message": "Client {client_id} disconnected due to error"}}')
 
 # Heartbeat function to check if clients are still connected
 async def ping():

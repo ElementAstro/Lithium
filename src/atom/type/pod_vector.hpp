@@ -2,12 +2,11 @@
 #define ATOM_TYPE_POD_VECTOR_HPP
 
 #include <algorithm>
-#include <cstddef>
 #include <cstring>
 #include <initializer_list>
+#include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 #include "atom/macro.hpp"
 
@@ -15,66 +14,62 @@ namespace atom::type {
 template <typename T>
 concept PodType = std::is_trivial_v<T> && std::is_standard_layout_v<T>;
 
-ATOM_INLINE auto pool64Alloc(std::size_t size) -> void* {
-    return std::malloc(size);
-}
-
-ATOM_INLINE void pool64Dealloc(void* ptr) { std::free(ptr); }
+template <typename T>
+concept ValueType = requires(T t) {
+    { std::is_copy_constructible_v<T> };
+    { std::is_move_constructible_v<T> };
+};
 
 template <PodType T, int Growth = 2>
-struct PodVector {
-    static constexpr int SIZE_T = sizeof(T);
-    static constexpr int N = 64 / SIZE_T;
+class PodVector {
+    static ATOM_CONSTEXPR int SIZE_T = sizeof(T);
+    static ATOM_CONSTEXPR int N = 64 / SIZE_T;
 
     static_assert(N >= 4, "Element size_ too large");
 
 private:
-    int size_;
-    int capacity_;
-    T* data_;
+    int size_ = 0;
+    int capacity_ = N;
+    std::allocator<T> allocator_;
+    T* data_ = allocator_.allocate(capacity_);
 
 public:
     using size_type = int;
 
-    PodVector() : size_(0), capacity_(N) {
-        data_ = static_cast<T*>(
-            pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
+    ATOM_CONSTEXPR PodVector() ATOM_NOEXCEPT = default;
+
+    ATOM_CONSTEXPR PodVector(std::initializer_list<T> il)
+        : size_(static_cast<int>(il.size())),
+          capacity_(std::max(N, size_)),
+          data_(allocator_.allocate(capacity_)) {
+        std::ranges::copy(il, data_);
     }
 
-    PodVector(std::initializer_list<T> il)
-        : size_(il.size()), capacity_(std::max(N, size_)) {
-        data_ = static_cast<T*>(
-            pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
-        std::copy(il.begin(), il.end(), data_);
-    }
-
-    explicit PodVector(int size_)
-        : size_(size_), capacity_(std::max(N, size_)) {
-        data_ = static_cast<T*>(
-            pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
-    }
+    explicit ATOM_CONSTEXPR PodVector(int size_)
+        : size_(size_),
+          capacity_(std::max(N, size_)),
+          data_(allocator_.allocate(capacity_)) {}
 
     PodVector(const PodVector& other)
-        : size_(other.size_), capacity_(other.capacity_) {
-        data_ = static_cast<T*>(
-            pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
+        : size_(other.size_),
+          capacity_(other.capacity_),
+          data_(allocator_.allocate(capacity_)) {
         std::memcpy(data_, other.data_, SIZE_T * size_);
     }
 
-    PodVector(PodVector&& other) noexcept
-        : size_(other.size_), capacity_(other.capacity_), data_(other.data_) {
-        other.data_ = nullptr;
-    }
+    PodVector(PodVector&& other) ATOM_NOEXCEPT
+        : size_(other.size_),
+          capacity_(other.capacity_),
+          data_(std::exchange(other.data_, nullptr)) {}
 
-    auto operator=(PodVector&& other) noexcept -> PodVector& {
+    auto operator=(PodVector&& other) ATOM_NOEXCEPT -> PodVector& {
         if (this != &other) {
             if (data_ != nullptr) {
-                pool64Dealloc(data_);
+                allocator_.deallocate(data_, capacity_);
             }
             size_ = other.size_;
             capacity_ = other.capacity_;
-            data_ = other.data_;
-            other.data_ = nullptr;
+            data_ = std::exchange(other.data_, nullptr);
         }
         return *this;
     }
@@ -83,7 +78,7 @@ public:
 
     template <typename ValueT>
     void pushBack(ValueT&& t) {
-        if (size_ == capacity_) {
+        if (size_ == capacity_) [[unlikely]] {
             reserve(capacity_ * Growth);
         }
         data_[size_++] = std::forward<ValueT>(t);
@@ -91,32 +86,28 @@ public:
 
     template <typename... Args>
     void emplaceBack(Args&&... args) {
-        if (size_ == capacity_) {
+        if (size_ == capacity_) [[unlikely]] {
             reserve(capacity_ * Growth);
         }
         new (&data_[size_++]) T(std::forward<Args>(args)...);
     }
 
-    void reserve(int cap) {
-        if (cap <= capacity_) {
+    ATOM_CONSTEXPR void reserve(int cap) {
+        if (cap <= capacity_) [[likely]] {
             return;
         }
-        capacity_ = cap;
-        T* oldData = data_;
-        data_ = static_cast<T*>(
-            pool64Alloc(static_cast<std::size_t>(capacity_ * SIZE_T)));
-        if (oldData != nullptr) {
-            std::memcpy(data_, oldData, SIZE_T * size_);
-            pool64Dealloc(oldData);
+        T* newData = allocator_.allocate(cap);
+        if (data_ != nullptr) {
+            std::memcpy(newData, data_, SIZE_T * size_);
+            allocator_.deallocate(data_, capacity_);
         }
+        data_ = newData;
+        capacity_ = cap;
     }
 
-    void popBack() { size_--; }
-    auto popxBack() -> T {
-        T t = std::move(data_[size_ - 1]);
-        size_--;
-        return t;
-    }
+    ATOM_CONSTEXPR void popBack() ATOM_NOEXCEPT { size_--; }
+
+    ATOM_CONSTEXPR auto popxBack() -> T { return std::move(data_[--size_]); }
 
     void extend(const PodVector& other) {
         for (const auto& elem : other) {
@@ -130,21 +121,25 @@ public:
         }
     }
 
-    auto operator[](int index) -> T& { return data_[index]; }
-    auto operator[](int index) const -> const T& { return data_[index]; }
+    ATOM_CONSTEXPR auto operator[](int index) -> T& { return data_[index]; }
+    ATOM_CONSTEXPR auto operator[](int index) const -> const T& {
+        return data_[index];
+    }
 
-    auto begin() -> T* { return data_; }
-    auto end() -> T* { return data_ + size_; }
-    auto begin() const -> const T* { return data_; }
-    auto end() const -> const T* { return data_ + size_; }
-    auto back() -> T& { return data_[size_ - 1]; }
-    auto back() const -> const T& { return data_[size_ - 1]; }
+    ATOM_CONSTEXPR auto begin() ATOM_NOEXCEPT -> T* { return data_; }
+    ATOM_CONSTEXPR auto end() ATOM_NOEXCEPT -> T* { return data_ + size_; }
+    ATOM_CONSTEXPR auto begin() const ATOM_NOEXCEPT -> const T* { return data_; }
+    ATOM_CONSTEXPR auto end() const ATOM_NOEXCEPT -> const T* { return data_ + size_; }
+    ATOM_CONSTEXPR auto back() -> T& { return data_[size_ - 1]; }
+    ATOM_CONSTEXPR auto back() const -> const T& { return data_[size_ - 1]; }
 
-    [[nodiscard]] auto empty() const -> bool { return size_ == 0; }
-    [[nodiscard]] auto size() const -> int { return size_; }
-    auto data() -> T* { return data_; }
-    auto data() const -> const T* { return data_; }
-    void clear() { size_ = 0; }
+    ATOM_NODISCARD ATOM_CONSTEXPR auto empty() const ATOM_NOEXCEPT -> bool {
+        return size_ == 0;
+    }
+    ATOM_NODISCARD ATOM_CONSTEXPR auto size() const ATOM_NOEXCEPT -> int { return size_; }
+    ATOM_CONSTEXPR auto data() ATOM_NOEXCEPT -> T* { return data_; }
+    ATOM_CONSTEXPR auto data() const ATOM_NOEXCEPT -> const T* { return data_; }
+    ATOM_CONSTEXPR void clear() ATOM_NOEXCEPT { size_ = 0; }
 
     template <typename ValueT>
     void insert(int i, ValueT&& val) {
@@ -158,23 +153,21 @@ public:
         size_++;
     }
 
-    void erase(int i) {
-        for (int j = i; j < size_ - 1; j++) {
-            data_[j] = data_[j + 1];
-        }
+    ATOM_CONSTEXPR void erase(int i) {
+        std::ranges::copy(data_ + i + 1, data_ + size_, data_ + i);
         size_--;
     }
 
-    void reverse() { std::reverse(data_, data_ + size_); }
+    ATOM_CONSTEXPR void reverse() { std::ranges::reverse(data_, data_ + size_); }
 
-    void resize(int size_) {
+    ATOM_CONSTEXPR void resize(int size_) {
         if (size_ > capacity_) {
             reserve(size_);
         }
-        size_ = size_;
+        this->size_ = size_;
     }
 
-    auto detach() noexcept -> std::pair<T*, int> {
+    auto detach() ATOM_NOEXCEPT -> std::pair<T*, int> {
         T* p = data_;
         int size = size_;
         data_ = nullptr;
@@ -184,38 +177,13 @@ public:
 
     ~PodVector() {
         if (data_ != nullptr) {
-            pool64Dealloc(data_);
+            allocator_.deallocate(data_, capacity_);
         }
     }
 
-    [[nodiscard]] auto capacity() const -> size_t { return capacity_; }
-};
-
-template <typename T, typename Container = std::vector<T>>
-class Stack {
-    Container vec_;
-
-public:
-    void push(const T& t) { vec_.push_back(t); }
-    void push(T&& t) { vec_.push_back(std::move(t)); }
-    template <typename... Args>
-    void emplace(Args&&... args) {
-        vec_.emplace_back(std::forward<Args>(args)...);
+    ATOM_NODISCARD ATOM_CONSTEXPR auto capacity() const ATOM_NOEXCEPT -> int {
+        return capacity_;
     }
-    void pop() { vec_.pop_back(); }
-    void clear() { vec_.clear(); }
-    [[nodiscard]] auto empty() const -> bool { return vec_.empty(); }
-    auto size() const -> typename Container::size_type { return vec_.size(); }
-    auto top() -> T& { return vec_.back(); }
-    auto top() const -> const T& { return vec_.back(); }
-    auto popx() -> T {
-        T t = std::move(vec_.back());
-        vec_.pop_back();
-        return t;
-    }
-    void reserve(int n) { vec_.reserve(n); }
-    auto container() -> Container& { return vec_; }
-    auto container() const -> const Container& { return vec_; }
 };
 
 }  // namespace atom::type

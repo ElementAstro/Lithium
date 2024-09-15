@@ -16,13 +16,17 @@ public:
     int getValue() const { return value; }
 
     void setValue(int v) {
-        std::cout << "Setting value to " << v << std::endl;
+        // std::cout << "Setting value to " << v << std::endl;
         value = v;
     }
 
-    void printValue() const { std::cout << "Value: " << value << std::endl; }
+    void printValue() const {
+        // std::cout << "Value: " << value << std::endl;
+    }
 
-    static void staticPrint() { std::cout << "Static print" << std::endl; }
+    static void staticPrint() {
+        // std::cout << "Static print" << std::endl;//
+    }
 };
 
 // 注册类型信息
@@ -50,7 +54,7 @@ public:
             "getValue", [](std::vector<BoxedValue> args) -> BoxedValue {
                 auto& obj = args[0];
                 auto value = obj.tryCast<TestClass>()->getValue();
-                std::cout << "Value: " << value << std::endl;
+                // std::cout << "Value: " << value << std::endl;
                 return BoxedValue(value);
             });
 
@@ -77,11 +81,13 @@ public:
                 return BoxedValue(obj.tryCast<TestClass>()->getValue());
             },
             [](BoxedValue& obj, const BoxedValue& value) {
-                std::cout << "Setting value to " << value.getTypeInfo().name()
-                          << ": " << value.tryCast<int>().value() << std::endl;
+                // std::cout << "Setting value to " <<
+                // value.getTypeInfo().name()
+                //           << ": " << value.tryCast<int>().value() <<
+                //           std::endl;
                 if (auto v = value.tryCast<int>(); v.has_value()) {
                     obj.tryCast<TestClass>()->setValue(*v);
-                    std::cout << "Value set to " << *v << std::endl;
+                    // std::cout << "Value set to " << *v << std::endl;
                 } else {
                     THROW_INVALID_ARGUMENT("Invalid type for value property");
                 }

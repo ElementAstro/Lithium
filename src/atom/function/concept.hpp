@@ -9,6 +9,9 @@
 #ifndef ATOM_META_CONCEPT_HPP
 #define ATOM_META_CONCEPT_HPP
 
+#include <deque>
+#include <list>
+#include <map>
 #if __cplusplus < 202002L
 #error "C++20 is required for this library"
 #endif
@@ -193,12 +196,33 @@ template <typename T>
 concept AnyChar = Char<T> || WChar<T> || Char16<T> || Char32<T>;
 
 template <typename T>
-concept String = requires(T x) {
+concept NotSequenceContainer =
+    !std::is_same_v<T, std::vector<typename T::value_type>> &&
+    !std::is_same_v<T, std::list<typename T::value_type>> &&
+    !std::is_same_v<T, std::deque<typename T::value_type>>;
+
+template <typename T>
+concept NotAssociativeOrSequenceContainer =
+    !std::is_same_v<T,
+                    std::map<typename T::key_type, typename T::mapped_type>> &&
+    !std::is_same_v<
+        T, std::unordered_map<typename T::key_type, typename T::mapped_type>> &&
+    !std::is_same_v<
+        T, std::multimap<typename T::key_type, typename T::mapped_type>> &&
+    !std::is_same_v<T, std::unordered_multimap<typename T::key_type,
+                                               typename T::mapped_type>> &&
+    !NotSequenceContainer<T>;
+
+template <typename T>
+concept String = NotAssociativeOrSequenceContainer<T> && requires(T x) {
     { x.size() } -> std::convertible_to<std::size_t>;
     { x.empty() } -> std::convertible_to<bool>;
     { x.begin() } -> std::convertible_to<typename T::iterator>;
     { x.end() } -> std::convertible_to<typename T::iterator>;
 };
+
+template <typename T>
+concept IsBuiltIn = std::is_fundamental_v<T> || String<T>;
 
 // Checks if a type is an enum
 template <typename T>
@@ -225,6 +249,9 @@ template <typename T>
 concept WeakPointer = requires(T x) {
     requires std::is_same_v<T, std::weak_ptr<typename T::element_type>>;
 };
+
+template <typename T>
+concept SmartPointer = UniquePointer<T> || SharedPointer<T> || WeakPointer<T>;
 
 // Checks if a type is a reference
 template <typename T>
@@ -269,6 +296,20 @@ template <typename T>
 concept Container = requires(T x) {
     { x.size() } -> std::convertible_to<std::size_t>;
     requires Iterable<T>;
+};
+
+template <typename T>
+concept StringContainer = requires(T t) {
+    typename T::value_type;
+    String<T> || Char<T>;
+    { t.push_back(std::declval<typename T::value_type>()) };
+};
+
+template <typename T>
+concept NumberContainer = requires(T t) {
+    typename T::value_type;
+    Number<typename T::value_type>;
+    { t.push_back(std::declval<typename T::value_type>()) };
 };
 
 // Checks if a type is an associative container like map or set

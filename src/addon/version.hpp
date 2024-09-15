@@ -28,6 +28,7 @@ struct Version {
           build(std::move(bld)) {}
 
     static constexpr auto parse(std::string_view versionStr) -> Version;
+    [[nodiscard]] auto toString() const -> std::string;
 
     constexpr auto operator<(const Version& other) const -> bool;
     constexpr auto operator>(const Version& other) const -> bool;

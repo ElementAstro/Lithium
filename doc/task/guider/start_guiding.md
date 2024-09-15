@@ -100,7 +100,7 @@ public StartGuiding(IGuiderMediator guiderMediator)
 
 ### Flowchart: Execution Process
 
-以下是 `StartGuiding` 类中 `Execute` 方法的关键步骤流程图。  
+以下是 `StartGuiding` 类中 `Execute` 方法的关键步骤流程图。
 Below is a flowchart outlining the key steps in the `Execute` method of the `StartGuiding` class.
 
 ```mermaid

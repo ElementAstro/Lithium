@@ -105,7 +105,7 @@ public Dither(IGuiderMediator guiderMediator, IProfileService profileService)
 
 ### Flowchart: Execution Process
 
-以下是 `Dither` 类中 `Execute` 方法的关键步骤流程图。  
+以下是 `Dither` 类中 `Execute` 方法的关键步骤流程图。
 Below is a flowchart outlining the key steps in the `Execute` method of the `Dither` class.
 
 ```mermaid

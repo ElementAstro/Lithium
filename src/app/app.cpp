@@ -18,10 +18,10 @@ ServerCore::ServerCore(size_t num_threads)
     GET_OR_CREATE_PTR(componentManager, ComponentManager,
                       Constants::COMPONENT_MANAGER);
     GET_OR_CREATE_PTR(commandDispatcher, CommandDispatcher, Constants::DISPATCHER);
-    
+
     initializeSystemEvents();
 
-    
+
 }
 
 ServerCore::~ServerCore() { stop(); }

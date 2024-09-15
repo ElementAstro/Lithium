@@ -2,8 +2,8 @@
 Module for starfield image registration using triangle-based invariants.
 
 This module provides functions to estimate and apply geometric transformations between
-two sets of starfield images. The core technique relies on computing invariant features 
-(triangle invariants) from sets of nearest neighbors of stars in both images. The 
+two sets of starfield images. The core technique relies on computing invariant features
+(triangle invariants) from sets of nearest neighbors of stars in both images. The
 transformation between the two images is then estimated using these invariant features.
 
 The key functionalities include:

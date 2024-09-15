@@ -97,7 +97,7 @@ public StopGuiding(IGuiderMediator guiderMediator)
 
 ### Flowchart: Execution Process
 
-以下是 `StopGuiding` 类中 `Execute` 方法的关键步骤流程图。  
+以下是 `StopGuiding` 类中 `Execute` 方法的关键步骤流程图。
 Below is a flowchart outlining the key steps in the `Execute` method of the `StopGuiding` class.
 
 ```mermaid

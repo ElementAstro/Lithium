@@ -104,7 +104,7 @@ public:
 
     class Impl;
 private:
-    
+
     std::unique_ptr<Impl> impl_;  ///< 使用 Pimpl 隐藏实现细节
 };
 

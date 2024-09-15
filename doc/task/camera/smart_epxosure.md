@@ -89,7 +89,7 @@ The `SmartExposure` class is a key component within the N.I.N.A. (Nighttime Imag
 
 ## Flowchart
 
-以下是 `SmartExposure` 类执行过程中关键步骤的流程图。  
+以下是 `SmartExposure` 类执行过程中关键步骤的流程图。
 Below is a flowchart outlining the key steps in the execution process of the `SmartExposure` class.
 
 ```mermaid

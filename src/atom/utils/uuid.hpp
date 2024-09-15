@@ -136,6 +136,12 @@ public:
      */
     static auto generateV1() -> UUID;
 
+    /**
+     * @brief Generates a version 4, random UUID.
+     * @return A version 4 UUID.
+     */
+    static auto generateV4() -> UUID;
+
 private:
     /**
      * @brief Generates a random UUID.

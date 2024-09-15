@@ -1,14 +1,19 @@
 #include "command.hpp"
 
+#include <atomic>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <memory>
 #include <mutex>
-#include <nlohmann/json.hpp>
-#include <thread>
+#include <ranges>
 
+#include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
 
+#include "macro.hpp"
+
+namespace lithium {
 struct CompileCommand {
     std::string directory;
     std::string command;
@@ -18,7 +23,13 @@ struct CompileCommand {
         return json{
             {"directory", directory}, {"command", command}, {"file", file}};
     }
-};
+
+    void fromJson(const json& j) {
+        directory = j["directory"].get<std::string>();
+        command = j["command"].get<std::string>();
+        file = j["file"].get<std::string>();
+    }
+} ATOM_ALIGNAS(128);
 
 struct CompileCommandGenerator::Impl {
     std::string sourceDir = "./src";
@@ -31,8 +42,12 @@ struct CompileCommandGenerator::Impl {
     std::string projectName = "MyProject";
     std::string projectVersion = "1.0.0";
     std::mutex output_mutex;
+    std::atomic<int> commandCounter{0};
 
-    std::vector<std::string> getSourceFiles() {
+    // 获取源文件
+    auto getSourceFiles() -> std::vector<std::string> {
+        LOG_F(INFO, "Scanning source directory: {}",
+              sourceDir);  // Log scanning process
         std::vector<std::string> sourceFiles;
         for (const auto& entry :
              std::filesystem::directory_iterator(sourceDir)) {
@@ -41,30 +56,42 @@ struct CompileCommandGenerator::Impl {
                 for (const auto& ext : extensions) {
                     if (path.extension() == ext) {
                         sourceFiles.push_back(path.string());
+                        LOG_F(INFO, "Found source file: {}",
+                              path.string());  // Log found file
                     }
                 }
             }
         }
+        LOG_F(INFO, "Total source files found: {}", sourceFiles.size());
         return sourceFiles;
     }
 
-    std::vector<CompileCommand> parseExistingCommands() {
+    [[nodiscard]] auto parseExistingCommands() const
+        -> std::vector<CompileCommand> {
         std::vector<CompileCommand> commands;
-        std::ifstream ifs(existingCommandsPath);
+        if (existingCommandsPath.empty() ||
+            !std::filesystem::exists(existingCommandsPath)) {
+            LOG_F(WARNING, "No existing compile commands found at {}",
+                  existingCommandsPath);
+            return commands;
+        }
 
+        LOG_F(INFO, "Parsing existing compile commands from {}",
+              existingCommandsPath);
+        std::ifstream ifs(existingCommandsPath);
         if (ifs.is_open()) {
             json j;
             ifs >> j;
             for (const auto& cmd : j["commands"]) {
-                commands.emplace_back(cmd["directory"].get<std::string>(),
-                                    cmd["command"].get<std::string>(),
-                                    cmd["file"].get<std::string>());
+                CompileCommand c;
+                c.fromJson(cmd);
+                commands.push_back(c);
             }
             ifs.close();
+            LOG_F(INFO, "Parsed {} existing compile commands", commands.size());
         } else {
-            std::cerr << "Could not open " << existingCommandsPath << std::endl;
+            LOG_F(ERROR, "Failed to open {}", existingCommandsPath);
         }
-
         return commands;
     }
 
@@ -73,94 +100,114 @@ struct CompileCommandGenerator::Impl {
             compiler + " " + includeFlag + " " + outputFlag + " " + file;
         CompileCommand cmd{sourceDir, command, file};
 
+        LOG_F(INFO, "Generating compile command for file: {}", file);
         std::lock_guard lock(output_mutex);
         j_commands.push_back(cmd.toJson());
+        int currentCount =
+            commandCounter.fetch_add(1, std::memory_order_relaxed) + 1;
+        LOG_F(INFO, "Total commands generated so far: {}", currentCount);
     }
 
     void saveCommandsToFile(const json& j) {
+        LOG_F(INFO, "Saving compile commands to file: {}", outputPath);
         std::ofstream ofs(outputPath);
         if (ofs.is_open()) {
             ofs << j.dump(4);
             ofs.close();
-            std::cout << "compile_commands.json generated successfully at "
-                      << outputPath << "." << std::endl;
+            LOG_F(INFO,
+                  "compile_commands.json generated successfully with {} "
+                  "commands at {}.",
+                  commandCounter.load(std::memory_order_relaxed),
+                  outputPath);  // Log success
         } else {
-            std::cerr << "Failed to create compile_commands.json." << std::endl;
+            LOG_F(ERROR, "Failed to open {} for writing.", outputPath);
         }
     }
-};
+} ATOM_ALIGNAS(128);
 
-CompileCommandGenerator::CompileCommandGenerator() : pImpl(new Impl) {}
+CompileCommandGenerator::CompileCommandGenerator()
+    : impl_(std::make_unique<Impl>()) {}
 
-CompileCommandGenerator::~CompileCommandGenerator() { delete pImpl; }
+CompileCommandGenerator::~CompileCommandGenerator() = default;
 
 void CompileCommandGenerator::setSourceDir(const std::string& dir) {
-    pImpl->sourceDir = dir;
+    LOG_F(INFO, "Setting source directory to {}",
+          dir);  // Log set source directory
+    impl_->sourceDir = dir;
 }
 
 void CompileCommandGenerator::setCompiler(const std::string& compiler) {
-    pImpl->compiler = compiler;
+    LOG_F(INFO, "Setting compiler to {}", compiler);
+    impl_->compiler = compiler;
 }
 
 void CompileCommandGenerator::setIncludeFlag(const std::string& flag) {
-    pImpl->includeFlag = flag;
+    LOG_F(INFO, "Setting include flag to {}", flag);
+    impl_->includeFlag = flag;
 }
 
 void CompileCommandGenerator::setOutputFlag(const std::string& flag) {
-    pImpl->outputFlag = flag;
+    LOG_F(INFO, "Setting output flag to {}", flag);
+    impl_->outputFlag = flag;
 }
 
 void CompileCommandGenerator::setProjectName(const std::string& name) {
-    pImpl->projectName = name;
+    LOG_F(INFO, "Setting project name to {}", name);
+    impl_->projectName = name;
 }
 
 void CompileCommandGenerator::setProjectVersion(const std::string& version) {
-    pImpl->projectVersion = version;
+    LOG_F(INFO, "Setting project version to {}",
+          version);  // Log set project version
+    impl_->projectVersion = version;
 }
 
 void CompileCommandGenerator::addExtension(const std::string& ext) {
-    pImpl->extensions.push_back(ext);
+    LOG_F(INFO, "Adding file extension: {}", ext);
+    impl_->extensions.push_back(ext);
 }
 
 void CompileCommandGenerator::setOutputPath(const std::string& path) {
-    pImpl->outputPath = path;
+    LOG_F(INFO, "Setting output path to {}", path);
+    impl_->outputPath = path;
 }
 
 void CompileCommandGenerator::setExistingCommandsPath(const std::string& path) {
-    pImpl->existingCommandsPath = path;
+    LOG_F(INFO, "Setting existing commands path to {}",
+          path);  // Log set existing commands path
+    impl_->existingCommandsPath = path;
 }
 
 void CompileCommandGenerator::generate() {
+    LOG_F(INFO, "Starting compile command generation");
     std::vector<CompileCommand> commands;
 
     // 解析现有的 compile_commands.json
-    if (!pImpl->existingCommandsPath.empty()) {
-        auto existing_commands = pImpl->parseExistingCommands();
-        commands.insert(commands.end(), existing_commands.begin(),
-                        existing_commands.end());
+    if (!impl_->existingCommandsPath.empty()) {
+        auto existingCommands = impl_->parseExistingCommands();
+        commands.insert(commands.end(), existingCommands.begin(),
+                        existingCommands.end());
     }
 
-    auto source_files = pImpl->getSourceFiles();
-    json j_commands = json::array();
+    auto sourceFiles = impl_->getSourceFiles();
+    json jCommands = json::array();
 
-    // 多线程处理构建命令
-    std::vector<std::thread> threads;
-    for (const auto& file : source_files) {
-        threads.emplace_back(&Impl::generateCompileCommand, pImpl, file,
-                             std::ref(j_commands));
-    }
-
-    // 等待所有线程完成
-    for (auto& thread : threads) {
-        thread.join();
-    }
+    LOG_F(INFO, "Generating compile commands for {} source files",
+          sourceFiles.size());  // Log number of files
+    std::ranges::for_each(sourceFiles.begin(), sourceFiles.end(),
+                          [&](const std::string& file) {
+                              impl_->generateCompileCommand(file, jCommands);
+                          });
 
     // 构建最终的 JSON
     json j = {{"version", 4},
-              {"project_name", pImpl->projectName},
-              {"project_version", pImpl->projectVersion},
-              {"commands", j_commands}};
+              {"project_name", impl_->projectName},
+              {"project_version", impl_->projectVersion},
+              {"commands", jCommands}};
 
     // 保存到文件
-    pImpl->saveCommandsToFile(j);
+    impl_->saveCommandsToFile(j);
+    LOG_F(INFO, "Compile command generation complete");
 }
+
+}  // namespace lithium

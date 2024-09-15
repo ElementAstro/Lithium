@@ -8,22 +8,26 @@
 
 Date: 2023-11-3
 
-Description: Http Header Parser
+Description: Http Header Parser with C++20 features
 
 **************************************************/
 
 #include "httpparser.hpp"
 
+#include <algorithm>  // C++20 algorithms
 #include <iostream>
+#include <ranges>  // C++20 ranges
 #include <sstream>
 
 namespace atom::web {
-class HttpHeaderParserImpl {
+
+class HttpHeaderParser::HttpHeaderParserImpl {
 public:
     std::map<std::string, std::vector<std::string>> headers_;
 };
 
-HttpHeaderParser::HttpHeaderParser() : m_pImpl(std::make_unique<HttpHeaderParserImpl>()) {}
+HttpHeaderParser::HttpHeaderParser()
+    : m_pImpl(std::make_unique<HttpHeaderParser::HttpHeaderParserImpl>()) {}
 
 void HttpHeaderParser::parseHeaders(const std::string &rawHeaders) {
     m_pImpl->headers_.clear();
@@ -54,28 +58,21 @@ void HttpHeaderParser::setHeaders(
     m_pImpl->headers_ = headers;
 }
 
-std::vector<std::string> HttpHeaderParser::getHeaderValues(
+void HttpHeaderParser::addHeaderValue(const std::string &key,
+                                      const std::string &value) {
+    m_pImpl->headers_[key].push_back(value);
+}
+
+std::optional<std::vector<std::string>> HttpHeaderParser::getHeaderValues(
     const std::string &key) const {
-    auto it = m_pImpl->headers_.find(key);
-    if (it != m_pImpl->headers_.end()) {
+    if (auto it = m_pImpl->headers_.find(key); it != m_pImpl->headers_.end()) {
         return it->second;
-    } else {
-        return {};
     }
+    return std::nullopt;  // Use optional to represent missing values
 }
 
 void HttpHeaderParser::removeHeader(const std::string &key) {
     m_pImpl->headers_.erase(key);
-}
-
-void HttpHeaderParser::printHeaders() const {
-    for (const auto &entry : m_pImpl->headers_) {
-        std::cout << entry.first << ": ";
-        for (const auto &value : entry.second) {
-            std::cout << value << ", ";
-        }
-        std::cout << std::endl;
-    }
 }
 
 std::map<std::string, std::vector<std::string>>
@@ -84,7 +81,7 @@ HttpHeaderParser::getAllHeaders() const {
 }
 
 bool HttpHeaderParser::hasHeader(const std::string &key) const {
-    return m_pImpl->headers_.find(key) != m_pImpl->headers_.end();
+    return m_pImpl->headers_.contains(key);  // Use C++20 contains method
 }
 
 void HttpHeaderParser::clearHeaders() { m_pImpl->headers_.clear(); }

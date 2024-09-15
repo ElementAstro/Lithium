@@ -4,43 +4,16 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-6-21
-
-Description: Downloader
-
-**************************************************/
-
 #pragma once
 
-#define DOWNLOAD_MANAGER_H
-
-#include <atomic>
-#include <mutex>
-#include <optional>
-#include <queue>
+#include <functional>
+#include <memory>
 #include <string>
 #include <thread>
-#include <vector>
 
 namespace atom::web {
-
-struct DownloadTask {
-    std::string url;
-    std::string filepath;
-    bool completed{false};
-    bool paused{false};
-    size_t downloaded_bytes{0};
-    int priority{0};
-};
-
-inline bool operator<(const DownloadTask &lhs, const DownloadTask &rhs) {
-    return lhs.priority < rhs.priority;
-}
-
 /**
- * @brief DownloadManager 类，用于管理下载任务
+ * @brief DownloadManager 类，用于管理下载任务，使用 Pimpl 模式隐藏实现细节
  */
 class DownloadManager {
 public:
@@ -48,7 +21,7 @@ public:
      * @brief 构造函数
      * @param task_file 保存下载任务列表的文件路径
      */
-    DownloadManager(const std::string &task_file);
+    explicit DownloadManager(const std::string& task_file);
 
     /**
      * @brief 析构函数，用于释放资源
@@ -61,7 +34,7 @@ public:
      * @param filepath 本地保存文件路径
      * @param priority 下载任务优先级，数字越大优先级越高
      */
-    void add_task(const std::string &url, const std::string &filepath,
+    void add_task(const std::string& url, const std::string& filepath,
                   int priority = 0);
 
     /**
@@ -98,148 +71,41 @@ public:
      */
     size_t get_downloaded_bytes(size_t index);
 
+    /**
+     * @brief 取消下载任务
+     * @param index 要取消的任务在任务列表中的索引
+     */
+    void cancel_task(size_t index);
+
+    /**
+     * @brief 动态调整下载线程数
+     * @param thread_count 新的下载线程数
+     */
+    void set_thread_count(size_t thread_count);
+
+    /**
+     * @brief 设置下载错误重试次数
+     * @param retries 每个任务失败时的最大重试次数
+     */
+    void set_max_retries(size_t retries);
+
+    /**
+     * @brief 注册下载完成回调函数
+     * @param callback 下载完成时的回调函数，参数为任务索引
+     */
+    void on_download_complete(const std::function<void(size_t)>& callback);
+
+    /**
+     * @brief 注册下载进度更新回调函数
+     * @param callback 下载进度更新时的回调函数，参数为任务索引和下载百分比
+     */
+    void on_progress_update(
+        const std::function<void(size_t, double)>& callback);
+
+    class Impl;
 private:
-    /**
-     * @brief 获取下一个要下载的任务的索引
-     * @return 下一个要下载的任务的索引，如果任务队列为空，则返回空
-     */
-    std::optional<size_t> get_next_task_index();
-
-    /**
-     * @brief 获取下一个要下载的任务
-     * @return 下一个要下载的任务，如果任务队列为空，则返回空
-     */
-    std::optional<DownloadTask> get_next_task();
-
-    /**
-     * @brief 启动下载线程
-     * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
-     */
-    void run(size_t download_speed);
-
-    /**
-     * @brief 下载指定的任务
-     * @param task 要下载的任务
-     * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
-     */
-    void download_task(DownloadTask &task, size_t download_speed);
-
-    /**
-     * @brief 保存下载任务列表到文件中
-     */
-    void save_task_list_to_file();
-
-private:
-    std::string task_file_;            ///< 下载任务列表文件路径
-    std::vector<DownloadTask> tasks_;  ///< 下载任务列表
-    std::priority_queue<DownloadTask>
-        task_queue_;    ///< 任务队列，按照优先级排序
-    std::mutex mutex_;  ///< 互斥量，用于保护任务列表和任务队列
-    std::atomic<bool> running_{false};  ///< 是否正在下载中
-    std::chrono::system_clock::time_point start_time_;
+    
+    std::unique_ptr<Impl> impl_;  ///< 使用 Pimpl 隐藏实现细节
 };
+
 }  // namespace atom::web
-
-/*
-#include <iostream>
-#include <string>
-#include "downloader.hpp"
-
-int main()
-{
-    DownloadManager download_manager("tasks.txt");
-
-    while (true)
-    {
-        std::cout << "1. Add task" << std::endl;
-        std::cout << "2. Pause task" << std::endl;
-        std::cout << "3. Resume task" << std::endl;
-        std::cout << "4. Remove task" << std::endl;
-        std::cout << "5. Start downloading" << std::endl;
-        std::cout << "6. Exit" << std::endl;
-
-        int choice;
-        std::cout << "Please select an option: ";
-        std::cin >> choice;
-
-        if (choice == 1)
-        {
-            std::string url, filepath;
-            int priority;
-
-            std::cout << "URL: ";
-            std::cin >> url;
-
-            std::cout << "Filepath: ";
-            std::cin >> filepath;
-
-            std::cout << "Priority (-1 for default): ";
-            std::cin >> priority;
-
-            download_manager.add_task(url, filepath, priority);
-            std::cout << "Task added." << std::endl;
-        }
-        else if (choice == 2)
-        {
-            int index;
-            std::cout << "Task index: ";
-            std::cin >> index;
-
-            if (download_manager.pause_task(index))
-            {
-                std::cout << "Task paused." << std::endl;
-            }
-            else
-            {
-                std::cout << "Failed to pause task." << std::endl;
-            }
-        }
-        else if (choice == 3)
-        {
-            int index;
-            std::cout << "Task index: ";
-            std::cin >> index;
-
-            if (download_manager.resume_task(index))
-            {
-                std::cout << "Task resumed." << std::endl;
-            }
-            else
-            {
-                std::cout << "Failed to resume task." << std::endl;
-            }
-        }
-        else if (choice == 4)
-        {
-            int index;
-            std::cout << "Task index: ";
-            std::cin >> index;
-
-            if (download_manager.remove_task(index))
-            {
-                std::cout << "Task removed." << std::endl;
-            }
-            else
-            {
-                std::cout << "Failed to remove task." << std::endl;
-            }
-        }
-        else if (choice == 5)
-        {
-            download_manager.start();
-            break;
-        }
-        else if (choice == 6)
-        {
-            break;
-        }
-        else
-        {
-            std::cout << "Invalid choice, please try again." << std::endl;
-        }
-    }
-
-    return 0;
-}
-
-*/

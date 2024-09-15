@@ -9,10 +9,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "version.hpp"
+#include "tinyxml2/tinyxml2.h"
 
 #include "atom/type/json_fwd.hpp"
+#include "version.hpp"
+
 using json = nlohmann::json;
+using namespace tinyxml2;
 
 namespace lithium {
 /**
@@ -132,57 +135,24 @@ private:
     std::unordered_map<Node, Version>
         nodeVersions_;  ///< Map to track node versions.
 
-    /**
-     * @brief Utility function to check for cycles in the graph using DFS.
-     *
-     * @param node The current node being visited.
-     * @param visited Set of visited nodes.
-     * @param recStack Set of nodes currently in the recursion stack.
-     * @return True if a cycle is detected, false otherwise.
-     */
     auto hasCycleUtil(const Node& node, std::unordered_set<Node>& visited,
                       std::unordered_set<Node>& recStack) const -> bool;
 
-    /**
-     * @brief Utility function to perform DFS for topological sorting.
-     *
-     * @param node The current node being visited.
-     * @param visited Set of visited nodes.
-     * @param stack The stack to hold the topological order.
-     * @return True if successful, false otherwise.
-     */
     auto topologicalSortUtil(const Node& node,
                              std::unordered_set<Node>& visited,
                              std::stack<Node>& stack) const -> bool;
 
-    /**
-     * @brief Utility function to gather all dependencies of a node.
-     *
-     * @param node The node for which to collect dependencies.
-     * @param allDependencies Set to hold all found dependencies.
-     */
     void getAllDependenciesUtil(
         const Node& node, std::unordered_set<Node>& allDependencies) const;
 
-    /**
-     * @brief Removes duplicate entries from a vector of strings.
-     *
-     * @param input The input vector potentially containing duplicates.
-     * @return A vector containing unique entries from the input.
-     */
     static auto removeDuplicates(const std::vector<Node>& input)
         -> std::vector<Node>;
 
-    /**
-     * @brief Parses a package.json file to extract package name and
-     * dependencies.
-     *
-     * @param path The path to the package.json file.
-     * @return A pair containing the package name and its dependencies.
-     */
     static auto parsePackageJson(const Node& path)
         -> std::pair<Node, std::unordered_map<Node, Version>>;
-};
 
+    static auto parsePackageXml(const Node& path)
+        -> std::pair<Node, std::unordered_map<Node, Version>>;
+};
 }  // namespace lithium
 #endif  // LITHIUM_ADDON_DEPENDENCY_HPP

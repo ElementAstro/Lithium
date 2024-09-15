@@ -19,44 +19,97 @@ Description: Configor
 #include <memory>
 #include <optional>
 #include <string>
+
+#include "atom/error/exception.hpp"
 #include "atom/type/json_fwd.hpp"
 
-namespace fs = std::filesystem;
+#include "utils/constant.hpp"
 
-#define GetIntConfig(path)                  \
-    GetPtr<ConfigManager>("lithium.config") \
-        .value()                            \
-        ->getValue(path)                    \
-        .value()                            \
+namespace fs = std::filesystem;
+using json = nlohmann::json;
+
+#define GetIntConfig(path)                           \
+    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
+        .value()                                     \
+        ->getValue(path)                             \
+        .value()                                     \
         .get<int>()
 
-#define GetFloatConfig(path)                \
-    GetPtr<ConfigManager>("lithium.config") \
-        .value()                            \
-        ->getValue(path)                    \
-        .value()                            \
+#define GetFloatConfig(path)                         \
+    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
+        .value()                                     \
+        ->getValue(path)                             \
+        .value()                                     \
         .get<float>()
 
-#define GetBoolConfig(path)                 \
-    GetPtr<ConfigManager>("lithium.config") \
-        .value()                            \
-        ->getValue(path)                    \
-        .value()                            \
+#define GetBoolConfig(path)                          \
+    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
+        .value()                                     \
+        ->getValue(path)                             \
+        .value()                                     \
         .get<bool>()
 
-#define GetDoubleConfig(path)               \
-    GetPtr<ConfigManager>("lithium.config") \
-        .value()                            \
-        ->getValue(path)                    \
-        .value()                            \
+#define GetDoubleConfig(path)                        \
+    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
+        .value()                                     \
+        ->getValue(path)                             \
+        .value()                                     \
         .get<double>()
 
-#define GetStringConfig(path)               \
-    GetPtr<ConfigManager>("lithium.config") \
-        .value()                            \
-        ->getValue(path)                    \
-        .value()                            \
+#define GetStringConfig(path)                        \
+    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
+        .value()                                     \
+        ->getValue(path)                             \
+        .value()                                     \
         .get<std::string>()
+
+#define GET_CONFIG_VALUE(configManager, path, type, outputVar)              \
+    type outputVar;                                                         \
+    do {                                                                    \
+        auto opt = (configManager)->getValue(path);                         \
+        if (opt.has_value()) {                                              \
+            try {                                                           \
+                (outputVar) = opt.value().get<type>();                      \
+            } catch (const std::bad_optional_access& e) {                   \
+                LOG_F(ERROR, "Bad access to config value for {}: {}", path, \
+                      e.what());                                            \
+                THROW_BAD_CONFIG_EXCEPTION(e.what());                       \
+            } catch (const json::exception& e) {                            \
+                LOG_F(ERROR, "Invalid config value for {}: {}", path,       \
+                      e.what());                                            \
+                THROW_INVALID_CONFIG_EXCEPTION(e.what());                   \
+            } catch (const std::exception& e) {                             \
+                THROW_UNKOWN(e.what());                                     \
+            }                                                               \
+        } else {                                                            \
+            LOG_F(WARNING, "Config value for {} not found", path);          \
+            THROW_OBJ_NOT_EXIST("Config value for", path);                  \
+        }                                                                   \
+    } while (0)
+
+class BadConfigException : public atom::error::Exception {
+    using atom::error::Exception::Exception;
+};
+
+#define THROW_BAD_CONFIG_EXCEPTION(...)                                      \
+    throw BadConfigException(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
+                             __VA_ARGS__)
+
+#define THROW_NESTED_BAD_CONFIG_EXCEPTION(...)                        \
+    BadConfigException::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                      ATOM_FUNC_NAME, __VA_ARGS__)
+
+class InvalidConfigException : public BadConfigException {
+    using BadConfigException::BadConfigException;
+};
+
+#define THROW_INVALID_CONFIG_EXCEPTION(...)                      \
+    throw InvalidConfigException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                 ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_NESTED_INVALID_CONFIG_EXCEPTION(...)                        \
+    InvalidConfigException::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                          ATOM_FUNC_NAME, __VA_ARGS__)
 
 namespace lithium {
 class ConfigManagerImpl;
@@ -96,10 +149,10 @@ public:
     /**
      * @brief Retrieves the value associated with the given key path.
      * @param key_path The path to the configuration value.
-     * @return std::optional<nlohmann::json> The optional JSON value if found.
+     * @return std::optional<json> The optional JSON value if found.
      */
     [[nodiscard]] auto getValue(const std::string& key_path) const
-        -> std::optional<nlohmann::json>;
+        -> std::optional<json>;
 
     /**
      * @brief Sets the value for the specified key path.
@@ -107,10 +160,9 @@ public:
      * @param value The JSON value to set.
      * @return bool True if the value was successfully set, false otherwise.
      */
-    auto setValue(const std::string& key_path,
-                  const nlohmann::json& value) -> bool;
+    auto setValue(const std::string& key_path, const json& value) -> bool;
 
-    auto appendValue(const std::string& key_path, const nlohmann::json& value) -> bool;
+    auto appendValue(const std::string& key_path, const json& value) -> bool;
 
     /**
      * @brief Deletes the value associated with the given key path.
@@ -166,13 +218,13 @@ public:
      * @brief Merges the current configuration with the provided JSON data.
      * @param src The JSON object to merge into the current configuration.
      */
-    void mergeConfig(const nlohmann::json& src);
+    void mergeConfig(const json& src);
 
 private:
     std::unique_ptr<ConfigManagerImpl>
         m_impl_;  ///< Implementation-specific pointer.
 
-    void mergeConfig(const nlohmann::json& src, nlohmann::json& target);
+    void mergeConfig(const json& src, json& target);
 };
 
 }  // namespace lithium

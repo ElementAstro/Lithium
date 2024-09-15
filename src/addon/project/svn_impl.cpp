@@ -21,6 +21,19 @@ SvnManager::Impl::~Impl() {
     apr_terminate();
 }
 
+bool SvnManager::Impl::initRepository() {
+    svn_error_t* err = svn_client_create_context2(&ctx, nullptr, pool);
+    if (err) {
+        printError(err);
+        return false;
+    }
+    return true;
+}
+
+bool SvnManager::Impl::cloneRepository(const std::string& url) {
+    return checkout(url, "HEAD");
+}
+
 void SvnManager::Impl::printError(svn_error_t* err) {
     if (err) {
         char buf[1024];
@@ -152,6 +165,199 @@ std::vector<std::string> SvnManager::Impl::getLog(int limit) {
     }
 
     return logMessages;
+}
+
+bool SvnManager::Impl::checkoutBranch(const std::string& branchName) {
+    std::string branchUrl = repoPath + "/branches/" + branchName;
+    return checkout(branchUrl, "HEAD");
+}
+
+bool SvnManager::Impl::pull(const std::string& remoteName,
+                            const std::string& branchName) {
+    // SVN doesn't have a direct equivalent to Git's pull, so we'll just update
+    return update();
+}
+
+bool SvnManager::Impl::push(const std::string& remoteName,
+                            const std::string& branchName) {
+    // SVN doesn't have a direct equivalent to Git's push, as changes are
+    // immediately visible after commit
+    return true;
+}
+
+std::vector<CommitInfo> SvnManager::Impl::getLog(int limit) {
+    std::vector<CommitInfo> logEntries;
+
+    struct LogReceiverBaton {
+        std::vector<CommitInfo>* logEntries;
+        int remaining;
+    };
+
+    LogReceiverBaton baton = {&logEntries, limit};
+
+    auto log_receiver = [](void* baton, svn_log_entry_t* log_entry,
+                           apr_pool_t* pool) -> svn_error_t* {
+        auto* b = static_cast<LogReceiverBaton*>(baton);
+        if (b->remaining-- <= 0)
+            return SVN_NO_ERROR;
+
+        CommitInfo info;
+        info.id = std::to_string(log_entry->revision);
+        info.author = svn_prop_get_value(log_entry->revprops, "svn:author")
+                          ? svn_string_value(svn_prop_get_value(
+                                log_entry->revprops, "svn:author"))
+                          : "";
+        info.message = svn_prop_get_value(log_entry->revprops, "svn:log")
+                           ? svn_string_value(svn_prop_get_value(
+                                 log_entry->revprops, "svn:log"))
+                           : "";
+
+        apr_time_t commit_time = 0;
+        if (svn_prop_get_value(log_entry->revprops, "svn:date")) {
+            svn_time_from_cstring(&commit_time,
+                                  svn_string_value(svn_prop_get_value(
+                                      log_entry->revprops, "svn:date")),
+                                  pool);
+        }
+        info.timestamp =
+            std::chrono::system_clock::from_time_t(apr_time_sec(commit_time));
+
+        b->logEntries->push_back(info);
+        return SVN_NO_ERROR;
+    };
+
+    svn_opt_revision_t start = {svn_opt_revision_head};
+    svn_opt_revision_t end = {svn_opt_revision_number, 0};
+
+    svn_error_t* err = svn_client_log5(
+        repoPath.c_str(), nullptr, &start, &end, limit, TRUE, TRUE, FALSE,
+        apr_array_make(pool, 1, sizeof(const char*)), log_receiver, &baton, ctx,
+        pool);
+
+    if (err) {
+        printError(err);
+        return {};
+    }
+
+    return logEntries;
+}
+
+std::optional<std::string> SvnManager::Impl::getCurrentBranch() {
+    // SVN doesn't have a direct equivalent to Git's current branch concept
+    // We can return the current working copy root URL instead
+    const char* url;
+    svn_error_t* err =
+        svn_client_get_repos_root(&url, nullptr, repoPath.c_str(), ctx, pool);
+    if (err) {
+        printError(err);
+        return std::nullopt;
+    }
+    return std::string(url);
+}
+
+std::vector<std::string> SvnManager::Impl::getBranches() {
+    std::vector<std::string> branches;
+    const char* url;
+    svn_error_t* err =
+        svn_client_get_repos_root(&url, nullptr, repoPath.c_str(), ctx, pool);
+    if (err) {
+        printError(err);
+        return branches;
+    }
+
+    std::string branchesUrl = std::string(url) + "/branches";
+    svn_opt_revision_t revision = {svn_opt_revision_head};
+
+    auto list_receiver = [](void* baton, const char* path,
+                            const svn_dirent_t* dirent, const svn_lock_t* lock,
+                            const char* abs_path,
+                            apr_pool_t* pool) -> svn_error_t* {
+        auto* branches = static_cast<std::vector<std::string>*>(baton);
+        branches->push_back(svn_path_basename(path, pool));
+        return SVN_NO_ERROR;
+    };
+
+    err = svn_client_list3(branchesUrl.c_str(), &revision, &revision,
+                           svn_depth_immediates, SVN_DIRENT_ALL, FALSE,
+                           list_receiver, &branches, ctx, pool);
+    if (err) {
+        printError(err);
+    }
+
+    return branches;
+}
+
+std::vector<std::pair<std::string, std::string>> SvnManager::Impl::getStatus() {
+    std::vector<std::pair<std::string, std::string>> status;
+
+    auto status_receiver = [](void* baton, const char* path,
+                              const svn_client_status_t* status,
+                              apr_pool_t* pool) -> svn_error_t* {
+        auto* statusVec =
+            static_cast<std::vector<std::pair<std::string, std::string>>*>(
+                baton);
+        std::string statusStr;
+        switch (status->node_status) {
+            case svn_wc_status_added:
+                statusStr = "Added";
+                break;
+            case svn_wc_status_deleted:
+                statusStr = "Deleted";
+                break;
+            case svn_wc_status_modified:
+                statusStr = "Modified";
+                break;
+            case svn_wc_status_replaced:
+                statusStr = "Replaced";
+                break;
+            case svn_wc_status_unversioned:
+                statusStr = "Unversioned";
+                break;
+            default:
+                statusStr = "Unknown";
+        }
+        statusVec->emplace_back(path, statusStr);
+        return SVN_NO_ERROR;
+    };
+
+    svn_opt_revision_t revision = {svn_opt_revision_working};
+    svn_error_t* err = svn_client_status6(
+        nullptr, ctx, repoPath.c_str(), &revision, svn_depth_infinity, TRUE,
+        TRUE, TRUE, TRUE, TRUE, TRUE, nullptr, status_receiver, &status, pool);
+    if (err) {
+        printError(err);
+    }
+
+    return status;
+}
+
+bool SvnManager::Impl::revertCommit(const std::string& commitId) {
+    svn_revnum_t revision = std::stol(commitId);
+    svn_opt_revision_t rev = {svn_opt_revision_number, {revision}};
+    svn_error_t* err =
+        svn_client_merge_peg5(repoPath.c_str(), nullptr, &rev, &rev,
+                              repoPath.c_str(), svn_depth_infinity, TRUE, FALSE,
+                              FALSE, FALSE, FALSE, nullptr, ctx, pool);
+    if (err) {
+        printError(err);
+        return false;
+    }
+    return true;
+}
+
+bool SvnManager::Impl::createTag(const std::string& tagName,
+                                 const std::string& message) {
+    std::string tagUrl = repoPath + "/tags/" + tagName;
+    svn_opt_revision_t revision = {svn_opt_revision_head};
+
+    svn_error_t* err = svn_client_copy6(
+        nullptr, repoPath.c_str(), &revision, tagUrl.c_str(), FALSE, TRUE,
+        FALSE, nullptr, nullptr, nullptr, message.c_str(), ctx, pool);
+    if (err) {
+        printError(err);
+        return false;
+    }
+    return true;
 }
 
 }  // namespace lithium

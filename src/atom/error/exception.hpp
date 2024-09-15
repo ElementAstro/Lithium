@@ -107,10 +107,9 @@ private:
     throw atom::error::Exception(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                  ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_NESTED_EXCEPTION(...)                                         \
-    atom::error::Exception::rethrowNested(__FILE__, __LINE__, __FUNCTION__, \
-                                          __VA_ARGS__)
-// Special Exception
+#define THROW_NESTED_EXCEPTION(...)                                       \
+    atom::error::Exception::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                          ATOM_FUNC_NAME, __VA_ARGS__)
 
 // -------------------------------------------------------------------
 // Common
@@ -125,9 +124,18 @@ public:
     throw atom::error::RuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                     ATOM_FUNC_NAME, __VA_ARGS__)
 
-#define THROW_NESTED_RUNTIME_ERROR(...)                                        \
-    atom::error::RuntimeError::rethrowNested(__FILE__, __LINE__, __FUNCTION__, \
-                                             __VA_ARGS__)
+#define THROW_NESTED_RUNTIME_ERROR(...)                                      \
+    atom::error::RuntimeError::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                             ATOM_FUNC_NAME, __VA_ARGS__)
+
+class LogicError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_LOGIC_ERROR(...)                                    \
+    throw atom::error::LogicError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                  ATOM_FUNC_NAME, __VA_ARGS__)
 
 class UnlawfulOperation : public Exception {
 public:

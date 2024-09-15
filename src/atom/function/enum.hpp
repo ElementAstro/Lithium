@@ -15,11 +15,18 @@
 #include <string_view>
 #include <type_traits>
 
-// EnumTraits 模板结构体需要为每个枚举类型特化。
+/*!
+ * \brief Template struct for EnumTraits, needs to be specialized for each enum
+ * type. \tparam T Enum type.
+ */
 template <typename T>
 struct EnumTraits;
 
-// 辅助函数：从编译器生成的函数签名中提取枚举名称
+/*!
+ * \brief Helper function to extract enum name from compiler-generated function
+ * signature. \tparam T Enum type. \param func_sig Function signature. \return
+ * Extracted enum name.
+ */
 template <typename T>
 constexpr std::string_view extract_enum_name(const char* func_sig) {
     std::string_view name(func_sig);
@@ -36,7 +43,12 @@ constexpr std::string_view extract_enum_name(const char* func_sig) {
     return name.substr(prefixPos, suffixPos - prefixPos);
 }
 
-// 生成枚举值的字符串名称
+/*!
+ * \brief Generate string name for enum value.
+ * \tparam T Enum type.
+ * \tparam Value Enum value.
+ * \return String name of the enum value.
+ */
 template <typename T, T Value>
 constexpr std::string_view enum_name() noexcept {
 #if defined(__clang__) || defined(__GNUC__)
@@ -48,7 +60,12 @@ constexpr std::string_view enum_name() noexcept {
 #endif
 }
 
-// 枚举值转字符串
+/*!
+ * \brief Convert enum value to string.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \return String name of the enum value.
+ */
 template <typename T>
 constexpr auto enum_name(T value) noexcept -> std::string_view {
     constexpr auto VALUES = EnumTraits<T>::values;
@@ -62,7 +79,12 @@ constexpr auto enum_name(T value) noexcept -> std::string_view {
     return {};
 }
 
-// 字符串转枚举值
+/*!
+ * \brief Convert string to enum value.
+ * \tparam T Enum type.
+ * \param name String name of the enum value.
+ * \return Optional enum value.
+ */
 template <typename T>
 constexpr auto enum_cast(std::string_view name) noexcept -> std::optional<T> {
     constexpr auto VALUES = EnumTraits<T>::values;
@@ -76,13 +98,23 @@ constexpr auto enum_cast(std::string_view name) noexcept -> std::optional<T> {
     return std::nullopt;
 }
 
-// 枚举值转整数
+/*!
+ * \brief Convert enum value to integer.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \return Integer representation of the enum value.
+ */
 template <typename T>
 constexpr auto enum_to_integer(T value) noexcept {
     return static_cast<std::underlying_type_t<T>>(value);
 }
 
-// 整数转枚举值
+/*!
+ * \brief Convert integer to enum value.
+ * \tparam T Enum type.
+ * \param value Integer value.
+ * \return Optional enum value.
+ */
 template <typename T>
 constexpr auto integer_to_enum(std::underlying_type_t<T> value) noexcept
     -> std::optional<T> {
@@ -96,7 +128,12 @@ constexpr auto integer_to_enum(std::underlying_type_t<T> value) noexcept
     return std::nullopt;
 }
 
-// 检查枚举值是否有效
+/*!
+ * \brief Check if enum value is valid.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \return True if valid, false otherwise.
+ */
 template <typename T>
 constexpr auto enum_contains(T value) noexcept -> bool {
     constexpr auto VALUES = EnumTraits<T>::values;
@@ -108,7 +145,11 @@ constexpr auto enum_contains(T value) noexcept -> bool {
     return false;
 }
 
-// 获取所有枚举值和名称
+/*!
+ * \brief Get all enum values and names.
+ * \tparam T Enum type.
+ * \return Array of pairs of enum values and their names.
+ */
 template <typename T>
 constexpr auto enum_entries() noexcept {
     constexpr auto VALUES = EnumTraits<T>::values;
@@ -122,7 +163,13 @@ constexpr auto enum_entries() noexcept {
     return entries;
 }
 
-// 支持标志枚举（位运算）
+/*!
+ * \brief Support for flag enums (bitwise operations).
+ * \tparam T Enum type.
+ * \param lhs Left-hand side enum value.
+ * \param rhs Right-hand side enum value.
+ * \return Result of bitwise OR operation.
+ */
 template <typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
 constexpr auto operator|(T lhs, T rhs) noexcept -> T {
     using UT = std::underlying_type_t<T>;
@@ -162,13 +209,21 @@ constexpr auto operator~(T rhs) noexcept -> T {
     return static_cast<T>(~static_cast<UT>(rhs));
 }
 
-// 获取枚举的默认值
+/*!
+ * \brief Get the default value of an enum.
+ * \tparam T Enum type.
+ * \return Default enum value.
+ */
 template <typename T>
 constexpr auto enum_default() noexcept -> T {
     return EnumTraits<T>::values[0];
 }
 
-// 根据名字排序枚举值
+/*!
+ * \brief Sort enum values by their names.
+ * \tparam T Enum type.
+ * \return Sorted array of pairs of enum values and their names.
+ */
 template <typename T>
 constexpr auto enum_sorted_by_name() noexcept {
     auto entries = enum_entries<T>();
@@ -177,7 +232,11 @@ constexpr auto enum_sorted_by_name() noexcept {
     return entries;
 }
 
-// 根据整数值排序枚举值
+/*!
+ * \brief Sort enum values by their integer values.
+ * \tparam T Enum type.
+ * \return Sorted array of pairs of enum values and their names.
+ */
 template <typename T>
 constexpr auto enum_sorted_by_value() noexcept {
     auto entries = enum_entries<T>();
@@ -187,7 +246,12 @@ constexpr auto enum_sorted_by_value() noexcept {
     return entries;
 }
 
-// 模糊匹配字符串并转换为枚举值
+/*!
+ * \brief Fuzzy match string and convert to enum value.
+ * \tparam T Enum type.
+ * \param name String name of the enum value.
+ * \return Optional enum value.
+ */
 template <typename T>
 auto enum_cast_fuzzy(std::string_view name) -> std::optional<T> {
     constexpr auto names = EnumTraits<T>::names;
@@ -200,7 +264,12 @@ auto enum_cast_fuzzy(std::string_view name) -> std::optional<T> {
     return std::nullopt;
 }
 
-// 检查整数值是否在枚举范围内
+/*!
+ * \brief Check if integer value is within enum range.
+ * \tparam T Enum type.
+ * \param value Integer value.
+ * \return True if within range, false otherwise.
+ */
 template <typename T>
 constexpr auto integer_in_enum_range(std::underlying_type_t<T> value) noexcept
     -> bool {
@@ -209,12 +278,21 @@ constexpr auto integer_in_enum_range(std::underlying_type_t<T> value) noexcept
                        [value](T e) { return enum_to_integer(e) == value; });
 }
 
-// 添加枚举别名支持
+/*!
+ * \brief Support for enum aliases.
+ * \tparam T Enum type.
+ */
 template <typename T>
 struct EnumAliasTraits {
     static constexpr std::array<std::string_view, 0> ALIASES = {};
 };
 
+/*!
+ * \brief Convert string to enum value with alias support.
+ * \tparam T Enum type.
+ * \param name String name of the enum value.
+ * \return Optional enum value.
+ */
 template <typename T>
 constexpr auto enum_cast_with_alias(std::string_view name) noexcept
     -> std::optional<T> {

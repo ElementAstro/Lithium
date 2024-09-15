@@ -8,7 +8,7 @@
 
 Date: 2023-11-3
 
-Description: Http Header Parser
+Description: Http Header Parser with C++20 features
 
 **************************************************/
 
@@ -17,13 +17,11 @@ Description: Http Header Parser
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
-
 namespace atom::web {
-class HttpHeaderParserImpl;
-
 /**
  * @brief The HttpHeaderParser class is responsible for parsing and manipulating
  * HTTP headers.
@@ -56,11 +54,19 @@ public:
         const std::map<std::string, std::vector<std::string>> &headers);
 
     /**
+     * @brief Adds a new value to an existing header field.
+     * @param key The key of the header field.
+     * @param value The value to add.
+     */
+    void addHeaderValue(const std::string &key, const std::string &value);
+
+    /**
      * @brief Retrieves the values of a specific header field.
      * @param key The key of the header field.
      * @return A vector containing the values of the header field.
      */
-    std::vector<std::string> getHeaderValues(const std::string &key) const;
+    [[nodiscard]] auto getHeaderValues(const std::string &key) const
+        -> std::optional<std::vector<std::string>>;
 
     /**
      * @brief Removes a specific header field.
@@ -69,22 +75,18 @@ public:
     void removeHeader(const std::string &key);
 
     /**
-     * @brief Prints all the parsed headers to the console.
-     */
-    void printHeaders() const;
-
-    /**
      * @brief Retrieves all the parsed headers.
      * @return A map containing all the parsed headers.
      */
-    std::map<std::string, std::vector<std::string>> getAllHeaders() const;
+    [[nodiscard]] auto getAllHeaders() const
+        -> std::map<std::string, std::vector<std::string>>;
 
     /**
      * @brief Checks if a specific header field exists.
      * @param key The key of the header field to check.
      * @return True if the header field exists, false otherwise.
      */
-    bool hasHeader(const std::string &key) const;
+    [[nodiscard]] auto hasHeader(const std::string &key) const -> bool;
 
     /**
      * @brief Clears all the parsed headers.
@@ -92,6 +94,7 @@ public:
     void clearHeaders();
 
 private:
+    class HttpHeaderParserImpl;
     std::unique_ptr<HttpHeaderParserImpl> m_pImpl;  // Pointer to implementation
 };
 }  // namespace atom::web

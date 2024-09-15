@@ -964,8 +964,8 @@ void TaskInterpreter::executeImport(const json& step) {
             std::condition_variable cv;
             bool callbackCalled = false;
 
-            std::string fullPath = constants::TASK_FOLDER + scriptName +
-                                   constants::PATH_SEPARATOR + ".json";
+            std::string fullPath = Constants::TASK_FOLDER + scriptName +
+                                   Constants::PATH_SEPARATOR + ".json";
             LOG_F(INFO, "Importing script from file: {}", fullPath);
 
             // Asynchronously read the script file

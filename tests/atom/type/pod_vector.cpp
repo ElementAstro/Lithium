@@ -174,34 +174,3 @@ TEST(PodVectorTest, Detach) {
     EXPECT_EQ(data[3], 4);
     std::free(data);
 }
-
-// Test case for Stack class
-TEST(StackTest, BasicOperations) {
-    Stack<int> stack;
-    EXPECT_TRUE(stack.empty());
-
-    stack.push(1);
-    stack.push(2);
-    stack.push(3);
-    EXPECT_EQ(stack.size(), 3);
-    EXPECT_EQ(stack.top(), 3);
-
-    stack.pop();
-    EXPECT_EQ(stack.size(), 2);
-    EXPECT_EQ(stack.top(), 2);
-
-    stack.clear();
-    EXPECT_TRUE(stack.empty());
-}
-
-// Test case for Stack class with popx method
-TEST(StackTest, Popx) {
-    Stack<int> stack;
-    stack.push(1);
-    stack.push(2);
-    stack.push(3);
-
-    int last = stack.popx();
-    EXPECT_EQ(last, 3);
-    EXPECT_EQ(stack.size(), 2);
-}

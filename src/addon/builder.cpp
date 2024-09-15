@@ -6,6 +6,7 @@
 #include "atom/error/exception.hpp"
 
 namespace lithium {
+
 BuildManager::BuildManager(BuildSystemType type) {
     switch (type) {
         case BuildSystemType::CMake:
@@ -20,35 +21,69 @@ BuildManager::BuildManager(BuildSystemType type) {
 }
 
 auto BuildManager::configureProject(
-    const std::string &sourceDir, const std::string &buildDir,
-    const std::string &buildType,
-    const std::vector<std::string> &options) -> bool {
+    const std::filesystem::path& sourceDir,
+    const std::filesystem::path& buildDir, BuildType buildType,
+    const std::vector<std::string>& options) -> BuildResult {
     return builder_->configureProject(sourceDir, buildDir, buildType, options);
 }
 
-auto BuildManager::buildProject(const std::string &buildDir, int jobs) -> bool {
+auto BuildManager::buildProject(const std::filesystem::path& buildDir,
+                                std::optional<int> jobs) -> BuildResult {
     return builder_->buildProject(buildDir, jobs);
 }
 
-auto BuildManager::cleanProject(const std::string &buildDir) -> bool {
+auto BuildManager::cleanProject(const std::filesystem::path& buildDir)
+    -> BuildResult {
     return builder_->cleanProject(buildDir);
 }
 
-auto BuildManager::installProject(const std::string &buildDir,
-                                  const std::string &installDir) -> bool {
+auto BuildManager::installProject(const std::filesystem::path& buildDir,
+                                  const std::filesystem::path& installDir)
+    -> BuildResult {
     return builder_->installProject(buildDir, installDir);
 }
 
-auto BuildManager::runTests(const std::string &buildDir) -> bool {
-    return builder_->runTests(buildDir);
+auto BuildManager::runTests(const std::filesystem::path& buildDir,
+                            const std::vector<std::string>& testNames)
+    -> BuildResult {
+    return builder_->runTests(buildDir, testNames);
 }
 
-auto BuildManager::generateDocs(const std::string &buildDir) -> bool {
-    return builder_->generateDocs(buildDir);
+auto BuildManager::generateDocs(const std::filesystem::path& buildDir,
+                                const std::filesystem::path& outputDir)
+    -> BuildResult {
+    return builder_->generateDocs(buildDir, outputDir);
 }
 
-auto BuildManager::loadConfig(const std::string &configPath) -> bool {
+auto BuildManager::loadConfig(const std::filesystem::path& configPath) -> bool {
     return builder_->loadConfig(configPath);
+}
+
+auto BuildManager::setLogCallback(
+    std::function<void(const std::string&)> callback) -> void {
+    builder_->setLogCallback(std::move(callback));
+}
+
+auto BuildManager::getAvailableTargets(const std::filesystem::path& buildDir)
+    -> std::vector<std::string> {
+    return builder_->getAvailableTargets(buildDir);
+}
+
+auto BuildManager::buildTarget(const std::filesystem::path& buildDir,
+                               const std::string& target,
+                               std::optional<int> jobs) -> BuildResult {
+    return builder_->buildTarget(buildDir, target, jobs);
+}
+
+auto BuildManager::getCacheVariables(const std::filesystem::path& buildDir)
+    -> std::vector<std::pair<std::string, std::string>> {
+    return builder_->getCacheVariables(buildDir);
+}
+
+auto BuildManager::setCacheVariable(const std::filesystem::path& buildDir,
+                                    const std::string& name,
+                                    const std::string& value) -> bool {
+    return builder_->setCacheVariable(buildDir, name, value);
 }
 
 }  // namespace lithium

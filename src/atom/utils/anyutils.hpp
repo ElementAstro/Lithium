@@ -21,6 +21,8 @@ Description: A collection of useful functions with std::any Or Any
 #include <unordered_map>
 #include <utility>
 
+#include "atom/function/concept.hpp"
+
 template <typename T>
 concept CanBeStringified = requires(T t) {
     { toString(t) } -> std::convertible_to<std::string>;
@@ -32,21 +34,9 @@ concept CanBeStringifiedToJson = requires(T t) {
 };
 
 template <typename T>
-concept IsBuiltIn =
-    std::is_fundamental_v<T> || std::is_same_v<T, char> ||
-    std::is_same_v<T, const char *> || std::is_same_v<T, std::string> ||
-    std::is_same_v<T, std::string_view>;
-
-template <typename Container>
-concept ContainerLike = requires(const Container &c) {
-    { c.begin() } -> std::input_iterator;
-    { c.end() } -> std::input_iterator;
-};
-
-template <typename T>
 [[nodiscard]] std::string toString(const T &value, bool prettyPrint = false);
 
-template <ContainerLike Container>
+template <Container Container>
 [[nodiscard]] std::string toString(const Container &container,
                                    bool prettyPrint = false) {
     std::string result = "[";
@@ -65,8 +55,8 @@ template <ContainerLike Container>
 }
 
 template <typename K, typename V>
-[[nodiscard]] std::string toString(const std::unordered_map<K, V> &map,
-                                   bool prettyPrint = false) {
+[[nodiscard]] auto toString(const std::unordered_map<K, V> &map,
+                                   bool prettyPrint = false) -> std::string {
     std::string result = "{";
     for (const auto &pair : map) {
         result += toString(pair.first, prettyPrint) + ": " +
@@ -110,7 +100,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] std::string toJson(const T &value, bool prettyPrint = false);
 
-template <ContainerLike Container>
+template <Container Container>
 [[nodiscard]] std::string toJson(const Container &container,
                                  bool prettyPrint = false) {
     std::string result = "[";
@@ -168,7 +158,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] std::string toXml(const T &value, const std::string &tagName);
 
-template <ContainerLike Container>
+template <Container Container>
 [[nodiscard]] std::string toXml(const Container &container,
                                 const std::string &tagName) {
     std::string result;
@@ -221,7 +211,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] std::string toYaml(const T &value, const std::string &key);
 
-template <ContainerLike Container>
+template <Container Container>
 [[nodiscard]] std::string toYaml(const Container &container,
                                  const std::string &key) {
     std::string result = key.empty() ? "" : key + ":\n";
@@ -290,7 +280,7 @@ template <typename... Ts>
 template <typename T>
 [[nodiscard]] std::string toToml(const T &value, const std::string &key);
 
-template <ContainerLike Container>
+template <Container Container>
 [[nodiscard]] std::string toToml(const Container &container,
                                  const std::string &key) {
     std::string result = key + " = [\n";

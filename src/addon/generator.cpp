@@ -1,5 +1,7 @@
 #include "generator.hpp"
 
+#include <sstream>
+
 namespace lithium {
 void CppMemberGenerator::generate(const JsonType auto &j, std::ostream &os) {
     for (const auto &member : j) {

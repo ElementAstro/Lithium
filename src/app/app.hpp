@@ -8,9 +8,14 @@
 #include "eventloop.hpp"
 #include "executor.hpp"
 
+#include "addon/manager.hpp"
+#include "config/configor.hpp"
+
+namespace lithium::app {
 class ServerCore {
 public:
-    ServerCore(size_t num_threads = std::thread::hardware_concurrency());
+    explicit ServerCore(
+        size_t num_threads = std::jthread::hardware_concurrency());
     ~ServerCore();
 
     void start();
@@ -39,13 +44,20 @@ public:
     EventLoop& getEventLoop();
     atom::async::MessageBus& getMessageBus();
 
+    void loadComponent(const json& params);
+    void unloadComponent(const json& params);
+    void reloadComponent(const json& params);
+    std::vector<std::string> getComponentList() const;
+
 private:
     std::unique_ptr<AsyncExecutor> asyncExecutor;
     std::shared_ptr<EventLoop> eventLoop;
-    std::unique_ptr<CommandDispatcher> commandDispatcher;
+    std::shared_ptr<CommandDispatcher> commandDispatcher;
     std::shared_ptr<atom::async::MessageBus> messageBus;
+    std::shared_ptr<ComponentManager> componentManager;
 
     void initializeSystemEvents();
 };
+}  // namespace lithium::app
 
 #endif  // SERVER_CORE_HPP

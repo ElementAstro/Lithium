@@ -1,25 +1,56 @@
 #include "app.hpp"
 
-#include <iostream>
+#include "atom/function/global_ptr.hpp"
+#include "exception.hpp"
 
+#include "utils/constant.hpp"
+
+#include "atom/type/json.hpp"
+
+namespace lithium::app {
 ServerCore::ServerCore(size_t num_threads)
     : asyncExecutor(std::make_unique<AsyncExecutor>(num_threads)),
-      eventLoop(std::make_shared<EventLoop>()),
       commandDispatcher(std::make_unique<CommandDispatcher>(eventLoop)),
       messageBus(atom::async::MessageBus::createShared()) {
+    // Create EventLoop
+
+    GET_OR_CREATE_PTR(eventLoop, EventLoop, Constants::EVENTLOOP);
+    GET_OR_CREATE_PTR(componentManager, ComponentManager,
+                      Constants::COMPONENT_MANAGER);
+    GET_OR_CREATE_PTR(commandDispatcher, CommandDispatcher, Constants::DISPATCHER);
+    
     initializeSystemEvents();
+
+    
 }
 
 ServerCore::~ServerCore() { stop(); }
 
 void ServerCore::start() {
     publish("system.status", std::string("Server starting"));
-    // Additional startup logic can be added here
+
+    // 加载所有组件
+    auto components = componentManager->getComponentList();
+    for (const auto& component : components) {
+        json params;  // You can customize parameters if needed
+        componentManager->loadComponent(params);
+    }
+
     publish("system.status", std::string("Server started"));
 }
 
 void ServerCore::stop() {
     publish("system.status", std::string("Server stopping"));
+
+    // 卸载所有组件
+    auto components = componentManager->getComponentList();
+    for (const auto& component : components) {
+        json params;  // You can customize parameters if needed
+        componentManager->unloadComponent(params);
+    }
+
+    componentManager->destroy();  // 销毁组件管理器
+
     asyncExecutor->shutdown();
     eventLoop->stop();
     messageBus->clearAllSubscribers();
@@ -95,3 +126,5 @@ template void ServerCore::subscribe<std::string>(
     const std::string&, std::function<void(const std::string&)>);
 template void ServerCore::publish<std::string>(const std::string&,
                                                const std::string&);
+
+}  // namespace lithium::app

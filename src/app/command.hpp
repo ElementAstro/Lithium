@@ -1,11 +1,10 @@
-#ifndef COMMAND_DISPATCHER_HPP
-#define COMMAND_DISPATCHER_HPP
+#ifndef LITHIUM_APP_COMMAND_HPP
+#define LITHIUM_APP_COMMAND_HPP
 
 #include <any>
 #include <functional>
 #include <future>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <string>
@@ -13,6 +12,7 @@
 #include <variant>
 #include <vector>
 
+namespace lithium::app {
 class EventLoop;
 
 class CommandDispatcher {
@@ -74,5 +74,6 @@ private:
     std::shared_ptr<EventLoop> eventLoop_;
     int nextSubscriberId_ = 0;
 };
+}  // namespace lithium::app
 
-#endif  // COMMAND_DISPATCHER_HPP
+#endif  // LITHIUM_APP_COMMAND_HPP

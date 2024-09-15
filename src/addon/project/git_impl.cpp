@@ -7,14 +7,19 @@
 namespace lithium {
 GitManager::Impl::Impl(const std::string& repoPath)
     : repoPath(repoPath), repo(nullptr) {
+    LOG_F(INFO, "Initializing GitManager for repository path: {}", repoPath);
     git_libgit2_init();
+    LOG_F(INFO, "libgit2 initialized.");
 }
 
 GitManager::Impl::~Impl() {
+    LOG_F(INFO, "Shutting down GitManager.");
     if (repo != nullptr) {
         git_repository_free(repo);
+        LOG_F(INFO, "Repository freed.");
     }
     git_libgit2_shutdown();
+    LOG_F(INFO, "libgit2 shutdown completed.");
 }
 
 void GitManager::Impl::printError(int error) {
@@ -27,24 +32,29 @@ void GitManager::Impl::printError(int error) {
 }
 
 auto GitManager::Impl::initRepository() -> bool {
-    int error = git_repository_init(&repo, repoPath.c_str(), 0);
-    if (error < 0) {
+    LOG_F(INFO, "Initializing repository at: {}", repoPath);
+    if (int error = git_repository_init(&repo, repoPath.c_str(), 0);
+        error < 0) {
         printError(error);
         return false;
     }
+    LOG_F(INFO, "Repository successfully initialized.");
     return true;
 }
 
 auto GitManager::Impl::cloneRepository(const std::string& url) -> bool {
-    int error = git_clone(&repo, url.c_str(), repoPath.c_str(), nullptr);
-    if (error < 0) {
+    LOG_F(INFO, "Cloning repository from URL: {} to path: {}", url, repoPath);
+    if (int error = git_clone(&repo, url.c_str(), repoPath.c_str(), nullptr);
+        error < 0) {
         printError(error);
         return false;
     }
+    LOG_F(INFO, "Repository successfully cloned.");
     return true;
 }
 
 auto GitManager::Impl::createBranch(const std::string& branchName) -> bool {
+    LOG_F(INFO, "Creating new branch: {}", branchName);
     git_reference* newBranchRef = nullptr;
     git_oid commitOid;
 
@@ -68,10 +78,12 @@ auto GitManager::Impl::createBranch(const std::string& branchName) -> bool {
         printError(error);
         return false;
     }
+    LOG_F(INFO, "Branch {} successfully created.", branchName);
     return true;
 }
 
 auto GitManager::Impl::checkoutBranch(const std::string& branchName) -> bool {
+    LOG_F(INFO, "Checking out branch: {}", branchName);
     git_object* treeish = nullptr;
     int error = git_revparse_single(&treeish, repo,
                                     ("refs/heads/" + branchName).c_str());
@@ -92,6 +104,7 @@ auto GitManager::Impl::checkoutBranch(const std::string& branchName) -> bool {
         printError(error);
         return false;
     }
+    LOG_F(INFO, "Branch {} checked out.", branchName);
     return true;
 }
 
@@ -151,6 +164,7 @@ auto GitManager::Impl::mergeBranch(const std::string& branchName) -> bool {
             return false;
         }
     } else {
+        LOG_F(INFO, "Performing non-fast-forward merge.");
         // Perform a non-fast-forward merge
         git_index* index;
         error = git_merge(repo, (const git_annotated_commit**)&branchCommit, 1,
@@ -243,7 +257,7 @@ auto GitManager::Impl::mergeBranch(const std::string& branchName) -> bool {
             return false;
         }
     }
-
+    LOG_F(INFO, "Merge of branch {} completed successfully.", branchName);
     return true;
 }
 

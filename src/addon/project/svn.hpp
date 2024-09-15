@@ -4,20 +4,32 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "base.hpp"
 
 namespace lithium {
-class SvnManager {
+class SvnManager : public VcsManager {
 public:
     SvnManager(const std::string& repoPath);
-    ~SvnManager();
+    ~SvnManager() override;
 
-    auto checkout(const std::string& url, const std::string& revision) -> bool;
-    auto addFile(const std::string& filePath) -> bool;
-    auto commitChanges(const std::string& message) -> bool;
-    auto update() -> bool;
-    auto createBranch(const std::string& branchName) -> bool;
-    auto mergeBranch(const std::string& branchName) -> bool;
-    auto getLog(int limit = 10) -> std::vector<std::string>;
+    bool initRepository() override;
+    bool cloneRepository(const std::string& url) override;
+    bool createBranch(const std::string& branchName) override;
+    bool checkoutBranch(const std::string& branchName) override;
+    bool mergeBranch(const std::string& branchName) override;
+    bool addFile(const std::string& filePath) override;
+    bool commitChanges(const std::string& message) override;
+    bool pull(const std::string& remoteName,
+              const std::string& branchName) override;
+    bool push(const std::string& remoteName,
+              const std::string& branchName) override;
+    std::vector<CommitInfo> getLog(int limit = 10) override;
+    std::optional<std::string> getCurrentBranch() override;
+    std::vector<std::string> getBranches() override;
+    std::vector<std::pair<std::string, std::string>> getStatus() override;
+    bool revertCommit(const std::string& commitId) override;
+    bool createTag(const std::string& tagName,
+                   const std::string& message) override;
 
 private:
     class Impl;

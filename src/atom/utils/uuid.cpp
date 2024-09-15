@@ -104,6 +104,26 @@ auto UUID::generateV3(const UUID& namespace_uuid,
     return generateNameBased<EVP_md5>(namespace_uuid, name, 3);
 }
 
+auto UUID::generateV4() -> UUID {
+    // Generate a random UUID (version 4)
+    UUID uuid;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint8_t> dist(0, 255);
+
+    for (auto& byte : uuid.data_) {
+        byte = dist(gen);
+    }
+
+    // Set version to 4 (randomly generated UUID)
+    uuid.data_[6] = (uuid.data_[6] & 0x0F) | 0x40;
+
+    // Set the variant (RFC 4122 variant)
+    uuid.data_[8] = (uuid.data_[8] & 0x3F) | 0x80;
+
+    return uuid;
+}
+
 auto UUID::generateV5(const UUID& namespace_uuid,
                       const std::string& name) -> UUID {
     return generateNameBased<EVP_sha1>(namespace_uuid, name, 5);

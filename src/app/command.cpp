@@ -1,6 +1,7 @@
 #include "command.hpp"
 #include "eventloop.hpp"
 
+namespace lithium::app {
 CommandDispatcher::CommandDispatcher(std::shared_ptr<EventLoop> eventLoop)
     : eventLoop_(std::move(eventLoop)) {}
 
@@ -10,7 +11,8 @@ void CommandDispatcher::unregisterCommand(const CommandID& id) {
     undoHandlers_.erase(id);
 }
 
-void CommandDispatcher::recordHistory(const CommandID& id, const std::any& command) {
+void CommandDispatcher::recordHistory(const CommandID& id,
+                                      const std::any& command) {
     auto& commandHistory = history_[id];
     commandHistory.push_back(command);
     if (commandHistory.size() > maxHistorySize_) {
@@ -18,7 +20,8 @@ void CommandDispatcher::recordHistory(const CommandID& id, const std::any& comma
     }
 }
 
-void CommandDispatcher::notifySubscribers(const CommandID& id, const std::any& command) {
+void CommandDispatcher::notifySubscribers(const CommandID& id,
+                                          const std::any& command) {
     auto it = subscribers_.find(id);
     if (it != subscribers_.end()) {
         for (auto& [_, callback] : it->second) {
@@ -65,9 +68,9 @@ auto CommandDispatcher::getActiveCommands() const -> std::vector<CommandID> {
 
 // Template implementations
 template <typename CommandType>
-void CommandDispatcher::registerCommand(const CommandID& id,
-                                        std::function<void(const CommandType&)> handler,
-                                        std::optional<std::function<void(const CommandType&)>> undoHandler) {
+void CommandDispatcher::registerCommand(
+    const CommandID& id, std::function<void(const CommandType&)> handler,
+    std::optional<std::function<void(const CommandType&)>> undoHandler) {
     std::unique_lock lock(mutex_);
     handlers_[id] = [handler](const std::any& cmd) {
         handler(std::any_cast<const CommandType&>(cmd));
@@ -80,9 +83,10 @@ void CommandDispatcher::registerCommand(const CommandID& id,
 }
 
 template <typename CommandType>
-auto CommandDispatcher::dispatch(const CommandID& id, const CommandType& command, int priority,
-                                 std::optional<std::chrono::milliseconds> delay,
-                                 CommandCallback callback) -> std::future<ResultType> {
+auto CommandDispatcher::dispatch(
+    const CommandID& id, const CommandType& command, int priority,
+    std::optional<std::chrono::milliseconds> delay,
+    CommandCallback callback) -> std::future<ResultType> {
     auto task = [this, id, command, callback]() -> ResultType {
         try {
             std::shared_lock lock(mutex_);
@@ -115,7 +119,8 @@ auto CommandDispatcher::dispatch(const CommandID& id, const CommandType& command
 }
 
 template <typename CommandType>
-auto CommandDispatcher::getResult(std::future<ResultType>& resultFuture) -> CommandType {
+auto CommandDispatcher::getResult(std::future<ResultType>& resultFuture)
+    -> CommandType {
     auto result = resultFuture.get();
     if (std::holds_alternative<std::any>(result)) {
         return std::any_cast<CommandType>(std::get<std::any>(result));
@@ -139,7 +144,8 @@ void CommandDispatcher::redo(const CommandID& id, const CommandType& command) {
 }
 
 template <typename CommandType>
-auto CommandDispatcher::getCommandHistory(const CommandID& id) -> std::vector<CommandType> {
+auto CommandDispatcher::getCommandHistory(const CommandID& id)
+    -> std::vector<CommandType> {
     std::shared_lock lock(mutex_);
     std::vector<CommandType> history;
     if (auto it = history_.find(id); it != history_.end()) {
@@ -149,3 +155,5 @@ auto CommandDispatcher::getCommandHistory(const CommandID& id) -> std::vector<Co
     }
     return history;
 }
+
+}  // namespace lithium::app

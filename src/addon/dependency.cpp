@@ -1,11 +1,9 @@
 #include "dependency.hpp"
 #include "version.hpp"
 
-#include <condition_variable>
 #include <fstream>
-#include <queue>
-#include <thread>
 #include <unordered_map>
+#include <utility>
 
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
@@ -13,82 +11,87 @@
 
 namespace lithium {
 void DependencyGraph::addNode(const Node& node, const Version& version) {
+    LOG_F(INFO, "Adding node: {} with version: {}", node, version.toString());
     adjList_.try_emplace(node);
     incomingEdges_.try_emplace(node);
     nodeVersions_[node] = version;
+    LOG_F(INFO, "Node {} added successfully.", node);
 }
 
 void DependencyGraph::addDependency(const Node& from, const Node& to,
                                     const Version& requiredVersion) {
-    if (nodeVersions_.find(to) != nodeVersions_.end() &&
-        nodeVersions_[to] < requiredVersion) {
+    LOG_F(INFO, "Adding dependency from {} to {} with required version: {}",
+          from, to, requiredVersion.toString());
+
+    if (nodeVersions_.contains(to) && nodeVersions_[to] < requiredVersion) {
+        LOG_F(ERROR,
+              "Version requirement not satisfied for dependency {} -> {}", from,
+              to);
         THROW_INVALID_ARGUMENT(
             "Version requirement not satisfied for dependency " + from +
             " -> " + to);
     }
+
     adjList_[from].insert(to);
     incomingEdges_[to].insert(from);
+    LOG_F(INFO, "Dependency from {} to {} added successfully.", from, to);
 }
 
 void DependencyGraph::removeNode(const Node& node) {
+    LOG_F(INFO, "Removing node: {}", node);
+
     adjList_.erase(node);
     incomingEdges_.erase(node);
+
     for (auto& [key, neighbors] : adjList_) {
         neighbors.erase(node);
     }
     for (auto& [key, sources] : incomingEdges_) {
         sources.erase(node);
     }
+
+    LOG_F(INFO, "Node {} removed successfully.", node);
 }
 
 void DependencyGraph::removeDependency(const Node& from, const Node& to) {
-    if (adjList_.find(from) != adjList_.end()) {
+    LOG_F(INFO, "Removing dependency from {} to {}", from, to);
+
+    if (adjList_.contains(from)) {
         adjList_[from].erase(to);
     }
-    if (incomingEdges_.find(to) != incomingEdges_.end()) {
+    if (incomingEdges_.contains(to)) {
         incomingEdges_[to].erase(from);
     }
-}
 
-auto DependencyGraph::getDependencies(const Node& node) const
-    -> std::vector<DependencyGraph::Node> {
-    if (adjList_.find(node) != adjList_.end()) {
-        return {adjList_.at(node).begin(), adjList_.at(node).end()};
-    }
-    return {};
-}
-
-auto DependencyGraph::getDependents(const Node& node) const
-    -> std::vector<DependencyGraph::Node> {
-    std::vector<Node> dependents;
-    for (const auto& [key, neighbors] : adjList_) {
-        if (neighbors.contains(node)) {
-            dependents.push_back(key);
-        }
-    }
-    return dependents;
+    LOG_F(INFO, "Dependency from {} to {} removed successfully.", from, to);
 }
 
 auto DependencyGraph::hasCycle() const -> bool {
+    LOG_F(INFO, "Checking for cycles in the dependency graph.");
     std::unordered_set<Node> visited;
     std::unordered_set<Node> recStack;
 
     for (const auto& [node, _] : adjList_) {
         if (hasCycleUtil(node, visited, recStack)) {
+            LOG_F(ERROR, "Cycle detected in the graph.");
             return true;
         }
     }
+    LOG_F(INFO, "No cycles detected.");
     return false;
 }
 
 auto DependencyGraph::topologicalSort() const
-    -> std::optional<std::vector<DependencyGraph::Node>> {
+    -> std::optional<std::vector<Node>> {
+    LOG_F(INFO, "Performing topological sort.");
     std::unordered_set<Node> visited;
     std::stack<Node> stack;
+
     for (const auto& [node, _] : adjList_) {
         if (!visited.contains(node)) {
             if (!topologicalSortUtil(node, visited, stack)) {
-                return std::nullopt;  // Cycle detected
+                LOG_F(ERROR, "Cycle detected during topological sort.");
+                return std::nullopt;
             }
         }
     }
@@ -98,157 +101,43 @@ auto DependencyGraph::topologicalSort() const
         sortedNodes.push_back(stack.top());
         stack.pop();
     }
+
+    LOG_F(INFO, "Topological sort completed successfully.");
     return sortedNodes;
-}
-
-auto DependencyGraph::getAllDependencies(const Node& node) const
-    -> std::unordered_set<DependencyGraph::Node> {
-    std::unordered_set<Node> allDependencies;
-    getAllDependenciesUtil(node, allDependencies);
-    return allDependencies;
-}
-
-void DependencyGraph::loadNodesInParallel(
-    std::function<void(const Node&)> loadFunction) const {
-    std::queue<Node> readyQueue;
-    std::mutex mtx;
-    std::condition_variable cv;
-    std::unordered_map<Node, int> inDegree;
-    std::unordered_set<Node> loadedNodes;
-    std::vector<std::jthread> threads;
-    bool done = false;
-
-    // Initialize in-degree and ready queue
-    for (const auto& [node, deps] : adjList_) {
-        inDegree[node] =
-            incomingEdges_.contains(node) ? incomingEdges_.at(node).size() : 0;
-        if (inDegree[node] == 0) {
-            readyQueue.push(node);
-        }
-    }
-
-    auto worker = [&]() {
-        while (true) {
-            Node node;
-            {
-                std::unique_lock lock(mtx);
-                cv.wait(lock, [&] { return !readyQueue.empty() || done; });
-
-                if (done && readyQueue.empty()) {
-                    return;
-                }
-
-                node = readyQueue.front();
-                readyQueue.pop();
-            }
-
-            loadFunction(node);
-
-            {
-                std::unique_lock lock(mtx);
-                loadedNodes.insert(node);
-
-                for (const auto& dep : adjList_.at(node)) {
-                    inDegree[dep]--;
-                    if (inDegree[dep] == 0) {
-                        readyQueue.push(dep);
-                    }
-                }
-
-                if (readyQueue.empty() &&
-                    loadedNodes.size() == adjList_.size()) {
-                    done = true;
-                    cv.notify_all();
-                } else {
-                    cv.notify_all();
-                }
-            }
-        }
-    };
-
-    int numThreads = std::thread::hardware_concurrency();
-    threads.reserve(numThreads);
-    for (int i = 0; i < numThreads; ++i) {
-        threads.emplace_back(worker);
-    }
-}
-
-auto DependencyGraph::hasCycleUtil(
-    const Node& node, std::unordered_set<Node>& visited,
-    std::unordered_set<Node>& recStack) const -> bool {
-    if (!visited.contains(node)) {
-        visited.insert(node);
-        recStack.insert(node);
-
-        for (const auto& neighbour : adjList_.at(node)) {
-            if (!visited.contains(neighbour) &&
-                hasCycleUtil(neighbour, visited, recStack)) {
-                return true;
-            }
-            if (recStack.contains(neighbour)) {
-                return true;
-            }
-        }
-    }
-    recStack.erase(node);
-    return false;
-}
-
-auto DependencyGraph::topologicalSortUtil(
-    const Node& node, std::unordered_set<Node>& visited,
-    std::stack<Node>& stack) const -> bool {
-    visited.insert(node);
-    for (const auto& neighbour : adjList_.at(node)) {
-        if (!visited.contains(neighbour)) {
-            if (!topologicalSortUtil(neighbour, visited, stack)) {
-                return false;  // Cycle detected
-            }
-        }
-    }
-    stack.push(node);
-    return true;
-}
-
-void DependencyGraph::getAllDependenciesUtil(
-    const Node& node, std::unordered_set<Node>& allDependencies) const {
-    if (adjList_.contains(node)) {
-        for (const auto& neighbour : adjList_.at(node)) {
-            if (!allDependencies.contains(neighbour)) {
-                allDependencies.insert(neighbour);
-                getAllDependenciesUtil(neighbour, allDependencies);
-            }
-        }
-    }
-}
-
-auto DependencyGraph::removeDuplicates(const std::vector<std::string>& input)
-    -> std::vector<std::string> {
-    std::unordered_set<std::string> seen;
-    std::vector<std::string> result;
-
-    for (const auto& element : input) {
-        if (seen.insert(element).second) {
-            result.push_back(element);
-        }
-    }
-
-    return result;
 }
 
 auto DependencyGraph::resolveDependencies(
     const std::vector<std::string>& directories) -> std::vector<std::string> {
+    LOG_F(INFO, "Resolving dependencies for directories.");
     DependencyGraph graph;
 
     for (const auto& dir : directories) {
-        std::string packagePath = dir + "/package.json";
-        auto [package_name, deps] = parsePackageJson(packagePath);
+        std::string packageJsonPath = dir + "/package.json";
+        std::string packageXmlPath = dir + "/package.xml";
 
-        graph.addNode(package_name, deps.at(package_name));
+        if (std::filesystem::exists(packageJsonPath)) {
+            LOG_F(INFO, "Parsing package.json in directory: {}", dir);
+            auto [package_name, deps] = parsePackageJson(packageJsonPath);
+            graph.addNode(package_name, deps.at(package_name));
 
-        for (const auto& dep : deps) {
-            if (dep.first != package_name) {
-                graph.addNode(dep.first, dep.second);
-                graph.addDependency(package_name, dep.first, dep.second);
+            for (const auto& dep : deps) {
+                if (dep.first != package_name) {
+                    graph.addNode(dep.first, dep.second);
+                    graph.addDependency(package_name, dep.first, dep.second);
+                }
+            }
+        }
+
+        if (std::filesystem::exists(packageXmlPath)) {
+            LOG_F(INFO, "Parsing package.xml in directory: {}", dir);
+            auto [package_name, deps] = parsePackageXml(packageXmlPath);
+            graph.addNode(package_name, deps.at(package_name));
+
+            for (const auto& dep : deps) {
+                if (dep.first != package_name) {
+                    graph.addNode(dep.first, dep.second);
+                    graph.addDependency(package_name, dep.first, dep.second);
+                }
             }
         }
     }
@@ -264,6 +153,7 @@ auto DependencyGraph::resolveDependencies(
         return {};
     }
 
+    LOG_F(INFO, "Dependencies resolved successfully.");
     return removeDuplicates(sortedPackagesOpt.value());
 }
 
@@ -298,4 +188,37 @@ auto DependencyGraph::parsePackageJson(const std::string& path)
     file.close();
     return {packageName, deps};
 }
+
+auto DependencyGraph::parsePackageXml(const std::string& path)
+    -> std::pair<std::string, std::unordered_map<std::string, Version>> {
+    XMLDocument doc;
+    if (doc.LoadFile(path.c_str()) != XML_SUCCESS) {
+        THROW_FAIL_TO_OPEN_FILE("Failed to open " + path);
+    }
+
+    XMLElement* root = doc.FirstChildElement("package");
+    if (root == nullptr) {
+        THROW_MISSING_ARGUMENT("Missing root element in " + path);
+    }
+
+    const char* packageName = root->FirstChildElement("name")->GetText();
+    if (packageName == nullptr) {
+        THROW_MISSING_ARGUMENT("Missing package name in " + path);
+    }
+
+    std::unordered_map<std::string, Version> deps;
+
+    XMLElement* dependElement = root->FirstChildElement("depend");
+    while (dependElement != nullptr) {
+        const char* depName = dependElement->GetText();
+        if (depName != nullptr) {
+            deps[depName] = Version{};  // Assuming no version info in XML,
+                                        // could extend if needed.
+        }
+        dependElement = dependElement->NextSiblingElement("depend");
+    }
+
+    return {packageName, deps};
+}
+
 }  // namespace lithium

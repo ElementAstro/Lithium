@@ -284,8 +284,8 @@ void initLithiumApp(int argc, char **argv) {
     // AddPtr("ScriptManager",
     // ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
 
-    AddPtr(constants::LITHIUM_DEVICE_MANAGER, DeviceManager::createShared());
-    AddPtr(constants::LITHIUM_DEVICE_LOADER, ModuleLoader::createShared("./drivers"));
+    AddPtr(Constants::LITHIUM_DEVICE_MANAGER, DeviceManager::createShared());
+    AddPtr(Constants::LITHIUM_DEVICE_LOADER, ModuleLoader::createShared("./drivers"));
 
     AddPtr("lithium.error.stack", std::make_shared<atom::error::ErrorStack>());
 

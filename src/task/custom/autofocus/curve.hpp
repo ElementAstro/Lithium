@@ -1,13 +1,35 @@
-#pragma once
+#ifndef FOCUS_CURVE_FITTER_H
+#define FOCUS_CURVE_FITTER_H
 
-#include <vector>
+#include <string>
 #include <utility>
+#include <vector>
+
+enum class ModelType { POLYNOMIAL, GAUSSIAN, LORENTZIAN };
+
+struct DataPoint {
+    double position;
+    double sharpness;
+};
 
 class FocusCurveFitter {
 public:
-    FocusCurveFitter(int degree = 4);
-    std::pair<int, double> fitCurve(const std::vector<int>& positions, const std::vector<double>& hfrScores);
+    FocusCurveFitter();
+    ~FocusCurveFitter();
+
+    void addDataPoint(double position, double sharpness);
+    std::vector<double> fitCurve();
+    void autoSelectModel();
+    std::vector<std::pair<double, double>> calculateConfidenceIntervals(
+        double confidence_level = 0.95);
+    void visualize(const std::string& filename = "focus_curve.png");
+    void preprocessData();
+    void realTimeFitAndPredict(double new_position);
+    void parallelFitting();
 
 private:
-    int polynomialDegree;
+    class Impl;   // Forward declaration of the implementation class
+    Impl* impl_;  // Pointer to implementation (Pimpl idiom)
 };
+
+#endif  // FOCUS_CURVE_FITTER_H

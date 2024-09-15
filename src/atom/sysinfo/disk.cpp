@@ -14,8 +14,6 @@ Description: System Information Module - Disk
 
 #include "atom/sysinfo/disk.hpp"
 
-#include "atom/log/loguru.hpp"
-
 #include <array>
 #include <filesystem>
 #include <fstream>
@@ -42,6 +40,8 @@ Description: System Information Module - Disk
 #include <DiskArbitration/DiskArbitration.h>
 #include <mntent.h>
 #endif
+
+#include "atom/log/loguru.hpp"
 
 namespace fs = std::filesystem;
 
@@ -278,12 +278,103 @@ bool checkForMaliciousFiles(const std::string& path) {
 }
 
 bool isDeviceInWhiteList(const std::string& deviceID) {
-    if (whiteList.find(deviceID) != whiteList.end()) {
+    if (whiteList.contains(deviceID)) {
         LOG_F(INFO, "Device {} is in the whitelist. Access granted.", deviceID);
         return true;
     }
     LOG_F(ERROR, "Device {} is not in the whitelist. Access denied.", deviceID);
     return false;
+}
+
+auto getFileSystemType(const std::string& path) -> std::string {
+#ifdef _WIN32
+    char fileSystemNameBuffer[MAX_PATH] = {0};
+    if (!GetVolumeInformationA(path.c_str(),  // 根目录路径
+                               NULL,          // 卷名称
+                               0,             // 卷名称缓冲区大小
+                               NULL,          // 卷序列号
+                               NULL,          // 最大组件长度
+                               NULL,          // 文件系统标志
+                               fileSystemNameBuffer,  // 文件系统名称
+                               sizeof(fileSystemNameBuffer))) {
+        LOG_F(ERROR, "Error retrieving filesystem information for: {}", path);
+        return "Unknown";
+    }
+    return std::string(fileSystemNameBuffer);
+
+#elif __linux__ || __ANDROID__
+    struct statfs buffer;
+    if (statfs(path.c_str(), &buffer) != 0) {
+        LOG_F(ERROR, "Error retrieving filesystem information for: {}", path);
+        return "Unknown";
+    }
+
+    // 文件系统类型
+    switch (buffer.f_type) {
+        case 0xEF53:
+            return "ext4";
+        case 0x6969:
+            return "nfs";
+        case 0xFF534D42:
+            return "cifs";
+        case 0x4d44:
+            return "vfat";
+        default:
+            return "Unknown";
+    }
+
+#elif __APPLE__
+    struct statfs buffer;
+    if (statfs(path.c_str(), &buffer) != 0) {
+        LOG_F(ERROR, "Error retrieving filesystem information for: {}", path);
+        return "Unknown";
+    }
+
+    if (strcmp(buffer.f_fstypename, "hfs") == 0) {
+        return "HFS";
+    } else if (strcmp(buffer.f_fstypename, "apfs") == 0) {
+        return "APFS";
+    } else if (strcmp(buffer.f_fstypename, "msdos") == 0) {
+        return "FAT32";
+    } else if (strcmp(buffer.f_fstypename, "exfat") == 0) {
+        return "ExFAT";
+    } else if (strcmp(buffer.f_fstypename, "nfs") == 0) {
+        return "NFS";
+    } else {
+        return "Unknown";
+    }
+
+#elif __FreeBSD__ || __NetBSD__ || __OpenBSD__
+    struct statfs buffer;
+    if (statfs(path.c_str(), &buffer) != 0) {
+        LOG_F(ERROR, "Error retrieving filesystem information for: {}", path);
+        return "Unknown";
+    }
+
+    if (strcmp(buffer.f_fstypename, "ufs") == 0) {
+        return "UFS";
+    } else if (strcmp(buffer.f_fstypename, "zfs") == 0) {
+        return "ZFS";
+    } else if (strcmp(buffer.f_fstypename, "msdosfs") == 0) {
+        return "FAT32";
+    } else if (strcmp(buffer.f_fstypename, "nfs") == 0) {
+        return "NFS";
+    } else {
+        return "Unknown";
+    }
+
+#else
+    // 其他 Unix 系统使用 statvfs
+    struct statvfs buffer;
+    if (statvfs(path.c_str(), &buffer) != 0) {
+        std::cerr << "Error retrieving filesystem information for: " << path
+                  << std::endl;
+        return "Unknown";
+    }
+
+    // 其他系统的文件系统类型判断逻辑（这里没有定义特定的类型）
+    return "Unknown";
+#endif
 }
 
 #ifdef _WIN32

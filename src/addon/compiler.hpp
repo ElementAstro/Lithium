@@ -25,19 +25,20 @@ using json = nlohmann::json;
 namespace lithium {
 
 class CompilerImpl;
-
+class CompileCommandGenerator;
 class Compiler {
 public:
     Compiler();
     ~Compiler();
 
     /**
-     * 编译 C++ 代码为共享库，并加载到内存中
-     * @param code 要编译的代码
-     * @param moduleName 模块名
-     * @param functionName 入口函数名
-     * @param optionsFile 编译选项文件路径,默认为 "compile_options.json"
-     * @return 编译是否成功
+     * Compile C++ code into a shared library and load it into memory
+     * @param code Code to compile
+     * @param moduleName Module name
+     * @param functionName Entry function name
+     * @param optionsFile Compilation options file path, default is
+     * "compile_options.json"
+     * @return Whether compilation was successful
      */
     ATOM_NODISCARD auto compileToSharedLibrary(
         std::string_view code, std::string_view moduleName,
@@ -45,17 +46,23 @@ public:
         std::string_view optionsFile = "compile_options.json") -> bool;
 
     /**
-     * 添加自定义编译选项
-     * @param options 编译选项
+     * Add custom compilation options
+     * @param options Compilation options
      */
-    void addCompileOptions(const std::string &options);
+    void addCompileOptions(const std::string& options);
 
     /**
-     * 获取可用编译器列表
-     * @return 编译器列表
+     * Get list of available compilers
+     * @return List of compilers
      */
     ATOM_NODISCARD auto getAvailableCompilers() const
         -> std::vector<std::string>;
+
+    /**
+     * Generate compile commands for a given source directory
+     * @param sourceDir Source directory path
+     */
+    void generateCompileCommands(const std::string& sourceDir);
 
 private:
     std::unique_ptr<CompilerImpl> impl_;

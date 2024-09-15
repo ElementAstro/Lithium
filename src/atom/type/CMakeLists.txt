@@ -11,9 +11,7 @@ project(atom-type C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    ini.cpp
     message.cpp
-    string.cpp
 )
 
 # Headers
@@ -21,8 +19,6 @@ set(${PROJECT_NAME}_HEADERS
     args.hpp
     argsview.hpp
     flatset.hpp
-    ini.inl
-    ini.hpp
     json.hpp
     message.hpp
     pointer.hpp

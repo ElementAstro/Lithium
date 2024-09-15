@@ -22,7 +22,7 @@ void loadSharedCompoennt(const std::string &compoennt_name,
         return;
     }
     auto manager = GetWeakPtr<lithium::ComponentManager>(
-        constants::LITHIUM_COMPONENT_MANAGER);
+        Constants::LITHIUM_COMPONENT_MANAGER);
     if (manager.expired()) {
         std::cout << "Component manager not found" << '\n';
         return;
@@ -31,7 +31,7 @@ void loadSharedCompoennt(const std::string &compoennt_name,
             {{"component_name", compoennt_name},
              {"module_name", module_name},
              {"module_path", atom::system::getCurrentWorkingDirectory() +
-                                 constants::MODULE_FOLDER}})) {
+                                 Constants::MODULE_FOLDER}})) {
         std::cout << "Failed to load component" << '\n';
         return;
     }
@@ -44,7 +44,7 @@ void unloadSharedCompoennt(const std::string &compoennt_name) {
         return;
     }
     if (!GetWeakPtr<lithium::ComponentManager>(
-             constants::LITHIUM_COMPONENT_MANAGER)
+             Constants::LITHIUM_COMPONENT_MANAGER)
              .lock()
              ->unloadComponent({{"component_name", compoennt_name}})) {
         std::cout << "Failed to unload component" << '\n';
@@ -59,7 +59,7 @@ void reloadSharedCompoennt(const std::string &compoennt_name) {
         return;
     }
     if (!GetWeakPtr<lithium::ComponentManager>(
-             constants::LITHIUM_COMPONENT_MANAGER)
+             Constants::LITHIUM_COMPONENT_MANAGER)
              .lock()
              ->reloadComponent({{"component_name", compoennt_name}})) {
         std::cout << "Failed to reload component" << '\n';
@@ -70,7 +70,7 @@ void reloadSharedCompoennt(const std::string &compoennt_name) {
 
 void reloadAllComponents() {
     if (!GetWeakPtr<lithium::ComponentManager>(
-             constants::LITHIUM_COMPONENT_MANAGER)
+             Constants::LITHIUM_COMPONENT_MANAGER)
              .lock()
              ->reloadAllComponents()) {
         std::cout << "Failed to reload all components" << '\n';
@@ -85,7 +85,7 @@ void scanComponents(const std::string &path) {
         return;
     }
     if (auto vec = GetWeakPtr<lithium::ComponentManager>(
-                       constants::LITHIUM_COMPONENT_MANAGER)
+                       Constants::LITHIUM_COMPONENT_MANAGER)
                        .lock()
                        ->scanComponents(path);
         vec.empty()) {
@@ -105,7 +105,7 @@ void getComponentInfo(const std::string &name) {
         return;
     }
     auto manager = GetWeakPtr<lithium::ComponentManager>(
-        constants::LITHIUM_COMPONENT_MANAGER);
+        Constants::LITHIUM_COMPONENT_MANAGER);
     if (manager.expired()) {
         std::cout << "Component manager not found" << '\n';
         return;
@@ -121,7 +121,7 @@ void getComponentInfo(const std::string &name) {
 
 void getComponentList() {
     auto manager = GetWeakPtr<lithium::ComponentManager>(
-        constants::LITHIUM_COMPONENT_MANAGER);
+        Constants::LITHIUM_COMPONENT_MANAGER);
     if (manager.expired()) {
         std::cout << "Component manager not found" << std::endl;
         return;

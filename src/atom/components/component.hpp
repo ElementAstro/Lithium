@@ -59,7 +59,11 @@ public:
     // Inject methods
     // -------------------------------------------------------------------
 
-    std::weak_ptr<const Component> getInstance() const;
+    auto getInstance() const -> std::weak_ptr<const Component>;
+
+    auto getSharedInstance() -> std::shared_ptr<Component> {
+        return shared_from_this();
+    }
 
     // -------------------------------------------------------------------
     // Common methods

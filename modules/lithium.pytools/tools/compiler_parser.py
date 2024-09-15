@@ -1,12 +1,16 @@
 """
 This module contains functions for parsing compiler output and converting it to JSON, CSV, or XML format.
 """
+
+from pathlib import Path
 import re
 import json
 import csv
 import argparse
+import os
 import xml.etree.ElementTree as ET
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from termcolor import colored
 
 
 def parse_gcc_clang_output(output):
@@ -32,7 +36,8 @@ def parse_gcc_clang_output(output):
             "file": match[0],
             "line": int(match[1]),
             "column": int(match[2]),
-            "message": match[4].strip()
+            "message": match[4].strip(),
+            "severity": match[3].lower(),
         }
         if match[3].lower() == 'error':
             results["errors"].append(entry)
@@ -70,7 +75,8 @@ def parse_msvc_output(output):
             "file": match[0],
             "line": int(match[1]),
             "code": match[3],
-            "message": match[4].strip()
+            "message": match[4].strip(),
+            "severity": match[2].lower(),
         }
         if match[2].lower() == 'error':
             results["errors"].append(entry)
@@ -107,7 +113,8 @@ def parse_cmake_output(output):
         entry = {
             "file": match[0],
             "line": int(match[1]),
-            "message": match[3].strip()
+            "message": match[3].strip(),
+            "severity": match[2].lower(),
         }
         if match[2].lower() == 'error':
             results["errors"].append(entry)
@@ -152,7 +159,8 @@ def write_to_csv(data, output_path):
         output_path (str): The path to the output CSV file.
     """
     with open(output_path, 'w', newline='', encoding="utf-8") as csvfile:
-        fieldnames = ['file', 'line', 'column', 'type', 'code', 'message']
+        fieldnames = ['file', 'line', 'column',
+                      'type', 'code', 'message', 'severity']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for entry in data:
@@ -198,6 +206,25 @@ def process_file(compiler, file_path):
     }
 
 
+def colorize_output(entries):
+    """
+    Prints compiler results with colorized output in the console.
+
+    Args:
+        entries (list): A list of parsed compiler entries.
+    """
+    for entry in entries:
+        if entry['type'] == 'errors':
+            print(colored(f"Error in {entry['file']}:{
+                  entry['line']} - {entry['message']}", 'red'))
+        elif entry['type'] == 'warnings':
+            print(colored(f"Warning in {entry['file']}:{
+                  entry['line']} - {entry['message']}", 'yellow'))
+        else:
+            print(colored(f"Info in {entry['file']}:{
+                  entry['line']} - {entry['message']}", 'blue'))
+
+
 def main():
     """
     Main function to parse compiler output and convert to JSON, CSV, or XML format.
@@ -213,50 +240,78 @@ def main():
     parser.add_argument(
         '--output-file', default='output.json', help="Output file name.")
     parser.add_argument(
-        '--filter', choices=['error', 'warning', 'info'], help="Filter by message type.")
+        '--output-dir', default='.', help="Output directory.")
     parser.add_argument(
-        '--stats', action='store_true', help="Include statistics in the output.")
+        '--filter', nargs='*', choices=['error', 'warning', 'info'], help="Filter by message types.")
+    parser.add_argument('--stats', action='store_true',
+                        help="Include statistics in the output.")
+    parser.add_argument(
+        '--concurrency', type=int, default=4, help="Number of concurrent threads for processing files.")
 
     args = parser.parse_args()
 
-    all_results = []
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(process_file, args.compiler, file_path)
-                   for file_path in args.file_paths]
-        for future in futures:
-            all_results.append(future.result())
+    # Prepare the output directory
+    output_dir = Path(args.output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Initialize results list
+    all_results = []
+
+    # Use ThreadPoolExecutor for concurrent processing of files
+    with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
+        futures = {executor.submit(
+            process_file, args.compiler, file_path): file_path for file_path in args.file_paths}
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                all_results.append(result)
+            except Exception as e:
+                print(colored(f"Error processing {
+                      futures[future]}: {e}", 'red'))
+
+    # Flatten results for output processing
     flattened_results = []
     for result in all_results:
-        for key, entries in result['results'].items():
+        for severity, entries in result['results'].items():
             for entry in entries:
-                entry['type'] = key
+                entry['type'] = severity
                 entry['file'] = result['file']
                 flattened_results.append(entry)
 
+    # Apply filtering if specified
     if args.filter:
         flattened_results = [
-            entry for entry in flattened_results if entry['type'] == args.filter]
+            entry for entry in flattened_results if entry['type'] in args.filter]
 
+    # Calculate statistics if requested
     if args.stats:
         stats = {
+            "total": len(flattened_results),
             "errors": sum(1 for entry in flattened_results if entry['type'] == 'errors'),
             "warnings": sum(1 for entry in flattened_results if entry['type'] == 'warnings'),
             "info": sum(1 for entry in flattened_results if entry['type'] == 'info'),
         }
-        print(f"Statistics: {json.dumps(stats, indent=4)}")
+        print(f"Statistics:\n{json.dumps(stats, indent=4)}")
+
+    # Output results to the specified format
+    output_file_path = output_dir / args.output_file
 
     if args.output_format == 'json':
         json_output = json.dumps(flattened_results, indent=4)
-        with open(args.output_file, 'w', encoding="utf-8") as json_file:
+        with open(output_file_path, 'w', encoding="utf-8") as json_file:
             json_file.write(json_output)
-        print(f"JSON output saved to {args.output_file}")
+        print(f"JSON output saved to {output_file_path}")
     elif args.output_format == 'csv':
-        write_to_csv(flattened_results, args.output_file)
-        print(f"CSV output saved to {args.output_file}")
+        write_to_csv(flattened_results, output_file_path)
+        print(f"CSV output saved to {output_file_path}")
     elif args.output_format == 'xml':
-        write_to_xml(flattened_results, args.output_file)
-        print(f"XML output saved to {args.output_file}")
+        write_to_xml(flattened_results, output_file_path)
+        print(f"XML output saved to {output_file_path}")
+
+    # Optional: Print colorized output to the console
+    print("\nColorized Output:")
+    colorize_output(flattened_results)
 
 
 if __name__ == "__main__":

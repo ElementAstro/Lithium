@@ -5,7 +5,9 @@ import logging
 from typing import Dict, Any
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 class JSONTCPServer:
     """
@@ -13,113 +15,136 @@ class JSONTCPServer:
     """
 
     def __init__(self, host='127.0.0.1', port=8888, max_clients=10):
+        """
+        Initialize the JSONTCPServer with the server's host, port, and maximum number of clients.
+
+        Args:
+            host (str): The server's hostname or IP address.
+            port (int): The server's port number.
+            max_clients (int): The maximum number of concurrent clients.
+        """
         self.host = host
         self.port = port
         self.max_clients = max_clients
         self.active_clients = 0
-        self.semaphore = asyncio.Semaphore(max_clients)  # Limit concurrent connections
+        self.semaphore = asyncio.Semaphore(
+            max_clients)  # Limit concurrent connections
+        self.server = None
+        self.clients = []
 
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         """
-        Handles a single client connection.
-        """
-        client_addr = writer.get_extra_info('peername')
-        logging.info(f'New connection from {client_addr}')
-        self.active_clients += 1
+        Handle incoming client connections and process their requests.
 
+        Args:
+            reader (asyncio.StreamReader): The stream reader for the client connection.
+            writer (asyncio.StreamWriter): The stream writer for the client connection.
+        """
+        async with self.semaphore:
+            self.active_clients += 1
+            client_info = writer.get_extra_info('peername')
+            self.clients.append(writer)
+            self.log_client_activity(client_info, "connected")
+
+            try:
+                while True:
+                    data = await reader.readline()
+                    if not data:
+                        break
+                    message = data.decode().strip()
+                    logging.info(f"Received {message} from {client_info}")
+                    response = await self.process_command(json.loads(message))
+                    writer.write((json.dumps(response) + '\n').encode())
+                    await writer.drain()
+            except Exception as e:
+                logging.error(f"Error handling client {client_info}: {e}")
+            finally:
+                self.disconnect_client(writer)
+                self.log_client_activity(client_info, "disconnected")
+
+    async def process_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process a JSON command and return a JSON response.
+
+        Args:
+            command (Dict[str, Any]): The JSON command received from the client.
+
+        Returns:
+            Dict[str, Any]: The JSON response to send back to the client.
+        """
         try:
-            while True:
-                data = await reader.readline()
-                if not data:
-                    break
-
-                message = data.decode().strip()
-                logging.debug(f'Received {message} from {client_addr}')
-
-                try:
-                    json_data = json.loads(message)
-                    response = await self.process_command(json_data)
-                except json.JSONDecodeError as e:
-                    response = {"status": "error", "message": str(e)}
-
-                await self.send_response(writer, response)
-
-        except asyncio.CancelledError:
-            logging.warning(f'Connection with {client_addr} was cancelled')
+            if command['command'] == 'echo':
+                return {"response": command['message']}
+            elif command['command'] == 'run':
+                result = subprocess.run(
+                    command['cmd'], shell=True, capture_output=True, text=True)
+                return {"response": result.stdout}
+            else:
+                return {"error": "Unknown command"}
         except Exception as e:
-            logging.error(f'Error handling client {client_addr}: {e}')
-        finally:
-            logging.info(f'Closing connection with {client_addr}')
-            self.active_clients -= 1
-            writer.close()
-            await writer.wait_closed()
-
-    async def process_command(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Processes the received JSON command and returns a JSON response.
-        """
-        command = json_data.get("command")
-        if command == "echo":
-            return self.handle_echo(json_data)
-        elif command == "run":
-            return await self.handle_run(json_data)
-        else:
-            return {"status": "error", "message": "Unknown command"}
-
-    def handle_echo(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Handles the "echo" command.
-        """
-        message = json_data.get("message", "")
-        return {"status": "success", "response": message}
-
-    async def handle_run(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Handles the "run" command, executing a shell command.
-        """
-        cmd = json_data.get("cmd", "")
-        try:
-            # Use asyncio.create_subprocess_shell for better async handling
-            process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await process.communicate()
-            return {
-                "status": "success",
-                "stdout": stdout.decode().strip(),
-                "stderr": stderr.decode().strip(),
-                "returncode": process.returncode
-            }
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
-
-    async def send_response(self, writer: asyncio.StreamWriter, response: Dict[str, Any]):
-        """
-        Sends a JSON-formatted response to the client.
-        """
-        response_data = json.dumps(response) + '\n'
-        writer.write(response_data.encode())
-        await writer.drain()
+            logging.error(f"Error processing command: {e}")
+            return {"error": str(e)}
 
     async def start_server(self):
         """
-        Starts the TCP server and listens for client connections.
+        Start the TCP server and accept incoming connections.
         """
-        server = await asyncio.start_server(
-            self.handle_client,
-            self.host,
-            self.port
-        )
-        addr = server.sockets[0].getsockname()
+        self.server = await asyncio.start_server(self.handle_client, self.host, self.port)
+        addr = self.server.sockets[0].getsockname()
         logging.info(f'Serving on {addr}')
 
-        async with server:
-            await server.serve_forever()
+        async with self.server:
+            await self.server.serve_forever()
+
+    async def stop_server(self):
+        """
+        Stop the TCP server and disconnect all clients.
+        """
+        if self.server:
+            self.server.close()
+            await self.server.wait_closed()
+            logging.info('Server stopped')
+
+        for client in self.clients:
+            client.close()
+            await client.wait_closed()
+
+    def disconnect_client(self, writer: asyncio.StreamWriter):
+        """
+        Disconnect a client and remove it from the list of active clients.
+
+        Args:
+            writer (asyncio.StreamWriter): The stream writer for the client connection.
+        """
+        if writer in self.clients:
+            self.clients.remove(writer)
+        self.active_clients -= 1
+        writer.close()
+
+    async def broadcast_message(self, message: str):
+        """
+        Broadcast a message to all connected clients.
+
+        Args:
+            message (str): The message to broadcast.
+        """
+        for client in self.clients:
+            client.write((message + '\n').encode())
+            await client.drain()
+
+    def log_client_activity(self, client_info, activity):
+        """
+        Log client connection and disconnection activities.
+
+        Args:
+            client_info: Information about the client.
+            activity (str): The activity to log (e.g., "connected", "disconnected").
+        """
+        logging.info(f"Client {client_info} {activity}")
+
 
 async def main():
-    server = JSONTCPServer(host='127.0.0.1', port=8888, max_clients=10)
+    server = JSONTCPServer(host='127.0.0.1', port=8888)
     await server.start_server()
 
 if __name__ == '__main__':

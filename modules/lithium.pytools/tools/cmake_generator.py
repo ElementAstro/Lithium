@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-This script automates the generation of CMake build configuration files for C++ projects. It supports multi-directory 
-project structures, the creation of custom FindXXX.cmake files for third-party libraries, and the use of JSON configuration 
-files for specifying project settings. 
+This script automates the generation of CMake build configuration files for C++ projects. It supports multi-directory
+project structures, the creation of custom FindXXX.cmake files for third-party libraries, and the use of JSON configuration
+files for specifying project settings.
 
 Key features:
 1. Multi-directory support with separate CMakeLists.txt for each subdirectory.

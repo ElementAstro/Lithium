@@ -15,7 +15,7 @@ def command_info():
 
 def test_generate_pybind11_code_basic(executable_name, command_info):
     result = generate_pybind11_code(executable_name, command_info)
-    
+
     # Check if the result contains the expected sections
     assert "#include <pybind11/pybind11.h>" in result
     assert "namespace py = pybind11;" in result
@@ -30,7 +30,7 @@ def test_generate_pybind11_code_basic(executable_name, command_info):
 
 def test_generate_pybind11_code_empty_command_info(executable_name):
     result = generate_pybind11_code(executable_name, [])
-    
+
     # Check if the result contains the expected sections
     assert "#include <pybind11/pybind11.h>" in result
     assert "namespace py = pybind11;" in result
@@ -46,7 +46,7 @@ def test_generate_pybind11_code_special_characters(executable_name):
         ("--complex-option", "Complex option with special characters: @#$%^&*()")
     ]
     result = generate_pybind11_code(executable_name, special_command_info)
-    
+
     # Check if the result contains the generated functions
     for option, description in special_command_info:
         function_name = f'get_{option.lstrip("-").replace("-", "_")}'

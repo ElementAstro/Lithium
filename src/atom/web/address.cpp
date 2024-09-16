@@ -34,7 +34,7 @@ auto IPv4::parse(const std::string& address) -> bool {
     }          std::cerr << std::format("Invalid IPv4 address: {}", address)
                   << std::endl;
         return false;
-   
+
 }
 
 void IPv4::printAddressType() const {

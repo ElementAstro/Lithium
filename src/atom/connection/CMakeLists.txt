@@ -15,8 +15,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     fifoserver.cpp
     sockethub.cpp
     tcpclient.cpp
-    #udp_server.cpp
     udpclient.cpp
+    udpserver.cpp
 )
 
 # Headers
@@ -25,8 +25,8 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     fifoserver.hpp
     sockethub.hpp
     tcpclient.hpp
-    #udp_server.hpp
     udpclient.hpp
+    udpserver.hpp
 )
 
 if (ENABLE_LIBSSH)

@@ -11,6 +11,8 @@ cmake_minimum_required(VERSION 3.20)
 project(atom-component LANGUAGES C CXX)
 # Source files with project-specific prefix
 set(${PROJECT_NAME}_SOURCES
+    component.cpp
+    dispatch.cpp
 )
 
 set(${PROJECT_NAME}_HEADERS

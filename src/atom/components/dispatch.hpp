@@ -12,7 +12,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "function/type_caster.hpp"
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_set8.hpp"
@@ -22,35 +21,36 @@
 #include <unordered_set>
 #endif
 
-#include "atom/type/noncopyable.hpp"
-#include "atom/type/pointer.hpp"
-
-#include "atom/function/proxy.hpp"
-#include "atom/function/type_info.hpp"
-#include "macro.hpp"
-
 #include "atom/error/exception.hpp"
 #include "atom/function/abi.hpp"
-#include "atom/function/func_traits.hpp"
+#include "atom/function/proxy.hpp"
+#include "atom/function/type_caster.hpp"
 
 #include "atom/utils/to_string.hpp"
 
+#include "macro.hpp"
+
+// -------------------------------------------------------------------
+// Command Argument
+// -------------------------------------------------------------------
+
 class Arg {
 public:
-    explicit Arg(std::string name) : name_(std::move(name)) {}
-    Arg(std::string name, std::any default_value)
-        : name_(std::move(name)), default_value_(default_value) {}
+    explicit Arg(std::string name);
+    Arg(std::string name, std::any default_value);
 
-    [[nodiscard]] auto getName() const -> const std::string& { return name_; }
+    [[nodiscard]] auto getName() const -> const std::string&;
     [[nodiscard]] auto getDefaultValue() const
-        -> const std::optional<std::any>& {
-        return default_value_;
-    }
+        -> const std::optional<std::any>&;
 
 private:
     std::string name_;
     std::optional<std::any> default_value_;
 };
+
+// -------------------------------------------------------------------
+// Command Exception
+// -------------------------------------------------------------------
 
 class DispatchException : public atom::error::Exception {
 public:
@@ -70,11 +70,34 @@ public:
     throw DispatchTimeout(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
                           __VA_ARGS__);
 
+// -------------------------------------------------------------------
+// Command Dispatcher
+// -------------------------------------------------------------------
+
+/**
+ * @brief Manages and dispatches commands.
+ */
 class CommandDispatcher {
 public:
+    /**
+     * @brief Constructs a CommandDispatcher with a TypeCaster.
+     * @param typeCaster A weak pointer to a TypeCaster.
+     */
     explicit CommandDispatcher(std::weak_ptr<atom::meta::TypeCaster> typeCaster)
         : typeCaster_(std::move(typeCaster)) {}
 
+    /**
+     * @brief Defines a command.
+     * @tparam Ret The return type of the command function.
+     * @tparam Args The argument types of the command function.
+     * @param name The name of the command.
+     * @param group The group of the command.
+     * @param description The description of the command.
+     * @param func The command function.
+     * @param precondition An optional precondition function.
+     * @param postcondition An optional postcondition function.
+     * @param arg_info Information about the arguments.
+     */
     template <typename Ret, typename... Args>
     void def(const std::string& name, const std::string& group,
              const std::string& description, std::function<Ret(Args...)> func,
@@ -82,6 +105,18 @@ public:
              std::optional<std::function<void()>> postcondition = std::nullopt,
              std::vector<Arg> arg_info = {});
 
+    /**
+     * @brief Defines a templated command.
+     * @tparam Ret The return type of the command function.
+     * @tparam Args The argument types of the command function.
+     * @param name The name of the command.
+     * @param group The group of the command.
+     * @param description The description of the command.
+     * @param func The command function.
+     * @param precondition An optional precondition function.
+     * @param postcondition An optional postcondition function.
+     * @param arg_info Information about the arguments.
+     */
     template <typename Ret, typename... Args>
     void defT(const std::string& name, const std::string& group,
               const std::string& description, std::function<Ret(Args...)> func,
@@ -89,73 +124,204 @@ public:
               std::optional<std::function<void()>> postcondition = std::nullopt,
               std::vector<Arg> arg_info = {});
 
+    /**
+     * @brief Checks if a command exists.
+     * @param name The name of the command.
+     * @return True if the command exists, false otherwise.
+     */
     [[nodiscard]] auto has(const std::string& name) const -> bool;
 
+    /**
+     * @brief Adds an alias for a command.
+     * @param name The name of the command.
+     * @param alias The alias for the command.
+     */
     void addAlias(const std::string& name, const std::string& alias);
 
+    /**
+     * @brief Adds a command to a group.
+     * @param name The name of the command.
+     * @param group The group of the command.
+     */
     void addGroup(const std::string& name, const std::string& group);
 
+    /**
+     * @brief Sets a timeout for a command.
+     * @param name The name of the command.
+     * @param timeout The timeout duration.
+     */
     void setTimeout(const std::string& name, std::chrono::milliseconds timeout);
 
+    /**
+     * @brief Dispatches a command with arguments.
+     * @tparam Args The argument types.
+     * @param name The name of the command.
+     * @param args The arguments for the command.
+     * @return The result of the command execution.
+     */
     template <typename... Args>
     auto dispatch(const std::string& name, Args&&... args) -> std::any;
 
+    /**
+     * @brief Dispatches a command with a vector of arguments.
+     * @param name The name of the command.
+     * @param args The arguments for the command.
+     * @return The result of the command execution.
+     */
     auto dispatch(const std::string& name,
                   const std::vector<std::any>& args) -> std::any;
 
+    /**
+     * @brief Dispatches a command with function parameters.
+     * @param name The name of the command.
+     * @param params The function parameters.
+     * @return The result of the command execution.
+     */
     auto dispatch(const std::string& name,
                   const FunctionParams& params) -> std::any;
 
+    /**
+     * @brief Removes a command.
+     * @param name The name of the command.
+     */
     void removeCommand(const std::string& name);
 
-    auto getCommandsInGroup(const std::string& group) const
+    /**
+     * @brief Gets the commands in a group.
+     * @param group The group name.
+     * @return A vector of command names in the group.
+     */
+    [[nodiscard]] auto getCommandsInGroup(const std::string& group) const
         -> std::vector<std::string>;
 
-    auto getCommandDescription(const std::string& name) const -> std::string;
+    /**
+     * @brief Gets the description of a command.
+     * @param name The name of the command.
+     * @return The description of the command.
+     */
+    [[nodiscard]] auto getCommandDescription(const std::string& name) const
+        -> std::string;
 
 #if ENABLE_FASTHASH
+    /**
+     * @brief Gets the aliases of a command.
+     * @param name The name of the command.
+     * @return A set of aliases for the command.
+     */
     emhash::HashSet<std::string> getCommandAliases(
         const std::string& name) const;
 #else
-    auto getCommandAliases(const std::string& name) const
+    /**
+     * @brief Gets the aliases of a command.
+     * @param name The name of the command.
+     * @return A set of aliases for the command.
+     */
+    [[nodiscard]] auto getCommandAliases(const std::string& name) const
         -> std::unordered_set<std::string>;
 #endif
 
-    auto getAllCommands() const -> std::vector<std::string>;
+    /**
+     * @brief Gets all commands.
+     * @return A vector of all command names.
+     */
+    [[nodiscard]] auto getAllCommands() const -> std::vector<std::string>;
 
 private:
     struct Command;
 
+    /**
+     * @brief Helper function to dispatch a command.
+     * @tparam ArgsType The type of the arguments.
+     * @param name The name of the command.
+     * @param args The arguments for the command.
+     * @return The result of the command execution.
+     */
     template <typename ArgsType>
     auto dispatchHelper(const std::string& name,
                         const ArgsType& args) -> std::any;
 
+    /**
+     * @brief Converts a tuple to a vector of arguments.
+     * @tparam Args The types of the arguments.
+     * @param tuple The tuple of arguments.
+     * @return A vector of arguments.
+     */
     template <typename... Args>
     auto convertToArgsVector(std::tuple<Args...>&& tuple)
         -> std::vector<std::any>;
 
+    /**
+     * @brief Finds a command by name.
+     * @param name The name of the command.
+     * @return An iterator to the command.
+     */
     auto findCommand(const std::string& name);
 
+    /**
+     * @brief Completes the arguments for a command.
+     * @tparam ArgsType The type of the arguments.
+     * @param cmd The command.
+     * @param args The arguments for the command.
+     * @return A vector of completed arguments.
+     */
     template <typename ArgsType>
     auto completeArgs(const Command& cmd,
                       const ArgsType& args) -> std::vector<std::any>;
 
+    /**
+     * @brief Checks the precondition of a command.
+     * @param cmd The command.
+     * @param name The name of the command.
+     */
     void checkPrecondition(const Command& cmd, const std::string& name);
 
+    /**
+     * @brief Executes a command.
+     * @param cmd The command.
+     * @param name The name of the command.
+     * @param args The arguments for the command.
+     * @return The result of the command execution.
+     */
     auto executeCommand(const Command& cmd, const std::string& name,
                         const std::vector<std::any>& args) -> std::any;
 
+    /**
+     * @brief Executes a command with a timeout.
+     * @param cmd The command.
+     * @param name The name of the command.
+     * @param args The arguments for the command.
+     * @param timeout The timeout duration.
+     * @return The result of the command execution.
+     */
     auto executeWithTimeout(const Command& cmd, const std::string& name,
                             const std::vector<std::any>& args,
                             const std::chrono::duration<double>& timeout)
         -> std::any;
 
+    /**
+     * @brief Executes a command without a timeout.
+     * @param cmd The command.
+     * @param name The name of the command.
+     * @param args The arguments for the command.
+     * @return The result of the command execution.
+     */
     auto executeWithoutTimeout(const Command& cmd, const std::string& name,
                                const std::vector<std::any>& args) -> std::any;
 
+    /**
+     * @brief Executes the functions of a command.
+     * @param cmd The command.
+     * @param args The arguments for the command.
+     * @return The result of the command execution.
+     */
     auto executeFunctions(const Command& cmd,
                           const std::vector<std::any>& args) -> std::any;
 
+    /**
+     * @brief Computes the hash of the function arguments.
+     * @param args The arguments for the command.
+     * @return The hash of the function arguments.
+     */
     auto computeFunctionHash(const std::vector<std::any>& args) -> std::string;
 
     struct Command {
@@ -187,6 +353,23 @@ private:
 
     std::weak_ptr<atom::meta::TypeCaster> typeCaster_;
 };
+
+ATOM_INLINE auto CommandDispatcher::findCommand(const std::string& name) {
+    auto it = commands_.find(name);
+    if (it == commands_.end()) {
+        for (const auto& [cmdName, cmd] : commands_) {
+            if (std::find(cmd.aliases.begin(), cmd.aliases.end(), name) !=
+                cmd.aliases.end()) {
+#if ENABLE_DEBUG
+                std::cout << "Command '" << name
+                          << "' not found, did you mean '" << cmdName << "'?\n";
+#endif
+                return commands_.find(cmdName);
+            }
+        }
+    }
+    return it;
+}
 
 template <typename Ret, typename... Args>
 void CommandDispatcher::def(const std::string& name, const std::string& group,
@@ -277,23 +460,6 @@ auto CommandDispatcher::convertToArgsVector(std::tuple<Args...>&& tuple)
     return argsVec;
 }
 
-ATOM_INLINE auto CommandDispatcher::findCommand(const std::string& name) {
-    auto it = commands_.find(name);
-    if (it == commands_.end()) {
-        for (const auto& [cmdName, cmd] : commands_) {
-            if (std::find(cmd.aliases.begin(), cmd.aliases.end(), name) !=
-                cmd.aliases.end()) {
-#if ENABLE_DEBUG
-                std::cout << "Command '" << name
-                          << "' not found, did you mean '" << cmdName << "'?\n";
-#endif
-                return commands_.find(cmdName);
-            }
-        }
-    }
-    return it;
-}
-
 template <typename ArgsType>
 auto CommandDispatcher::dispatchHelper(const std::string& name,
                                        const ArgsType& args) -> std::any {
@@ -342,179 +508,6 @@ auto CommandDispatcher::completeArgs(const Command& cmd, const ArgsType& args)
         }
     }
     return fullArgs;
-}
-
-ATOM_INLINE void CommandDispatcher::checkPrecondition(const Command& cmd,
-                                                      const std::string& name) {
-    if (cmd.precondition && !cmd.precondition.value()()) {
-        THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
-    }
-}
-
-ATOM_INLINE auto CommandDispatcher::executeCommand(
-    const Command& cmd, const std::string& name,
-    const std::vector<std::any>& args) -> std::any {
-    if (auto timeoutIt = timeoutMap_.find(name);
-        timeoutIt != timeoutMap_.end()) {
-        return executeWithTimeout(cmd, name, args, timeoutIt->second);
-    }
-    return executeWithoutTimeout(cmd, name, args);
-}
-
-ATOM_INLINE auto CommandDispatcher::executeWithTimeout(
-    const Command& cmd, const std::string& name,
-    const std::vector<std::any>& args,
-    const std::chrono::duration<double>& timeout) -> std::any {
-    auto future = std::async(std::launch::async,
-                             [&]() { return executeFunctions(cmd, args); });
-
-    if (future.wait_for(timeout) == std::future_status::timeout) {
-        THROW_DISPATCH_TIMEOUT("Command timed out: " + name);
-    }
-
-    return future.get();
-}
-
-ATOM_INLINE auto CommandDispatcher::executeWithoutTimeout(
-    const Command& cmd, [[maybe_unused]] const std::string& name,
-    const std::vector<std::any>& args) -> std::any {
-    if (!args.empty()) {
-        if (args.size() == 1 &&
-            args[0].type() == typeid(std::vector<std::any>)) {
-            return executeFunctions(
-                cmd, std::any_cast<std::vector<std::any>>(args[0]));
-        }
-    }
-
-    return executeFunctions(cmd, args);
-}
-
-ATOM_INLINE auto CommandDispatcher::executeFunctions(
-    const Command& cmd, const std::vector<std::any>& args) -> std::any {
-    // TODO: FIX ME - Overload resolution
-    if (cmd.funcs.size() == 1) {
-        return cmd.funcs[0](args);
-    }
-
-    std::string funcHash = computeFunctionHash(args);
-    for (size_t i = 0; i < cmd.funcs.size(); ++i) {
-        if (cmd.hash[i] == funcHash) {
-            try {
-                return cmd.funcs[i](args);
-            } catch (const std::bad_any_cast&) {
-                THROW_DISPATCH_EXCEPTION("Failed to call function with hash " +
-                                         funcHash);
-            }
-        }
-    }
-
-    THROW_INVALID_ARGUMENT("No matching overload found");
-}
-
-ATOM_INLINE auto CommandDispatcher::computeFunctionHash(
-    const std::vector<std::any>& args) -> std::string {
-    std::vector<std::string> argTypes;
-    argTypes.reserve(args.size());
-    for (const auto& arg : args) {
-        argTypes.emplace_back(
-            atom::meta::DemangleHelper::demangle(arg.type().name()));
-    }
-    return atom::utils::toString(atom::algorithm::computeHash(argTypes));
-}
-
-ATOM_INLINE auto CommandDispatcher::has(const std::string& name) const -> bool {
-    if (commands_.find(name) != commands_.end()) {
-        return true;
-    }
-    for (const auto& command : commands_) {
-        if (command.second.aliases.find(name) != command.second.aliases.end()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-ATOM_INLINE void CommandDispatcher::addAlias(const std::string& name,
-                                             const std::string& alias) {
-    auto it = commands_.find(name);
-    if (it != commands_.end()) {
-        it->second.aliases.insert(alias);
-        commands_[alias] = it->second;
-        groupMap_[alias] = groupMap_[name];
-    }
-}
-
-ATOM_INLINE void CommandDispatcher::addGroup(const std::string& name,
-                                             const std::string& group) {
-    groupMap_[name] = group;
-}
-
-ATOM_INLINE void CommandDispatcher::setTimeout(
-    const std::string& name, std::chrono::milliseconds timeout) {
-    timeoutMap_[name] = timeout;
-}
-
-ATOM_INLINE void CommandDispatcher::removeCommand(const std::string& name) {
-    commands_.erase(name);
-    groupMap_.erase(name);
-    timeoutMap_.erase(name);
-}
-
-ATOM_INLINE auto CommandDispatcher::getCommandsInGroup(
-    const std::string& group) const -> std::vector<std::string> {
-    std::vector<std::string> result;
-    for (const auto& pair : groupMap_) {
-        if (pair.second == group) {
-            result.push_back(pair.first);
-        }
-    }
-    return result;
-}
-
-ATOM_INLINE auto CommandDispatcher::getCommandDescription(
-    const std::string& name) const -> std::string {
-    auto it = commands_.find(name);
-    if (it != commands_.end()) {
-        return it->second.description;
-    }
-    return "";
-}
-
-ATOM_INLINE auto CommandDispatcher::getCommandAliases(
-    const std::string& name) const -> std::unordered_set<std::string> {
-    auto it = commands_.find(name);
-    if (it != commands_.end()) {
-        return it->second.aliases;
-    }
-    return {};
-}
-
-ATOM_INLINE auto CommandDispatcher::dispatch(
-    const std::string& name, const std::vector<std::any>& args) -> std::any {
-    return dispatchHelper(name, args);
-}
-
-ATOM_INLINE auto CommandDispatcher::dispatch(
-    const std::string& name, const FunctionParams& params) -> std::any {
-    return dispatchHelper(name, params.toVector());
-}
-
-ATOM_INLINE auto CommandDispatcher::getAllCommands() const
-    -> std::vector<std::string> {
-    std::vector<std::string> result;
-    result.reserve(commands_.size());
-    for (const auto& pair : commands_) {
-        result.push_back(pair.first);
-    }
-    // Max: Add aliases to the result vector
-    for (const auto& command : commands_) {
-        for (const auto& alias : command.second.aliases) {
-            result.push_back(alias);
-        }
-    }
-    auto it = std::unique(result.begin(), result.end());
-    result.erase(it, result.end());
-    return result;
 }
 
 #endif

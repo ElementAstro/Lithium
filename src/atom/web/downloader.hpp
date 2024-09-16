@@ -12,6 +12,7 @@
 #include <thread>
 
 namespace atom::web {
+
 /**
  * @brief DownloadManager 类，用于管理下载任务，使用 Pimpl 模式隐藏实现细节
  */
@@ -102,9 +103,8 @@ public:
     void on_progress_update(
         const std::function<void(size_t, double)>& callback);
 
-    class Impl;
 private:
-
+    class Impl;
     std::unique_ptr<Impl> impl_;  ///< 使用 Pimpl 隐藏实现细节
 };
 

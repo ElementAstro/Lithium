@@ -201,6 +201,7 @@ static_assert(false, "Unsupported compiler");
 // STATIC
 #define ATOM_STATIC_API
 
+#include <cstddef>
 // PTR_SIZE
 #ifdef _WIN32
 #ifdef _WIN64

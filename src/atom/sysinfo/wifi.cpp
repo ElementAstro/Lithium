@@ -14,6 +14,7 @@ Description: System Information Module - Wifi Information
 
 #include "atom/sysinfo/wifi.hpp"
 
+#include <codecvt>
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,6 +27,8 @@ Description: System Information Module - Wifi Information
 #include <iptypes.h>
 #include <wlanapi.h>
 #include <ws2tcpip.h>
+#undef max
+#undef min
 // clang-format on
 #if !defined(__MINGW32__) && !defined(__MINGW64__)
 #pragma comment(lib, "iphlpapi.lib")
@@ -61,6 +64,31 @@ using IF_ADDRS_UNICAST = struct ifaddrs*;
 #endif
 
 namespace atom::system {
+bool isConnectedToInternet() {
+    bool connected = false;
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock != -1) {
+        struct sockaddr_in server;
+        server.sin_family = AF_INET;
+        server.sin_port = htons(80);
+#ifdef _WIN32
+        server.sin_addr.s_addr = inet_addr("8.8.8.8");
+#else
+        if (inet_pton(AF_INET, "8.8.8.8", &(server.sin_addr)) != -1) {
+#endif
+        if (connect(sock, (struct sockaddr*)&server, sizeof(server)) != -1) {
+            connected = true;
+        }
+#ifdef _WIN32
+        closesocket(sock);
+#else
+            close(sock);
+        }
+#endif
+    }
+    return connected;
+}
+
 // 获取当前连接的WIFI
 auto getCurrentWifi() -> std::string {
     std::string wifiName;
@@ -478,13 +506,16 @@ auto getInterfaceNames() -> std::vector<std::string> {
 #if defined(_WIN32) || defined(__USE_W32_SOCKETS)
     for (auto adapter = allAddrs; adapter != nullptr; adapter = adapter->Next) {
         std::string interfaceName =
-            adapter->FriendlyName ? adapter->FriendlyName : "";
+            adapter->FriendlyName
+                ? std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(
+                      adapter->FriendlyName)
+                : "";
         if (!interfaceName.empty()) {
             interfaceNames.push_back(interfaceName);
         }
     }
 #else
-    for (auto *addr = allAddrs; addr != nullptr; addr = addr->ifa_next) {
+    for (auto* addr = allAddrs; addr != nullptr; addr = addr->ifa_next) {
         if (addr->ifa_name != nullptr) {
             interfaceNames.emplace_back(addr->ifa_name);
         }

@@ -14,491 +14,168 @@ Description: Address class for IPv4, IPv6, and Unix domain sockets.
 
 #include "address.hpp"
 
-#include <cstring>
+#include <bitset>
+#include <format>
+#include <iostream>
 #include <regex>
-#ifndef _WIN32
-#include <netdb.h>
-#endif
+#include <sstream>
+#include <string>
+#include <vector>
 
-namespace atom::web {
-Address::ptr Address::Create(const std::string &address, uint16_t port) {
-    addrinfo hints, *result = nullptr;
-    memset(&hints, 0, sizeof(addrinfo));
-
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
-
-    char service[32];
-    snprintf(service, sizeof(service), "%u", port);
-
-    int ret = getaddrinfo(address.c_str(), service, &hints, &result);
-    if (ret != 0) {
-        return nullptr;
-    }
-
-    Address::ptr addr;
-    for (addrinfo *rp = result; rp != nullptr; rp = rp->ai_next) {
-        addr = Create(rp->ai_addr, rp->ai_addrlen);
-        if (addr != nullptr) {
-            break;
-        }
-    }
-
-    freeaddrinfo(result);
-    return addr;
+// IPv4 类的实现
+auto IPv4::parse(const std::string& address) -> bool {
+    std::regex ipv4Pattern(
+        R"(^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$)");
+    if (std::regex_match(address, ipv4Pattern)) {
+        addressStr = address;
+        std::cout << std::format("Valid IPv4 address: {}", address)
+                  << std::endl;
+        return true;
+    }          std::cerr << std::format("Invalid IPv4 address: {}", address)
+                  << std::endl;
+        return false;
+   
 }
 
-Address::ptr Address::Create(const sockaddr *addr,
-                             [[maybe_unused]] socklen_t addrlen) {
-    if (addr == nullptr) {
-        return nullptr;
-    }
-    if (addr->sa_family == AF_INET) {
-        return std::make_shared<IPv4Address>(*(const sockaddr_in *)addr);
-    } else if (addr->sa_family == AF_INET6) {
-        return std::make_shared<IPv6Address>(*(const sockaddr_in6 *)addr);
-    } else {
-        return nullptr;
-    }
+void IPv4::printAddressType() const {
+    std::cout << "Address type: IPv4" << std::endl;
 }
 
-bool Address::Lookup(std::vector<Address::ptr> &result, const std::string &host,
-                     int family, int type, int protocol) {
-    struct addrinfo hints, *res;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family;
-    hints.ai_socktype = type;
-    hints.ai_protocol = protocol;
-    if (getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0) {
+bool IPv4::isInRange(const std::string& start, const std::string& end) {
+    unsigned int ip = ipToInteger(addressStr);
+    unsigned int startIp = ipToInteger(start);
+    unsigned int endIp = ipToInteger(end);
+    return (ip >= startIp && ip <= endIp);
+}
+
+std::string IPv4::toBinary() const {
+    std::stringstream binaryStream;
+    std::istringstream iss(addressStr);
+    std::string segment;
+    while (std::getline(iss, segment, '.')) {
+        int num = std::stoi(segment);
+        binaryStream << std::bitset<8>(num);  // 每个八位段转换为二进制
+    }
+    return binaryStream.str();
+}
+
+bool IPv4::isEqual(const Address& other) const {
+    if (other.getType() != "IPv4") {
         return false;
     }
+    return addressStr == other.getAddress();
+}
 
-    for (struct addrinfo *p = res; p != nullptr; p = p->ai_next) {
-        result.push_back(Create(p->ai_addr, p->ai_addrlen));
+std::string IPv4::getType() const { return "IPv4"; }
+
+unsigned int IPv4::ipToInteger(const std::string& ip) const {
+    std::istringstream iss(ip);
+    std::string segment;
+    unsigned int result = 0;
+    int shift = 24;
+    while (std::getline(iss, segment, '.')) {
+        result |= (std::stoi(segment) << shift);
+        shift -= 8;
     }
-    freeaddrinfo(res);
+    return result;
+}
+
+// IPv6 类的实现
+bool IPv6::parse(const std::string& address) {
+    std::regex ipv6_pattern(R"(^([A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}$)");
+    if (std::regex_match(address, ipv6_pattern)) {
+        addressStr = address;
+        std::cout << std::format("Valid IPv6 address: {}", address)
+                  << std::endl;
+        return true;
+    } else {
+        std::cerr << std::format("Invalid IPv6 address: {}", address)
+                  << std::endl;
+        return false;
+    }
+}
+
+void IPv6::printAddressType() const {
+    std::cout << "Address type: IPv6" << std::endl;
+}
+
+bool IPv6::isInRange(const std::string& start, const std::string& end) {
+    std::vector<unsigned short> ip = ipToVector(addressStr);
+    std::vector<unsigned short> startIp = ipToVector(start);
+    std::vector<unsigned short> endIp = ipToVector(end);
+
+    for (int i = 0; i < 8; ++i) {
+        if (ip[i] < startIp[i] || ip[i] > endIp[i]) {
+            return false;
+        }
+    }
     return true;
 }
 
-Address::ptr Address::LookupAny(const std::string &host, int family, int type,
-                                int protocol) {
-    std::vector<Address::ptr> result;
-    if (Lookup(result, host, family, type, protocol)) {
-        if (!result.empty()) {
-            return result.front();
-        }
+std::string IPv6::toBinary() const {
+    std::stringstream binaryStream;
+    std::istringstream iss(addressStr);
+    std::string segment;
+    while (std::getline(iss, segment, ':')) {
+        unsigned short num =
+            static_cast<unsigned short>(std::stoi(segment, nullptr, 16));
+        binaryStream << std::bitset<16>(num);  // 每个十六位段转换为二进制
     }
-    return nullptr;
+    return binaryStream.str();
 }
 
-std::shared_ptr<IPAddress> Address::LookupAnyIPAddress(const std::string &host,
-                                                       int family, int type,
-                                                       int protocol) {
-    auto addr = LookupAny(host, family, type, protocol);
-    return std::dynamic_pointer_cast<IPAddress>(addr);
-}
-
-#ifdef _WIN32
-
-bool Address::GetInterfaceAddresses(
-    std::multimap<std::string, std::pair<Address::ptr, uint32_t>> &result,
-    int family) {
-    PIP_ADAPTER_ADDRESSES pAddresses = nullptr;
-    ULONG outBufLen = 0;
-    ULONG flags = GAA_FLAG_INCLUDE_PREFIX | GAA_FLAG_SKIP_ANYCAST |
-                  GAA_FLAG_SKIP_MULTICAST;
-
-    DWORD ret =
-        GetAdaptersAddresses(family, flags, nullptr, nullptr, &outBufLen);
-    if (ret != ERROR_BUFFER_OVERFLOW) {
+bool IPv6::isEqual(const Address& other) const {
+    if (other.getType() != "IPv6") {
         return false;
     }
-    pAddresses = (PIP_ADAPTER_ADDRESSES)malloc(outBufLen);
-    ret = GetAdaptersAddresses(family, flags, nullptr, pAddresses, &outBufLen);
-    if (ret != ERROR_SUCCESS) {
-        free(pAddresses);
-        return false;
+    return addressStr == other.getAddress();
+}
+
+std::string IPv6::getType() const { return "IPv6"; }
+
+std::vector<unsigned short> IPv6::ipToVector(const std::string& ip) const {
+    std::vector<unsigned short> result(8, 0);
+    std::istringstream iss(ip);
+    std::string segment;
+    int index = 0;
+    while (std::getline(iss, segment, ':') && index < 8) {
+        result[index++] =
+            static_cast<unsigned short>(std::stoi(segment, nullptr, 16));
     }
-
-    for (PIP_ADAPTER_ADDRESSES adapter = pAddresses; adapter != nullptr;
-         adapter = adapter->Next) {
-        for (IP_ADAPTER_UNICAST_ADDRESS *unicastAddr =
-                 adapter->FirstUnicastAddress;
-             unicastAddr != nullptr; unicastAddr = unicastAddr->Next) {
-            Address::ptr addr;
-            uint32_t prefix_len = 0;
-            if (family == AF_INET &&
-                unicastAddr->Address.lpSockaddr->sa_family == AF_INET) {
-                addr = Create(unicastAddr->Address.lpSockaddr,
-                              sizeof(sockaddr_in));
-                sockaddr_in *sai =
-                    (sockaddr_in *)unicastAddr->Address.lpSockaddr;
-                prefix_len = CountBytes(sai->sin_addr.s_addr);
-            } else if (family == AF_INET6 &&
-                       unicastAddr->Address.lpSockaddr->sa_family == AF_INET6) {
-                addr = Create(unicastAddr->Address.lpSockaddr,
-                              sizeof(sockaddr_in6));
-                sockaddr_in6 *sai6 =
-                    (sockaddr_in6 *)unicastAddr->Address.lpSockaddr;
-                prefix_len = CountBytes(sai6->sin6_addr.u.Byte);
-            }
-            if (addr) {
-                result.insert(std::make_pair(adapter->AdapterName,
-                                             std::make_pair(addr, prefix_len)));
-            }
-        }
-    }
-
-    free(pAddresses);
-    return !result.empty();
+    return result;
 }
 
-#else
+// 使用示例
+int main() {
+    // IPv4测试
+    Address* ipv4 = new IPv4();
+    ipv4->printAddressType();
+    ipv4->parse("192.168.1.1");
+    std::cout << "Binary format: " << ipv4->toBinary() << std::endl;
+    std::cout << "Is in range 192.168.0.0 - 192.168.255.255: " << std::boolalpha
+              << ipv4->isInRange("192.168.0.0", "192.168.255.255") << std::endl;
 
-bool Address::GetInterfaceAddresses(
-    std::multimap<std::string, std::pair<Address::ptr, uint32_t>> &result,
-    int family) {
-    struct ifaddrs *res = nullptr, *ifa = nullptr;
-    if (getifaddrs(&res) == -1) {
-        return false;
-    }
+    // IPv6测试
+    Address* ipv6 = new IPv6();
+    ipv6->printAddressType();
+    ipv6->parse("2001:0db8:85a3:0000:0000:8a2e:0370:7334");
+    std::cout << "Binary format: " << ipv6->toBinary() << std::endl;
+    std::cout << "Is in range 2001:0db8:85a3:0000:0000:8a2e:0370:7330 - "
+                 "2001:0db8:85a3:0000:0000:8a2e:0370:733f: "
+              << ipv6->isInRange("2001:0db8:85a3:0000:0000:8a2e:0370:7330",
+                                 "2001:0db8:85a3:0000:0000:8a2e:0370:733f")
+              << std::endl;
 
-    for (ifa = res; ifa != nullptr; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == nullptr) {
-            continue;
-        }
-        Address::ptr addr;
-        uint32_t prefix_len = 0;
-        if (family == AF_INET && ifa->ifa_addr->sa_family == AF_INET) {
-            addr = Create(ifa->ifa_addr, sizeof(sockaddr_in));
-            sockaddr_in *sai = (sockaddr_in *)ifa->ifa_addr;
-            prefix_len = CountBytes(sai->sin_addr.s_addr);
-        } else if (family == AF_INET6 && ifa->ifa_addr->sa_family == AF_INET6) {
-            addr = Create(ifa->ifa_addr, sizeof(sockaddr_in6));
-            sockaddr_in6 *sai6 = (sockaddr_in6 *)ifa->ifa_addr;
-            prefix_len = CountBytes(sai6->sin6_addr.__in6_u.__u6_addr8);
-        } else {
-            continue;
-        }
-        if (addr) {
-            result.insert(std::make_pair(ifa->ifa_name,
-                                         std::make_pair(addr, prefix_len)));
-        }
-    }
+    // 比较两个地址是否相等
+    Address* ipv4_2 = new IPv4();
+    ipv4_2->parse("192.168.1.1");
+    std::cout << "IPv4 addresses are equal: " << std::boolalpha
+              << ipv4->isEqual(*ipv4_2) << std::endl;
 
-    freeifaddrs(res);
-    return !result.empty();
+    // 释放内存
+    delete ipv4;
+    delete ipv4_2;
+    delete ipv6;
+
+    return 0;
 }
-
-#endif
-
-bool Address::GetInterfaceAddresses(
-    std::vector<std::pair<Address::ptr, uint32_t>> &result,
-    const std::string &iface, int family) {
-    if (iface.empty() || iface == "*") {
-        if (family == AF_INET || family == AF_UNSPEC) {
-            result.push_back(
-                std::make_pair(Create("0.0.0.0", sizeof(sockaddr_in)), 0));
-        }
-        if (family == AF_INET6 || family == AF_UNSPEC) {
-            result.push_back(
-                std::make_pair(Create("::0", sizeof(sockaddr_in)), 0));
-        }
-        return true;
-    }
-
-    std::multimap<std::string, std::pair<Address::ptr, uint32_t>> addrs;
-    if (!GetInterfaceAddresses(addrs, family)) {
-        return false;
-    }
-
-    auto its = addrs.equal_range(iface);
-    for (; its.first != its.second; ++its.first) {
-        result.push_back(its.first->second);
-    }
-    return !result.empty();
-}
-
-IPv4Address::IPv4Address(const sockaddr_in &address) {
-    memset(&m_addr, 0, sizeof(m_addr));
-    m_addr.sin_family = AF_INET;
-    m_addr.sin_port = address.sin_port;
-    m_addr.sin_addr.s_addr = address.sin_addr.s_addr;
-}
-
-IPv4Address::IPv4Address(uint32_t address, uint16_t port) {
-    memset(&m_addr, 0, sizeof(m_addr));
-    m_addr.sin_family = AF_INET;
-    m_addr.sin_port = htons(port);
-    m_addr.sin_addr.s_addr = htonl(address);
-}
-
-IPv4Address::ptr IPv4Address::Create(const char *ip, uint16_t port) {
-    IPv4Address::ptr ret(new IPv4Address);
-    ret->m_addr.sin_port = htons(port);
-    if (inet_pton(AF_INET, ip, &ret->m_addr.sin_addr) <= 0) {
-        return nullptr;
-    }
-    return ret;
-}
-
-const sockaddr *IPv4Address::getAddr() const { return (sockaddr *)&m_addr; }
-
-sockaddr *IPv4Address::getAddr() { return (sockaddr *)&m_addr; }
-
-socklen_t IPv4Address::getAddrLen() const { return sizeof(m_addr); }
-
-std::ostream &IPv4Address::insert(std::ostream &os) const {
-    uint32_t addr = ntohl(m_addr.sin_addr.s_addr);
-    os << ((addr >> 24) & 0xff) << "." << ((addr >> 16) & 0xff) << "."
-       << ((addr >> 8) & 0xff) << "." << (addr & 0xff);
-    return os;
-}
-
-IPAddress::ptr IPv4Address::broadcastAddress(uint32_t prefix_len) {
-    if (prefix_len > 32) {
-        return nullptr;
-    }
-    sockaddr_in baddr(m_addr);
-    baddr.sin_addr.s_addr |= htonl((1 << prefix_len) - 1);
-    return std::make_shared<IPv4Address>(baddr);
-}
-
-IPAddress::ptr IPv4Address::networdAddress(uint32_t prefix_len) {
-    if (prefix_len > 32) {
-        return nullptr;
-    }
-    sockaddr_in naddr(m_addr);
-    naddr.sin_addr.s_addr &=
-        htonl(((1 << prefix_len) - 1) << (32 - prefix_len));
-    return std::make_shared<IPv4Address>(naddr);
-}
-
-IPAddress::ptr IPv4Address::subnetMask(uint32_t prefix_len) {
-    sockaddr_in subnet;
-    memset(&subnet, 0, sizeof(subnet));
-    subnet.sin_family = AF_INET;
-    subnet.sin_addr.s_addr =
-        htonl(((1 << prefix_len) - 1) << (32 - prefix_len));
-    return std::make_shared<IPv4Address>(subnet);
-}
-
-uint16_t IPv4Address::getPort() const { return ntohs(m_addr.sin_port); }
-
-void IPv4Address::setPort(uint16_t v) { m_addr.sin_port = htons(v); }
-
-IPv6Address::IPv6Address() {
-    memset(&m_addr, 0, sizeof(m_addr));
-    m_addr.sin6_family = AF_INET6;
-}
-
-IPv6Address::IPv6Address(const sockaddr_in6 &address) {
-    memcpy(&m_addr, &address, sizeof(m_addr));
-}
-
-IPv6Address::IPv6Address(const uint8_t address[16], uint16_t port) {
-    memset(&m_addr, 0, sizeof(m_addr));
-    m_addr.sin6_family = AF_INET6;
-    memcpy(&m_addr.sin6_addr.s6_addr, address, 16);
-    m_addr.sin6_port = htons(port);
-}
-
-IPv6Address::ptr IPv6Address::Create(const char *address, uint16_t port) {
-    struct in6_addr addr;
-    if (inet_pton(AF_INET6, address, &addr) <= 0) {
-        return nullptr;
-    }
-    return std::make_shared<IPv6Address>(addr.s6_addr, port);
-}
-
-const sockaddr *IPv6Address::getAddr() const {
-    return reinterpret_cast<const sockaddr *>(&m_addr);
-}
-
-sockaddr *IPv6Address::getAddr() {
-    return reinterpret_cast<sockaddr *>(&m_addr);
-}
-
-socklen_t IPv6Address::getAddrLen() const {
-    return static_cast<socklen_t>(sizeof(m_addr));
-}
-
-std::ostream &IPv6Address::insert(std::ostream &os) const {
-    char buf[INET6_ADDRSTRLEN] = {0};
-    inet_ntop(AF_INET6, &(m_addr.sin6_addr), buf, sizeof(buf));
-    os << "[" << buf << "]:" << ntohs(m_addr.sin6_port);
-    return os;
-}
-
-IPAddress::ptr IPv6Address::broadcastAddress(uint32_t prefix_len) {
-    if (prefix_len > 128) {
-        return nullptr;
-    }
-    sockaddr_in6 baddr(m_addr);
-    uint32_t mask = prefix_len == 0 ? 0 : (~0ull << (128 - prefix_len));
-    for (int i = 0; i < 16; ++i) {
-        baddr.sin6_addr.s6_addr[i] |= ((mask >> (120 - i * 8)) & 0xff);
-    }
-    return std::make_shared<IPv6Address>(baddr);
-}
-
-IPAddress::ptr IPv6Address::networdAddress(uint32_t prefix_len) {
-    if (prefix_len > 128) {
-        return nullptr;
-    }
-    sockaddr_in6 addr(m_addr);
-    uint32_t mask = prefix_len == 0 ? 0 : (~0ull << (128 - prefix_len));
-    for (int i = 0; i < 16; ++i) {
-        addr.sin6_addr.s6_addr[i] &= ((mask >> (120 - i * 8)) & 0xff);
-    }
-    return std::make_shared<IPv6Address>(addr);
-}
-
-IPAddress::ptr IPv6Address::subnetMask(uint32_t prefix_len) {
-    sockaddr_in6 subnet;
-    memset(&subnet, 0, sizeof(subnet));
-    subnet.sin6_family = AF_INET6;
-    uint32_t mask = prefix_len == 0 ? 0 : (~0ull << (128 - prefix_len));
-    for (int i = 0; i < 16; ++i) {
-        subnet.sin6_addr.s6_addr[i] = (mask >> (120 - i * 8)) & 0xff;
-    }
-    return std::make_shared<IPv6Address>(subnet);
-}
-
-uint16_t IPv6Address::getPort() const { return ntohs(m_addr.sin6_port); }
-
-void IPv6Address::setPort(uint16_t v) { m_addr.sin6_port = htons(v); }
-
-#ifdef _WIN32  // Windows
-// 获取IPv4地址
-std::vector<std::string> getIPv4Addresses() {
-    std::vector<std::string> addresses;
-
-    ULONG bufferSize = 0;
-    if (GetAdaptersAddresses(AF_INET, 0, nullptr, nullptr, &bufferSize) !=
-        ERROR_BUFFER_OVERFLOW) {
-        return addresses;
-    }
-
-    std::unique_ptr<IP_ADAPTER_ADDRESSES> adapterAddresses(
-        new IP_ADAPTER_ADDRESSES[bufferSize]);
-    if (GetAdaptersAddresses(AF_INET, 0, nullptr, adapterAddresses.get(),
-                             &bufferSize) == ERROR_SUCCESS) {
-        for (PIP_ADAPTER_ADDRESSES adapter = adapterAddresses.get(); adapter;
-             adapter = adapter->Next) {
-            for (PIP_ADAPTER_UNICAST_ADDRESS unicastAddress =
-                     adapter->FirstUnicastAddress;
-                 unicastAddress; unicastAddress = unicastAddress->Next) {
-                sockaddr_in *sockAddrIn = reinterpret_cast<sockaddr_in *>(
-                    unicastAddress->Address.lpSockaddr);
-                char addressBuffer[INET_ADDRSTRLEN] = {0};
-                if (inet_ntop(AF_INET, &(sockAddrIn->sin_addr), addressBuffer,
-                              INET_ADDRSTRLEN)) {
-                    addresses.push_back(addressBuffer);
-                }
-            }
-        }
-    }
-
-    return addresses;
-}
-
-// 获取IPv6地址
-std::vector<std::string> getIPv6Addresses() {
-    std::vector<std::string> addresses;
-
-    ULONG bufferSize = 0;
-    if (GetAdaptersAddresses(AF_INET6, 0, nullptr, nullptr, &bufferSize) !=
-        ERROR_BUFFER_OVERFLOW) {
-        return addresses;
-    }
-
-    std::unique_ptr<IP_ADAPTER_ADDRESSES> adapterAddresses(
-        new IP_ADAPTER_ADDRESSES[bufferSize]);
-    if (GetAdaptersAddresses(AF_INET6, 0, nullptr, adapterAddresses.get(),
-                             &bufferSize) == ERROR_SUCCESS) {
-        for (PIP_ADAPTER_ADDRESSES adapter = adapterAddresses.get(); adapter;
-             adapter = adapter->Next) {
-            for (PIP_ADAPTER_UNICAST_ADDRESS unicastAddress =
-                     adapter->FirstUnicastAddress;
-                 unicastAddress; unicastAddress = unicastAddress->Next) {
-                sockaddr_in6 *sockAddrIn6 = reinterpret_cast<sockaddr_in6 *>(
-                    unicastAddress->Address.lpSockaddr);
-                char addressBuffer[INET6_ADDRSTRLEN] = {0};
-                if (inet_ntop(AF_INET6, &(sockAddrIn6->sin6_addr),
-                              addressBuffer, INET6_ADDRSTRLEN)) {
-                    addresses.push_back(addressBuffer);
-                }
-            }
-        }
-    }
-
-    return addresses;
-}
-
-#else  // Linux
-
-// 获取IPv4地址
-std::vector<std::string> getIPv4Addresses() {
-    std::vector<std::string> addresses;
-
-    struct ifaddrs *ifAddrList = nullptr;
-    if (getifaddrs(&ifAddrList) == -1) {
-        return addresses;
-    }
-
-    for (struct ifaddrs *ifa = ifAddrList; ifa != nullptr;
-         ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
-            struct sockaddr_in *sockAddrIn =
-                reinterpret_cast<struct sockaddr_in *>(ifa->ifa_addr);
-            char addressBuffer[INET_ADDRSTRLEN] = {0};
-            if (inet_ntop(AF_INET, &(sockAddrIn->sin_addr), addressBuffer,
-                          INET_ADDRSTRLEN)) {
-                addresses.push_back(addressBuffer);
-            }
-        }
-    }
-
-    freeifaddrs(ifAddrList);
-    return addresses;
-}
-
-// 获取IPv6地址
-std::vector<std::string> getIPv6Addresses() {
-    std::vector<std::string> addresses;
-
-    struct ifaddrs *ifAddrList = nullptr;
-    if (getifaddrs(&ifAddrList) == -1) {
-        return addresses;
-    }
-
-    for (struct ifaddrs *ifa = ifAddrList; ifa != nullptr;
-         ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET6) {
-            struct sockaddr_in6 *sockAddrIn6 =
-                reinterpret_cast<struct sockaddr_in6 *>(ifa->ifa_addr);
-            char addressBuffer[INET6_ADDRSTRLEN] = {0};
-            if (inet_ntop(AF_INET6, &(sockAddrIn6->sin6_addr), addressBuffer,
-                          INET6_ADDRSTRLEN)) {
-                addresses.push_back(addressBuffer);
-            }
-        }
-    }
-
-    freeifaddrs(ifAddrList);
-    return addresses;
-}
-#endif
-
-bool isIPv4Format(const std::string &str) {
-    std::regex urlRegex("\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{2}");
-    return std::regex_match(str, urlRegex);
-}
-
-bool isIPv6Format(const std::string &str) {
-    std::regex ipv6Regex("^(([0-9A-Fa-f]{1,4}):){7}([0-9A-Fa-f]{1,4})$");
-    return std::regex_match(str, ipv6Regex);
-}
-}  // namespace atom::web

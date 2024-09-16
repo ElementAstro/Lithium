@@ -12,8 +12,7 @@ Description: A simple UDP server.
 
 *************************************************/
 
-#include "udp_server.hpp"
-#include "atom/log/loguru.hpp"
+#include "udpserver.hpp"
 
 #include <algorithm>
 #include <mutex>
@@ -29,6 +28,8 @@ Description: A simple UDP server.
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
+
+#include "atom/log/loguru.hpp"
 
 namespace atom::connection {
 class UdpSocketHub::Impl {
@@ -94,7 +95,15 @@ public:
 
     void removeMessageHandler(MessageHandler handler) {
         std::scoped_lock lock(handlersMutex_);
-        auto it = std::find(handlers_.begin(), handlers_.end(), handler);
+        auto it = std::find_if(
+            handlers_.begin(), handlers_.end(),
+            [&handler](const MessageHandler& h) {
+                return handler.target_type() == h.target_type() &&
+                       handler.target<void(const std::string&,
+                                           const std::string&, int)>() ==
+                           h.target<void(const std::string&, const std::string&,
+                                         int)>();
+            });
         if (it != handlers_.end()) {
             handlers_.erase(it);
         }

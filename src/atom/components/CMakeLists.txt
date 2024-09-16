@@ -13,6 +13,8 @@ project(atom-component LANGUAGES C CXX)
 set(${PROJECT_NAME}_SOURCES
     component.cpp
     dispatch.cpp
+    registry.cpp
+    var.cpp
 )
 
 set(${PROJECT_NAME}_HEADERS

@@ -15,6 +15,7 @@ Description: JSON to XML conversion
 #include "json2xml.hpp"
 
 #include <filesystem>
+#include <format>
 #include <fstream>
 
 #include "atom/log/loguru.hpp"
@@ -25,6 +26,7 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 namespace lithium::cxxtools::detail {
+
 void jsonToXml(const json &jsonData, tinyxml2::XMLElement *xmlElement) {
     tinyxml2::XMLDocument *xmlDoc = xmlElement->GetDocument();
 
@@ -41,10 +43,22 @@ void jsonToXml(const json &jsonData, tinyxml2::XMLElement *xmlElement) {
                 xmlElement->InsertEndChild(childXmlElement);
                 jsonToXml(arrayItem, childXmlElement);
             }
-        } else {
+        } else if (item.value().is_string()) {
             tinyxml2::XMLElement *childXmlElement =
                 xmlDoc->NewElement(item.key().c_str());
             childXmlElement->SetText(item.value().get<std::string>().c_str());
+            xmlElement->InsertEndChild(childXmlElement);
+        } else if (item.value().is_number()) {
+            tinyxml2::XMLElement *childXmlElement =
+                xmlDoc->NewElement(item.key().c_str());
+            childXmlElement->SetText(
+                std::to_string(item.value().get<double>()).c_str());
+            xmlElement->InsertEndChild(childXmlElement);
+        } else if (item.value().is_boolean()) {
+            tinyxml2::XMLElement *childXmlElement =
+                xmlDoc->NewElement(item.key().c_str());
+            childXmlElement->SetText(item.value().get<bool>() ? "true"
+                                                              : "false");
             xmlElement->InsertEndChild(childXmlElement);
         }
     }
@@ -119,7 +133,8 @@ int main(int argc, const char **argv) {
     std::string jsonFilePath = program.get<std::string>("--input");
     std::string xmlFilePath = program.get<std::string>("--output");
 
-    if (convertJsonToXml(jsonFilePath, xmlFilePath)) {
+    if (lithium::cxxtools::detail::convertJsonToXml(jsonFilePath,
+                                                    xmlFilePath)) {
         DLOG_F(INFO, "JSON to XML conversion succeeded.");
     } else {
         DLOG_F(INFO, "JSON to XML conversion failed.");

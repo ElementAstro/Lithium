@@ -12,8 +12,8 @@ Description: No Offset Pointer
 
 **************************************************/
 
-#ifndef ATOM_TYPE_NoOffsetPtr_HPP
-#define ATOM_TYPE_NoOffsetPtr_HPP
+#ifndef ATOM_TYPE_NO_OFFSET_PTR_HPP
+#define ATOM_TYPE_NO_OFFSET_PTR_HPP
 
 #include <cassert>
 #include <concepts>
@@ -70,10 +70,10 @@ public:
     UnshiftedPtr(UnshiftedPtr&&) noexcept(
         std::is_nothrow_move_constructible_v<T>) = delete;
 
-    UnshiftedPtr& operator=(const UnshiftedPtr&) noexcept(
-        std::is_nothrow_copy_assignable_v<T>) = delete;
-    UnshiftedPtr& operator=(UnshiftedPtr&&) noexcept(
-        std::is_nothrow_move_assignable_v<T>) = delete;
+    auto operator=(const UnshiftedPtr&) noexcept(
+        std::is_nothrow_copy_assignable_v<T>) -> UnshiftedPtr& = delete;
+    auto operator=(UnshiftedPtr&&) noexcept(
+        std::is_nothrow_move_assignable_v<T>) -> UnshiftedPtr& = delete;
 
     /**
      * @brief Provides pointer-like access to the managed object.
@@ -123,6 +123,19 @@ public:
     }
 
     /**
+     * @brief Emplaces a new object in place with the provided arguments.
+     *
+     * @tparam Args The types of the arguments to construct the object with.
+     * @param args The arguments to construct the object with.
+     */
+    template <typename... Args>
+        requires std::constructible_from<T, Args...>
+    constexpr void emplace(Args&&... args) noexcept(
+        std::is_nothrow_constructible_v<T, Args...>) {
+        reset(std::forward<Args>(args)...);
+    }
+
+    /**
      * @brief Releases ownership of the managed object without destroying it.
      *        This effectively "releases" the managed object to be used
      * elsewhere. The UnshiftedPtr should not be used after calling this unless
@@ -130,10 +143,19 @@ public:
      *
      * @return A pointer to the managed object.
      */
-    [[nodiscard]] constexpr T* release() noexcept {
+    [[nodiscard]] constexpr auto release() noexcept -> T* {
         T* ptr = new (&storage_) T(std::move(get()));
         get().~T();  // No managed object left in storage
         return ptr;
+    }
+
+    /**
+     * @brief Checks if the managed object has a value.
+     *
+     * @return True if the managed object has a value, false otherwise.
+     */
+    [[nodiscard]] constexpr auto hasValue() const noexcept -> bool {
+        return reinterpret_cast<const T*>(&storage_) != nullptr;
     }
 
 private:
@@ -159,4 +181,4 @@ private:
     std::aligned_storage_t<sizeof(T), alignof(T)> storage_;
 };
 
-#endif  // ATOM_TYPE_NoOffsetPtr_HPP
+#endif  // ATOM_TYPE_NO_OFFSET_PTR_HPP

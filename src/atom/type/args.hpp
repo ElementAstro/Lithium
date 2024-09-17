@@ -16,13 +16,11 @@ Description: Argument Container Library for C++
 #define ATOM_TYPE_ARG_HPP
 
 #include <any>
+#include <concepts>
 #include <optional>
+#include <span>
 #include <string_view>
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#else
 #include <unordered_map>
-#endif
 
 // 设置参数的便捷宏
 #define SET_ARGUMENT(container, name, value) container.set(#name, value)
@@ -57,8 +55,23 @@ public:
      * @note If the key exists, it will overwrite the original value.
      */
     template <typename T>
+        requires(!std::same_as<std::decay_t<T>, std::any>)
     void set(std::string_view key, T &&value) {
         m_data_[key] = std::forward<T>(value);
+    }
+
+    /**
+     * @brief 批量设置键值对。
+     * @brief Set multiple key-value pairs.
+     * @param pairs 键值对数组。
+     * @param pairs Array of key-value pairs.
+     */
+    template <typename T>
+        requires(!std::same_as<std::decay_t<T>, std::any>)
+    void set(std::span<const std::pair<std::string_view, T>> pairs) {
+        for (const auto &[key, value] : pairs) {
+            m_data_[key] = value;
+        }
     }
 
     /**
@@ -113,6 +126,25 @@ public:
     }
 
     /**
+     * @brief 批量获取键对应的值。
+     * @brief Get the values corresponding to the keys.
+     * @param keys 键数组。
+     * @param keys Array of keys.
+     * @return 值数组。
+     * @return Array of values.
+     */
+    template <typename T>
+    auto get(std::span<const std::string_view> keys) const
+        -> std::vector<std::optional<T>> {
+        std::vector<std::optional<T>> values;
+        values.reserve(keys.size());
+        for (const auto &key : keys) {
+            values.push_back(getOptional<T>(key));
+        }
+        return values;
+    }
+
+    /**
      * @brief 检查键是否存在。
      * @brief Check if the key exists.
      * @param key 键。
@@ -121,10 +153,7 @@ public:
      * @return If the key exists, return true; otherwise return false.
      */
     auto contains(std::string_view key) const noexcept -> bool {
-        if (auto data = m_data_.find(key); data != m_data_.end()) {
-            return true;
-        }
-        return false;
+        return m_data_.contains(key);
     }
 
     /**
@@ -140,6 +169,7 @@ public:
      * @brief Clear the container.
      */
     void clear() noexcept { m_data_.clear(); }
+
     /**
      * @brief 获取容器中键值对的数量。
      * @brief Get the number of key-value pairs in the container.
@@ -155,15 +185,6 @@ public:
      * @return If the container is empty, return true; otherwise return false.
      */
     auto empty() const noexcept -> bool { return m_data_.empty(); }
-
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string_view, std::any> data()
-#else
-    std::unordered_map<std::string_view, std::any> data()
-#endif
-        const noexcept {
-        return m_data_;
-    }
 
     /**
      * @brief 获取指定键对应的值。
@@ -222,11 +243,7 @@ public:
     }
 
 private:
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> m_data_;
-#else
     std::unordered_map<std::string_view, std::any> m_data_;
-#endif
 };
 
 #endif

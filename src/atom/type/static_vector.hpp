@@ -8,22 +8,32 @@
 
 Date: 2024-3-1
 
-Description: A static vector
+Description: A static vector (Optimized with C++20 features)
 
 **************************************************/
 
 #ifndef ATOM_TYPE_STATIC_VECTOR_HPP
 #define ATOM_TYPE_STATIC_VECTOR_HPP
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <compare>
 #include <cstddef>
+#include <ranges>
 #include <utility>
 
 #include "error/exception.hpp"
 #include "macro.hpp"
 
+/**
+ * @brief A static vector implementation with a fixed capacity.
+ *
+ * @tparam T The type of elements stored in the vector.
+ * @tparam Capacity The maximum number of elements the vector can hold.
+ */
 template <typename T, std::size_t Capacity>
+    requires(Capacity > 0)  // Ensure positive capacity
 class StaticVector {
 public:
     using value_type = T;
@@ -38,195 +48,392 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    ATOM_CONSTEXPR StaticVector() ATOM_NOEXCEPT = default;
+    /**
+     * @brief Default constructor. Constructs an empty StaticVector.
+     */
+    constexpr StaticVector() noexcept = default;
 
-    ATOM_CONSTEXPR StaticVector(std::initializer_list<T> init) ATOM_NOEXCEPT {
+    /**
+     * @brief Constructs a StaticVector from an initializer list.
+     *
+     * @param init The initializer list to initialize the StaticVector with.
+     */
+    constexpr StaticVector(std::initializer_list<T> init) noexcept {
         assert(init.size() <= Capacity);
-        std::copy(init.begin(), init.end(), begin());
+        std::ranges::copy(init, begin());
         m_size_ = init.size();
     }
 
-    ATOM_CONSTEXPR void pushBack(const T& value) ATOM_NOEXCEPT {
+    /**
+     * @brief Copy constructor. Constructs a StaticVector by copying another StaticVector.
+     *
+     * @param other The StaticVector to copy from.
+     */
+    constexpr StaticVector(const StaticVector& other) noexcept = default;
+
+    /**
+     * @brief Move constructor. Constructs a StaticVector by moving another StaticVector.
+     *
+     * @param other The StaticVector to move from.
+     */
+    constexpr StaticVector(StaticVector&& other) noexcept = default;
+
+    /**
+     * @brief Copy assignment operator. Copies the contents of another StaticVector.
+     *
+     * @param other The StaticVector to copy from.
+     * @return A reference to the assigned StaticVector.
+     */
+    constexpr auto operator=(const StaticVector& other) noexcept
+        -> StaticVector& = default;
+
+    /**
+     * @brief Move assignment operator. Moves the contents of another StaticVector.
+     *
+     * @param other The StaticVector to move from.
+     * @return A reference to the assigned StaticVector.
+     */
+    constexpr auto operator=(StaticVector&& other) noexcept -> StaticVector& =
+                                                                   default;
+
+    /**
+     * @brief Adds an element to the end of the StaticVector by copying.
+     *
+     * @param value The value to add.
+     */
+    constexpr void pushBack(const T& value) noexcept {
         assert(m_size_ < Capacity);
         m_data_[m_size_++] = value;
     }
 
-    ATOM_CONSTEXPR void pushBack(T&& value) ATOM_NOEXCEPT {
+    /**
+     * @brief Adds an element to the end of the StaticVector by moving.
+     *
+     * @param value The value to add.
+     */
+    constexpr void pushBack(T&& value) noexcept {
         assert(m_size_ < Capacity);
         m_data_[m_size_++] = std::move(value);
     }
 
+    /**
+     * @brief Constructs an element in place at the end of the StaticVector.
+     *
+     * @tparam Args The types of the arguments to construct the element with.
+     * @param args The arguments to construct the element with.
+     * @return A reference to the constructed element.
+     */
     template <typename... Args>
-    ATOM_CONSTEXPR auto emplaceBack(Args&&... args) ATOM_NOEXCEPT -> reference {
+    constexpr auto emplaceBack(Args&&... args) noexcept -> reference {
         assert(m_size_ < Capacity);
         return m_data_[m_size_++] = T(std::forward<Args>(args)...);
     }
 
-    ATOM_CONSTEXPR void popBack() ATOM_NOEXCEPT {
+    /**
+     * @brief Removes the last element from the StaticVector.
+     */
+    constexpr void popBack() noexcept {
         assert(m_size_ > 0);
         --m_size_;
     }
 
-    ATOM_CONSTEXPR void clear() ATOM_NOEXCEPT { m_size_ = 0; }
+    /**
+     * @brief Clears the StaticVector, removing all elements.
+     */
+    constexpr void clear() noexcept { m_size_ = 0; }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto empty() const ATOM_NOEXCEPT -> bool {
+    /**
+     * @brief Checks if the StaticVector is empty.
+     *
+     * @return True if the StaticVector is empty, false otherwise.
+     */
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
         return m_size_ == 0;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto size() const ATOM_NOEXCEPT -> size_type {
+    /**
+     * @brief Returns the number of elements in the StaticVector.
+     *
+     * @return The number of elements in the StaticVector.
+     */
+    [[nodiscard]] constexpr auto size() const noexcept -> size_type {
         return m_size_;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto capacity() const ATOM_NOEXCEPT
-        -> size_type {
+    /**
+     * @brief Returns the capacity of the StaticVector.
+     *
+     * @return The capacity of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto capacity() const noexcept -> size_type {
         return Capacity;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto operator[](size_type index)
-        ATOM_NOEXCEPT->reference {
+    /**
+     * @brief Accesses an element by index.
+     *
+     * @param index The index of the element to access.
+     * @return A reference to the element at the specified index.
+     */
+    [[nodiscard]] constexpr auto operator[](size_type index) noexcept
+        -> reference {
         assert(index < m_size_);
         return m_data_[index];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto operator[](size_type index) const
-        ATOM_NOEXCEPT->const_reference {
+    /**
+     * @brief Accesses an element by index.
+     *
+     * @param index The index of the element to access.
+     * @return A const reference to the element at the specified index.
+     */
+    [[nodiscard]] constexpr auto operator[](size_type index) const noexcept
+        -> const_reference {
         assert(index < m_size_);
         return m_data_[index];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto at(size_type index) -> reference {
+    /**
+     * @brief Accesses an element by index with bounds checking.
+     *
+     * @param index The index of the element to access.
+     * @return A reference to the element at the specified index.
+     * @throws std::out_of_range if the index is out of bounds.
+     */
+    [[nodiscard]] constexpr auto at(size_type index) -> reference {
         if (index >= m_size_) {
             THROW_OUT_OF_RANGE("StaticVector::at");
         }
         return m_data_[index];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto at(size_type index) const
-        -> const_reference {
+    /**
+     * @brief Accesses an element by index with bounds checking.
+     *
+     * @param index The index of the element to access.
+     * @return A const reference to the element at the specified index.
+     * @throws std::out_of_range if the index is out of bounds.
+     */
+    [[nodiscard]] constexpr auto at(size_type index) const -> const_reference {
         if (index >= m_size_) {
             THROW_OUT_OF_RANGE("StaticVector::at");
         }
         return m_data_[index];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto front() ATOM_NOEXCEPT -> reference {
+    /**
+     * @brief Accesses the first element.
+     *
+     * @return A reference to the first element.
+     */
+    [[nodiscard]] constexpr auto front() noexcept -> reference {
         assert(m_size_ > 0);
         return m_data_[0];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto front() const ATOM_NOEXCEPT
-        -> const_reference {
+    /**
+     * @brief Accesses the first element.
+     *
+     * @return A const reference to the first element.
+     */
+    [[nodiscard]] constexpr auto front() const noexcept -> const_reference {
         assert(m_size_ > 0);
         return m_data_[0];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto back() ATOM_NOEXCEPT -> reference {
+    /**
+     * @brief Accesses the last element.
+     *
+     * @return A reference to the last element.
+     */
+    [[nodiscard]] constexpr auto back() noexcept -> reference {
         assert(m_size_ > 0);
         return m_data_[m_size_ - 1];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto back() const ATOM_NOEXCEPT
-        -> const_reference {
+    /**
+     * @brief Accesses the last element.
+     *
+     * @return A const reference to the last element.
+     */
+    [[nodiscard]] constexpr auto back() const noexcept -> const_reference {
         assert(m_size_ > 0);
         return m_data_[m_size_ - 1];
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto data() ATOM_NOEXCEPT -> pointer {
+    /**
+     * @brief Returns a pointer to the underlying data.
+     *
+     * @return A pointer to the underlying data.
+     */
+    [[nodiscard]] constexpr auto data() noexcept -> pointer {
         return m_data_.data();
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto data() const ATOM_NOEXCEPT
-        -> const_pointer {
+    /**
+     * @brief Returns a const pointer to the underlying data.
+     *
+     * @return A const pointer to the underlying data.
+     */
+    [[nodiscard]] constexpr auto data() const noexcept -> const_pointer {
         return m_data_.data();
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto begin() ATOM_NOEXCEPT -> iterator {
+    /**
+     * @brief Returns an iterator to the beginning of the StaticVector.
+     *
+     * @return An iterator to the beginning of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto begin() noexcept -> iterator { return data(); }
+
+    /**
+     * @brief Returns a const iterator to the beginning of the StaticVector.
+     *
+     * @return A const iterator to the beginning of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto begin() const noexcept -> const_iterator {
         return data();
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto begin() const ATOM_NOEXCEPT
-        -> const_iterator {
-        return data();
-    }
-
-    ATOM_NODISCARD ATOM_CONSTEXPR auto cbegin() const ATOM_NOEXCEPT
-        -> const_iterator {
-        return begin();
-    }
-
-    ATOM_NODISCARD ATOM_CONSTEXPR auto end() ATOM_NOEXCEPT -> iterator {
+    /**
+     * @brief Returns an iterator to the end of the StaticVector.
+     *
+     * @return An iterator to the end of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto end() noexcept -> iterator {
         return data() + m_size_;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto end() const ATOM_NOEXCEPT
-        -> const_iterator {
+    /**
+     * @brief Returns a const iterator to the end of the StaticVector.
+     *
+     * @return A const iterator to the end of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto end() const noexcept -> const_iterator {
         return data() + m_size_;
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto cend() const ATOM_NOEXCEPT
-        -> const_iterator {
-        return end();
-    }
-
-    ATOM_NODISCARD ATOM_CONSTEXPR auto rbegin()
-        ATOM_NOEXCEPT -> reverse_iterator {
+    /**
+     * @brief Returns a reverse iterator to the beginning of the StaticVector.
+     *
+     * @return A reverse iterator to the beginning of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto rbegin() noexcept -> reverse_iterator {
         return reverse_iterator(end());
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto rbegin() const ATOM_NOEXCEPT
+    /**
+     * @brief Returns a const reverse iterator to the beginning of the StaticVector.
+     *
+     * @return A const reverse iterator to the beginning of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto rbegin() const noexcept
         -> const_reverse_iterator {
         return const_reverse_iterator(end());
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto crbegin() const ATOM_NOEXCEPT
-        -> const_reverse_iterator {
-        return rbegin();
-    }
-
-    ATOM_NODISCARD ATOM_CONSTEXPR auto rend()
-        ATOM_NOEXCEPT -> reverse_iterator {
+    /**
+     * @brief Returns a reverse iterator to the end of the StaticVector.
+     *
+     * @return A reverse iterator to the end of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto rend() noexcept -> reverse_iterator {
         return reverse_iterator(begin());
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto rend() const ATOM_NOEXCEPT
+    /**
+     * @brief Returns a const reverse iterator to the end of the StaticVector.
+     *
+     * @return A const reverse iterator to the end of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto rend() const noexcept
         -> const_reverse_iterator {
         return const_reverse_iterator(begin());
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto crend() const ATOM_NOEXCEPT
+    /**
+     * @brief Returns a const iterator to the beginning of the StaticVector.
+     *
+     * @return A const iterator to the beginning of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator {
+        return begin();
+    }
+
+    /**
+     * @brief Returns a const iterator to the end of the StaticVector.
+     *
+     * @return A const iterator to the end of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator {
+        return end();
+    }
+
+    /**
+     * @brief Returns a const reverse iterator to the beginning of the StaticVector.
+     *
+     * @return A const reverse iterator to the beginning of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto crbegin() const noexcept
+        -> const_reverse_iterator {
+        return rbegin();
+    }
+
+    /**
+     * @brief Returns a const reverse iterator to the end of the StaticVector.
+     *
+     * @return A const reverse iterator to the end of the StaticVector.
+     */
+    [[nodiscard]] constexpr auto crend() const noexcept
         -> const_reverse_iterator {
         return rend();
     }
 
-    ATOM_CONSTEXPR void swap(StaticVector& other) ATOM_NOEXCEPT {
-        using std::swap;
-        swap(m_data_, other.m_data_);
-        swap(m_size_, other.m_size_);
+    /**
+     * @brief Swaps the contents of the StaticVector with another StaticVector.
+     *
+     * @param other The StaticVector to swap with.
+     */
+    constexpr void swap(StaticVector& other) noexcept {
+        std::ranges::swap(m_data_, other.m_data_);
+        std::swap(m_size_, other.m_size_);
     }
+
+    /**
+     * @brief Equality operator.
+     *
+     * @param lhs The left-hand side StaticVector.
+     * @param rhs The right-hand side StaticVector.
+     * @return True if the StaticVectors are equal, false otherwise.
+     */
+    [[nodiscard]] constexpr auto operator<=>(
+        const StaticVector&) const noexcept = default;
 
 private:
     std::array<T, Capacity> m_data_{};
     size_type m_size_{0};
 };
 
+// Equality operator
 template <typename T, std::size_t Capacity>
-ATOM_CONSTEXPR auto operator==(const StaticVector<T, Capacity>& lhs,
-                               const StaticVector<T, Capacity>& rhs)
-    ATOM_NOEXCEPT->bool {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+constexpr auto operator==(const StaticVector<T, Capacity>& lhs,
+                          const StaticVector<T, Capacity>& rhs) noexcept
+    -> bool {
+    return std::ranges::equal(lhs, rhs);
 }
 
+// Three-way comparison operator
 template <typename T, std::size_t Capacity>
-ATOM_CONSTEXPR auto operator<=>(const StaticVector<T, Capacity>& lhs,
-                                const StaticVector<T, Capacity>& rhs)
-    ATOM_NOEXCEPT {
+constexpr auto operator<=>(const StaticVector<T, Capacity>& lhs,
+                           const StaticVector<T, Capacity>& rhs) noexcept {
     return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(),
                                                   rhs.begin(), rhs.end());
 }
 
+// Swap function for StaticVector
 template <typename T, std::size_t Capacity>
-ATOM_CONSTEXPR void swap(StaticVector<T, Capacity>& lhs,
-                         StaticVector<T, Capacity>& rhs) ATOM_NOEXCEPT {
+constexpr void swap(StaticVector<T, Capacity>& lhs,
+                    StaticVector<T, Capacity>& rhs) noexcept {
     lhs.swap(rhs);
 }
 

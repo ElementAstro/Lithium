@@ -115,7 +115,7 @@ struct Indestructible {
      * @param other The Indestructible object to copy assign from.
      * @return Reference to the assigned Indestructible object.
      */
-    constexpr Indestructible& operator=(const Indestructible& other)
+    constexpr auto operator=(const Indestructible& other) -> Indestructible&
         requires std::is_trivially_copy_assignable_v<T>
     = default;
 
@@ -128,7 +128,7 @@ struct Indestructible {
      * @param other The Indestructible object to copy assign from.
      * @return Reference to the assigned Indestructible object.
      */
-    constexpr Indestructible& operator=(const Indestructible& other)
+    constexpr auto operator=(const Indestructible& other) -> Indestructible&
         requires(!std::is_trivially_copy_assignable_v<T>)
     {
         if (this != &other) {
@@ -147,7 +147,7 @@ struct Indestructible {
      * @param other The Indestructible object to move assign from.
      * @return Reference to the assigned Indestructible object.
      */
-    constexpr Indestructible& operator=(Indestructible&& other)
+    constexpr auto operator=(Indestructible&& other) -> Indestructible&
         requires std::is_trivially_move_assignable_v<T>
     = default;
 
@@ -174,21 +174,21 @@ struct Indestructible {
      *
      * @return Reference to the stored object.
      */
-    constexpr T& get() & { return object; }
+    constexpr auto get() & -> T& { return object; }
 
     /**
      * @brief Returns a const reference to the stored object.
      *
      * @return Const reference to the stored object.
      */
-    constexpr const T& get() const& { return object; }
+    constexpr auto get() const& -> const T& { return object; }
 
     /**
      * @brief Returns an rvalue reference to the stored object.
      *
      * @return Rvalue reference to the stored object.
      */
-    constexpr T&& get() && { return std::move(object); }
+    constexpr auto get() && -> T&& { return std::move(object); }
 
     /**
      * @brief Returns a const rvalue reference to the stored object.
@@ -202,42 +202,69 @@ struct Indestructible {
      *
      * @return Pointer to the stored object.
      */
-    constexpr T* operator->() { return &object; }
+    constexpr auto operator->() -> T* { return &object; }
 
     /**
      * @brief Returns a const pointer to the stored object.
      *
      * @return Const pointer to the stored object.
      */
-    constexpr const T* operator->() const { return &object; }
+    constexpr auto operator->() const -> const T* { return &object; }
 
     /**
      * @brief Returns a reference to the stored object.
      *
      * @return Reference to the stored object.
      */
-    constexpr operator T&() & { return object; }
+    constexpr explicit operator T&() & { return object; }
 
     /**
      * @brief Returns a const reference to the stored object.
      *
      * @return Const reference to the stored object.
      */
-    constexpr operator const T&() const& { return object; }
+    constexpr explicit operator const T&() const& { return object; }
 
     /**
      * @brief Returns an rvalue reference to the stored object.
      *
      * @return Rvalue reference to the stored object.
      */
-    constexpr operator T&&() && { return std::move(object); }
+    constexpr explicit operator T&&() && { return std::move(object); }
 
     /**
      * @brief Returns a const rvalue reference to the stored object.
      *
      * @return Const rvalue reference to the stored object.
      */
-    constexpr operator const T&&() const&& { return std::move(object); }
+    constexpr explicit operator const T&&() const&& { return std::move(object); }
+
+    /**
+     * @brief Resets the stored object with new arguments.
+     *
+     * @tparam Args The types of the arguments to construct the object with.
+     * @param args The arguments to construct the object with.
+     */
+    template <typename... Args>
+        requires std::is_constructible_v<T, Args...>
+    constexpr void reset(Args&&... args) {
+        if constexpr (!std::is_trivially_destructible_v<T>) {
+            object.~T();
+        }
+        new (&object) T(std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Emplaces a new object in place with the provided arguments.
+     *
+     * @tparam Args The types of the arguments to construct the object with.
+     * @param args The arguments to construct the object with.
+     */
+    template <typename... Args>
+        requires std::is_constructible_v<T, Args...>
+    constexpr void emplace(Args&&... args) {
+        reset(std::forward<Args>(args)...);
+    }
 };
 
 template <class T>

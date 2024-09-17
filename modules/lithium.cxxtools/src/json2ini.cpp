@@ -15,6 +15,7 @@ Description: JSON to INI
 #include "json2ini.hpp"
 
 #include <filesystem>
+#include <format>
 #include <fstream>
 
 #include "atom/log/loguru.hpp"
@@ -25,12 +26,21 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 namespace lithium::cxxtools::detail {
+
 void writeIniSection(std::ofstream &iniFile, std::string_view sectionName,
                      const json &jsonObject) {
     iniFile << "[" << sectionName << "]" << std::endl;
     for (auto it = jsonObject.begin(); it != jsonObject.end(); ++it) {
         if (it->is_string()) {
-            iniFile << it.key() << "=" << it->get<std::string>() << std::endl;
+            iniFile << std::format("{}={}", it.key(), it->get<std::string>())
+                    << std::endl;
+        } else if (it->is_number()) {
+            iniFile << std::format("{}={}", it.key(), it->get<double>())
+                    << std::endl;
+        } else if (it->is_boolean()) {
+            iniFile << std::format("{}={}", it.key(),
+                                   it->get<bool>() ? "true" : "false")
+                    << std::endl;
         }
     }
     iniFile << std::endl;
@@ -99,7 +109,7 @@ int main(int argc, char *argv[]) {
 
     try {
         LOG_F(INFO, "Converting JSON to INI...");
-        jsonToIni(jsonFilePath, iniFilePath);
+        lithium::cxxtools::detail::jsonToIni(jsonFilePath, iniFilePath);
         LOG_F(INFO, "JSON to INI conversion completed.");
     } catch (const std::exception &ex) {
         LOG_F(ERROR, "JSON to INI conversion failed: {}", ex.what());

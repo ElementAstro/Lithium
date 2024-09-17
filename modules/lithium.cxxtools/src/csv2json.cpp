@@ -15,7 +15,7 @@
 #include "atom/utils/string.hpp"
 
 namespace lithium::cxxtools::detail {
-auto csvToJson(std::string_view csvFilePath) -> json {
+auto csvToJson(std::string_view csvFilePath, char delimiter = ',') -> json {
     LOG_F(INFO, "Converting CSV file to JSON: {}", csvFilePath);
     std::ifstream csvFile(csvFilePath.data());
     if (!csvFile.is_open()) {
@@ -27,8 +27,11 @@ auto csvToJson(std::string_view csvFilePath) -> json {
 
     std::string line;
     bool isFirstLine = true;
-    while (getline(csvFile, line)) {
-        auto fields = atom::utils::splitString(line, ',');
+    while (std::getline(csvFile, line)) {
+        if (line.empty())
+            continue;  // Skip empty lines
+
+        auto fields = atom::utils::splitString(line, delimiter);
 
         if (isFirstLine) {
             headers = fields;
@@ -53,6 +56,7 @@ void saveJsonToFile(const json &jsonData, std::string_view jsonFilePath) {
     }
     jsonFile << jsonData.dump(4);
 }
+
 }  // namespace lithium::cxxtools::detail
 
 #if ATOM_STANDALONE_COMPONENT_ENABLED
@@ -69,6 +73,9 @@ int main(int argc, char *argv[]) {
     program.add_argument("-o", "--output")
         .required()
         .help("path to output JSON file");
+    program.add_argument("-d", "--delimiter")
+        .default_value(',')
+        .help("delimiter used in the CSV file");
 
     try {
         program.parse_args(argc, argv);
@@ -79,11 +86,13 @@ int main(int argc, char *argv[]) {
 
     std::string csvFilePath = program.get<std::string>("--input");
     std::string jsonFilePath = program.get<std::string>("--output");
+    char delimiter = program.get<char>("--delimiter");
 
     try {
         LOG_F(INFO, "Converting CSV to JSON...");
-        auto jsonData = csvToJson(csvFilePath);
-        saveJsonToFile(jsonData, jsonFilePath);
+        auto jsonData =
+            lithium::cxxtools::detail::csvToJson(csvFilePath, delimiter);
+        lithium::cxxtools::detail::saveJsonToFile(jsonData, jsonFilePath);
         LOG_F(INFO, "CSV to JSON conversion succeeded.");
     } catch (const std::exception &ex) {
         LOG_F(ERROR, "CSV to JSON conversion failed: {}", ex.what());
@@ -94,13 +103,14 @@ int main(int argc, char *argv[]) {
 }
 #else
 namespace lithium::cxxtools {
-auto csvToJson(std::string_view csv_file, std::string_view json_file) -> bool {
+auto csvToJson(std::string_view csv_file, std::string_view json_file,
+               char delimiter = ',') -> bool {
     if (csv_file.empty() || json_file.empty()) {
         LOG_F(ERROR, "CSV to JSON conversion failed: invalid input file path");
         return false;
     }
     try {
-        auto csvData = detail::csvToJson(csv_file);
+        auto csvData = detail::csvToJson(csv_file, delimiter);
         detail::saveJsonToFile(csvData, json_file);
         return true;
     } catch (const std::exception &e) {

@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <filesystem>
+#include <format>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,9 +16,12 @@
 #endif
 
 #include "atom/log/loguru.hpp"
-#include "atom/system//command.hpp"
+#include "atom/system/command.hpp"
+
+namespace fs = std::filesystem;
 
 namespace lithium::cxxtools {
+
 auto NetworkProxy::setProxy(const std::string& proxy,
                             NetworkProxy::ProxyMode mode,
                             const std::string& listenIP,
@@ -45,6 +50,7 @@ auto NetworkProxy::setProxy(const std::string& proxy,
 
 [[nodiscard]] auto NetworkProxy::getCurrentProxy() -> std::string {
 #ifdef _WIN32
+
     return getWindowsCurrentProxy();
 #else
     return getLinuxCurrentProxy();
@@ -133,7 +139,7 @@ bool NetworkProxy::setWindowsProxy(const std::string& proxy) const {
     // 打开注册表键
     if (RegOpenKeyEx(HKEY_CURRENT_USER, regPath, 0, KEY_SET_VALUE, &hKey) !=
         ERROR_SUCCESS) {
-        LOG_F(ERROR, "Failed to open registry key.")
+        LOG_F(ERROR, "Failed to open registry key.");
         return false;
     }
 
@@ -149,7 +155,7 @@ bool NetworkProxy::setWindowsProxy(const std::string& proxy) const {
     // 设置代理服务器地址
     if (RegSetValueEx(hKey, "ProxyServer", 0, REG_SZ, (BYTE*)proxy.c_str(),
                       proxy.length() + 1) != ERROR_SUCCESS) {
-        LOG_F(ERROR, "Failed to set proxy server.")
+        LOG_F(ERROR, "Failed to set proxy server.");
         RegCloseKey(hKey);
         return false;
     }
@@ -159,13 +165,13 @@ bool NetworkProxy::setWindowsProxy(const std::string& proxy) const {
     if (RegSetValueEx(hKey, "ProxyOverride", 0, REG_SZ,
                       (BYTE*)proxyOverride.c_str(),
                       proxyOverride.length() + 1) != ERROR_SUCCESS) {
-        LOG_F(ERROR, "Failed to set proxy override.")
+        LOG_F(ERROR, "Failed to set proxy override.");
         RegCloseKey(hKey);
         return false;
     }
 
     // 如果指定了监听IP，则更新代理覆盖字段以包含此IP
-    if (!listenIP.empty() && listenIP != "0.0.0.0") {
+    if (!listenIP_.empty() && listenIP_ != "0.0.0.0") {
         std::string currentOverride;
         DWORD size = 0;
         RegQueryValueEx(hKey, "ProxyOverride", NULL, NULL, NULL,
@@ -177,7 +183,7 @@ bool NetworkProxy::setWindowsProxy(const std::string& proxy) const {
         if (!currentOverride.empty() && currentOverride.back() != ';') {
             currentOverride += ";";
         }
-        currentOverride += listenIP;
+        currentOverride += listenIP_;
 
         if (RegSetValueEx(hKey, "ProxyOverride", 0, REG_SZ,
                           (BYTE*)currentOverride.c_str(),
@@ -189,12 +195,12 @@ bool NetworkProxy::setWindowsProxy(const std::string& proxy) const {
     }
 
     // 如果指定了自定义DNS，则通过 `netsh` 命令设置
-    if (!dns.empty()) {
+    if (!dns_.empty()) {
         std::string dnsCommand =
             "netsh interface ip set dns name=\"Local Area Connection\" "
             " " +
-            dns;
-        if (atom::system::executeCommandWithStatus(command).second != 0) {
+            dns_;
+        if (atom::system::executeCommandWithStatus(dnsCommand).second != 0) {
             LOG_F(ERROR, "Failed to set custom DNS.");
         }
     }
@@ -203,7 +209,7 @@ bool NetworkProxy::setWindowsProxy(const std::string& proxy) const {
     return true;
 }
 
-bool disableWindowsProxy() const {
+bool NetworkProxy::disableWindowsProxy() const {
     HKEY hKey;
     const char* regPath =
         "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
@@ -226,7 +232,7 @@ bool disableWindowsProxy() const {
     return true;
 }
 
-std::string getWindowsCurrentProxy() const {
+std::string NetworkProxy::getWindowsCurrentProxy() const {
     HKEY hKey;
     const char* regPath =
         "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
@@ -250,7 +256,7 @@ std::string getWindowsCurrentProxy() const {
     return std::string(buffer);
 }
 
-bool installWindowsCertificate(const std::string& certPath) const {
+bool NetworkProxy::installWindowsCertificate(const std::string& certPath) const {
     std::string command = "certutil -addstore -f \"Root\" " + certPath;
     int result = system(command.c_str());
     if (result != 0) {
@@ -260,7 +266,7 @@ bool installWindowsCertificate(const std::string& certPath) const {
     return true;
 }
 
-bool uninstallWindowsCertificate(const std::string& certName) const {
+bool NetworkProxy::uninstallWindowsCertificate(const std::string& certName) const {
     std::string command = "certutil -delstore \"Root\" " + certName;
     int result = system(command.c_str());
     if (result != 0) {
@@ -270,7 +276,7 @@ bool uninstallWindowsCertificate(const std::string& certName) const {
     return true;
 }
 
-std::string viewWindowsCertificateInfo(const std::string& certName) const {
+std::string NetworkProxy::viewWindowsCertificateInfo(const std::string& certName) const {
     std::string command = "certutil -store \"Root\" " + certName;
     std::string result;
     char buffer[128];
@@ -289,7 +295,7 @@ std::string viewWindowsCertificateInfo(const std::string& certName) const {
     return result;
 }
 
-void editWindowsHostsFile(
+void NetworkProxy::editWindowsHostsFile(
     const std::vector<std::pair<std::string, std::string>>& hostsEntries)
     const {
     std::string hostsPath = "C:\\Windows\\System32\\drivers\\etc\\hosts";
@@ -300,7 +306,7 @@ void editWindowsHostsFile(
     hostsFile.close();
 }
 
-void resetWindowsHostsFile() const {
+void NetworkProxy::resetWindowsHostsFile() const {
     std::string hostsPath = "C:\\Windows\\System32\\drivers\\etc\\hosts";
     std::ofstream hostsFile(hostsPath, std::ios_base::trunc);
     hostsFile.close();

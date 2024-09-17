@@ -15,6 +15,7 @@ Description: A simple implementation of object pool
 #ifndef ATOM_MEMORY_OBJECT_POOL_HPP
 #define ATOM_MEMORY_OBJECT_POOL_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <condition_variable>

@@ -19,105 +19,226 @@ Description: A Small List Implementation
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include "macro.hpp"
 
+namespace atom::type {
+
+/**
+ * @brief A small doubly linked list implementation.
+ *
+ * @tparam T The type of elements stored in the list.
+ */
 template <typename T>
 class SmallList {
-private:
-    struct Node {
-        T data;
-        Node* prev;
-        Node* next;
+    // Ensure that T is swappable and comparable
+    static_assert(std::is_swappable_v<T>, "T must be swappable");
+    static_assert(std::is_copy_constructible_v<T>,
+                  "T must be copy constructible");
 
+private:
+    /**
+     * @brief A node in the doubly linked list.
+     */
+    struct Node {
+        T data;                      ///< The data stored in the node.
+        std::unique_ptr<Node> next;  ///< Pointer to the next node.
+        Node* prev;                  ///< Pointer to the previous node.
+
+        /**
+         * @brief Constructs a node with the given value.
+         *
+         * @param value The value to store in the node.
+         */
         explicit Node(const T& value)
-            : data(value), prev(nullptr), next(nullptr) {}
+            : data(value), next(nullptr), prev(nullptr) {}
     };
 
-    Node* head_;
-    Node* tail_;
-    size_t list_size_;
+    std::unique_ptr<Node> head_;  ///< Pointer to the head of the list.
+    Node* tail_;                  ///< Pointer to the tail of the list.
+    size_t list_size_;            ///< The number of elements in the list.
 
 public:
-    SmallList() : head_(nullptr), tail_(nullptr), list_size_(0) {}
+    /**
+     * @brief Default constructor. Constructs an empty list.
+     */
+    constexpr SmallList() noexcept
+        : head_(nullptr), tail_(nullptr), list_size_(0) {}
 
-    SmallList(std::initializer_list<T> init_list) : SmallList() {
+    /**
+     * @brief Constructs a list with elements from an initializer list.
+     *
+     * @param init_list The initializer list containing elements to add to the
+     * list.
+     */
+    constexpr SmallList(std::initializer_list<T> init_list) : SmallList() {
         for (const auto& value : init_list) {
             pushBack(value);
         }
     }
 
-    ~SmallList() { clear(); }
+    /**
+     * @brief Destructor. Clears the list.
+     */
+    ~SmallList() noexcept { clear(); }
 
-    void pushBack(const T& value) {
-        Node* newNode = new Node(value);
+    /**
+     * @brief Copy constructor. Constructs a list by copying elements from
+     * another list.
+     *
+     * @param other The list to copy elements from.
+     */
+    SmallList(const SmallList& other) : SmallList() {
+        for (const auto& value : other) {
+            pushBack(value);
+        }
+    }
+
+    /**
+     * @brief Move constructor. Constructs a list by moving elements from
+     * another list.
+     *
+     * @param other The list to move elements from.
+     */
+    SmallList(SmallList&& other) noexcept : SmallList() { swap(other); }
+
+    /**
+     * @brief Copy assignment operator. Copies elements from another list.
+     *
+     * @param other The list to copy elements from.
+     * @return A reference to the assigned list.
+     */
+    SmallList& operator=(SmallList other) noexcept {
+        swap(other);
+        return *this;
+    }
+
+    /**
+     * @brief Adds an element to the end of the list.
+     *
+     * @param value The value to add.
+     */
+    constexpr void pushBack(const T& value) {
+        auto newNode = std::make_unique<Node>(value);
         if (empty()) {
-            head_ = tail_ = newNode;
+            head_ = std::move(newNode);
+            tail_ = head_.get();
         } else {
-            tail_->next = newNode;
-            newNode->prev = tail_;
-            tail_ = newNode;
+            tail_->next = std::move(newNode);
+            tail_->next->prev = tail_;
+            tail_ = tail_->next.get();
         }
         ++list_size_;
     }
 
-    void pushFront(const T& value) {
-        Node* newNode = new Node(value);
+    /**
+     * @brief Adds an element to the front of the list.
+     *
+     * @param value The value to add.
+     */
+    constexpr void pushFront(const T& value) {
+        auto newNode = std::make_unique<Node>(value);
         if (empty()) {
-            head_ = tail_ = newNode;
+            head_ = std::move(newNode);
+            tail_ = head_.get();
         } else {
-            head_->prev = newNode;
-            newNode->next = head_;
-            head_ = newNode;
+            newNode->next = std::move(head_);
+            head_->prev = newNode.get();
+            head_ = std::move(newNode);
         }
         ++list_size_;
     }
 
-    void popBack() {
+    /**
+     * @brief Removes the last element from the list.
+     */
+    constexpr void popBack() noexcept {
         if (!empty()) {
-            Node* temp = tail_;
-            tail_ = tail_->prev;
-            if (tail_) {
-                tail_->next = nullptr;
-            } else {
-                head_ = nullptr;
-            }
-            delete temp;
-            --list_size_;
-        }
-    }
-
-    void popFront() {
-        if (!empty()) {
-            Node* temp = head_;
-            head_ = head_->next;
-            if (head_) {
-                head_->prev = nullptr;
-            } else {
+            if (tail_ == head_.get()) {
+                head_.reset();
                 tail_ = nullptr;
+            } else {
+                tail_ = tail_->prev;
+                tail_->next.reset();
             }
-            delete temp;
             --list_size_;
         }
     }
 
-    auto front() -> T& { return head_->data; }
+    /**
+     * @brief Removes the first element from the list.
+     */
+    constexpr void popFront() noexcept {
+        if (!empty()) {
+            if (head_.get() == tail_) {
+                head_.reset();
+                tail_ = nullptr;
+            } else {
+                head_ = std::move(head_->next);
+                head_->prev = nullptr;
+            }
+            --list_size_;
+        }
+    }
 
-    auto front() const -> const T& { return head_->data; }
+    /**
+     * @brief Returns a reference to the first element in the list.
+     *
+     * @return A reference to the first element.
+     */
+    constexpr T& front() noexcept { return head_->data; }
 
-    auto back() -> T& { return tail_->data; }
+    /**
+     * @brief Returns a const reference to the first element in the list.
+     *
+     * @return A const reference to the first element.
+     */
+    constexpr const T& front() const noexcept { return head_->data; }
 
-    auto back() const -> const T& { return tail_->data; }
+    /**
+     * @brief Returns a reference to the last element in the list.
+     *
+     * @return A reference to the last element.
+     */
+    constexpr T& back() noexcept { return tail_->data; }
 
-    ATOM_NODISCARD auto empty() const -> bool { return list_size_ == 0; }
+    /**
+     * @brief Returns a const reference to the last element in the list.
+     *
+     * @return A const reference to the last element.
+     */
+    constexpr const T& back() const noexcept { return tail_->data; }
 
-    ATOM_NODISCARD auto size() const -> size_t { return list_size_; }
+    /**
+     * @brief Checks if the list is empty.
+     *
+     * @return True if the list is empty, false otherwise.
+     */
+    ATOM_NODISCARD constexpr bool empty() const noexcept {
+        return list_size_ == 0;
+    }
 
-    void clear() {
+    /**
+     * @brief Returns the number of elements in the list.
+     *
+     * @return The number of elements in the list.
+     */
+    ATOM_NODISCARD constexpr size_t size() const noexcept { return list_size_; }
+
+    /**
+     * @brief Clears the list, removing all elements.
+     */
+    constexpr void clear() noexcept {
         while (!empty()) {
             popFront();
         }
     }
 
+    /**
+     * @brief A bidirectional iterator for the list.
+     */
     class Iterator {
     public:
         using iterator_category = std::bidirectional_iterator_tag;
@@ -126,66 +247,154 @@ public:
         using pointer = T*;
         using reference = T&;
 
-        explicit Iterator(Node* ptr = nullptr) : nodePtr(ptr) {}
+        /**
+         * @brief Constructs an iterator pointing to the given node.
+         *
+         * @param ptr The node to point to.
+         */
+        explicit Iterator(Node* ptr = nullptr) noexcept : nodePtr(ptr) {}
 
-        auto operator++() -> Iterator& {
-            nodePtr = nodePtr->next;
+        /**
+         * @brief Advances the iterator to the next element.
+         *
+         * @return A reference to the iterator.
+         */
+        Iterator& operator++() noexcept {
+            nodePtr = nodePtr->next.get();
             return *this;
         }
 
-        auto operator++(int) -> Iterator {
+        /**
+         * @brief Advances the iterator to the next element.
+         *
+         * @return A copy of the iterator before the increment.
+         */
+        Iterator operator++(int) noexcept {
             Iterator temp = *this;
             ++(*this);
             return temp;
         }
 
-        auto operator--() -> Iterator& {
+        /**
+         * @brief Moves the iterator to the previous element.
+         *
+         * @return A reference to the iterator.
+         */
+        Iterator& operator--() noexcept {
             nodePtr = nodePtr->prev;
             return *this;
         }
 
-        auto operator--(int) -> Iterator {
+        /**
+         * @brief Moves the iterator to the previous element.
+         *
+         * @return A copy of the iterator before the decrement.
+         */
+        Iterator operator--(int) noexcept {
             Iterator temp = *this;
             --(*this);
             return temp;
         }
 
-        auto operator==(const Iterator& other) const -> bool {
+        /**
+         * @brief Checks if two iterators are equal.
+         *
+         * @param other The iterator to compare with.
+         * @return True if the iterators are equal, false otherwise.
+         */
+        bool operator==(const Iterator& other) const noexcept {
             return nodePtr == other.nodePtr;
         }
 
-        auto operator!=(const Iterator& other) const -> bool {
+        /**
+         * @brief Checks if two iterators are not equal.
+         *
+         * @param other The iterator to compare with.
+         * @return True if the iterators are not equal, false otherwise.
+         */
+        bool operator!=(const Iterator& other) const noexcept {
             return !(*this == other);
         }
 
-        auto operator*() const -> T& { return nodePtr->data; }
+        /**
+         * @brief Dereferences the iterator to access the element.
+         *
+         * @return A reference to the element.
+         */
+        reference operator*() const noexcept { return nodePtr->data; }
 
-        auto operator->() const -> T* { return &(nodePtr->data); }
+        /**
+         * @brief Dereferences the iterator to access the element.
+         *
+         * @return A pointer to the element.
+         */
+        pointer operator->() const noexcept { return &(nodePtr->data); }
 
-        Node* nodePtr;
+        Node* nodePtr;  ///< Pointer to the current node.
     };
 
-    auto begin() -> Iterator { return Iterator(head_); }
+    /**
+     * @brief A reverse iterator for the list.
+     */
+    using ReverseIterator = std::reverse_iterator<Iterator>;
 
-    auto end() -> Iterator { return Iterator(nullptr); }
+    /**
+     * @brief Returns an iterator to the beginning of the list.
+     *
+     * @return An iterator to the beginning of the list.
+     */
+    Iterator begin() noexcept { return Iterator(head_.get()); }
 
+    /**
+     * @brief Returns an iterator to the end of the list.
+     *
+     * @return An iterator to the end of the list.
+     */
+    Iterator end() noexcept { return Iterator(nullptr); }
+
+    /**
+     * @brief Returns a reverse iterator to the beginning of the reversed list.
+     *
+     * @return A reverse iterator to the beginning of the reversed list.
+     */
+    ReverseIterator rbegin() noexcept { return ReverseIterator(end()); }
+
+    /**
+     * @brief Returns a reverse iterator to the end of the reversed list.
+     *
+     * @return A reverse iterator to the end of the reversed list.
+     */
+    ReverseIterator rend() noexcept { return ReverseIterator(begin()); }
+
+    /**
+     * @brief Inserts an element at the specified position.
+     *
+     * @param pos The position to insert the element at.
+     * @param value The value to insert.
+     */
     void insert(Iterator pos, const T& value) {
         if (pos == begin()) {
             pushFront(value);
         } else if (pos == end()) {
             pushBack(value);
         } else {
-            Node* newNode = new Node(value);
+            auto newNode = std::make_unique<Node>(value);
             Node* prevNode = pos.nodePtr->prev;
             newNode->prev = prevNode;
-            newNode->next = pos.nodePtr;
-            prevNode->next = newNode;
-            pos.nodePtr->prev = newNode;
+            newNode->next = std::move(prevNode->next);
+            prevNode->next = std::move(newNode);
+            pos.nodePtr->prev = prevNode->next.get();
             ++list_size_;
         }
     }
 
-    auto erase(Iterator pos) -> Iterator {
+    /**
+     * @brief Erases the element at the specified position.
+     *
+     * @param pos The position of the element to erase.
+     * @return An iterator to the element following the erased element.
+     */
+    Iterator erase(Iterator pos) noexcept {
         if (pos == begin()) {
             popFront();
             return begin();
@@ -195,14 +404,19 @@ public:
             return end();
         }
         Node* prevNode = pos.nodePtr->prev;
-        Node* nextNode = pos.nodePtr->next;
-        prevNode->next = nextNode;
-        nextNode->prev = prevNode;
-        delete pos.nodePtr;
+        Node* nextNode = pos.nodePtr->next.get();
+        prevNode->next = std::move(pos.nodePtr->next);
+        if (nextNode)
+            nextNode->prev = prevNode;
         --list_size_;
         return Iterator(nextNode);
     }
 
+    /**
+     * @brief Removes all elements with the specified value.
+     *
+     * @param value The value to remove.
+     */
     void remove(const T& value) {
         for (auto it = begin(); it != end();) {
             if (*it == value) {
@@ -213,6 +427,9 @@ public:
         }
     }
 
+    /**
+     * @brief Removes consecutive duplicate elements from the list.
+     */
     void unique() {
         for (auto it = begin(); it != end();) {
             auto nextIt = std::next(it);
@@ -224,6 +441,9 @@ public:
         }
     }
 
+    /**
+     * @brief Sorts the elements in the list.
+     */
     void sort() {
         if (size() <= 1) {
             return;
@@ -244,11 +464,57 @@ public:
         swap(temp);
     }
 
-    void swap(SmallList<T>& other) {
+    /**
+     * @brief Swaps the contents of this list with another list.
+     *
+     * @param other The list to swap contents with.
+     */
+    void swap(SmallList<T>& other) noexcept {
         std::swap(head_, other.head_);
         std::swap(tail_, other.tail_);
         std::swap(list_size_, other.list_size_);
     }
+
+    /**
+     * @brief Constructs an element in place at the end of the list.
+     *
+     * @tparam Args The types of the arguments to construct the element with.
+     * @param args The arguments to construct the element with.
+     */
+    template <typename... Args>
+    void emplaceBack(Args&&... args) {
+        T value(std::forward<Args>(args)...);
+        pushBack(value);
+    }
+
+    /**
+     * @brief Constructs an element in place at the front of the list.
+     *
+     * @tparam Args The types of the arguments to construct the element with.
+     * @param args The arguments to construct the element with.
+     */
+    template <typename... Args>
+    void emplaceFront(Args&&... args) {
+        T value(std::forward<Args>(args)...);
+        pushFront(value);
+    }
+
+    /**
+     * @brief Constructs an element in place at the specified position.
+     *
+     * @tparam Args The types of the arguments to construct the element with.
+     * @param pos The position to construct the element at.
+     * @param args The arguments to construct the element with.
+     * @return An iterator to the constructed element.
+     */
+    template <typename... Args>
+    Iterator emplace(Iterator pos, Args&&... args) {
+        T value(std::forward<Args>(args)...);
+        insert(pos, value);
+        return Iterator(pos.nodePtr);
+    }
 };
+
+}  // namespace atom::type
 
 #endif  // ATOM_TYPE_SMALL_LIST_HPP

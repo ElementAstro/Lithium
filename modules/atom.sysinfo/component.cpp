@@ -35,42 +35,42 @@ ATOM_MODULE(atom_io, [](Component &component) {
     component.def("logical_cpus", &getNumberOfPhysicalCPUs, "cpu",
                   "Get number of logical CPUs");
     component.def("cache_sizes", &getCacheSizes, "cpu", "Get CPU cache sizes");
-    
+
     // ------------------------------------------------------------
     // Memory
     // ------------------------------------------------------------
 
     component.def("memory_usage", &getMemoryUsage, "memory",
                   "Get current memory usage percentage");
-    component.def("total_memory", &getTotalMemorySize, "memory",    
+    component.def("total_memory", &getTotalMemorySize, "memory",
                   "Get total memory size");
-    component.def("available_memory", &getAvailableMemorySize, "memory",   
+    component.def("available_memory", &getAvailableMemorySize, "memory",
                   "Get available memory size");
     component.def("physical_memory_info", &getPhysicalMemoryInfo, "memory",
                     "Get physical memory slot info");
-    component.def("virtual_memory_max", &getVirtualMemoryMax, "memory",  
+    component.def("virtual_memory_max", &getVirtualMemoryMax, "memory",
                   "Get virtual memory max size");
     component.def("virtual_memory_used", &getVirtualMemoryUsed, "memory",
                     "Get virtual memory used size");
-    component.def("swap_memory_total", &getSwapMemoryTotal, "memory", 
+    component.def("swap_memory_total", &getSwapMemoryTotal, "memory",
                   "Get swap memory total size");
-    component.def("swap_memory_used", &getSwapMemoryUsed, "memory", 
+    component.def("swap_memory_used", &getSwapMemoryUsed, "memory",
                   "Get swap memory used size");
-    component.def("committed_memory", &getCommittedMemory, "memory", 
+    component.def("committed_memory", &getCommittedMemory, "memory",
                   "Get committed memory");
-    component.def("uncommitted_memory", &getUncommittedMemory, "memory", 
+    component.def("uncommitted_memory", &getUncommittedMemory, "memory",
                   "Get uncommitted memory");
 
     component.defType<MemoryInfo>("memory_info");
     component.defType<MemoryInfo::MemorySlot>("memory_slot");
     component.def_v("memory_slot_type", &MemoryInfo::MemorySlot::type, "memory_slot",
                   "Get memory slot type");
-    component.def("memory_slot_capacity", &MemoryInfo::MemorySlot::capacity, "memory_slot", 
+    component.def("memory_slot_capacity", &MemoryInfo::MemorySlot::capacity, "memory_slot",
                   "Get memory slot capacity");
-    component.def("memory_slot_clock_speed", &MemoryInfo::MemorySlot::clockSpeed, "memory_slot", 
+    component.def("memory_slot_clock_speed", &MemoryInfo::MemorySlot::clockSpeed, "memory_slot",
                   "Get memory slot clock speed");
 
-    
+
     // ------------------------------------------------------------
     // Disk
     // ------------------------------------------------------------

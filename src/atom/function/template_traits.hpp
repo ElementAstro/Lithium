@@ -18,6 +18,10 @@
 
 #include "abi.hpp"
 
+#ifdef _WIN32
+#undef max
+#endif
+
 namespace atom::meta {
 
 // Identity template

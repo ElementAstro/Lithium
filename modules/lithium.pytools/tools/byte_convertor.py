@@ -96,7 +96,7 @@ def convert_file_to_array(
     filename: str,
     start: int = 0,
     end: Optional[int] = None,
-    format: str = 'hex'
+    data_format: str = 'hex'
 ) -> str:
     """
     Convert a binary file to a C-style array string.
@@ -105,7 +105,7 @@ def convert_file_to_array(
         filename (str): Path to the binary file.
         start (int): Start byte for conversion. Defaults to 0.
         end (Optional[int]): End byte for conversion. Defaults to None (end of file).
-        format (str): Format of the array data ('hex', 'bin', 'dec'). Defaults to 'hex'.
+        data_format (str): Format of the array data ('hex', 'bin', 'dec'). Defaults to 'hex'.
 
     Returns:
         str: C-style array string.
@@ -113,14 +113,14 @@ def convert_file_to_array(
     with open(filename, 'rb') as file:
         data = file.read()[start:end]
 
-    if format == 'hex':
+    if data_format == 'hex':
         return ', '.join(f'0x{b:02X}' for b in data)
-    elif format == 'bin':
+    elif data_format == 'bin':
         return ', '.join(f'0b{b:08b}' for b in data)
-    elif format == 'dec':
+    elif data_format == 'dec':
         return ', '.join(f'{b}' for b in data)
     else:
-        raise ValueError(f"Unsupported format: {format}")
+        raise ValueError(f"Unsupported format: {data_format}")
 
 
 def convert_array_to_file(
@@ -156,7 +156,7 @@ def extract_array_data_from_header(header_filename: str) -> str:
     Raises:
         ValueError: If no array data found in the header file.
     """
-    with open(header_filename, 'r') as file:
+    with open(header_filename, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
     for line in lines:
@@ -204,7 +204,7 @@ def convert_to_header(
     array_type: str = "unsigned char",
     comment_style: str = "C",
     compress: bool = False,
-    format: str = 'hex',
+    data_format: str = 'hex',
     start: int = 0,
     end: Optional[int] = None,
     protect: bool = True,
@@ -222,7 +222,7 @@ def convert_to_header(
         array_type (str): Data type of the array in the header file. Defaults to "unsigned char".
         comment_style (str): Comment style ("C" or "CPP"). Defaults to "C".
         compress (bool): Whether to compress the data. Defaults to False.
-        format (str): Format of the array data ("hex", "bin", "dec"). Defaults to "hex".
+        data_format (str): Format of the array data ("hex", "bin", "dec"). Defaults to 'hex'.
         start (int): Start byte for conversion. Defaults to 0.
         end (Optional[int]): End byte for conversion. Defaults to None.
         protect (bool): Whether to include #ifndef protection macros. Defaults to True.
@@ -254,7 +254,7 @@ def convert_to_header(
             '.h', f'_part_{i}.h') if len(parts) > 1 else output_header
         array_data = ', '.join(f'0x{b:02X}' for b in part)
 
-        with open(part_header, 'w') as header_file:
+        with open(part_header, 'w', encoding='utf-8') as header_file:
             if protect:
                 header_file.write(f'#ifndef {macro_name}\n')
                 header_file.write(f'#define {macro_name}\n\n')
@@ -270,18 +270,17 @@ def convert_to_header(
             header_file.write(
                 f'const unsigned int {size_name}_{i} = sizeof({part_name});\n')
             if protect:
-                header_file.write(f'#endif\n')
+                header_file.write('#endif\n')
 
             if cpp_class and i == len(parts) - 1:
                 header_file.write('\n')
-                header_file.write(
-                    f'class {array_name.capitalize()}Wrapper {{\n')
-                header_file.write(f'public:\n')
+                header_file.write('class {array_name.capitalize()}Wrapper {\n')
+                header_file.write('public:\n')
                 header_file.write(
                     f'    const {array_type}* data() const {{ return {array_name}; }}\n')
                 header_file.write(
                     f'    unsigned int size() const {{ return {size_name}; }}\n')
-                header_file.write(f'}};\n')
+                header_file.write('};\n')
 
 
 def convert_to_file(
@@ -332,7 +331,7 @@ def parse_args(args: List[str]) -> Tuple[str, str, Optional[str], dict]:
         "array_type": "unsigned char",
         "comment_style": "C",
         "compress": False,
-        "format": 'hex',
+        "data_format": 'hex',
         "start": 0,
         "end": None,
         "protect": True,
@@ -353,7 +352,7 @@ def parse_args(args: List[str]) -> Tuple[str, str, Optional[str], dict]:
         elif args[i] == "--compress":
             options["compress"] = True
         elif args[i] == "--format" and i + 1 < len(args):
-            options["format"] = args[i + 1]
+            options["data_format"] = args[i + 1]
         elif args[i] == "--start" and i + 1 < len(args):
             options["start"] = int(args[i + 1])
         elif args[i] == "--end" and i + 1 < len(args):
@@ -413,7 +412,7 @@ def main() -> None:
             array_type=options["array_type"],
             comment_style=options["comment_style"],
             compress=options["compress"],
-            format=options["format"],
+            data_format=options["data_format"],
             start=options["start"],
             end=options["end"],
             protect=options["protect"],

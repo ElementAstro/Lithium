@@ -65,8 +65,8 @@ TaskScheduler::Task TakeManyExposure::validateExposure() {
     if (impl_->gain < min_gain_ || impl_->gain > max_gain_) {
         LOG_F(ERROR, "Invalid gain: {}", impl_->gain);
         impl_->gain = default_gain_;
-        //THROW_INVALID_ARGUMENT("Exposure failed due to invalid gain: ",
-        //                       impl_->gain);
+        // THROW_INVALID_ARGUMENT("Exposure failed due to invalid gain: ",
+        //                        impl_->gain);
         co_return std::format("Exposure failed due to invalid gain: {}",
                               impl_->gain);
     }
@@ -79,82 +79,84 @@ TaskScheduler::Task TakeManyExposure::validateExposure() {
 TaskScheduler::Task TakeManyExposure::takeExposure() {
     try {
         LOG_F(INFO, "Taking exposure for camera {} with {} seconds.",
-              camera_name_, exposure_time_);
+              impl_->camera_name_, impl_->exposure_time_);
         std::this_thread::sleep_for(
-            std::chrono::duration<double>(exposure_time_));
+            std::chrono::duration<double>(impl_->exposure_time_));
 
-        std::string result = "Exposure result for camera " + camera_name_ +
-                             " with " + std::to_string(exposure_time_) +
-                             " seconds.";
+        std::string result =
+            "Exposure result for camera " + impl_->camera_name_ + " with " +
+            std::to_string(impl_->exposure_time_) + " seconds.";
         co_yield "Exposure completed: " + result;
         co_return result;
     } catch (const std::exception& e) {
-        THROW_UNLAWFUL_OPERATION("Exposure failed for camera " + camera_name_ +
-                                 ": " + e.what());
+        THROW_UNLAWFUL_OPERATION("Exposure failed for camera " +
+                                 impl_->camera_name_ + ": " + e.what());
     }
 }
 
 TaskScheduler::Task TakeManyExposure::handleExposureError() {
-    int exposure_time = exposure_time_;
-
-    GET_CONFIG_VALUE(config_manager_, "/camera/retry_attempts", int,
+    GET_CONFIG_VALUE(impl_->config_manager_, "/camera/retry_attempts", int,
                      retryAttempts);
-    GET_CONFIG_VALUE(config_manager_, "/camera/retry_delay", int, retryDelay);
-    GET_CONFIG_VALUE(config_manager_, "/camera/quality_threshold", double,
-                     qualityThreshold);
+    GET_CONFIG_VALUE(impl_->config_manager_, "/camera/retry_delay", int,
+                     retryDelay);
+    GET_CONFIG_VALUE(impl_->config_manager_, "/camera/quality_threshold",
+                     double, qualityThreshold);
 
     for (int i = 0; i < retryAttempts; ++i) {
         try {
-            co_yield "Attempting exposure for camera " + camera_name_ +
+            co_yield "Attempting exposure for camera " + impl_->camera_name_ +
                 " after " + std::to_string(i + 1) + " retry(ies).";
 
-            auto exposure_task = takeExposure();
-            co_await exposure_task;
+            auto exposureTask = takeExposure();
+            co_await exposureTask;
 
-            if (auto result = task_scheduler_->getResult(exposure_task)) {
+            if (auto result = impl_->task_scheduler_->getResult(exposureTask)) {
                 double quality = evaluateExposureQuality(*result);
-                LOG_F(INFO, "Exposure quality for camera {}: {}", camera_name_,
-                      quality);
+                LOG_F(INFO, "Exposure quality for camera {}: {}",
+                      impl_->camera_name_, quality);
 
                 if (quality >= qualityThreshold) {
                     co_return *result;
                 } else {
-                    exposure_time = adjustExposureTime(exposure_time, quality);
+                    impl_->exposure_time_ =
+                        adjustExposureTime(impl_->exposure_time_, quality);
                     LOG_F(INFO, "Adjusted exposure time for camera {}: {}",
-                          camera_name_, exposure_time);
+                          impl_->camera_name_, impl_->exposure_time_);
                 }
             } else {
                 LOG_F(ERROR,
                       "Exposure task completed but no result produced for {}",
-                      camera_name_);
+                      impl_->camera_name_);
                 THROW_UNLAWFUL_OPERATION(
                     "Exposure task completed but no result produced for "
                     "camera " +
-                    camera_name_);
+                    impl_->camera_name_);
             }
         } catch (const atom::error::UnlawfulOperation& e) {
             LOG_F(ERROR, "Exposure attempt {} failed for camera {}: {}", i + 1,
-                  camera_name_, e.what());
+                  impl_->camera_name_, e.what());
         }
     }
     co_return std::format("Exposure failed for camera {} after {} retries.",
-                          camera_name_, retryAttempts);
+                          impl_->camera_name_, retryAttempts);
 }
 
 TaskScheduler::Task TakeManyExposure::run() {
-    auto validate_task =
+    auto validateTask =
         std::make_shared<TaskScheduler::Task>(validateExposure());
-    task_scheduler_->schedule("validate_exposure_" + camera_name_,
-                              validate_task);
+    impl_->task_scheduler_->schedule("validate_exposure_" + impl_->camera_name_,
+                                     validateTask);
 
-    auto exposure_task =
+    auto exposureTask =
         std::make_shared<TaskScheduler::Task>(handleExposureError());
-    exposure_task->dependencies.push_back("validate_exposure_" + camera_name_);
-    task_scheduler_->schedule("exposure_task_" + camera_name_, exposure_task);
+    exposureTask->dependencies.push_back("validate_exposure_" +
+                                         impl_->camera_name_);
+    impl_->task_scheduler_->schedule("exposure_task_" + impl_->camera_name_,
+                                     exposureTask);
 
-    co_await *exposure_task;
+    co_await *exposureTask;
 
-    co_return "Exposure sequence completed for camera " + camera_name_;
+    co_return "Exposure sequence completed for camera " + impl_->camera_name_;
 }
 
 double TakeManyExposure::evaluateExposureQuality(

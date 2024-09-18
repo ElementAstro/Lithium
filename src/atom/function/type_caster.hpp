@@ -10,14 +10,10 @@
 #define ATOM_META_TYPE_CASTER_HPP
 
 #include <any>
-#include <concepts>
 #include <functional>
 #include <memory>
 #include <queue>
-#include <stdexcept>
 #include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #if ENABLE_FASTHASH
@@ -94,6 +90,7 @@ public:
 
             auto path = findConversionPath(srcInfo.value(), destInfo);
             std::any result = input[i];
+#pragma unroll
             for (size_t j = 0; j < path.size() - 1; ++j) {
                 result = conversions_.at(path[j]).at(path[j + 1])(result);
             }
@@ -105,6 +102,7 @@ public:
     auto getRegisteredTypes() const -> std::vector<std::string> {
         std::vector<std::string> typeNames;
         typeNames.reserve(type_name_map_.size());
+#pragma unroll
         for (const auto& [name, info] : type_name_map_) {
             typeNames.push_back(name);
         }
@@ -119,30 +117,33 @@ public:
     }
 
     template <typename EnumType>
-    void registerEnumValue(const std::string& enumName,
-                           const std::string& strValue, EnumType enumValue) {
-        if (!m_enumMaps_.contains(enumName)) {
-            m_enumMaps_[enumName] = std::unordered_map<std::string, EnumType>();
+    void registerEnumValue(const std::string& enum_name,
+                           const std::string& string_value,
+                           EnumType enum_value) {
+        if (!m_enumMaps_.contains(enum_name)) {
+            m_enumMaps_[enum_name] =
+                std::unordered_map<std::string, EnumType>();
         }
 
         auto& enumMap =
             std::any_cast<std::unordered_map<std::string, EnumType>&>(
-                m_enumMaps_[enumName]);
+                m_enumMaps_[enum_name]);
 
-        enumMap[strValue] = enumValue;
+        enumMap[string_value] = enum_value;
     }
 
     template <typename EnumType>
-    const std::unordered_map<std::string, EnumType>& getEnumMap(
-        const std::string& enumName) const {
+    auto getEnumMap(const std::string& enum_name) const
+        -> const std::unordered_map<std::string, EnumType>& {
         return std::any_cast<const std::unordered_map<std::string, EnumType>&>(
-            m_enumMaps_.at(enumName));
+            m_enumMaps_.at(enum_name));
     }
 
     template <typename EnumType>
     auto enumToString(EnumType value,
-                      const std::string& enumName) -> std::string {
-        const auto& enumMap = getEnumMap<EnumType>(enumName);
+                      const std::string& enum_name) -> std::string {
+        const auto& enumMap = getEnumMap<EnumType>(enum_name);
+#pragma unroll
         for (const auto& [key, enumValue] : enumMap) {
             if (enumValue == value) {
                 return key;
@@ -152,11 +153,12 @@ public:
     }
 
     template <typename EnumType>
-    EnumType stringToEnum(const std::string& str, const std::string& enumName) {
-        const auto& enumMap = getEnumMap<EnumType>(enumName);
-        auto it = enumMap.find(str);
-        if (it != enumMap.end()) {
-            return it->second;
+    auto stringToEnum(const std::string& string_value,
+                      const std::string& enum_name) -> EnumType {
+        const auto& enumMap = getEnumMap<EnumType>(enum_name);
+        auto iterator = enumMap.find(string_value);
+        if (iterator != enumMap.end()) {
+            return iterator->second;
         }
         THROW_INVALID_ARGUMENT("Invalid enum string");
     }
@@ -206,6 +208,7 @@ private:
 
             auto findIt = conversions_.find(last);
             if (findIt != conversions_.end()) {
+#pragma unroll
                 for (const auto& [next_type, _] : findIt->second) {
                     if (visited.insert(next_type).second) {
                         auto newPath = currentPath;
@@ -230,8 +233,8 @@ private:
     static auto getTypeInfo(const std::string& name)
         -> std::optional<TypeInfo> {
         auto& registry = detail::getTypeRegistry();
-        if (auto it = registry.find(name); it != registry.end()) {
-            return it->second;
+        if (auto iterator = registry.find(name); iterator != registry.end()) {
+            return iterator->second;
         }
         return std::nullopt;
     }

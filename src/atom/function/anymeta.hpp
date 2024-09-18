@@ -33,14 +33,14 @@ public:
     using EventCallback =
         std::function<void(BoxedValue&, const std::vector<BoxedValue>&)>;
 
-    struct Property {
+    struct ATOM_ALIGNAS(64) Property {
         GetterFunction getter;
         SetterFunction setter;
-    } ATOM_ALIGNAS(64);
+    };
 
-    struct Event {
+    struct ATOM_ALIGNAS(32) Event {
         std::vector<EventCallback> listeners;
-    } ATOM_ALIGNAS(32);
+    };
 
 private:
     std::unordered_map<std::string, std::vector<MethodFunction>>
@@ -82,8 +82,10 @@ public:
     // Fire event and notify listeners
     void fireEvent(BoxedValue& obj, const std::string& event_name,
                    const std::vector<BoxedValue>& args) const {
-        if (auto it = m_events_.find(event_name); it != m_events_.end()) {
-            for (const auto& listener : it->second.listeners) {
+        if (auto eventIter = m_events_.find(event_name);
+            eventIter != m_events_.end()) {
+#pragma unroll
+            for (const auto& listener : eventIter->second.listeners) {
                 listener(obj, args);
             }
         } else {
@@ -94,8 +96,9 @@ public:
     // Retrieve all overloaded methods by name
     [[nodiscard]] auto getMethods(const std::string& name) const
         -> std::optional<const std::vector<MethodFunction>*> {
-        if (auto it = m_methods_.find(name); it != m_methods_.end()) {
-            return &it->second;
+        if (auto methodIter = m_methods_.find(name);
+            methodIter != m_methods_.end()) {
+            return &methodIter->second;
         }
         return std::nullopt;
     }
@@ -103,8 +106,9 @@ public:
     // Retrieve property by name
     [[nodiscard]] auto getProperty(const std::string& name) const
         -> std::optional<Property> {
-        if (auto it = m_properties_.find(name); it != m_properties_.end()) {
-            return it->second;
+        if (auto propertyIter = m_properties_.find(name);
+            propertyIter != m_properties_.end()) {
+            return propertyIter->second;
         }
         return std::nullopt;
     }
@@ -113,10 +117,10 @@ public:
     [[nodiscard]] auto getConstructor(const std::string& type_name,
                                       size_t index = 0) const
         -> std::optional<ConstructorFunction> {
-        if (auto it = m_constructors_.find(type_name);
-            it != m_constructors_.end()) {
-            if (index < it->second.size()) {
-                return it->second[index];
+        if (auto constructorIter = m_constructors_.find(type_name);
+            constructorIter != m_constructors_.end()) {
+            if (index < constructorIter->second.size()) {
+                return constructorIter->second[index];
             }
         }
         return std::nullopt;
@@ -125,8 +129,9 @@ public:
     // Retrieve event by name
     [[nodiscard]] auto getEvent(const std::string& name) const
         -> std::optional<const Event*> {
-        if (auto it = m_events_.find(name); it != m_events_.end()) {
-            return &it->second;
+        if (auto eventIter = m_events_.find(name);
+            eventIter != m_events_.end()) {
+            return &eventIter->second;
         }
         return std::nullopt;
     }
@@ -154,8 +159,9 @@ public:
     [[nodiscard]] auto getMetadata(const std::string& name) const
         -> std::optional<TypeMetadata> {
         std::shared_lock lock(m_mutex_);
-        if (auto it = m_registry_.find(name); it != m_registry_.end()) {
-            return it->second;
+        if (auto registryIter = m_registry_.find(name);
+            registryIter != m_registry_.end()) {
+            return registryIter->second;
         }
         return std::nullopt;
     }
@@ -168,6 +174,7 @@ inline auto callMethod(BoxedValue& obj, const std::string& method_name,
             TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
         metadata) {
         if (auto methods = metadata->getMethods(method_name); methods) {
+#pragma unroll
             for (const auto& method : **methods) {
                 // TODO: FIX ME - 参数类型匹配逻辑:
                 // 确保传入的参数与方法期望的参数类型一致

@@ -48,7 +48,7 @@ def run_command(command: list) -> str:
         SystemExit: If the command returns a non-zero exit code.
     """
     result = subprocess.run(command, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True)
+                            stderr=subprocess.PIPE, text=True, check=False)
     if result.returncode != 0:
         print(f"Error: {result.stderr}")
         sys.exit(result.returncode)
@@ -119,7 +119,7 @@ def list_available_versions(package_name: str) -> list:
         requests.RequestException: If there's an error while fetching data from PyPI.
     """
     try:
-        response = requests.get(f"https://pypi.org/pypi/{package_name}/json")
+        response = requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=5)
         response.raise_for_status()
         data = response.json()
         versions = sorted(data['releases'].keys(),
@@ -202,7 +202,7 @@ def freeze_installed_packages(output_file: str = "requirements.txt"):
     """
     command = [sys.executable, "-m", "pip", "freeze"]
     output = run_command(command)
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write(output)
     print(f"Requirements written to {output_file}")
 

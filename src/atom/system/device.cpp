@@ -1,5 +1,6 @@
 #include "device.hpp"
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,16 @@
 
 namespace atom::system {
 #ifdef _WIN32
+constexpr size_t BUFFER_SIZE = 512;
+constexpr size_t ADDRESS_SIZE = 18;
+constexpr int BLUETOOTH_SEARCH_TIMEOUT = 15;
+constexpr int BYTE_5 = 5;
+constexpr int BYTE_4 = 4;
+constexpr int BYTE_3 = 3;
+constexpr int BYTE_2 = 2;
+constexpr int BYTE_1 = 1;
+constexpr int BYTE_0 = 0;
+
 auto enumerateUsbDevices() -> std::vector<DeviceInfo> {
     std::vector<DeviceInfo> devices;
     HDEVINFO deviceInfoSet = SetupDiGetClassDevs(
@@ -43,11 +54,11 @@ auto enumerateUsbDevices() -> std::vector<DeviceInfo> {
          SetupDiEnumDeviceInfo(deviceInfoSet, i, &deviceInfoData) != 0; i++) {
         DWORD dataType;
         DWORD size;
-        char buffer[512];
+        std::array<char, BUFFER_SIZE> buffer;
         if (SetupDiGetDeviceRegistryProperty(
                 deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, &dataType,
-                (PBYTE)buffer, sizeof(buffer), &size)) {
-            devices.push_back({buffer, ""});
+                reinterpret_cast<PBYTE>(buffer.data()), buffer.size(), &size)) {
+            devices.push_back({buffer.data(), ""});
         }
     }
 
@@ -69,11 +80,11 @@ auto enumerateSerialPorts() -> std::vector<DeviceInfo> {
          SetupDiEnumDeviceInfo(deviceInfoSet, i, &deviceInfoData) != 0; i++) {
         DWORD dataType;
         DWORD size;
-        char buffer[512];
+        std::array<char, BUFFER_SIZE> buffer;
         if (SetupDiGetDeviceRegistryProperty(
                 deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, &dataType,
-                (PBYTE)buffer, sizeof(buffer), &size)) {
-            devices.push_back({buffer, ""});
+                reinterpret_cast<PBYTE>(buffer.data()), buffer.size(), &size)) {
+            devices.push_back({buffer.data(), ""});
         }
     }
 
@@ -84,7 +95,14 @@ auto enumerateSerialPorts() -> std::vector<DeviceInfo> {
 auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
     std::vector<DeviceInfo> devices;
     BLUETOOTH_DEVICE_SEARCH_PARAMS searchParams = {
-        sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS), 1, 0, 1, 1, 1, 15, nullptr};
+        sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS),
+        1,
+        0,
+        1,
+        1,
+        1,
+        BLUETOOTH_SEARCH_TIMEOUT,
+        nullptr};
 
     BLUETOOTH_DEVICE_INFO deviceInfo;
     deviceInfo.dwSize = sizeof(BLUETOOTH_DEVICE_INFO);
@@ -93,15 +111,20 @@ auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
 
     if (btFind != nullptr) {
         do {
-            std::wstring ws(deviceInfo.szName);
-            std::string name(ws.begin(), ws.end());
-            char address[18];
-            snprintf(
-                address, sizeof(address), "%02X:%02X:%02X:%02X:%02X:%02X",
-                deviceInfo.Address.rgBytes[5], deviceInfo.Address.rgBytes[4],
-                deviceInfo.Address.rgBytes[3], deviceInfo.Address.rgBytes[2],
-                deviceInfo.Address.rgBytes[1], deviceInfo.Address.rgBytes[0]);
-            devices.push_back({name, address});
+            std::wstring wideName(deviceInfo.szName);
+            std::string name(wideName.begin(), wideName.end());
+            std::array<char, ADDRESS_SIZE> address;
+            std::string formattedAddress =
+                std::format("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                            deviceInfo.Address.rgBytes[BYTE_5],
+                            deviceInfo.Address.rgBytes[BYTE_4],
+                            deviceInfo.Address.rgBytes[BYTE_3],
+                            deviceInfo.Address.rgBytes[BYTE_2],
+                            deviceInfo.Address.rgBytes[BYTE_1],
+                            deviceInfo.Address.rgBytes[BYTE_0]);
+            std::copy(formattedAddress.begin(), formattedAddress.end(),
+                      address.begin());
+            devices.push_back({name, address.data()});
         } while (BluetoothFindNextDevice(btFind, &deviceInfo) != 0);
         BluetoothFindDeviceClose(btFind);
     }

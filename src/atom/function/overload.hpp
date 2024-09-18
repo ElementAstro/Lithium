@@ -136,9 +136,9 @@ template <typename... Args>
 constexpr auto overload_cast = OverloadCast<Args...>{};
 
 template <class T>
-constexpr std::decay_t<T> decay_copy(T&& value) noexcept(
-    std::is_nothrow_convertible_v<T, std::decay_t<T>>) {
-    return std::forward<T>(value);  // 将值转发并转换为衰减类型
+constexpr auto decayCopy(T&& value) noexcept(
+    std::is_nothrow_convertible_v<T, std::decay_t<T>>) -> std::decay_t<T> {
+    return std::forward<T>(value);
 }
 
 }  // namespace atom::meta

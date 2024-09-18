@@ -97,7 +97,7 @@ auto toString(const Enum& value) -> std::string {
  * @return A string representation of the pointer address or value.
  */
 template <PointerType T>
-std::string toString(T ptr) {
+auto toString(T ptr) -> std::string {
     if (ptr) {
         return "Pointer(" + toString(*ptr) + ")";
     }
@@ -111,7 +111,7 @@ std::string toString(T ptr) {
  * @return A string representation of the smart pointer.
  */
 template <SmartPointer SmartPtr>
-std::string toString(const SmartPtr& ptr) {
+auto toString(const SmartPtr& ptr) -> std::string {
     if (ptr) {
         return "SmartPointer(" + toString(*ptr) + ")";
     }

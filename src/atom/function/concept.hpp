@@ -27,28 +27,30 @@
 
 // Checks if a type can be invoked with specified argument types
 template <typename F, typename... Args>
-concept Invocable = requires(F f, Args&&... args) {
-    { std::invoke(f, std::forward<Args>(args)...) };
+concept Invocable = requires(F func, Args&&... args) {
+    { std::invoke(func, std::forward<Args>(args)...) };
 };
 
 // Checks if a type can be invoked with specified argument types and returns a
 // result convertible to R
 template <typename F, typename R, typename... Args>
-concept InvocableR = requires(F f, Args&&... args) {
-    { std::invoke(f, std::forward<Args>(args)...) } -> std::convertible_to<R>;
+concept InvocableR = requires(F func, Args&&... args) {
+    {
+        std::invoke(func, std::forward<Args>(args)...)
+    } -> std::convertible_to<R>;
 };
 
 // Similar to Invocable but checks for noexcept
 template <typename F, typename... Args>
-concept NothrowInvocable = requires(F f, Args&&... args) {
-    { std::invoke(f, std::forward<Args>(args)...) } noexcept;
+concept NothrowInvocable = requires(F func, Args&&... args) {
+    { std::invoke(func, std::forward<Args>(args)...) } noexcept;
 };
 
 // Similar to InvocableR but checks for noexcept
 template <typename F, typename R, typename... Args>
-concept NothrowInvocableR = requires(F f, Args&&... args) {
+concept NothrowInvocableR = requires(F func, Args&&... args) {
     {
-        std::invoke(f, std::forward<Args>(args)...)
+        std::invoke(func, std::forward<Args>(args)...)
     } noexcept -> std::convertible_to<R>;
 };
 
@@ -57,7 +59,7 @@ template <typename T>
 concept FunctionPointer = std::is_function_v<std::remove_pointer_t<T>>;
 
 template <typename T>
-concept Callable = requires(T t) {
+concept Callable = requires(T obj) {
     { std::function{std::declval<T>()} };
 };
 
@@ -68,8 +70,8 @@ concept CallableReturns = std::is_invocable_r_v<Ret, T, Args...>;
 // Checks if a callable type can be invoked with a given set of arguments and is
 // noexcept
 template <typename T, typename... Args>
-concept CallableNoexcept = requires(T t, Args&&... args) {
-    { t(std::forward<Args>(args)...) } noexcept;
+concept CallableNoexcept = requires(T obj, Args&&... args) {
+    { obj(std::forward<Args>(args)...) } noexcept;
 };
 
 // Checks if a type is a std::function of any signature
@@ -85,57 +87,57 @@ concept StdFunction = requires {
 // -----------------------------------------------------------------------------
 
 template <typename T>
-concept Relocatable = requires(T t) {
+concept Relocatable = requires(T obj) {
     { std::is_nothrow_move_constructible_v<T> } -> std::convertible_to<bool>;
     { std::is_nothrow_move_assignable_v<T> } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept DefaultConstructible = requires(T t) {
+concept DefaultConstructible = requires(T obj) {
     { T() } -> std::same_as<T>;
 };
 
 template <typename T>
-concept CopyConstructible = requires(T t) {
-    { T(t) } -> std::same_as<T>;
+concept CopyConstructible = requires(T obj) {
+    { T(obj) } -> std::same_as<T>;
 };
 
 template <typename T>
-concept CopyAssignable = requires(T t) {
-    { t = t } -> std::same_as<T&>;
+concept CopyAssignable = requires(T obj) {
+    { obj = obj } -> std::same_as<T&>;
 };
 
 template <typename T>
-concept MoveAssignable = requires(T t) {
-    { t = std::move(t) } -> std::same_as<T&>;
+concept MoveAssignable = requires(T obj) {
+    { obj = std::move(obj) } -> std::same_as<T&>;
 };
 
 template <typename T>
-concept EqualityComparable = requires(T t) {
-    { t == t } -> std::convertible_to<bool>;
-    { t != t } -> std::convertible_to<bool>;
+concept EqualityComparable = requires(T obj) {
+    { obj == obj } -> std::convertible_to<bool>;
+    { obj != obj } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept LessThanComparable = requires(T t) {
-    { t < t } -> std::convertible_to<bool>;
+concept LessThanComparable = requires(T obj) {
+    { obj < obj } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept Hashable = requires(T t) {
-    { std::hash<T>{}(t) } -> std::convertible_to<std::size_t>;
+concept Hashable = requires(T obj) {
+    { std::hash<T>{}(obj) } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
-concept Swappable = requires(T t) { std::swap(t, t); };
+concept Swappable = requires(T obj) { std::swap(obj, obj); };
 
 template <typename T>
 concept Copyable =
     std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
 
 template <typename T>
-concept Destructible = requires(T t) {
-    { t.~T() } -> std::same_as<void>;
+concept Destructible = requires(T obj) {
+    { obj.~T() } -> std::same_as<void>;
 };
 
 // -----------------------------------------------------------------------------
@@ -169,7 +171,7 @@ concept Number = Arithmetic<T> || Integral<T> || FloatingPoint<T>;
 #include <complex>
 // Checks if a type is a complex number (in <complex> header)
 template <typename T>
-concept ComplexNumber = requires(T x) {
+concept ComplexNumber = requires(T obj) {
     typename T::value_type;
     requires std::is_same_v<T, std::complex<typename T::value_type>>;
 };
@@ -214,11 +216,11 @@ concept NotAssociativeOrSequenceContainer =
     !NotSequenceContainer<T>;
 
 template <typename T>
-concept String = NotAssociativeOrSequenceContainer<T> && requires(T x) {
-    { x.size() } -> std::convertible_to<std::size_t>;
-    { x.empty() } -> std::convertible_to<bool>;
-    { x.begin() } -> std::convertible_to<typename T::iterator>;
-    { x.end() } -> std::convertible_to<typename T::iterator>;
+concept String = NotAssociativeOrSequenceContainer<T> && requires(T obj) {
+    { obj.size() } -> std::convertible_to<std::size_t>;
+    { obj.empty() } -> std::convertible_to<bool>;
+    { obj.begin() } -> std::convertible_to<typename T::iterator>;
+    { obj.end() } -> std::convertible_to<typename T::iterator>;
 };
 
 template <typename T>
@@ -234,19 +236,19 @@ concept Pointer = std::is_pointer_v<T>;
 
 // Checks if a type is a std::unique_ptr of any type
 template <typename T>
-concept UniquePointer = requires(T x) {
+concept UniquePointer = requires(T obj) {
     requires std::is_same_v<T, std::unique_ptr<typename T::element_type>>;
 };
 
 // Checks if a type is a std::shared_ptr of any type
 template <typename T>
-concept SharedPointer = requires(T x) {
+concept SharedPointer = requires(T obj) {
     requires std::is_same_v<T, std::shared_ptr<typename T::element_type>>;
 };
 
 // Checks if a type is a std::weak_ptr of any type
 template <typename T>
-concept WeakPointer = requires(T x) {
+concept WeakPointer = requires(T obj) {
     requires std::is_same_v<T, std::weak_ptr<typename T::element_type>>;
 };
 
@@ -286,35 +288,35 @@ concept TriviallyCopyable =
 
 // Checks if a type supports begin() and end()
 template <typename T>
-concept Iterable = requires(T x) {
-    { x.begin() } -> std::forward_iterator;
-    { x.end() } -> std::forward_iterator;
+concept Iterable = requires(T obj) {
+    { obj.begin() } -> std::forward_iterator;
+    { obj.end() } -> std::forward_iterator;
 };
 
 // Checks if a type is a standard container with size, begin, and end
 template <typename T>
-concept Container = requires(T x) {
-    { x.size() } -> std::convertible_to<std::size_t>;
+concept Container = requires(T obj) {
+    { obj.size() } -> std::convertible_to<std::size_t>;
     requires Iterable<T>;
 };
 
 template <typename T>
-concept StringContainer = requires(T t) {
+concept StringContainer = requires(T obj) {
     typename T::value_type;
     String<T> || Char<T>;
-    { t.push_back(std::declval<typename T::value_type>()) };
+    { obj.push_back(std::declval<typename T::value_type>()) };
 };
 
 template <typename T>
-concept NumberContainer = requires(T t) {
+concept NumberContainer = requires(T obj) {
     typename T::value_type;
     Number<typename T::value_type>;
-    { t.push_back(std::declval<typename T::value_type>()) };
+    { obj.push_back(std::declval<typename T::value_type>()) };
 };
 
 // Checks if a type is an associative container like map or set
 template <typename T>
-concept AssociativeContainer = requires(T x) {
+concept AssociativeContainer = requires(T obj) {
     typename T::key_type;
     typename T::mapped_type;
     requires Container<T>;
@@ -322,12 +324,12 @@ concept AssociativeContainer = requires(T x) {
 
 // Concept to check if a type is an iterator
 template <typename T>
-concept Iterator = requires(T it) {
+concept Iterator = requires(T iter) {
     {
-        *it
+        *iter
     } -> std::convertible_to<typename std::iterator_traits<T>::value_type>;
-    { ++it } -> std::same_as<T&>;
-    { it++ } -> std::convertible_to<const T&>;
+    { ++iter } -> std::same_as<T&>;
+    { iter++ } -> std::convertible_to<const T&>;
 };
 #endif
 

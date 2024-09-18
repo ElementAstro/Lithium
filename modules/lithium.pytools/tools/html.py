@@ -1,9 +1,17 @@
+"""
+This module provides classes and functions to generate HTML documents from JSON structures.
+"""
+
 import json
 import re
 import argparse
 
 
 class Tag:
+    """
+    Represents an HTML tag.
+    """
+
     def __init__(self, name, is_single=False, attrs=None, contents=None):
         """
         Initialize a new HTML tag.
@@ -93,8 +101,7 @@ class Tag:
                              for c in self.contents)
         if self.is_single:
             return f'<{self.name}{attrs} />'
-        else:
-            return f'<{self.name}{attrs}>{inner_html}</{self.name}>'
+        return f'<{self.name}{attrs}>{inner_html}</{self.name}>'
 
     def render_str(self, text, context):
         """
@@ -108,7 +115,11 @@ class Tag:
             str: The rendered string.
         """
         if context is not None and isinstance(text, str):
-            return re.sub(r'\{\{(\w+)\}\}', lambda m: str(context.get(m.group(1), m.group(0))), text)
+            return re.sub(
+                r'\{\{(\w+)\}\}',
+                lambda m: str(context.get(m.group(1), m.group(0))),
+                text
+            )
         return text
 
     def __str__(self):
@@ -122,6 +133,10 @@ class Tag:
 
 
 class HTMLDocument:
+    """
+    Represents an HTML document.
+    """
+
     def __init__(self, title=""):
         """
         Initialize a new HTML document.
@@ -147,15 +162,28 @@ class HTMLDocument:
             version (str): The version of Bootstrap to use.
         """
         if not self.bootstrap_enabled:
-            link_tag = Tag("link", is_single=True, attrs={
-                "rel": "stylesheet",
-                "href": f"https://stackpath.bootstrapcdn.com/bootstrap/{version}/css/bootstrap.min.css"
-            })
+            link_tag = Tag(
+                "link",
+                is_single=True,
+                attrs={
+                    "rel": "stylesheet",
+                    "href": (
+                        "https://stackpath.bootstrapcdn.com/bootstrap/"
+                        f"{version}/css/bootstrap.min.css"
+                    )
+                }
+            )
             self.head.add_content(link_tag)
 
-            script_tag_js = Tag("script", attrs={
-                "src": f"https://stackpath.bootstrapcdn.com/bootstrap/{version}/js/bootstrap.bundle.min.js"
-            })
+            script_tag_js = Tag(
+                "script",
+                attrs={
+                    "src": (
+                        "https://stackpath.bootstrapcdn.com/bootstrap/"
+                        f"{version}/js/bootstrap.bundle.min.js"
+                    )
+                }
+            )
             self.body.add_content(script_tag_js)
 
             self.bootstrap_enabled = True
@@ -242,26 +270,41 @@ def main():
     Main function to parse command line arguments and generate HTML document.
     """
     parser = argparse.ArgumentParser(
-        description="Generate HTML from JSON structure.")
+        description="Generate HTML from JSON structure."
+    )
     parser.add_argument(
-        "json_file", help="Path to the JSON file containing the HTML structure.")
+        "json_file",
+        help="Path to the JSON file containing the HTML structure."
+    )
     parser.add_argument(
-        "--context", help="Path to the JSON file containing the context for template rendering.", default=None)
+        "--context",
+        help="Path to the JSON file containing the context for template rendering.",
+        default=None
+    )
     parser.add_argument(
-        "--output", help="Path to the output HTML file.", default="output.html")
+        "--output",
+        help="Path to the output HTML file.",
+        default="output.html"
+    )
     parser.add_argument(
-        "--title", help="Title of the HTML document.", default="Generated Page")
+        "--title",
+        help="Title of the HTML document.",
+        default="Generated Page"
+    )
     parser.add_argument(
-        "--enable-bootstrap", help="Enable Bootstrap in the HTML document.", action="store_true")
+        "--enable-bootstrap",
+        help="Enable Bootstrap in the HTML document.",
+        action="store_true"
+    )
 
     args = parser.parse_args()
 
-    with open(args.json_file, 'r') as f:
+    with open(args.json_file, 'r', encoding='utf-8') as f:
         json_data = json.load(f)
 
     context = None
     if args.context:
-        with open(args.context, 'r') as f:
+        with open(args.context, 'r', encoding='utf-8') as f:
             context = json.load(f)
 
     doc = HTMLDocument(args.title)
@@ -271,7 +314,7 @@ def main():
     generated_html = generate_html_from_json(json_data, context)
     doc.add_tag(generated_html)
 
-    with open(args.output, 'w') as f:
+    with open(args.output, 'w', encoding='utf-8') as f:
         f.write(str(doc))
 
     print(f"HTML document generated and saved to {args.output}")

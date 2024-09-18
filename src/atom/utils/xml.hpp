@@ -39,8 +39,8 @@ public:
      * @param parentElementName The name of the parent element.
      * @return A vector containing the names of all child elements.
      */
-    std::vector<std::string> getChildElementNames(
-        const std::string &parentElementName) const;
+    auto getChildElementNames(const std::string &parentElementName) const
+        -> std::vector<std::string>;
 
     /**
      * @brief Returns the text value of the specified element.
@@ -48,7 +48,7 @@ public:
      * @param elementName The name of the element.
      * @return The text value of the element.
      */
-    std::string getElementText(const std::string &elementName) const;
+    auto getElementText(const std::string &elementName) const -> std::string;
 
     /**
      * @brief Returns the value of the specified attribute of the specified
@@ -58,15 +58,16 @@ public:
      * @param attributeName The name of the attribute.
      * @return The value of the attribute.
      */
-    std::string getAttributeValue(const std::string &elementName,
-                                  const std::string &attributeName) const;
+    auto getAttributeValue(const std::string &elementName,
+                           const std::string &attributeName) const
+        -> std::string;
 
     /**
      * @brief Returns the names of all root elements in the XML file.
      *
      * @return A vector containing the names of all root elements.
      */
-    std::vector<std::string> getRootElementNames() const;
+    auto getRootElementNames() const -> std::vector<std::string>;
 
     /**
      * @brief Checks if the specified parent element has a child element with
@@ -76,8 +77,8 @@ public:
      * @param childElementName The name of the child element.
      * @return true if the child element exists, false otherwise.
      */
-    bool hasChildElement(const std::string &parentElementName,
-                         const std::string &childElementName) const;
+    auto hasChildElement(const std::string &parentElementName,
+                         const std::string &childElementName) const -> bool;
 
     /**
      * @brief Returns the text value of the specified child element of the
@@ -87,8 +88,9 @@ public:
      * @param childElementName The name of the child element.
      * @return The text value of the child element.
      */
-    std::string getChildElementText(const std::string &parentElementName,
-                                    const std::string &childElementName) const;
+    auto getChildElementText(const std::string &parentElementName,
+                             const std::string &childElementName) const
+        -> std::string;
 
     /**
      * @brief Returns the value of the specified attribute of the specified
@@ -99,10 +101,10 @@ public:
      * @param attributeName The name of the attribute.
      * @return The value of the attribute.
      */
-    std::string getChildElementAttributeValue(
-        const std::string &parentElementName,
-        const std::string &childElementName,
-        const std::string &attributeName) const;
+    auto getChildElementAttributeValue(const std::string &parentElementName,
+                                       const std::string &childElementName,
+                                       const std::string &attributeName) const
+        -> std::string;
 
     /**
      * @brief Returns the text value of the element specified by a given path.
@@ -111,7 +113,7 @@ public:
      * @return The text value of the element.
      * @throw std::runtime_error if the element does not exist.
      */
-    std::string getValueByPath(const std::string &path) const;
+    auto getValueByPath(const std::string &path) const -> std::string;
 
     /**
      * @brief Returns the value of the specified attribute of the element
@@ -122,8 +124,9 @@ public:
      * @return The value of the attribute.
      * @throw std::runtime_error if the element does not exist.
      */
-    std::string getAttributeValueByPath(const std::string &path,
-                                        const std::string &attributeName) const;
+    auto getAttributeValueByPath(const std::string &path,
+                                 const std::string &attributeName) const
+        -> std::string;
 
     /**
      * @brief Checks if the element specified by a given path has a child
@@ -134,8 +137,9 @@ public:
      * @return true if the child element exists, false otherwise.
      * @throw std::runtime_error if the parent element does not exist.
      */
-    bool hasChildElementByPath(const std::string &path,
-                               const std::string &childElementName) const;
+    auto hasChildElementByPath(const std::string &path,
+                               const std::string &childElementName) const
+        -> bool;
 
     /**
      * @brief Returns the text value of the child element with the specified
@@ -146,8 +150,9 @@ public:
      * @return The text value of the child element.
      * @throw std::runtime_error if the parent or child element does not exist.
      */
-    std::string getChildElementTextByPath(
-        const std::string &path, const std::string &childElementName) const;
+    auto getChildElementTextByPath(const std::string &path,
+                                   const std::string &childElementName) const
+        -> std::string;
 
     /**
      * @brief Returns the value of the specified attribute of the child element
@@ -159,9 +164,9 @@ public:
      * @return The value of the attribute.
      * @throw std::runtime_error if the parent or child element does not exist.
      */
-    std::string getChildElementAttributeValueByPath(
+    auto getChildElementAttributeValueByPath(
         const std::string &path, const std::string &childElementName,
-        const std::string &attributeName) const;
+        const std::string &attributeName) const -> std::string;
 
     /**
      * @brief Saves the XML document to the specified file.
@@ -169,7 +174,7 @@ public:
      * @param filePath The path to save the XML document to.
      * @return true if the document was saved successfully, false otherwise.
      */
-    bool saveToFile(const std::string &filePath) const;
+    auto saveToFile(const std::string &filePath) const -> bool;
 
 private:
     mutable tinyxml2::XMLDocument doc_;
@@ -181,7 +186,8 @@ private:
      * @return A pointer to the element.
      * @throw std::runtime_error if the element does not exist.
      */
-    tinyxml2::XMLElement *getElementByPath(const std::string &path) const;
+    auto getElementByPath(const std::string &path) const
+        -> tinyxml2::XMLElement *;
 };
 }  // namespace atom::utils
 

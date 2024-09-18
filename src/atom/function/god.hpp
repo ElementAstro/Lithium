@@ -25,431 +25,451 @@ ATOM_INLINE void blessNoBugs() {}
  * \brief Casts a value from one type to another.
  * \tparam To The type to cast to.
  * \tparam From The type to cast from.
- * \param f The value to cast.
+ * \param fromValue The value to cast.
  * \return The casted value.
  */
 template <typename To, typename From>
-constexpr auto cast(From&& f) -> To {
-    return static_cast<To>(std::forward<From>(f));
+constexpr auto cast(From&& fromValue) -> To {
+    return static_cast<To>(std::forward<From>(fromValue));
 }
 
 /*!
  * \brief Aligns a value up to the nearest multiple of A.
- * \tparam A The alignment value, must be a power of 2.
- * \tparam X The type of the value to align.
- * \param x The value to align.
+ * \tparam Alignment The alignment value, must be a power of 2.
+ * \tparam ValueType The type of the value to align.
+ * \param value The value to align.
  * \return The aligned value.
  */
-template <std::size_t A, typename X>
-constexpr auto alignUp(X x) -> X {
-    static_assert((A & (A - 1)) == 0, "A must be power of 2");
-    return (x + static_cast<X>(A - 1)) & ~static_cast<X>(A - 1);
+template <std::size_t Alignment, typename ValueType>
+constexpr auto alignUp(ValueType value) -> ValueType {
+    static_assert((Alignment & (Alignment - 1)) == 0,
+                  "Alignment must be power of 2");
+    return (value + static_cast<ValueType>(Alignment - 1)) &
+           ~static_cast<ValueType>(Alignment - 1);
 }
 
 /*!
  * \brief Aligns a pointer up to the nearest multiple of A.
- * \tparam A The alignment value, must be a power of 2.
- * \tparam X The type of the pointer to align.
- * \param x The pointer to align.
+ * \tparam Alignment The alignment value, must be a power of 2.
+ * \tparam PointerType The type of the pointer to align.
+ * \param pointer The pointer to align.
  * \return The aligned pointer.
  */
-template <std::size_t A, typename X>
-constexpr auto alignUp(X* x) -> X* {
-    return reinterpret_cast<X*>(alignUp<A>(reinterpret_cast<std::size_t>(x)));
+template <std::size_t Alignment, typename PointerType>
+constexpr auto alignUp(PointerType* pointer) -> PointerType* {
+    return reinterpret_cast<PointerType*>(
+        alignUp<Alignment>(reinterpret_cast<std::size_t>(pointer)));
 }
 
 /*!
- * \brief Aligns a value up to the nearest multiple of a.
- * \tparam X The type of the value to align.
- * \tparam A The type of the alignment value, must be integral.
- * \param x The value to align.
- * \param a The alignment value.
+ * \brief Aligns a value up to the nearest multiple of alignment.
+ * \tparam ValueType The type of the value to align.
+ * \tparam AlignmentType The type of the alignment value, must be integral.
+ * \param value The value to align.
+ * \param alignment The alignment value.
  * \return The aligned value.
  */
-template <typename X, typename A>
-constexpr auto alignUp(X x, A a) -> X {
-    static_assert(std::is_integral<A>::value, "A must be integral type");
-    return (x + static_cast<X>(a - 1)) & ~static_cast<X>(a - 1);
+template <typename ValueType, typename AlignmentType>
+constexpr auto alignUp(ValueType value, AlignmentType alignment) -> ValueType {
+    static_assert(std::is_integral<AlignmentType>::value,
+                  "Alignment must be integral type");
+    return (value + static_cast<ValueType>(alignment - 1)) &
+           ~static_cast<ValueType>(alignment - 1);
 }
 
 /*!
- * \brief Aligns a pointer up to the nearest multiple of a.
- * \tparam X The type of the pointer to align.
- * \tparam A The type of the alignment value, must be integral.
- * \param x The pointer to align.
- * \param a The alignment value.
+ * \brief Aligns a pointer up to the nearest multiple of alignment.
+ * \tparam PointerType The type of the pointer to align.
+ * \tparam AlignmentType The type of the alignment value, must be integral.
+ * \param pointer The pointer to align.
+ * \param alignment The alignment value.
  * \return The aligned pointer.
  */
-template <typename X, typename A>
-constexpr auto alignUp(X* x, A a) -> X* {
-    return reinterpret_cast<X*>(alignUp(reinterpret_cast<std::size_t>(x), a));
+template <typename PointerType, typename AlignmentType>
+constexpr auto alignUp(PointerType* pointer,
+                       AlignmentType alignment) -> PointerType* {
+    return reinterpret_cast<PointerType*>(
+        alignUp(reinterpret_cast<std::size_t>(pointer), alignment));
 }
 
 /*!
  * \brief Aligns a value down to the nearest multiple of A.
- * \tparam A The alignment value, must be a power of 2.
- * \tparam X The type of the value to align.
- * \param x The value to align.
+ * \tparam Alignment The alignment value, must be a power of 2.
+ * \tparam ValueType The type of the value to align.
+ * \param value The value to align.
  * \return The aligned value.
  */
-template <std::size_t A, typename X>
-constexpr auto alignDown(X x) -> X {
-    static_assert((A & (A - 1)) == 0, "A must be power of 2");
-    return x & ~static_cast<X>(A - 1);
+template <std::size_t Alignment, typename ValueType>
+constexpr auto alignDown(ValueType value) -> ValueType {
+    static_assert((Alignment & (Alignment - 1)) == 0,
+                  "Alignment must be power of 2");
+    return value & ~static_cast<ValueType>(Alignment - 1);
 }
 
 /*!
  * \brief Aligns a pointer down to the nearest multiple of A.
- * \tparam A The alignment value, must be a power of 2.
- * \tparam X The type of the pointer to align.
- * \param x The pointer to align.
+ * \tparam Alignment The alignment value, must be a power of 2.
+ * \tparam PointerType The type of the pointer to align.
+ * \param pointer The pointer to align.
  * \return The aligned pointer.
  */
-template <std::size_t A, typename X>
-constexpr auto alignDown(X* x) -> X* {
-    return reinterpret_cast<X*>(alignDown<A>(reinterpret_cast<std::size_t>(x)));
+template <std::size_t Alignment, typename PointerType>
+constexpr auto alignDown(PointerType* pointer) -> PointerType* {
+    return reinterpret_cast<PointerType*>(
+        alignDown<Alignment>(reinterpret_cast<std::size_t>(pointer)));
 }
 
 /*!
- * \brief Aligns a value down to the nearest multiple of a.
- * \tparam X The type of the value to align.
- * \tparam A The type of the alignment value, must be integral.
- * \param x The value to align.
- * \param a The alignment value.
+ * \brief Aligns a value down to the nearest multiple of alignment.
+ * \tparam ValueType The type of the value to align.
+ * \tparam AlignmentType The type of the alignment value, must be integral.
+ * \param value The value to align.
+ * \param alignment The alignment value.
  * \return The aligned value.
  */
-template <typename X, typename A>
-constexpr auto alignDown(X x, A a) -> X {
-    static_assert(std::is_integral<A>::value, "A must be integral type");
-    return x & ~static_cast<X>(a - 1);
+template <typename ValueType, typename AlignmentType>
+constexpr auto alignDown(ValueType value,
+                         AlignmentType alignment) -> ValueType {
+    static_assert(std::is_integral<AlignmentType>::value,
+                  "Alignment must be integral type");
+    return value & ~static_cast<ValueType>(alignment - 1);
 }
 
 /*!
- * \brief Aligns a pointer down to the nearest multiple of a.
- * \tparam X The type of the pointer to align.
- * \tparam A The type of the alignment value, must be integral.
- * \param x The pointer to align.
- * \param a The alignment value.
+ * \brief Aligns a pointer down to the nearest multiple of alignment.
+ * \tparam PointerType The type of the pointer to align.
+ * \tparam AlignmentType The type of the alignment value, must be integral.
+ * \param pointer The pointer to align.
+ * \param alignment The alignment value.
  * \return The aligned pointer.
  */
-template <typename X, typename A>
-constexpr auto alignDown(X* x, A a) -> X* {
-    return reinterpret_cast<X*>(alignDown(reinterpret_cast<std::size_t>(x), a));
+template <typename PointerType, typename AlignmentType>
+constexpr auto alignDown(PointerType* pointer,
+                         AlignmentType alignment) -> PointerType* {
+    return reinterpret_cast<PointerType*>(
+        alignDown(reinterpret_cast<std::size_t>(pointer), alignment));
 }
 
 /*!
  * \brief Computes the base-2 logarithm of an integral value.
- * \tparam T The type of the value, must be integral.
- * \param x The value to compute the logarithm of.
+ * \tparam IntegralType The type of the value, must be integral.
+ * \param value The value to compute the logarithm of.
  * \return The base-2 logarithm of the value.
  */
-template <typename T>
-constexpr auto log2(T x) -> T {
-    static_assert(std::is_integral<T>::value, "T must be integral type");
-    return x <= 1 ? 0 : 1 + atom::meta::log2(x >> 1);
+template <typename IntegralType>
+constexpr auto log2(IntegralType value) -> IntegralType {
+    static_assert(std::is_integral<IntegralType>::value,
+                  "IntegralType must be integral type");
+    return value <= 1 ? 0 : 1 + atom::meta::log2(value >> 1);
 }
 
 /*!
  * \brief Computes the number of blocks of size N needed to cover a value.
- * \tparam N The block size, must be a power of 2.
- * \tparam X The type of the value.
- * \param x The value to compute the number of blocks for.
+ * \tparam BlockSize The block size, must be a power of 2.
+ * \tparam ValueType The type of the value.
+ * \param value The value to compute the number of blocks for.
  * \return The number of blocks needed to cover the value.
  */
-template <std::size_t N, typename X>
-constexpr auto nb(X x) -> X {
-    static_assert((N & (N - 1)) == 0, "N must be power of 2");
-    return (x >> atom::meta::log2(static_cast<X>(N))) +
-           !!(x & static_cast<X>(N - 1));
+template <std::size_t BlockSize, typename ValueType>
+constexpr auto nb(ValueType value) -> ValueType {
+    static_assert((BlockSize & (BlockSize - 1)) == 0,
+                  "BlockSize must be power of 2");
+    return (value >> atom::meta::log2(static_cast<ValueType>(BlockSize))) +
+           !!(value & static_cast<ValueType>(BlockSize - 1));
 }
 
 /*!
  * \brief Compares two values for equality.
- * \tparam T The type of the values.
- * \param p Pointer to the first value.
- * \param q Pointer to the second value.
+ * \tparam ValueType The type of the values.
+ * \param first Pointer to the first value.
+ * \param second Pointer to the second value.
  * \return True if the values are equal, false otherwise.
  */
-template <typename T>
-ATOM_INLINE auto eq(const void* p, const void* q) -> bool {
-    return *reinterpret_cast<const T*>(p) == *reinterpret_cast<const T*>(q);
+template <typename ValueType>
+ATOM_INLINE auto eq(const void* first, const void* second) -> bool {
+    return *reinterpret_cast<const ValueType*>(first) ==
+           *reinterpret_cast<const ValueType*>(second);
 }
 
 /*!
  * \brief Copies N bytes from src to dst.
- * \tparam N The number of bytes to copy.
- * \param dst Pointer to the destination.
- * \param src Pointer to the source.
+ * \tparam NumBytes The number of bytes to copy.
+ * \param destination Pointer to the destination.
+ * \param source Pointer to the source.
  */
-template <std::size_t N>
-ATOM_INLINE void copy(void* dst, const void* src) {
-    if constexpr (N > 0) {
-        std::memcpy(dst, src, N);
+template <std::size_t NumBytes>
+ATOM_INLINE void copy(void* destination, const void* source) {
+    if constexpr (NumBytes > 0) {
+        std::memcpy(destination, source, NumBytes);
     }
 }
 
 /*!
- * \brief Specialization of copy for N = 0, does nothing.
+ * \brief Specialization of copy for NumBytes = 0, does nothing.
  */
 template <>
 ATOM_INLINE void copy<0>(void*, const void*) {}
 
 /*!
- * \brief Swaps the value pointed to by p with v.
- * \tparam T The type of the value pointed to by p.
- * \tparam V The type of the value v.
- * \param p Pointer to the value to swap.
- * \param v The value to swap with.
- * \return The original value pointed to by p.
+ * \brief Swaps the value pointed to by pointer with value.
+ * \tparam PointerType The type of the value pointed to by pointer.
+ * \tparam ValueType The type of the value.
+ * \param pointer Pointer to the value to swap.
+ * \param value The value to swap with.
+ * \return The original value pointed to by pointer.
  */
-template <typename T, typename V>
-ATOM_INLINE auto swap(T* p, V v) -> T {
-    T x = *p;
-    *p = static_cast<T>(v);
-    return x;
+template <typename PointerType, typename ValueType>
+ATOM_INLINE auto swap(PointerType* pointer, ValueType value) -> PointerType {
+    PointerType originalValue = *pointer;
+    *pointer = static_cast<PointerType>(value);
+    return originalValue;
 }
 
 /*!
- * \brief Adds v to the value pointed to by p and returns the original value.
- * \tparam T The type of the value pointed to by p.
- * \tparam V The type of the value v.
- * \param p Pointer to the value to add to.
- * \param v The value to add.
- * \return The original value pointed to by p.
+ * \brief Adds value to the value pointed to by pointer and returns the original
+ * value. \tparam PointerType The type of the value pointed to by pointer.
+ * \tparam ValueType The type of the value.
+ * \param pointer Pointer to the value to add to.
+ * \param value The value to add.
+ * \return The original value pointed to by pointer.
  */
-template <typename T, typename V>
-ATOM_INLINE auto fetchAdd(T* p, V v) -> T {
-    T x = *p;
-    *p += v;
-    return x;
+template <typename PointerType, typename ValueType>
+ATOM_INLINE auto fetchAdd(PointerType* pointer,
+                          ValueType value) -> PointerType {
+    PointerType originalValue = *pointer;
+    *pointer += value;
+    return originalValue;
 }
 
 /*!
- * \brief Subtracts v from the value pointed to by p and returns the original
- * value. \tparam T The type of the value pointed to by p. \tparam V The type of
- * the value v. \param p Pointer to the value to subtract from. \param v The
- * value to subtract. \return The original value pointed to by p.
+ * \brief Subtracts value from the value pointed to by pointer and returns the
+ * original value. \tparam PointerType The type of the value pointed to by
+ * pointer. \tparam ValueType The type of the value. \param pointer Pointer to
+ * the value to subtract from. \param value The value to subtract. \return The
+ * original value pointed to by pointer.
  */
-template <typename T, typename V>
-ATOM_INLINE auto fetchSub(T* p, V v) -> T {
-    T x = *p;
-    *p -= v;
-    return x;
+template <typename PointerType, typename ValueType>
+ATOM_INLINE auto fetchSub(PointerType* pointer,
+                          ValueType value) -> PointerType {
+    PointerType originalValue = *pointer;
+    *pointer -= value;
+    return originalValue;
 }
 
 /*!
- * \brief Performs a bitwise AND between the value pointed to by p and v, and
- * returns the original value. \tparam T The type of the value pointed to by p.
- * \tparam V The type of the value v.
- * \param p Pointer to the value to AND.
- * \param v The value to AND with.
- * \return The original value pointed to by p.
+ * \brief Performs a bitwise AND between the value pointed to by pointer and
+ * value, and returns the original value. \tparam PointerType The type of the
+ * value pointed to by pointer. \tparam ValueType The type of the value. \param
+ * pointer Pointer to the value to AND. \param value The value to AND with.
+ * \return The original value pointed to by pointer.
  */
-template <typename T, typename V>
-ATOM_INLINE auto fetchAnd(T* p, V v) -> T {
-    T x = *p;
-    *p &= static_cast<T>(v);
-    return x;
+template <typename PointerType, typename ValueType>
+ATOM_INLINE auto fetchAnd(PointerType* pointer,
+                          ValueType value) -> PointerType {
+    PointerType originalValue = *pointer;
+    *pointer &= static_cast<PointerType>(value);
+    return originalValue;
 }
 
 /*!
- * \brief Performs a bitwise OR between the value pointed to by p and v, and
- * returns the original value. \tparam T The type of the value pointed to by p.
- * \tparam V The type of the value v.
- * \param p Pointer to the value to OR.
- * \param v The value to OR with.
- * \return The original value pointed to by p.
+ * \brief Performs a bitwise OR between the value pointed to by pointer and
+ * value, and returns the original value. \tparam PointerType The type of the
+ * value pointed to by pointer. \tparam ValueType The type of the value. \param
+ * pointer Pointer to the value to OR. \param value The value to OR with.
+ * \return The original value pointed to by pointer.
  */
-template <typename T, typename V>
-ATOM_INLINE auto fetchOr(T* p, V v) -> T {
-    T x = *p;
-    *p |= static_cast<T>(v);
-    return x;
+template <typename PointerType, typename ValueType>
+ATOM_INLINE auto fetchOr(PointerType* pointer, ValueType value) -> PointerType {
+    PointerType originalValue = *pointer;
+    *pointer |= static_cast<PointerType>(value);
+    return originalValue;
 }
 
 /*!
- * \brief Performs a bitwise XOR between the value pointed to by p and v, and
- * returns the original value. \tparam T The type of the value pointed to by p.
- * \tparam V The type of the value v.
- * \param p Pointer to the value to XOR.
- * \param v The value to XOR with.
- * \return The original value pointed to by p.
+ * \brief Performs a bitwise XOR between the value pointed to by pointer and
+ * value, and returns the original value. \tparam PointerType The type of the
+ * value pointed to by pointer. \tparam ValueType The type of the value. \param
+ * pointer Pointer to the value to XOR. \param value The value to XOR with.
+ * \return The original value pointed to by pointer.
  */
-template <typename T, typename V>
-ATOM_INLINE auto fetchXor(T* p, V v) -> T {
-    T x = *p;
-    *p ^= static_cast<T>(v);
-    return x;
+template <typename PointerType, typename ValueType>
+ATOM_INLINE auto fetchXor(PointerType* pointer,
+                          ValueType value) -> PointerType {
+    PointerType originalValue = *pointer;
+    *pointer ^= static_cast<PointerType>(value);
+    return originalValue;
 }
 
 /*!
  * \brief Alias for std::enable_if_t.
- * \tparam C The condition.
- * \tparam T The type to enable if the condition is true.
+ * \tparam Condition The condition.
+ * \tparam Type The type to enable if the condition is true.
  */
-template <bool C, typename T = void>
-using if_t = std::enable_if_t<C, T>;
+template <bool Condition, typename Type = void>
+using if_t = std::enable_if_t<Condition, Type>;
 
 /*!
  * \brief Alias for std::remove_reference_t.
- * \tparam T The type to remove reference from.
+ * \tparam Type The type to remove reference from.
  */
-template <typename T>
-using rmRefT = std::remove_reference_t<T>;
+template <typename Type>
+using rmRefT = std::remove_reference_t<Type>;
 
 /*!
  * \brief Alias for std::remove_cv_t.
- * \tparam T The type to remove const and volatile qualifiers from.
+ * \tparam Type The type to remove const and volatile qualifiers from.
  */
-template <typename T>
-using rmCvT = std::remove_cv_t<T>;
+template <typename Type>
+using rmCvT = std::remove_cv_t<Type>;
 
 /*!
  * \brief Alias for removing both const, volatile qualifiers and reference.
- * \tparam T The type to remove const, volatile qualifiers and reference from.
+ * \tparam Type The type to remove const, volatile qualifiers and reference
+ * from.
  */
-template <typename T>
-using rmCvRefT = rmCvT<rmRefT<T>>;
+template <typename Type>
+using rmCvRefT = rmCvT<rmRefT<Type>>;
 
 /*!
  * \brief Alias for std::remove_extent_t.
- * \tparam T The type to remove extent from.
+ * \tparam Type The type to remove extent from.
  */
-template <typename T>
-using rmArrT = std::remove_extent_t<T>;
+template <typename Type>
+using rmArrT = std::remove_extent_t<Type>;
 
 /*!
  * \brief Alias for std::add_const_t.
- * \tparam T The type to add const qualifier to.
+ * \tparam Type The type to add const qualifier to.
  */
-template <typename T>
-using constT = std::add_const_t<T>;
+template <typename Type>
+using constT = std::add_const_t<Type>;
 
 /*!
  * \brief Alias for adding const qualifier and lvalue reference.
- * \tparam T The type to add const qualifier and lvalue reference to.
+ * \tparam Type The type to add const qualifier and lvalue reference to.
  */
-template <typename T>
-using constRefT = std::add_lvalue_reference_t<constT<rmRefT<T>>>;
+template <typename Type>
+using constRefT = std::add_lvalue_reference_t<constT<rmRefT<Type>>>;
 
 namespace detail {
 
 /*!
  * \brief Helper struct to check if all types are the same.
- * \tparam T The types to check.
+ * \tparam Types The types to check.
  */
-template <typename... T>
-struct isSame {
-    static constexpr bool value = false;
+template <typename... Types>
+struct IsSame {
+    static constexpr bool K_VALUE = false;
 };
 
 /*!
- * \brief Specialization of isSame for two or more types.
- * \tparam T The first type.
- * \tparam U The second type.
- * \tparam X The remaining types.
+ * \brief Specialization of IsSame for two or more types.
+ * \tparam FirstType The first type.
+ * \tparam SecondType The second type.
+ * \tparam RemainingTypes The remaining types.
  */
-template <typename T, typename U, typename... X>
-struct isSame<T, U, X...> {
-    static constexpr bool value =
-        std::is_same_v<T, U> || isSame<T, X...>::value;
+template <typename FirstType, typename SecondType, typename... RemainingTypes>
+struct IsSame<FirstType, SecondType, RemainingTypes...> {
+    static constexpr bool K_VALUE =
+        std::is_same_v<FirstType, SecondType> ||
+        IsSame<FirstType, RemainingTypes...>::kValue;
 };
 
 }  // namespace detail
 
 /*!
  * \brief Checks if all types are the same.
- * \tparam T The first type.
- * \tparam U The second type.
- * \tparam X The remaining types.
+ * \tparam FirstType The first type.
+ * \tparam SecondType The second type.
+ * \tparam RemainingTypes The remaining types.
  * \return True if all types are the same, false otherwise.
  */
-template <typename T, typename U, typename... X>
+template <typename FirstType, typename SecondType, typename... RemainingTypes>
 constexpr auto isSame() -> bool {
-    return detail::isSame<T, U, X...>::value;
+    return detail::IsSame<FirstType, SecondType, RemainingTypes...>::kValue;
 }
 
 /*!
  * \brief Checks if a type is a reference.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type is a reference, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto isRef() -> bool {
-    return std::is_reference_v<T>;
+    return std::is_reference_v<Type>;
 }
 
 /*!
  * \brief Checks if a type is an array.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type is an array, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto isArray() -> bool {
-    return std::is_array_v<T>;
+    return std::is_array_v<Type>;
 }
 
 /*!
  * \brief Checks if a type is a class.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type is a class, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto isClass() -> bool {
-    return std::is_class_v<T>;
+    return std::is_class_v<Type>;
 }
 
 /*!
  * \brief Checks if a type is a scalar.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type is a scalar, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto isScalar() -> bool {
-    return std::is_scalar_v<T>;
+    return std::is_scalar_v<Type>;
 }
 
 /*!
  * \brief Checks if a type is trivially copyable.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type is trivially copyable, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto isTriviallyCopyable() -> bool {
-    return std::is_trivially_copyable_v<T>;
+    return std::is_trivially_copyable_v<Type>;
 }
 
 /*!
  * \brief Checks if a type is trivially destructible.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type is trivially destructible, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto isTriviallyDestructible() -> bool {
-    return std::is_trivially_destructible_v<T>;
+    return std::is_trivially_destructible_v<Type>;
 }
 
 /*!
  * \brief Checks if a type is a base of another type.
- * \tparam B The base type.
- * \tparam D The derived type.
- * \return True if B is a base of D, false otherwise.
+ * \tparam BaseType The base type.
+ * \tparam DerivedType The derived type.
+ * \return True if BaseType is a base of DerivedType, false otherwise.
  */
-template <typename B, typename D>
+template <typename BaseType, typename DerivedType>
 constexpr auto isBaseOf() -> bool {
-    return std::is_base_of_v<B, D>;
+    return std::is_base_of_v<BaseType, DerivedType>;
 }
 
 /*!
  * \brief Checks if a type has a virtual destructor.
- * \tparam T The type to check.
+ * \tparam Type The type to check.
  * \return True if the type has a virtual destructor, false otherwise.
  */
-template <typename T>
+template <typename Type>
 constexpr auto hasVirtualDestructor() -> bool {
-    return std::has_virtual_destructor_v<T>;
+    return std::has_virtual_destructor_v<Type>;
 }
 
 }  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_GOD_HPP

@@ -19,41 +19,41 @@ auto GlobalSharedPtrManager::getInstance() -> GlobalSharedPtrManager & {
 }
 
 void GlobalSharedPtrManager::removeSharedPtr(const std::string &key) {
-    std::unique_lock lock(mtx);
-    sharedPtrMap.erase(key);
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    shared_ptr_map_.erase(key);
 }
 
 void GlobalSharedPtrManager::removeExpiredWeakPtrs() {
-    std::unique_lock lock(mtx);
-    auto it = sharedPtrMap.begin();
-    while (it != sharedPtrMap.end()) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    auto iter = shared_ptr_map_.begin();
+    while (iter != shared_ptr_map_.end()) {
         try {
-            if (std::any_cast<std::weak_ptr<void>>(it->second).expired()) {
-                it = sharedPtrMap.erase(it);
+            if (std::any_cast<std::weak_ptr<void>>(iter->second).expired()) {
+                iter = shared_ptr_map_.erase(iter);
             } else {
-                ++it;
+                ++iter;
             }
         } catch (const std::bad_any_cast &) {
-            ++it;
+            ++iter;
         }
     }
 }
 
 void GlobalSharedPtrManager::clearAll() {
-    std::unique_lock lock(mtx);
-    sharedPtrMap.clear();
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    shared_ptr_map_.clear();
 }
 
 auto GlobalSharedPtrManager::size() const -> size_t {
-    std::shared_lock lock(mtx);
-    return sharedPtrMap.size();
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return shared_ptr_map_.size();
 }
 
 void GlobalSharedPtrManager::printSharedPtrMap() const {
-    std::shared_lock lock(mtx);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
 #if ENABLE_DEBUG
     std::cout << "GlobalSharedPtrManager:\n";
-    for (const auto &pair : sharedPtrMap) {
+    for (const auto &pair : shared_ptr_map_) {
         std::cout << "  " << pair.first << "\n";
     }
 #endif

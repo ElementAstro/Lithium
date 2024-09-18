@@ -1,6 +1,7 @@
 #ifndef ATOM_META_VANY_HPP
 #define ATOM_META_VANY_HPP
 
+#include <array>
 #include <cstring>
 #include <functional>
 #include <sstream>
@@ -11,20 +12,20 @@
 #include "macro.hpp"
 
 template <typename T, typename = void>
-struct is_iterable : std::false_type {};
+struct IsIterable : std::false_type {};
 
 template <typename T>
-struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())),
-                                  decltype(std::end(std::declval<T>()))>>
+struct IsIterable<T, std::void_t<decltype(std::begin(std::declval<T>())),
+                                 decltype(std::end(std::declval<T>()))>>
     : std::true_type {};
 
 template <typename T>
-inline constexpr bool is_iterable_v = is_iterable<T>::value;
+inline constexpr bool K_IS_ITERABLE_V = IsIterable<T>::value;
 
 namespace atom::meta {
 class Any {
 private:
-    struct VTable {
+    struct ATOM_ALIGNAS(64) VTable {
         void (*destroy)(void*);
         void (*copy)(const void*, void*);
         void (*move)(void*, void*);
@@ -33,7 +34,7 @@ private:
         size_t (*size)();
         void (*invoke)(const void*, const std::function<void(const void*)>&);
         void (*foreach)(const void*, const std::function<void(const Any&)>&);
-    } ATOM_ALIGNAS(128);
+    };
 
     template <typename T>
     static auto defaultToString(const void* ptr) -> std::string {
@@ -50,16 +51,17 @@ private:
 
     template <typename T>
     static void defaultInvoke(const void* ptr,
-                              const std::function<void(const void*)>& f) {
-        f(ptr);
+                              const std::function<void(const void*)>& func) {
+        func(ptr);
     }
 
     template <typename T>
     static void defaultForeach(const void* ptr,
-                               const std::function<void(const Any&)>& f) {
-        if constexpr (is_iterable_v<T>) {
+                               const std::function<void(const Any&)>& func) {
+        if constexpr (K_IS_ITERABLE_V<T>) {
+#pragma unroll
             for (const auto& item : *static_cast<const T*>(ptr)) {
-                f(Any(item));
+                func(Any(item));
             }
         } else {
             THROW_INVALID_ARGUMENT("Type is not iterable");
@@ -67,7 +69,7 @@ private:
     }
 
     template <typename T>
-    static constexpr VTable VTABLE = {
+    static constexpr VTable K_V_TABLE = {
         [](void* ptr) { static_cast<T*>(ptr)->~T(); },
         [](const void* src, void* dst) {
             new (dst) T(*static_cast<const T*>(src));
@@ -81,25 +83,25 @@ private:
         &defaultInvoke<T>,
         &defaultForeach<T>};
 
-    static constexpr size_t SMALL_OBJECT_SIZE = 3 * sizeof(void*);
+    static constexpr size_t kSmallObjectSize = 3 * sizeof(void*);
     union {
-        alignas(std::max_align_t) char storage[SMALL_OBJECT_SIZE];
+        alignas(std::max_align_t) std::array<char, kSmallObjectSize> storage;
         void* ptr;
     };
     const VTable* vptr_ = nullptr;
     bool is_small_ = true;
 
     template <typename T>
-    static constexpr bool IS_SMALL_OBJECT =
-        sizeof(T) <= SMALL_OBJECT_SIZE &&
+    static constexpr bool kIsSmallObject =
+        sizeof(T) <= kSmallObjectSize &&
         std::is_nothrow_move_constructible_v<T>;
 
     auto getPtr() -> void* {
-        return is_small_ ? static_cast<void*>(storage) : ptr;
+        return is_small_ ? static_cast<void*>(storage.data()) : ptr;
     }
 
     [[nodiscard]] auto getPtr() const -> const void* {
-        return is_small_ ? static_cast<const void*>(storage) : ptr;
+        return is_small_ ? static_cast<const void*>(storage.data()) : ptr;
     }
 
     template <typename T>
@@ -113,21 +115,21 @@ private:
     }
 
 public:
-    Any() noexcept = default;
+    Any() noexcept : storage{} {}
 
     Any(const Any& other) : vptr_(other.vptr_), is_small_(other.is_small_) {
         if (vptr_ != nullptr) {
             if (is_small_) {
-                vptr_->copy(other.getPtr(), storage);
+                vptr_->copy(other.getPtr(), storage.data());
             } else {
-                ptr = malloc(vptr_->size());
+                ptr = std::malloc(vptr_->size());
                 if (ptr == nullptr) {
                     throw std::bad_alloc();
                 }
                 try {
                     vptr_->copy(other.getPtr(), ptr);
                 } catch (...) {
-                    free(ptr);
+                    std::free(ptr);
                     throw;
                 }
             }
@@ -137,7 +139,7 @@ public:
     Any(Any&& other) noexcept : vptr_(other.vptr_), is_small_(other.is_small_) {
         if (vptr_ != nullptr) {
             if (is_small_) {
-                vptr_->move(other.storage, storage);
+                vptr_->move(other.storage.data(), storage.data());
             } else {
                 ptr = other.ptr;
                 other.ptr = nullptr;
@@ -147,20 +149,20 @@ public:
     }
 
     template <typename T>
-    Any(T&& value) {
+    explicit Any(T&& value) {
         using ValueType = std::remove_cvref_t<T>;
-        if constexpr (IS_SMALL_OBJECT<ValueType>) {
-            new (storage) ValueType(std::forward<T>(value));
+        if constexpr (kIsSmallObject<ValueType>) {
+            new (storage.data()) ValueType(std::forward<T>(value));
             is_small_ = true;
         } else {
-            ptr = malloc(sizeof(ValueType));
+            ptr = std::malloc(sizeof(ValueType));
             if (!ptr) {
                 throw std::bad_alloc();
             }
             new (ptr) ValueType(std::forward<T>(value));
             is_small_ = false;
         }
-        vptr_ = &VTABLE<ValueType>;
+        vptr_ = &K_V_TABLE<ValueType>;
     }
 
     ~Any() { reset(); }
@@ -182,7 +184,8 @@ public:
                 ptr = other.ptr;
                 other.ptr = nullptr;
             } else {
-                std::memcpy(storage, other.storage, SMALL_OBJECT_SIZE);
+                std::memcpy(storage.data(), other.storage.data(),
+                            kSmallObjectSize);
             }
             other.vptr_ = nullptr;
         }
@@ -206,7 +209,7 @@ public:
         if (vptr_ != nullptr) {
             vptr_->destroy(getPtr());
             if (!is_small_) {
-                free(ptr);
+                std::free(ptr);
             }
             vptr_ = nullptr;
             is_small_ = true;
@@ -252,18 +255,18 @@ public:
         return vptr_->toString(getPtr());
     }
 
-    void invoke(const std::function<void(const void*)>& f) const {
+    void invoke(const std::function<void(const void*)>& func) const {
         if (!hasValue()) {
             THROW_INVALID_ARGUMENT("Cannot invoke on empty Any");
         }
-        vptr_->invoke(getPtr(), f);
+        vptr_->invoke(getPtr(), func);
     }
 
-    void foreach (const std::function<void(const Any&)>& f) const {
+    void foreach (const std::function<void(const Any&)>& func) const {
         if (!hasValue()) {
             THROW_INVALID_ARGUMENT("Cannot iterate over empty Any");
         }
-        vptr_->foreach (getPtr(), f);
+        vptr_->foreach (getPtr(), func);
     }
 };
 }  // namespace atom::meta

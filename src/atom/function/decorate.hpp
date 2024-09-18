@@ -19,12 +19,9 @@
 #include <utility>
 #include <vector>
 
-#include "func_traits.hpp"  // Ensure this is implemented properly
-#include "macro.hpp"
+#include "func_traits.hpp"
 
 namespace atom::meta {
-
-// Concept for checking if a type is callable, adjusted for better utility
 template <typename F, typename... Args>
 concept Callable = requires(F&& func, Args&&... args) {
     {
@@ -77,22 +74,22 @@ struct decorator<R(Args...)> {
     using CallbackType =
         std::conditional_t<std::is_void_v<R>, std::function<void()>,
                            std::function<void(R)>>;
-    FuncType func;
 
 private:
+    FuncType func_;
     std::function<void()> before_;
     CallbackType callback_;
     std::function<void(std::chrono::microseconds)> after_;
 
 public:
-    explicit decorator(FuncType func) : func(std::move(func)) {}
+    explicit decorator(FuncType func) : func_(std::move(func)) {}
 
     template <typename Before, typename Callback = CallbackType,
               typename After = std::function<void(std::chrono::microseconds)>>
     auto withHooks(
         Before&& before, Callback&& callback = CallbackType(),
         After&& after = [](auto) {}) const -> decorator<R(Args...)> {
-        decorator<R(Args...)> copy(func);
+        decorator<R(Args...)> copy(func_);
         copy.before_ = std::forward<Before>(before);
         copy.callback_ = std::forward<Callback>(callback);
         copy.after_ = std::forward<After>(after);
@@ -108,12 +105,12 @@ public:
         auto start = std::chrono::high_resolution_clock::now();
 
         if constexpr (std::is_void_v<R>) {
-            std::invoke(func, std::get<Is>(args)...);
+            std::invoke(func_, std::get<Is>(args)...);
             if (callback_) {
                 callback_();
             }
         } else {
-            auto result = std::invoke(func, std::get<Is>(args)...);
+            auto result = std::invoke(func_, std::get<Is>(args)...);
             if (callback_) {
                 callback_(result);
             }
@@ -136,7 +133,7 @@ public:
         auto tupleArgs = std::make_tuple(std::forward<Args>(args)...);
         return callImpl(tupleArgs, std::make_index_sequence<sizeof...(Args)>{});
     }
-} ATOM_ALIGNAS(128);
+};
 
 template <typename F>
 auto makeDecorator(F&& func) {
@@ -153,6 +150,7 @@ struct LoopDecorator : public decorator<FuncType> {
         using ReturnType = decltype(this->func(args...));
         std::optional<ReturnType> result;
 
+#pragma unroll
         for (int i = 0; i < loopCount; ++i) {
             if constexpr (std::is_void_v<ReturnType>) {
                 Base::operator()(std::forward<TArgs>(args)...);
@@ -168,9 +166,9 @@ struct LoopDecorator : public decorator<FuncType> {
 };
 
 template <typename FuncType>
-auto makeLoopDecorator(FuncType&& f) {
+auto makeLoopDecorator(FuncType&& func) {
     return LoopDecorator<std::remove_reference_t<FuncType>>(
-        std::forward<FuncType>(f));
+        std::forward<FuncType>(func));
 }
 
 template <typename FuncType>
@@ -189,12 +187,12 @@ struct ConditionCheckDecorator : public decorator<FuncType> {
             return ReturnType{};
         }
     }
-} __attribute__((aligned(1)));
+};
 
 template <typename FuncType>
-auto makeConditionCheckDecorator(FuncType&& f) {
+auto makeConditionCheckDecorator(FuncType&& func) {
     return ConditionCheckDecorator<std::remove_reference_t<FuncType>>(
-        std::forward<FuncType>(f));
+        std::forward<FuncType>(func));
 }
 
 class DecoratorError : public std::exception {
@@ -214,6 +212,18 @@ public:
     virtual auto operator()(FuncType func,
                             Args... args) -> R = 0;  // Changed from Args&&...
     virtual ~BaseDecorator() = default;
+
+    // Define copy constructor
+    BaseDecorator(const BaseDecorator& other) = default;
+
+    // Define copy assignment operator
+    auto operator=(const BaseDecorator& other) -> BaseDecorator& = default;
+
+    // Define move constructor
+    BaseDecorator(BaseDecorator&& other) noexcept = default;
+
+    // Define move assignment operator
+    auto operator=(BaseDecorator&& other) noexcept -> BaseDecorator& = default;
 };
 
 template <typename R, typename... Args>
@@ -241,6 +251,7 @@ public:
         try {
             FuncType currentFunction = baseFunction_;
 
+#pragma unroll
             for (auto it = decorators_.rbegin(); it != decorators_.rend();
                  ++it) {
                 auto& decorator = *it;

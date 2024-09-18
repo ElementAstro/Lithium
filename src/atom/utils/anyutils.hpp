@@ -16,11 +16,12 @@ Description: A collection of useful functions with std::any Or Any
 #define ATOM_EXPERIMENT_ANYUTILS_HPP
 
 #include <concepts>
+#include <ranges>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
-
 #include "atom/function/concept.hpp"
 
 template <typename T>
@@ -34,11 +35,12 @@ concept CanBeStringifiedToJson = requires(T t) {
 };
 
 template <typename T>
-[[nodiscard]] std::string toString(const T &value, bool prettyPrint = false);
+[[nodiscard]] auto toString(const T &value,
+                            bool prettyPrint = false) -> std::string;
 
-template <Container Container>
-[[nodiscard]] std::string toString(const Container &container,
-                                   bool prettyPrint = false) {
+template <std::ranges::input_range Container>
+[[nodiscard]] auto toString(const Container &container,
+                            bool prettyPrint = false) -> std::string {
     std::string result = "[";
     for (const auto &item : container) {
         if constexpr (IsBuiltIn<decltype(item)>) {
@@ -56,7 +58,7 @@ template <Container Container>
 
 template <typename K, typename V>
 [[nodiscard]] auto toString(const std::unordered_map<K, V> &map,
-                                   bool prettyPrint = false) -> std::string {
+                            bool prettyPrint = false) -> std::string {
     std::string result = "{";
     for (const auto &pair : map) {
         result += toString(pair.first, prettyPrint) + ": " +
@@ -70,24 +72,21 @@ template <typename K, typename V>
 }
 
 template <typename T1, typename T2>
-[[nodiscard]] std::string toString(const std::pair<T1, T2> &pair,
-                                   bool prettyPrint = false) {
+[[nodiscard]] auto toString(const std::pair<T1, T2> &pair,
+                            bool prettyPrint = false) -> std::string {
     return "(" + toString(pair.first, prettyPrint) + ", " +
            toString(pair.second, prettyPrint) + ")";
 }
 
 template <typename T>
-[[nodiscard]] std::string toString(const T &value, bool prettyPrint) {
-    if constexpr (std::is_same_v<T, std::string> ||
-                  std::is_same_v<T, std::string_view> ||
-                  std::is_same_v<T, const char *> ||
-                  std::is_same_v<T, char *>) {
+[[nodiscard]] auto toString(const T &value, bool prettyPrint) -> std::string {
+    if constexpr (String<T> || Char<T>) {
         return value;
     } else if constexpr (std::is_same_v<T, bool>) {
         return value ? "true" : "false";
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    } else if constexpr (Number<T>) {
         return std::to_string(value);
-    } else if constexpr (std::is_pointer_v<T>) {
+    } else if constexpr (Pointer<T> || SmartPointer<T>) {
         if (value == nullptr) {
             return "nullptr";
         }
@@ -98,11 +97,12 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] std::string toJson(const T &value, bool prettyPrint = false);
+[[nodiscard]] auto toJson(const T &value,
+                          bool prettyPrint = false) -> std::string;
 
-template <Container Container>
-[[nodiscard]] std::string toJson(const Container &container,
-                                 bool prettyPrint = false) {
+template <std::ranges::input_range Container>
+[[nodiscard]] auto toJson(const Container &container,
+                          bool prettyPrint = false) -> std::string {
     std::string result = "[";
     for (const auto &item : container) {
         result += toJson(item, prettyPrint) + ", ";
@@ -115,8 +115,8 @@ template <Container Container>
 }
 
 template <typename K, typename V>
-[[nodiscard]] std::string toJson(const std::unordered_map<K, V> &map,
-                                 bool prettyPrint = false) {
+[[nodiscard]] auto toJson(const std::unordered_map<K, V> &map,
+                          bool prettyPrint = false) -> std::string {
     std::string result = "{";
     for (const auto &pair : map) {
         result += toJson(pair.first, prettyPrint) + ": " +
@@ -130,22 +130,21 @@ template <typename K, typename V>
 }
 
 template <typename T1, typename T2>
-[[nodiscard]] std::string toJson(const std::pair<T1, T2> &pair,
-                                 bool prettyPrint = false) {
+[[nodiscard]] auto toJson(const std::pair<T1, T2> &pair,
+                          bool prettyPrint = false) -> std::string {
     return "{" + toJson(pair.first, prettyPrint) + ", " +
            toJson(pair.second, prettyPrint) + "}";
 }
 
 template <typename T>
-[[nodiscard]] std::string toJson(const T &value, bool prettyPrint) {
-    if constexpr (std::is_same_v<T, std::string>) {
+[[nodiscard]] auto toJson(const T &value, bool prettyPrint) -> std::string {
+    if constexpr (String<T>) {
         return "\"" + value + "\"";
-    } else if constexpr (std::is_same_v<T, const char *> ||
-                         std::is_same_v<T, char *>) {
+    } else if constexpr (Char<T>) {
         return "\"" + std::string(value) + "\"";
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    } else if constexpr (Number<T>) {
         return std::to_string(value);
-    } else if constexpr (std::is_pointer_v<T>) {
+    } else if constexpr (Pointer<T> || SmartPointer<T>) {
         if (value == nullptr) {
             return "null";
         }
@@ -156,11 +155,12 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] std::string toXml(const T &value, const std::string &tagName);
+[[nodiscard]] auto toXml(const T &value,
+                         const std::string &tagName) -> std::string;
 
-template <Container Container>
-[[nodiscard]] std::string toXml(const Container &container,
-                                const std::string &tagName) {
+template <std::ranges::input_range Container>
+[[nodiscard]] auto toXml(const Container &container,
+                         const std::string &tagName) -> std::string {
     std::string result;
     for (const auto &item : container) {
         result += toXml(item, tagName);
@@ -169,8 +169,9 @@ template <Container Container>
 }
 
 template <typename K, typename V>
-[[nodiscard]] std::string toXml(const std::unordered_map<K, V> &map,
-                                [[maybe_unused]] const std::string &tagName) {
+[[nodiscard]] auto toXml(const std::unordered_map<K, V> &map,
+                         [[maybe_unused]] const std::string &tagName)
+    -> std::string {
     std::string result;
     for (const auto &pair : map) {
         result += toXml(pair.second, pair.first);
@@ -179,8 +180,8 @@ template <typename K, typename V>
 }
 
 template <typename T1, typename T2>
-[[nodiscard]] std::string toXml(const std::pair<T1, T2> &pair,
-                                const std::string &tagName) {
+[[nodiscard]] auto toXml(const std::pair<T1, T2> &pair,
+                         const std::string &tagName) -> std::string {
     std::string result = "<" + tagName + ">";
     result += toXml(pair.first, "key");
     result += toXml(pair.second, "value");
@@ -189,15 +190,14 @@ template <typename T1, typename T2>
 }
 
 template <typename T>
-[[nodiscard]] std::string toXml(const T &value, const std::string &tagName) {
-    if constexpr (std::is_same_v<T, std::string> ||
-                  std::is_same_v<T, const char *> ||
-                  std::is_same_v<T, char *>) {
+[[nodiscard]] auto toXml(const T &value,
+                         const std::string &tagName) -> std::string {
+    if constexpr (String<T> || Char<T>) {
         return "<" + tagName + ">" + value + "</" + tagName + ">";
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    } else if constexpr (Number<T>) {
         return "<" + tagName + ">" + std::to_string(value) + "</" + tagName +
                ">";
-    } else if constexpr (std::is_pointer_v<T>) {
+    } else if constexpr (Pointer<T> || SmartPointer<T>) {
         if (value == nullptr) [[unlikely]] {
             return "<" + tagName + "null" + "/>";
         } else [[likely]] {
@@ -209,11 +209,12 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] std::string toYaml(const T &value, const std::string &key);
+[[nodiscard]] auto toYaml(const T &value,
+                          const std::string &key) -> std::string;
 
-template <Container Container>
-[[nodiscard]] std::string toYaml(const Container &container,
-                                 const std::string &key) {
+template <std::ranges::input_range Container>
+[[nodiscard]] auto toYaml(const Container &container,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + ":\n";
     for (const auto &item : container) {
         result += (key.empty() ? "- " : "  - ") + toYaml(item, "") + "\n";
@@ -222,8 +223,8 @@ template <Container Container>
 }
 
 template <typename K, typename V>
-[[nodiscard]] std::string toYaml(const std::unordered_map<K, V> &map,
-                                 const std::string &key) {
+[[nodiscard]] auto toYaml(const std::unordered_map<K, V> &map,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + ":\n";
     for (const auto &pair : map) {
         result += (key.empty() ? "" : "  ") + toYaml(pair.second, pair.first);
@@ -232,8 +233,8 @@ template <typename K, typename V>
 }
 
 template <typename T1, typename T2>
-[[nodiscard]] std::string toYaml(const std::pair<T1, T2> &pair,
-                                 const std::string &key) {
+[[nodiscard]] auto toYaml(const std::pair<T1, T2> &pair,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + ":\n";
     result += std::string((key.empty() ? "" : "  ")) +
               "key: " + toYaml(pair.first, "");
@@ -243,16 +244,15 @@ template <typename T1, typename T2>
 }
 
 template <typename T>
-[[nodiscard]] std::string toYaml(const T &value, const std::string &key) {
-    if constexpr (std::is_same_v<T, std::string> ||
-                  std::is_same_v<T, const char *> ||
-                  std::is_same_v<T, char *>) {
+[[nodiscard]] auto toYaml(const T &value,
+                          const std::string &key) -> std::string {
+    if constexpr (String<T> || Char<T>) {
         return key.empty() ? "\"" + std::string(value) + "\""
                            : key + ": \"" + std::string(value) + "\"\n";
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    } else if constexpr (Number<T>) {
         return key.empty() ? std::to_string(value)
                            : key + ": " + std::to_string(value) + "\n";
-    } else if constexpr (std::is_pointer_v<T>) {
+    } else if constexpr (Pointer<T> || SmartPointer<T>) {
         if (value == nullptr) [[unlikely]] {
             return key.empty() ? "null" : key + ": null\n";
         } else [[likely]] {
@@ -264,25 +264,24 @@ template <typename T>
 }
 
 template <typename... Ts>
-[[nodiscard]] std::string toYaml(const std::tuple<Ts...> &tuple,
-                                 const std::string &key) {
+[[nodiscard]] auto toYaml(const std::tuple<Ts...> &tuple,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + ":\n";
     std::apply(
-        [&result, &key](const Ts &...args) {
-            ((result +=
-              (key.empty() ? "- " : "  - ") + toYaml(args, "") + "\n"),
-             ...);
+        [&result](const Ts &...args) {
+            ((result += "- " + toYaml(args, "") + "\n"), ...);
         },
         tuple);
     return result;
 }
 
 template <typename T>
-[[nodiscard]] std::string toToml(const T &value, const std::string &key);
+[[nodiscard]] auto toToml(const T &value,
+                          const std::string &key) -> std::string;
 
-template <Container Container>
-[[nodiscard]] std::string toToml(const Container &container,
-                                 const std::string &key) {
+template <std::ranges::input_range Container>
+[[nodiscard]] auto toToml(const Container &container,
+                          const std::string &key) -> std::string {
     std::string result = key + " = [\n";
     for (const auto &item : container) {
         result += "  " + toToml(item, "") + ",\n";
@@ -295,8 +294,8 @@ template <Container Container>
 }
 
 template <typename K, typename V>
-[[nodiscard]] std::string toToml(const std::unordered_map<K, V> &map,
-                                 const std::string &key) {
+[[nodiscard]] auto toToml(const std::unordered_map<K, V> &map,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + " = {\n";
     for (const auto &pair : map) {
         result += "  " + toToml(pair.second, pair.first);
@@ -309,8 +308,8 @@ template <typename K, typename V>
 }
 
 template <typename T1, typename T2>
-[[nodiscard]] std::string toToml(const std::pair<T1, T2> &pair,
-                                 const std::string &key) {
+[[nodiscard]] auto toToml(const std::pair<T1, T2> &pair,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + " = {\n";
     result += "  key = " + toToml(pair.first, "") + ",\n";
     result += "  value = " + toToml(pair.second, "") + "\n";
@@ -319,16 +318,15 @@ template <typename T1, typename T2>
 }
 
 template <typename T>
-[[nodiscard]] std::string toToml(const T &value, const std::string &key) {
-    if constexpr (std::is_same_v<T, std::string> ||
-                  std::is_same_v<T, const char *> ||
-                  std::is_same_v<T, char *>) {
+[[nodiscard]] auto toToml(const T &value,
+                          const std::string &key) -> std::string {
+    if constexpr (String<T> || Char<T>) {
         return key.empty() ? "\"" + std::string(value) + "\""
                            : key + " = \"" + std::string(value) + "\"\n";
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    } else if constexpr (Number<T>) {
         return key.empty() ? std::to_string(value)
                            : key + " = " + std::to_string(value) + "\n";
-    } else if constexpr (std::is_pointer_v<T>) {
+    } else if constexpr (Pointer<T> || SmartPointer<T>) {
         if (value == nullptr) [[unlikely]] {
             return key.empty() ? "null" : key + " = null\n";
         } else [[likely]] {
@@ -340,11 +338,11 @@ template <typename T>
 }
 
 template <typename... Ts>
-[[nodiscard]] std::string toToml(const std::tuple<Ts...> &tuple,
-                                 const std::string &key) {
+[[nodiscard]] auto toToml(const std::tuple<Ts...> &tuple,
+                          const std::string &key) -> std::string {
     std::string result = key.empty() ? "" : key + " = [\n";
     std::apply(
-        [&result, &key](const Ts &...args) {
+        [&result](const Ts &...args) {
             ((result += "  " + toToml(args, "") + ",\n"), ...);
         },
         tuple);

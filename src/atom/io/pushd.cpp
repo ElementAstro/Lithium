@@ -1,22 +1,27 @@
 #include "pushd.hpp"
-#include <filesystem>
-#include <stack>
-#include <iostream>
-#include <fstream>
+
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <stack>
 #include <vector>
+
+#include "atom/log/loguru.hpp"
 
 // Private implementation class
 class DirectoryStackImpl {
 public:
-    std::stack<std::filesystem::path> dir_stack;
+    std::stack<std::filesystem::path> dirStack;
 
-    std::vector<std::filesystem::path> get_stack_contents() const {
-        std::stack<std::filesystem::path> temp_stack = dir_stack;
+    [[nodiscard]] auto getStackContents() const
+        -> std::vector<std::filesystem::path> {
+        std::stack<std::filesystem::path> tempStack = dirStack;
         std::vector<std::filesystem::path> contents;
-        while (!temp_stack.empty()) {
-            contents.push_back(temp_stack.top());
-            temp_stack.pop();
+        while (!tempStack.empty()) {
+            contents.push_back(tempStack.top());
+            tempStack.pop();
         }
         std::reverse(contents.begin(), contents.end());
         return contents;
@@ -25,149 +30,166 @@ public:
 
 // DirectoryStack public interface methods
 
-DirectoryStack::DirectoryStack() : impl(new DirectoryStackImpl) {}
+DirectoryStack::DirectoryStack()
+    : impl_(std::make_unique<DirectoryStackImpl>()) {}
 
-DirectoryStack::~DirectoryStack() {
-    delete impl;
+DirectoryStack::~DirectoryStack() = default;
+
+DirectoryStack::DirectoryStack(const DirectoryStack& other)
+    : impl_(std::make_unique<DirectoryStackImpl>(*other.impl_)) {}
+
+auto DirectoryStack::operator=(const DirectoryStack& other) -> DirectoryStack& {
+    if (this != &other) {
+        impl_ = std::make_unique<DirectoryStackImpl>(*other.impl_);
+    }
+    return *this;
 }
 
-void DirectoryStack::pushd(const std::filesystem::path& new_dir) {
+DirectoryStack::DirectoryStack(DirectoryStack&& other) noexcept = default;
+
+auto DirectoryStack::operator=(DirectoryStack&& other) noexcept
+    -> DirectoryStack& = default;
+
+void DirectoryStack::pushd(const std::filesystem::path& newDir) {
     try {
-        std::filesystem::path current_dir = std::filesystem::current_path();
-        impl->dir_stack.push(current_dir);
-        std::filesystem::current_path(new_dir);
-        std::cout << "Changed directory to: " << std::filesystem::current_path() << '\n';
+        std::filesystem::path currentDir = std::filesystem::current_path();
+        impl_->dirStack.push(currentDir);
+        std::filesystem::current_path(newDir);
+        LOG_F(INFO, "Changed directory to: {}",
+              std::filesystem::current_path().string());
     } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Error: " << e.what() << '\n';
+        LOG_F(ERROR, "Error: {}", e.what());
     }
 }
 
 void DirectoryStack::popd() {
-    if (impl->dir_stack.empty()) {
-        std::cerr << "Directory stack is empty, cannot pop.\n";
+    if (impl_->dirStack.empty()) {
+        LOG_F(ERROR, "Directory stack is empty, cannot pop.");
         return;
     }
     try {
-        std::filesystem::path previous_dir = impl->dir_stack.top();
-        impl->dir_stack.pop();
-        std::filesystem::current_path(previous_dir);
-        std::cout << "Changed back to directory: " << std::filesystem::current_path() << '\n';
+        std::filesystem::path previousDir = impl_->dirStack.top();
+        impl_->dirStack.pop();
+        std::filesystem::current_path(previousDir);
+        LOG_F(INFO, "Changed back to directory: {}",
+              std::filesystem::current_path().string());
     } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Error: " << e.what() << '\n';
+        LOG_F(ERROR, "Error: {}", e.what());
     }
 }
 
 void DirectoryStack::peek() const {
-    if (impl->dir_stack.empty()) {
-        std::cerr << "Directory stack is empty.\n";
+    if (impl_->dirStack.empty()) {
+        LOG_F(ERROR, "Directory stack is empty.");
         return;
     }
-    std::cout << "Top directory in stack: " << impl->dir_stack.top() << '\n';
+    LOG_F(INFO, "Top directory in stack: {}", impl_->dirStack.top().string());
 }
 
 void DirectoryStack::dirs() const {
-    std::cout << "Current Directory Stack:\n";
-    auto contents = impl->get_stack_contents();
+    LOG_F(INFO, "Current Directory Stack:");
+    auto contents = impl_->getStackContents();
     for (size_t i = 0; i < contents.size(); ++i) {
-        std::cout << i << ": " << contents[i] << '\n';
+        LOG_F(INFO, "%zu: {}", i, contents[i].string());
     }
 }
 
 void DirectoryStack::clear() {
-    while (!impl->dir_stack.empty()) {
-        impl->dir_stack.pop();
+    while (!impl_->dirStack.empty()) {
+        impl_->dirStack.pop();
     }
-    std::cout << "Directory stack cleared.\n";
+    LOG_F(INFO, "Directory stack cleared.");
 }
 
 void DirectoryStack::swap(size_t index1, size_t index2) {
-    auto contents = impl->get_stack_contents();
+    auto contents = impl_->getStackContents();
     if (index1 >= contents.size() || index2 >= contents.size()) {
-        std::cerr << "Invalid indices for swap operation.\n";
+        LOG_F(ERROR, "Invalid indices for swap operation.");
         return;
     }
     std::swap(contents[index1], contents[index2]);
 
-    std::stack<std::filesystem::path> new_stack;
-    for (auto it = contents.rbegin(); it != contents.rend(); ++it) {
-        new_stack.push(*it);
+    std::stack<std::filesystem::path> newStack;
+    for (const auto& dir : contents) {
+        newStack.push(dir);
     }
-    impl->dir_stack = new_stack;
+    impl_->dirStack = std::move(newStack);
 
-    std::cout << "Swapped directories at indices " << index1 << " and " << index2 << ".\n";
+    LOG_F(INFO, "Swapped directories at indices %zu and %zu.", index1, index2);
     dirs();  // Display the updated stack
 }
 
 void DirectoryStack::remove(size_t index) {
-    auto contents = impl->get_stack_contents();
+    auto contents = impl_->getStackContents();
     if (index >= contents.size()) {
-        std::cerr << "Invalid index for remove operation.\n";
+        LOG_F(ERROR, "Invalid index for remove operation.");
         return;
     }
-    contents.erase(contents.begin() + index);
+    contents.erase(
+        contents.begin() +
+        static_cast<std::vector<std::filesystem::path>::difference_type>(
+            index));
 
-    std::stack<std::filesystem::path> new_stack;
-    for (auto it = contents.rbegin(); it != contents.rend(); ++it) {
-        new_stack.push(*it);
+    std::stack<std::filesystem::path> newStack;
+    for (const auto& dir : contents) {
+        newStack.push(dir);
     }
-    impl->dir_stack = new_stack;
+    impl_->dirStack = std::move(newStack);
 
-    std::cout << "Removed directory at index " << index << ".\n";
+    LOG_F(INFO, "Removed directory at index %zu.", index);
     dirs();  // Display the updated stack
 }
 
-void DirectoryStack::goto_index(size_t index) {
-    auto contents = impl->get_stack_contents();
+void DirectoryStack::gotoIndex(size_t index) {
+    auto contents = impl_->getStackContents();
     if (index >= contents.size()) {
-        std::cerr << "Invalid index for goto operation.\n";
+        LOG_F(ERROR, "Invalid index for goto operation.");
         return;
     }
     try {
         std::filesystem::current_path(contents[index]);
-        std::cout << "Changed to directory: " << std::filesystem::current_path() << '\n';
+        LOG_F(INFO, "Changed to directory: {}",
+              std::filesystem::current_path().string());
     } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Error: " << e.what() << '\n';
+        LOG_F(ERROR, "Error: {}", e.what());
     }
 }
 
-void DirectoryStack::save_stack_to_file(const std::string& filename) const {
+void DirectoryStack::saveStackToFile(const std::string& filename) const {
     std::ofstream file(filename);
     if (!file) {
-        std::cerr << "Error: Unable to open file for writing.\n";
+        LOG_F(ERROR, "Error: Unable to open file for writing.");
         return;
     }
-    auto contents = impl->get_stack_contents();
+    auto contents = impl_->getStackContents();
     for (const auto& dir : contents) {
         file << dir.string() << '\n';
     }
     file.close();
-    std::cout << "Directory stack saved to " << filename << ".\n";
+    LOG_F(INFO, "Directory stack saved to {}.", filename);
 }
 
-void DirectoryStack::load_stack_from_file(const std::string& filename) {
+void DirectoryStack::loadStackFromFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file) {
-        std::cerr << "Error: Unable to open file for reading.\n";
+        LOG_F(ERROR, "Error: Unable to open file for reading.");
         return;
     }
     clear();  // Clear the current stack
     std::string line;
     while (std::getline(file, line)) {
-        impl->dir_stack.push(line);
+        impl_->dirStack.emplace(line);
     }
     file.close();
-    std::cout << "Directory stack loaded from " << filename << ".\n";
+    LOG_F(INFO, "Directory stack loaded from {}.", filename);
     dirs();  // Display the updated stack
 }
 
-size_t DirectoryStack::size() const {
-    return impl->dir_stack.size();
-}
+auto DirectoryStack::size() const -> size_t { return impl_->dirStack.size(); }
 
-bool DirectoryStack::is_empty() const {
-    return impl->dir_stack.empty();
-}
+auto DirectoryStack::isEmpty() const -> bool { return impl_->dirStack.empty(); }
 
-void DirectoryStack::show_current_directory() const {
-    std::cout << "Current Directory: " << std::filesystem::current_path() << '\n';
+void DirectoryStack::showCurrentDirectory() const {
+    LOG_F(INFO, "Current Directory: {}",
+          std::filesystem::current_path().string());
 }

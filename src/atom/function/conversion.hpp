@@ -1,11 +1,3 @@
-/*!
- * \file conversion.hpp
- * \brief C++ Type Conversion
- * \author Max Qian <lightapt.com>
- * \date 2024-03-01
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
 #ifndef ATOM_META_CONVERSION_HPP
 #define ATOM_META_CONVERSION_HPP
 
@@ -39,7 +31,7 @@ class TypeConversionBase {
 public:
     ATOM_NODISCARD virtual auto convert(const std::any& from) const
         -> std::any = 0;
-    ATOM_NODISCARD virtual auto convertDown(const std::any& to) const
+    ATOM_NODISCARD virtual auto convertDown(const std::any& toAny) const
         -> std::any = 0;
 
     ATOM_NODISCARD virtual auto to() const ATOM_NOEXCEPT -> const TypeInfo& {
@@ -49,18 +41,27 @@ public:
         return fromType;
     }
 
+    ATOM_NODISCARD auto getFromType() const ATOM_NOEXCEPT -> const TypeInfo& {
+        return fromType;
+    }
+
     ATOM_NODISCARD virtual auto bidir() const ATOM_NOEXCEPT -> bool {
         return true;
     }
 
     virtual ~TypeConversionBase() = default;
 
-    TypeInfo toType;
-    TypeInfo fromType;
+    TypeConversionBase(const TypeConversionBase&) = default;
+    TypeConversionBase& operator=(const TypeConversionBase&) = default;
+    TypeConversionBase(TypeConversionBase&&) = default;
+    TypeConversionBase& operator=(TypeConversionBase&&) = default;
 
 protected:
-    TypeConversionBase(const TypeInfo& to, const TypeInfo& from)
-        : toType(to), fromType(from) {}
+    TypeConversionBase(const TypeInfo& toTypeInfo, const TypeInfo& fromTypeInfo)
+        : toType(toTypeInfo), fromType(fromTypeInfo) {}
+
+    TypeInfo toType;
+    TypeInfo fromType;
 };
 
 template <typename From, typename To>
@@ -92,18 +93,18 @@ public:
         }
     }
 
-    ATOM_NODISCARD auto convertDown(const std::any& to) const
+    ATOM_NODISCARD auto convertDown(const std::any& toAny) const
         -> std::any override {
         // Pointer types static conversion (downcasting)
         try {
             if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
-                auto toPtr = std::any_cast<To>(to);
+                auto toPtr = std::any_cast<To>(toAny);
                 return std::any(static_cast<From>(toPtr));
             }
             // Reference types static conversion (downcasting)
             else if constexpr (std::is_reference_v<From> &&
                                std::is_reference_v<To>) {
-                auto& toRef = std::any_cast<To&>(to);
+                auto& toRef = std::any_cast<To&>(toAny);
                 return std::any(static_cast<From&>(toRef));
 
             } else {
@@ -150,11 +151,11 @@ public:
         }
     }
 
-    ATOM_NODISCARD auto convertDown(const std::any& to) const
+    ATOM_NODISCARD auto convertDown(const std::any& toAny) const
         -> std::any override {
         // Pointer types dynamic conversion
         if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
-            auto toPtr = std::any_cast<To>(to);
+            auto toPtr = std::any_cast<To>(toAny);
             auto convertedPtr = dynamic_cast<From>(toPtr);
             if (!convertedPtr && toPtr != nullptr) {
                 throw std::bad_cast();
@@ -165,7 +166,7 @@ public:
         else if constexpr (std::is_reference_v<From> &&
                            std::is_reference_v<To>) {
             try {
-                auto& toRef = std::any_cast<To&>(to);
+                auto& toRef = std::any_cast<To&>(toAny);
                 return std::any(dynamic_cast<From&>(toRef));
             } catch (const std::bad_cast&) {
                 THROW_CONVERSION_ERROR("Failed to convert ", toType.name(),
@@ -220,10 +221,10 @@ public:
         }
     }
 
-    ATOM_NODISCARD auto convertDown(const std::any& to) const
+    ATOM_NODISCARD auto convertDown(const std::any& toAny) const
         -> std::any override {
         try {
-            const auto& toVec = std::any_cast<const std::vector<To>&>(to);
+            const auto& toVec = std::any_cast<const std::vector<To>&>(toAny);
             std::vector<From> fromVec;
             fromVec.reserve(toVec.size());
 
@@ -254,7 +255,7 @@ public:
         : TypeConversionBase(userType<MapType<K2, V2>>(),
                              userType<MapType<K1, V1>>()) {}
 
-    ATOM_NODISCARD auto convert(const std::any& from) const
+    [[nodiscard]] auto convert(const std::any& from) const
         -> std::any override {
         try {
             const auto& fromMap = std::any_cast<const MapType<K1, V1>&>(from);
@@ -277,10 +278,10 @@ public:
         }
     }
 
-    ATOM_NODISCARD auto convertDown(const std::any& to) const
+    ATOM_NODISCARD auto convertDown(const std::any& toAny) const
         -> std::any override {
         try {
-            const auto& toMap = std::any_cast<const MapType<K2, V2>&>(to);
+            const auto& toMap = std::any_cast<const MapType<K2, V2>&>(toAny);
             MapType<K1, V1> fromMap;
 
             for (const auto& [key, value] : toMap) {
@@ -308,7 +309,7 @@ public:
         : TypeConversionBase(userType<SeqType<To>>(),
                              userType<SeqType<From>>()) {}
 
-    ATOM_NODISCARD auto convert(const std::any& from) const
+    [[nodiscard]] auto convert(const std::any& from) const
         -> std::any override {
         try {
             const auto& fromSeq = std::any_cast<const SeqType<From>&>(from);
@@ -331,10 +332,10 @@ public:
         }
     }
 
-    ATOM_NODISCARD auto convertDown(const std::any& to) const
+    ATOM_NODISCARD auto convertDown(const std::any& toAny) const
         -> std::any override {
         try {
-            const auto& toSeq = std::any_cast<const SeqType<To>&>(to);
+            const auto& toSeq = std::any_cast<const SeqType<To>&>(toAny);
             SeqType<From> fromSeq;
 
             for (const auto& elem : toSeq) {
@@ -362,7 +363,7 @@ public:
         : TypeConversionBase(userType<SetType<To>>(),
                              userType<SetType<From>>()) {}
 
-    ATOM_NODISCARD auto convert(const std::any& from) const
+    [[nodiscard]] auto convert(const std::any& from) const
         -> std::any override {
         try {
             const auto& fromSet = std::any_cast<const SetType<From>&>(from);
@@ -384,10 +385,10 @@ public:
         }
     }
 
-    ATOM_NODISCARD auto convertDown(const std::any& to) const
+    ATOM_NODISCARD auto convertDown(const std::any& toAny) const
         -> std::any override {
         try {
-            const auto& toSet = std::any_cast<const SetType<To>&>(to);
+            const auto& toSet = std::any_cast<const SetType<To>&>(toAny);
             SetType<From> fromSet;
 
             for (const auto& elem : toSet) {
@@ -417,12 +418,12 @@ public:
     }
 
     void addConversion(const std::shared_ptr<TypeConversionBase>& conversion) {
-        auto key = conversion->fromType;
+        auto key = conversion->getFromType();
         conversions_[key].push_back(conversion);
     }
 
     template <typename To, typename From>
-    auto convert(const std::any& from) const -> std::any {
+    [[nodiscard]] auto convert(const std::any& from) const -> std::any {
         auto fromType = userType<From>();
         auto toType = userType<To>();
 
@@ -441,10 +442,11 @@ public:
         THROW_CONVERSION_ERROR(fromType.name(), toType.name());
     }
 
-    auto canConvert(const TypeInfo& from, const TypeInfo& to) const -> bool {
-        if (conversions_.contains(from)) {
-            for (const auto& conv : conversions_.at(from)) {
-                if (conv->toType == to) {
+    [[nodiscard]] auto canConvert(const TypeInfo& fromTypeInfo,
+                                  const TypeInfo& toTypeInfo) const -> bool {
+        if (conversions_.contains(fromTypeInfo)) {
+            for (const auto& conv : conversions_.at(fromTypeInfo)) {
+                if (conv->to() == toTypeInfo) {
                     return true;
                 }
             }

@@ -251,7 +251,7 @@ auto Env::Environ() -> std::unordered_map<std::string, std::string> {
 void Env::setVariable(const std::string &name, const std::string &value,
                       bool overwrite) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (overwrite || !getenv(name.c_str())) {
+    if (overwrite || (getenv(name.c_str()) == nullptr)) {
         if (SetEnvironmentVariableA(name.c_str(), value.c_str()) == 0) {
             LOG_F(ERROR, "Failed to set environment variable: {}", name);
         }
@@ -283,7 +283,7 @@ auto Env::getVariable(const std::string &name) -> std::string {
 // 删除环境变量
 void Env::unsetVariable(const std::string &name) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (SetEnvironmentVariableA(name.c_str(), NULL) == 0) {
+    if (SetEnvironmentVariableA(name.c_str(), nullptr) == 0) {
         LOG_F(ERROR, "Failed to unset environment variable: {}", name);
     }
 #else
@@ -295,22 +295,24 @@ void Env::unsetVariable(const std::string &name) {
 
 // 列出所有环境变量
 auto Env::listVariables() -> std::vector<std::string> {
+    std::vector<std::string> vars;
+
 #if defined(_WIN32) || defined(_WIN64)
     LPCH envStrings = GetEnvironmentStringsA();
-    if (envStrings) {
-        for (LPCH var = envStrings; *var; var += strlen(var) + 1) {
+    if (envStrings != nullptr) {
+        for (LPCH var = envStrings; *var != '\0'; var += strlen(var) + 1) {
             vars.emplace_back(var);
         }
         FreeEnvironmentStringsA(envStrings);
     }
 #else
-    std::vector<std::string> vars;
     char **env = environ;
     while (*env != nullptr) {
         vars.emplace_back(*env);
         ++env;
     }
 #endif
+
     return vars;
 }
 

@@ -20,7 +20,7 @@
 
 class FunctionParams {
 public:
-    explicit FunctionParams(const std::any& bv) : params_{bv} {}
+    explicit FunctionParams(const std::any& value) : params_{value} {}
 
     // Generalizing to accept any range of std::any
     template <std::ranges::input_range Range>
@@ -71,12 +71,14 @@ public:
         if (start > end || end > params_.size()) {
             THROW_OUT_OF_RANGE("Invalid slice range");
         }
-        return FunctionParams(std::vector<std::any>(params_.begin() + start,
-                                                    params_.begin() + end));
+        using DifferenceType = std::make_signed_t<std::size_t>;
+        return FunctionParams(std::vector<std::any>(
+            params_.begin() + static_cast<DifferenceType>(start),
+            params_.begin() + static_cast<DifferenceType>(end)));
     }
 
     template <typename Predicate>
-    [[nodiscard]] FunctionParams filter(Predicate pred) const {
+    [[nodiscard]] auto filter(Predicate pred) const -> FunctionParams {
         std::vector<std::any> filtered;
         std::ranges::copy_if(params_, std::back_inserter(filtered), pred);
         return FunctionParams(filtered);

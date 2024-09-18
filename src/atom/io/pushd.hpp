@@ -2,7 +2,7 @@
 #define DIRECTORYSTACK_H
 
 #include <filesystem>
-#include <vector>
+#include <memory>
 #include <string>
 
 // Forward declaration of the implementation class
@@ -10,7 +10,8 @@ class DirectoryStackImpl;
 
 /**
  * @class DirectoryStack
- * @brief A class for managing a stack of directory paths, allowing push, pop, and various operations on the stack.
+ * @brief A class for managing a stack of directory paths, allowing push, pop,
+ * and various operations on the stack.
  */
 class DirectoryStack {
 public:
@@ -25,7 +26,28 @@ public:
     ~DirectoryStack();
 
     /**
-     * @brief Push the current directory onto the stack and change to the specified directory.
+     * @brief Copy constructor
+     */
+    DirectoryStack(const DirectoryStack& other);
+
+    /**
+     * @brief Copy assignment operator
+     */
+    auto operator=(const DirectoryStack& other) -> DirectoryStack&;
+
+    /**
+     * @brief Move constructor
+     */
+    DirectoryStack(DirectoryStack&& other) noexcept;
+
+    /**
+     * @brief Move assignment operator
+     */
+    auto operator=(DirectoryStack&& other) noexcept -> DirectoryStack&;
+
+    /**
+     * @brief Push the current directory onto the stack and change to the
+     * specified directory.
      * @param new_dir The directory to change to.
      */
     void pushd(const std::filesystem::path& new_dir);
@@ -67,39 +89,40 @@ public:
      * @brief Change to the directory at the specified index in the stack.
      * @param index The index of the directory to change to.
      */
-    void goto_index(size_t index);
+    void gotoIndex(size_t index);
 
     /**
      * @brief Save the directory stack to a file.
      * @param filename The name of the file to save the stack to.
      */
-    void save_stack_to_file(const std::string& filename) const;
+    void saveStackToFile(const std::string& filename) const;
 
     /**
      * @brief Load the directory stack from a file.
      * @param filename The name of the file to load the stack from.
      */
-    void load_stack_from_file(const std::string& filename);
+    void loadStackFromFile(const std::string& filename);
 
     /**
      * @brief Get the size of the directory stack.
      * @return The number of directories in the stack.
      */
-    size_t size() const;
+    [[nodiscard]] auto size() const -> size_t;
 
     /**
      * @brief Check if the directory stack is empty.
      * @return True if the stack is empty, false otherwise.
      */
-    bool is_empty() const;
+    [[nodiscard]] auto isEmpty() const -> bool;
 
     /**
      * @brief Show the current directory path.
      */
-    void show_current_directory() const;
+    void showCurrentDirectory() const;
 
 private:
-    DirectoryStackImpl* impl; ///< Pointer to the implementation.
+    std::unique_ptr<DirectoryStackImpl>
+        impl_;  ///< Pointer to the implementation.
 };
 
-#endif // DIRECTORYSTACK_H
+#endif  // DIRECTORYSTACK_H

@@ -18,7 +18,21 @@ Description: Some useful functions about time
 #include <ctime>
 #include <string>
 
+#include "atom/error/exception.hpp"
+
 namespace atom::utils {
+class TimeConvertException : public atom::error::Exception {
+    using atom::error::Exception::Exception;
+};
+
+#define THROW_TIME_CONVERT_ERROR(...)                                       \
+    throw atom::utils::TimeConvertException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                            ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_NESTED_TIME_CONVERT_ERROR(...)         \
+    atom::utils::RuntimeError::TimeConvertException( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
+
 /**
  * @brief Retrieves the current timestamp as a formatted string.
  *
@@ -27,7 +41,7 @@ namespace atom::utils {
  *
  * @return std::string The current timestamp formatted as "%Y-%m-%d %H:%M:%S".
  */
-[[nodiscard]] std::string getTimestampString();
+[[nodiscard]] auto getTimestampString() -> std::string;
 
 /**
  * @brief Converts a UTC time string to China Standard Time (CST, UTC+8).
@@ -42,7 +56,8 @@ namespace atom::utils {
  * @return std::string The corresponding time in China Standard Time, formatted
  * as "%Y-%m-%d %H:%M:%S".
  */
-[[nodiscard]] std::string convertToChinaTime(const std::string &utcTimeStr);
+[[nodiscard]] auto convertToChinaTime(const std::string &utcTimeStr)
+    -> std::string;
 
 /**
  * @brief Retrieves the current China Standard Time (CST) as a formatted
@@ -55,7 +70,7 @@ namespace atom::utils {
  * @return std::string The current China Standard Time formatted as "%Y-%m-%d
  * %H:%M:%S".
  */
-[[nodiscard]] std::string getChinaTimestampString();
+[[nodiscard]] auto getChinaTimestampString() -> std::string;
 
 /**
  * @brief Converts a timestamp to a formatted string.
@@ -69,7 +84,7 @@ namespace atom::utils {
  *
  * @return std::string The string representation of the timestamp.
  */
-[[nodiscard]] std::string timeStampToString(time_t timestamp);
+[[nodiscard]] auto timeStampToString(time_t timestamp) -> std::string;
 
 /**
  * @brief Converts a `tm` structure to a formatted string.
@@ -83,8 +98,8 @@ namespace atom::utils {
  * @return std::string The formatted time string based on the `tm` structure and
  * format.
  */
-[[nodiscard]] std::string toString(const std::tm &tm,
-                                   const std::string &format);
+[[nodiscard]] auto toString(const std::tm &tm,
+                            const std::string &format) -> std::string;
 
 /**
  * @brief Retrieves the current UTC time as a formatted string.
@@ -94,7 +109,7 @@ namespace atom::utils {
  *
  * @return std::string The current UTC time formatted as "%Y-%m-%d %H:%M:%S".
  */
-[[nodiscard]] std::string getUtcTime();
+[[nodiscard]] auto getUtcTime() -> std::string;
 
 /**
  * @brief Converts a timestamp to a `tm` structure.
@@ -109,7 +124,7 @@ namespace atom::utils {
  * @return std::tm The corresponding `std::tm` structure representing the
  * timestamp.
  */
-[[nodiscard]] std::tm timestampToTime(long long timestamp);
+[[nodiscard]] auto timestampToTime(long long timestamp) -> std::tm;
 }  // namespace atom::utils
 
 #endif

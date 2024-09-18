@@ -14,114 +14,141 @@ Description: A XML reader class using tinyxml2.
 
 #include "xml.hpp"
 
-#include <stdexcept>
+#include "atom/log/loguru.hpp"
 
 namespace atom::utils {
 XMLReader::XMLReader(const std::string &filePath) {
+    LOG_F(INFO, "Loading XML file: {}", filePath);
     if (doc_.LoadFile(filePath.c_str()) != tinyxml2::XML_SUCCESS) {
+        LOG_F(ERROR, "Failed to load XML file: {}", filePath);
         throw std::runtime_error("Failed to load XML file");
     }
+    LOG_F(INFO, "Successfully loaded XML file: {}", filePath);
 }
 
-std::vector<std::string> XMLReader::getChildElementNames(
-    const std::string &parentElementName) const {
+auto XMLReader::getChildElementNames(const std::string &parentElementName) const
+    -> std::vector<std::string> {
+    LOG_F(INFO, "Getting child element names for parent: {}",
+          parentElementName);
     std::vector<std::string> childElementNames;
     const tinyxml2::XMLElement *parentElement =
         doc_.FirstChildElement(parentElementName.c_str());
-    if (parentElement) {
+    if (parentElement != nullptr) {
         for (const tinyxml2::XMLElement *element =
                  parentElement->FirstChildElement();
              element != nullptr; element = element->NextSiblingElement()) {
-            childElementNames.push_back(element->Name());
+            childElementNames.emplace_back(element->Name());
         }
     }
+    LOG_F(INFO, "Found {} child elements for parent: {}",
+          childElementNames.size(), parentElementName);
     return childElementNames;
 }
 
-std::string XMLReader::getElementText(const std::string &elementName) const {
+auto XMLReader::getElementText(const std::string &elementName) const
+    -> std::string {
+    LOG_F(INFO, "Getting text for element: {}", elementName);
     const tinyxml2::XMLElement *element =
         doc_.FirstChildElement(elementName.c_str());
-    if (element) {
+    if (element != nullptr) {
         return element->GetText();
     }
     return "";
 }
 
-std::string XMLReader::getAttributeValue(
-    const std::string &elementName, const std::string &attributeName) const {
+auto XMLReader::getAttributeValue(const std::string &elementName,
+                                  const std::string &attributeName) const
+    -> std::string {
+    LOG_F(INFO, "Getting attribute value for element: {}, attribute: {}",
+          elementName, attributeName);
     const tinyxml2::XMLElement *element =
         doc_.FirstChildElement(elementName.c_str());
-    if (element) {
+    if (element != nullptr) {
         return element->Attribute(attributeName.c_str());
     }
     return "";
 }
 
-std::vector<std::string> XMLReader::getRootElementNames() const {
+auto XMLReader::getRootElementNames() const -> std::vector<std::string> {
+    LOG_F(INFO, "Getting root element names");
     std::vector<std::string> rootElementNames;
     const tinyxml2::XMLElement *rootElement = doc_.RootElement();
-    if (rootElement) {
-        rootElementNames.push_back(rootElement->Name());
+    if (rootElement != nullptr) {
+        rootElementNames.emplace_back(rootElement->Name());
     }
+    LOG_F(INFO, "Found {} root elements", rootElementNames.size());
     return rootElementNames;
 }
 
-bool XMLReader::hasChildElement(const std::string &parentElementName,
-                                const std::string &childElementName) const {
+auto XMLReader::hasChildElement(const std::string &parentElementName,
+                                const std::string &childElementName) const
+    -> bool {
+    LOG_F(INFO, "Checking if parent element: {} has child element: {}",
+          parentElementName, childElementName);
     const tinyxml2::XMLElement *parentElement =
         doc_.FirstChildElement(parentElementName.c_str());
-    if (parentElement) {
+    if (parentElement != nullptr) {
         return parentElement->FirstChildElement(childElementName.c_str()) !=
                nullptr;
     }
     return false;
 }
 
-std::string XMLReader::getChildElementText(
-    const std::string &parentElementName,
-    const std::string &childElementName) const {
+auto XMLReader::getChildElementText(const std::string &parentElementName,
+                                    const std::string &childElementName) const
+    -> std::string {
+    LOG_F(INFO, "Getting text for child element: {} of parent element: {}",
+          childElementName, parentElementName);
     const tinyxml2::XMLElement *parentElement =
         doc_.FirstChildElement(parentElementName.c_str());
-    if (parentElement) {
+    if (parentElement != nullptr) {
         const tinyxml2::XMLElement *childElement =
             parentElement->FirstChildElement(childElementName.c_str());
-        if (childElement) {
+        if (childElement != nullptr) {
             return childElement->GetText();
         }
     }
     return "";
 }
 
-std::string XMLReader::getChildElementAttributeValue(
+auto XMLReader::getChildElementAttributeValue(
     const std::string &parentElementName, const std::string &childElementName,
-    const std::string &attributeName) const {
+    const std::string &attributeName) const -> std::string {
+    LOG_F(INFO,
+          "Getting attribute value for child element: {} of parent element: "
+          "{}, attribute: {}",
+          childElementName, parentElementName, attributeName);
     const tinyxml2::XMLElement *parentElement =
         doc_.FirstChildElement(parentElementName.c_str());
-    if (parentElement) {
+    if (parentElement != nullptr) {
         const tinyxml2::XMLElement *childElement =
             parentElement->FirstChildElement(childElementName.c_str());
-        if (childElement) {
+        if (childElement != nullptr) {
             return childElement->Attribute(attributeName.c_str());
         }
     }
     return "";
 }
 
-std::string XMLReader::getValueByPath(const std::string &path) const {
+auto XMLReader::getValueByPath(const std::string &path) const -> std::string {
+    LOG_F(INFO, "Getting value by path: {}", path);
     std::string value;
     tinyxml2::XMLElement *element = getElementByPath(path);
-    if (element) {
+    if (element != nullptr) {
         value = element->GetText();
     }
     return value;
 }
 
 // 根据路径获取属性值
-std::string XMLReader::getAttributeValueByPath(
-    const std::string &path, const std::string &attributeName) const {
+auto XMLReader::getAttributeValueByPath(const std::string &path,
+                                        const std::string &attributeName) const
+    -> std::string {
+    LOG_F(INFO, "Getting attribute value by path: {}, attribute: {}", path,
+          attributeName);
     std::string value;
     tinyxml2::XMLElement *element = getElementByPath(path);
-    if (element) {
+    if (element != nullptr) {
         value = element->Attribute(attributeName.c_str());
     }
     return value;
@@ -130,52 +157,63 @@ std::string XMLReader::getAttributeValueByPath(
 // 根据路径判断是否存在子元素
 bool XMLReader::hasChildElementByPath(
     const std::string &path, const std::string &childElementName) const {
+    LOG_F(INFO, "Checking if path: {} has child element: {}", path,
+          childElementName);
     tinyxml2::XMLElement *element = getElementByPath(path);
-    if (element) {
+    if (element != nullptr) {
         return element->FirstChildElement(childElementName.c_str()) != nullptr;
     }
     return false;
 }
 
 // 根据路径获取子元素的文本
-std::string XMLReader::getChildElementTextByPath(
-    const std::string &path, const std::string &childElementName) const {
+auto XMLReader::getChildElementTextByPath(
+    const std::string &path,
+    const std::string &childElementName) const -> std::string {
+    LOG_F(INFO, "Getting text for child element: {} by path: {}",
+          childElementName, path);
     std::string value;
     tinyxml2::XMLElement *element = getElementByPath(path);
-    if (element) {
+    if (element != nullptr) {
         tinyxml2::XMLElement *childElement =
             element->FirstChildElement(childElementName.c_str());
-        if (childElement) {
+        if (childElement != nullptr) {
             value = childElement->GetText();
         }
     }
     return value;
 }
 
-std::string XMLReader::getChildElementAttributeValueByPath(
+auto XMLReader::getChildElementAttributeValueByPath(
     const std::string &path, const std::string &childElementName,
-    const std::string &attributeName) const {
+    const std::string &attributeName) const -> std::string {
+    LOG_F(INFO,
+          "Getting attribute value for child element: {} by path: {}, "
+          "attribute: {}",
+          childElementName, path, attributeName);
     std::string value;
     tinyxml2::XMLElement *element = getElementByPath(path);
-    if (element) {
+    if (element != nullptr) {
         tinyxml2::XMLElement *childElement =
             element->FirstChildElement(childElementName.c_str());
-        if (childElement) {
+        if (childElement != nullptr) {
             value = childElement->Attribute(attributeName.c_str());
         }
     }
     return value;
 }
 
-bool XMLReader::saveToFile(const std::string &filePath) const {
+auto XMLReader::saveToFile(const std::string &filePath) const -> bool {
+    LOG_F(INFO, "Saving XML to file: {}", filePath);
     return doc_.SaveFile(filePath.c_str()) == tinyxml2::XML_SUCCESS;
 }
 
 tinyxml2::XMLElement *XMLReader::getElementByPath(
     const std::string &path) const {
+    LOG_F(INFO, "Getting element by path: {}", path);
     tinyxml2::XMLElement *element = doc_.RootElement();
     size_t pos = 0;
-    while (element && pos != std::string::npos) {
+    while ((element != nullptr) && pos != std::string::npos) {
         size_t newPos = path.find('.', pos);
         std::string elementName = path.substr(pos, newPos - pos);
         element = element->FirstChildElement(elementName.c_str());

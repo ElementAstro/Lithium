@@ -1,4 +1,6 @@
 #include "cotask.hpp"
+
+#include <algorithm>
 #include <thread>
 
 #include "atom/log/loguru.hpp"

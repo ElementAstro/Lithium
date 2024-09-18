@@ -61,7 +61,7 @@ public:
      * @return An optional containing the value if found and not expired,
      * otherwise std::nullopt.
      */
-    std::optional<Value> get(const Key& key);
+    auto get(const Key& key) -> std::optional<Value>;
 
     /**
      * @brief Inserts or updates a value in the cache.
@@ -92,7 +92,7 @@ public:
      *
      * @return A vector containing all keys currently in the cache.
      */
-    std::vector<Key> keys() const;
+    auto keys() const -> std::vector<Key>;
 
     /**
      * @brief Removes and returns the least recently used item.
@@ -100,7 +100,7 @@ public:
      * @return An optional containing the key-value pair if the cache is not
      * empty, otherwise std::nullopt.
      */
-    std::optional<KeyValuePair> pop_lru();
+    auto popLru() -> std::optional<KeyValuePair>;
 
     /**
      * @brief Resizes the cache to a new maximum size.
@@ -117,7 +117,7 @@ public:
      *
      * @return The number of items currently in the cache.
      */
-    size_t size() const;
+    auto size() const -> size_t;
 
     /**
      * @brief Gets the current load factor of the cache.
@@ -126,7 +126,7 @@ public:
      *
      * @return The load factor of the cache.
      */
-    float load_factor() const;
+    auto loadFactor() const -> float;
 
     /**
      * @brief Sets the callback function to be called when a new item is
@@ -134,7 +134,7 @@ public:
      *
      * @param callback The callback function that takes a key and value.
      */
-    void set_insert_callback(
+    void setInsertCallback(
         std::function<void(const Key&, const Value&)> callback);
 
     /**
@@ -142,14 +142,14 @@ public:
      *
      * @param callback The callback function that takes a key.
      */
-    void set_erase_callback(std::function<void(const Key&)> callback);
+    void setEraseCallback(std::function<void(const Key&)> callback);
 
     /**
      * @brief Sets the callback function to be called when the cache is cleared.
      *
      * @param callback The callback function.
      */
-    void set_clear_callback(std::function<void()> callback);
+    void setClearCallback(std::function<void()> callback);
 
     /**
      * @brief Gets the hit rate of the cache.
@@ -159,7 +159,7 @@ public:
      *
      * @return The hit rate of the cache.
      */
-    float hit_rate() const;
+    auto hitRate() const -> float;
 
     /**
      * @brief Saves the cache contents to a file.
@@ -167,7 +167,7 @@ public:
      * @param filename The name of the file to save to.
      * @throws std::runtime_error If a deadlock is avoided while locking.
      */
-    void save_to_file(const std::string& filename) const;
+    void saveToFile(const std::string& filename) const;
 
     /**
      * @brief Loads cache contents from a file.
@@ -175,7 +175,7 @@ public:
      * @param filename The name of the file to load from.
      * @throws std::runtime_error If a deadlock is avoided while locking.
      */
-    void load_from_file(const std::string& filename);
+    void loadFromFile(const std::string& filename);
 
 private:
     mutable std::shared_mutex mutex_;  ///< Mutex for protecting shared data.
@@ -184,8 +184,8 @@ private:
     std::unordered_map<Key, CacheItem>
         cache_items_map_;  ///< Map for fast key lookups.
     size_t max_size_;      ///< Maximum number of items in the cache.
-    size_t hit_count_;     ///< Number of cache hits.
-    size_t miss_count_;    ///< Number of cache misses.
+    size_t hit_count_{};   ///< Number of cache hits.
+    size_t miss_count_{};  ///< Number of cache misses.
 
     std::function<void(const Key&, const Value&)>
         on_insert_;  ///< Callback for item insertion.
@@ -198,33 +198,33 @@ private:
      * @param item The cache item to check.
      * @return True if the item is expired, false otherwise.
      */
-    bool is_expired(const CacheItem& item) const;
+    auto isExpired(const CacheItem& item) const -> bool;
 };
 
 template <typename Key, typename Value>
 ThreadSafeLRUCache<Key, Value>::ThreadSafeLRUCache(size_t max_size)
-    : max_size_(max_size), hit_count_(0), miss_count_(0) {}
+    : max_size_(max_size) {}
 
 template <typename Key, typename Value>
-std::optional<Value> ThreadSafeLRUCache<Key, Value>::get(const Key& key) {
+auto ThreadSafeLRUCache<Key, Value>::get(const Key& key)
+    -> std::optional<Value> {
     std::unique_lock lock(mutex_, std::try_to_lock);
     if (!lock) {
         return std::nullopt;  // Avoid deadlock
     }
 
     auto it = cache_items_map_.find(key);
-    if (it == cache_items_map_.end() || is_expired(it->second)) {
+    if (it == cache_items_map_.end() || isExpired(it->second)) {
         ++miss_count_;
         if (it != cache_items_map_.end()) {
             erase(key);  // Remove expired item
         }
         return std::nullopt;
-    } else {
-        ++hit_count_;
-        cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_,
-                                 it->second.iterator);
-        return it->second.value;
     }
+    ++hit_count_;
+    cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_,
+                             it->second.iterator);
+    return it->second.value;
 }
 
 template <typename Key, typename Value>
@@ -280,7 +280,7 @@ void ThreadSafeLRUCache<Key, Value>::clear() {
 }
 
 template <typename Key, typename Value>
-std::vector<Key> ThreadSafeLRUCache<Key, Value>::keys() const {
+auto ThreadSafeLRUCache<Key, Value>::keys() const -> std::vector<Key> {
     std::shared_lock lock(mutex_);
     std::vector<Key> keys;
     for (const auto& pair : cache_items_list_) {
@@ -290,8 +290,8 @@ std::vector<Key> ThreadSafeLRUCache<Key, Value>::keys() const {
 }
 
 template <typename Key, typename Value>
-std::optional<typename ThreadSafeLRUCache<Key, Value>::KeyValuePair>
-ThreadSafeLRUCache<Key, Value>::pop_lru() {
+auto ThreadSafeLRUCache<Key, Value>::popLru()
+    -> std::optional<typename ThreadSafeLRUCache<Key, Value>::KeyValuePair> {
     std::unique_lock lock(mutex_);
     if (cache_items_list_.empty()) {
         return std::nullopt;
@@ -323,38 +323,40 @@ size_t ThreadSafeLRUCache<Key, Value>::size() const {
 }
 
 template <typename Key, typename Value>
-float ThreadSafeLRUCache<Key, Value>::load_factor() const {
+auto ThreadSafeLRUCache<Key, Value>::loadFactor() const -> float {
     std::shared_lock lock(mutex_);
     return static_cast<float>(cache_items_map_.size()) / max_size_;
 }
 
 template <typename Key, typename Value>
-void ThreadSafeLRUCache<Key, Value>::set_insert_callback(
+void ThreadSafeLRUCache<Key, Value>::setInsertCallback(
     std::function<void(const Key&, const Value&)> callback) {
     on_insert_ = std::move(callback);
 }
 
 template <typename Key, typename Value>
-void ThreadSafeLRUCache<Key, Value>::set_erase_callback(
+void ThreadSafeLRUCache<Key, Value>::setEraseCallback(
     std::function<void(const Key&)> callback) {
     on_erase_ = std::move(callback);
 }
 
 template <typename Key, typename Value>
-void ThreadSafeLRUCache<Key, Value>::set_clear_callback(
+void ThreadSafeLRUCache<Key, Value>::setClearCallback(
     std::function<void()> callback) {
     on_clear_ = std::move(callback);
 }
 
 template <typename Key, typename Value>
-float ThreadSafeLRUCache<Key, Value>::hit_rate() const {
+auto ThreadSafeLRUCache<Key, Value>::hitRate() const -> float {
     std::shared_lock lock(mutex_);
     size_t total = hit_count_ + miss_count_;
-    return total == 0 ? 0.0f : static_cast<float>(hit_count_) / total;
+    return total == 0 ? 0.0F
+                      : static_cast<float>(static_cast<double>(hit_count_) /
+                                           static_cast<double>(total));
 }
 
 template <typename Key, typename Value>
-void ThreadSafeLRUCache<Key, Value>::save_to_file(
+void ThreadSafeLRUCache<Key, Value>::saveToFile(
     const std::string& filename) const {
     std::unique_lock lock(mutex_, std::try_to_lock);
     if (!lock) {
@@ -368,17 +370,16 @@ void ThreadSafeLRUCache<Key, Value>::save_to_file(
         for (const auto& pair : cache_items_list_) {
             ofs.write(reinterpret_cast<const char*>(&pair.first),
                       sizeof(pair.first));
-            size_t value_size = pair.second.size();
-            ofs.write(reinterpret_cast<const char*>(&value_size),
-                      sizeof(value_size));
-            ofs.write(pair.second.c_str(), value_size);
+            size_t valueSize = pair.second.size();
+            ofs.write(reinterpret_cast<const char*>(&valueSize),
+                      sizeof(valueSize));
+            ofs.write(pair.second.c_str(), valueSize);
         }
     }
 }
 
 template <typename Key, typename Value>
-void ThreadSafeLRUCache<Key, Value>::load_from_file(
-    const std::string& filename) {
+void ThreadSafeLRUCache<Key, Value>::loadFromFile(const std::string& filename) {
     std::unique_lock lock(mutex_, std::try_to_lock);
     if (!lock) {
         throw std::runtime_error("Resource deadlock avoided");
@@ -392,17 +393,17 @@ void ThreadSafeLRUCache<Key, Value>::load_from_file(
         for (size_t i = 0; i < size; ++i) {
             Key key;
             ifs.read(reinterpret_cast<char*>(&key), sizeof(key));
-            size_t value_size;
-            ifs.read(reinterpret_cast<char*>(&value_size), sizeof(value_size));
-            std::string value(value_size, '\0');
-            ifs.read(&value[0], value_size);
+            size_t valueSize;
+            ifs.read(reinterpret_cast<char*>(&valueSize), sizeof(valueSize));
+            std::string value(valueSize, '\0');
+            ifs.read(value.data(), static_cast<std::streamsize>(valueSize));
             put(key, value);
         }
     }
 }
 
 template <typename Key, typename Value>
-bool ThreadSafeLRUCache<Key, Value>::is_expired(const CacheItem& item) const {
+auto ThreadSafeLRUCache<Key, Value>::isExpired(const CacheItem& item) const -> bool {
     return Clock::now() > item.expiryTime;
 }
 

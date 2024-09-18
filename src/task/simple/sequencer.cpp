@@ -1,7 +1,8 @@
 #include "sequencer.hpp"
 #include <algorithm>
 #include <fstream>
-#include <nlohmann/json.hpp>
+
+#include "atom/type/json.hpp"
 
 namespace lithium::sequencer {
 

@@ -25,6 +25,7 @@ Description: IO
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "atom/utils/string.hpp"
 
 #ifdef __linux
 #include <dirent.h>
@@ -36,12 +37,15 @@ using json = nlohmann::json;
 
 #ifdef _WIN32
 #include <windows.h>
-const std::string PATH_SEPARATOR = "\\";
 const std::regex FOLDER_NAME_REGEX(R"(^[^\/?*:;{}\\]+[^\\]*$)");
 const std::regex FILE_NAME_REGEX("^[^\\/:*?\"<>|]+$");
 #else
 const std::regex FOLDER_NAME_REGEX("^[^/]+$");
 const std::regex FILE_NAME_REGEX("^[^/]+$");
+#endif
+
+#ifdef _MSC_VER
+#undef min
 #endif
 
 #define ATOM_IO_CHECK_ARGUMENT(value)                              \

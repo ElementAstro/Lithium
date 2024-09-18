@@ -102,8 +102,8 @@ auto delayStaticMemInvoke(R (*func)(Args...), T *obj) {
  * \return A lambda that, when called, returns the member variable.
  */
 template <typename T, typename M>
-auto delayMemberVarInvoke(M T::*m, T *obj) {
-    return [m, obj]() -> decltype(auto) { return (obj->*m); };
+auto delayMemberVarInvoke(M T::*memberVar, T *obj) {
+    return [memberVar, obj]() -> decltype(auto) { return (obj->*memberVar); };
 }
 
 /*!
@@ -195,7 +195,7 @@ auto safeTryCatchOrDefault(
 template <typename Func, typename... Args>
     requires Invocable<Func, Args...>
 auto safeTryCatchWithCustomHandler(
-    Func &&func, std::function<void(std::exception_ptr)> handler,
+    Func &&func, const std::function<void(std::exception_ptr)> &handler,
     Args &&...args) {
     try {
         return std::invoke(std::forward<Func>(func),

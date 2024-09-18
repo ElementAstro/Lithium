@@ -24,19 +24,19 @@ struct Any {
      * \return An instance of type T.
      */
     template <typename T>
-    consteval operator T() const noexcept;
+    explicit consteval operator T() const noexcept;
 };
 
 /*!
  * \brief Checks if a type T is constructible with braces.
  * \tparam T The type to check.
  * \tparam I The index sequence.
- * \param[in] std::index_sequence<I...> The index sequence.
+ * \param[in] indices The index sequence.
  * \return True if T is constructible with braces, false otherwise.
  */
 template <typename T, std::size_t... I>
-consteval auto isBracesConstructible(std::index_sequence<I...>) noexcept
-    -> bool {
+consteval auto isBracesConstructible(
+    std::index_sequence<I...> /*indices*/) noexcept -> bool {
     return requires { T{((void)I, std::declval<Any>())...}; };
 }
 

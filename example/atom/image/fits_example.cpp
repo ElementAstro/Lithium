@@ -1,6 +1,6 @@
 #include <iomanip>
 #include <iostream>
-#include "fits_file.hpp"
+#include "atom/image/fits_file.hpp"
 
 int main() {
     try {

@@ -12,6 +12,13 @@ logger.add("monitoring.log", level="DEBUG",
 router = APIRouter()
 
 
+class MonitoringException(Exception):
+    def __init__(self, message: str, status_code: int = 500):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(self.message)
+
+
 @router.get("/monitoring/status")
 async def get_server_status():
     """
@@ -28,8 +35,7 @@ async def get_server_status():
         return status
     except Exception as e:
         logger.error(f"Failed to retrieve server status: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve server status")
+        raise MonitoringException("Failed to retrieve server status")
 
 
 @router.get("/monitoring/requests")
@@ -50,8 +56,7 @@ async def get_request_statistics():
         return stats
     except Exception as e:
         logger.error(f"Failed to retrieve request statistics: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve request statistics")
+        raise MonitoringException("Failed to retrieve request statistics")
 
 
 @router.get("/monitoring/network")
@@ -71,8 +76,7 @@ async def get_network_statistics():
         return network_stats
     except Exception as e:
         logger.error(f"Failed to retrieve network statistics: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve network statistics")
+        raise MonitoringException("Failed to retrieve network statistics")
 
 
 @router.get("/monitoring/processes")
@@ -93,8 +97,7 @@ async def get_top_processes(limit: int = 5):
         return {"top_processes": top_processes}
     except Exception as e:
         logger.error(f"Failed to retrieve top processes: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve top processes")
+        raise MonitoringException("Failed to retrieve top processes")
 
 
 @router.get("/monitoring/temperature")
@@ -106,13 +109,15 @@ async def get_temperature():
         temperatures = psutil.sensors_temperatures()
         if not temperatures:
             logger.warning("Temperature sensors not available")
-            raise HTTPException(
-                status_code=404, detail="Temperature sensors not available")
+            raise MonitoringException(
+                "Temperature sensors not available", status_code=404)
         logger.info(f"Retrieved system temperatures: {temperatures}")
         return temperatures
+    except MonitoringException as e:
+        raise e
     except Exception as e:
         logger.error(f"Failed to retrieve system temperatures: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise MonitoringException("Failed to retrieve system temperatures")
 
 
 @router.get("/monitoring/logs")
@@ -129,10 +134,10 @@ async def get_recent_logs(lines: int = 10):
         return {"recent_logs": recent_logs}
     except FileNotFoundError:
         logger.error(f"Log file not found: {log_file_path}")
-        raise HTTPException(status_code=404, detail="Log file not found")
+        raise MonitoringException("Log file not found", status_code=404)
     except Exception as e:
         logger.error(f"Failed to retrieve recent logs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise MonitoringException("Failed to retrieve recent logs")
 
 
 @router.get("/monitoring/io")
@@ -150,8 +155,7 @@ async def get_io_statistics():
         return io_data
     except Exception as e:
         logger.error(f"Failed to retrieve I/O statistics: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve I/O statistics")
+        raise MonitoringException("Failed to retrieve I/O statistics")
 
 
 @router.get("/monitoring/load")
@@ -160,7 +164,7 @@ async def get_load_avg():
     Returns the system load averages over the last 1, 5, and 15 minutes.
     """
     try:
-        load_avg = os.getloadavg()
+        load_avg = psutil.getloadavg()
         load_data = {
             "1_min": load_avg[0],
             "5_min": load_avg[1],
@@ -170,8 +174,7 @@ async def get_load_avg():
         return load_data
     except Exception as e:
         logger.error(f"Failed to retrieve system load averages: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve system load averages")
+        raise MonitoringException("Failed to retrieve system load averages")
 
 
 @router.get("/monitoring/threads")
@@ -192,5 +195,60 @@ async def get_thread_statistics(limit: int = 5):
         return {"top_processes_by_threads": top_threads}
     except Exception as e:
         logger.error(f"Failed to retrieve top processes by thread count: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve top processes by thread count")
+        raise MonitoringException(
+            "Failed to retrieve top processes by thread count")
+
+
+@router.get("/monitoring/uptime")
+async def get_system_uptime():
+    """
+    Returns the system uptime.
+    """
+    try:
+        uptime = time.time() - psutil.boot_time()
+        logger.info(f"Retrieved system uptime: {uptime}")
+        return {"uptime": uptime}
+    except Exception as e:
+        logger.error(f"Failed to retrieve system uptime: {e}")
+        raise MonitoringException("Failed to retrieve system uptime")
+
+
+@router.get("/monitoring/users")
+async def get_system_users():
+    """
+    Returns the list of users currently logged into the system.
+    """
+    try:
+        users = psutil.users()
+        user_info = [{"name": user.name, "terminal": user.terminal,
+                      "host": user.host, "started": user.started} for user in users]
+        logger.info(f"Retrieved system users: {user_info}")
+        return {"users": user_info}
+    except Exception as e:
+        logger.error(f"Failed to retrieve system users: {e}")
+        raise MonitoringException("Failed to retrieve system users")
+
+
+@router.get("/monitoring/battery")
+async def get_battery_status():
+    """
+    Returns the current battery status (if available).
+    """
+    try:
+        battery = psutil.sensors_battery()
+        if not battery:
+            logger.warning("Battery information not available")
+            raise MonitoringException(
+                "Battery information not available", status_code=404)
+        battery_info = {
+            "percent": battery.percent,
+            "secsleft": battery.secsleft,
+            "power_plugged": battery.power_plugged
+        }
+        logger.info(f"Retrieved battery status: {battery_info}")
+        return battery_info
+    except MonitoringException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Failed to retrieve battery status: {e}")
+        raise MonitoringException("Failed to retrieve battery status")

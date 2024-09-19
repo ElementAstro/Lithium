@@ -9,8 +9,7 @@
 #ifndef ATOM_META_ABI_HPP
 #define ATOM_META_ABI_HPP
 
-#include <cctype>
-#include <memory>
+#include <array>
 #include <optional>
 #include <source_location>
 #include <string>
@@ -34,6 +33,9 @@
 #endif
 
 namespace atom::meta {
+
+constexpr std::size_t BUFFER_SIZE = 1024;
+
 class DemangleHelper {
 public:
     template <typename T>
@@ -85,11 +87,11 @@ public:
 private:
     static auto demangleInternal(std::string_view mangled_name) -> std::string {
 #ifdef _MSC_VER
-        char buffer[1024];
-        DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer,
-                                            sizeof(buffer), UNDNAME_COMPLETE);
+        std::array<char, BUFFER_SIZE> buffer;
+        DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer.data(),
+                                            buffer.size(), UNDNAME_COMPLETE);
 
-        return (length > 0) ? std::string(buffer, length)
+        return (length > 0) ? std::string(buffer.data(), length)
                             : std::string(mangled_name);
 #else
         int status = -1;

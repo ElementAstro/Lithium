@@ -1,20 +1,26 @@
 #pragma once
 
 #include <future>
+#include <memory>
 #include <string>
-#include <nlohmann/json.hpp>
+#include "atom/type/json.hpp"
 
 class TheSkyX {
 public:
     TheSkyX(const std::string& addr, int prt, bool useObj);
     ~TheSkyX();
 
-    std::string name() const;
-    bool canGetRotationAngle() const;
+    TheSkyX(const TheSkyX&) = delete;
+    TheSkyX& operator=(const TheSkyX&) = delete;
+    TheSkyX(TheSkyX&&) noexcept = default;
+    TheSkyX& operator=(TheSkyX&&) noexcept = default;
 
-    std::future<nlohmann::json> getTarget();
-    std::future<nlohmann::json> getSite();
-    std::future<double> getRotationAngle();
+    [[nodiscard]] auto name() const -> std::string;
+    [[nodiscard]] auto canGetRotationAngle() const -> bool;
+
+    auto getTarget() -> std::future<nlohmann::json>;
+    auto getSite() -> std::future<nlohmann::json>;
+    auto getRotationAngle() -> std::future<double>;
 
 private:
     class Impl;

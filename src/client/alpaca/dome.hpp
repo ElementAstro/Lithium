@@ -1,60 +1,59 @@
 #pragma once
 
 #include <future>
-#include <optional>
 #include <string>
 #include "device.hpp"
 
 class AlpacaDome : public AlpacaDevice {
 public:
     enum class ShutterState {
-        ShutterOpen = 0,
-        ShutterClosed = 1,
-        ShutterOpening = 2,
-        ShutterClosing = 3,
-        ShutterError = 4
+        shutterOpen = 0,
+        shutterClosed = 1,
+        shutterOpening = 2,
+        shutterClosing = 3,
+        shutterError = 4
     };
 
     AlpacaDome(std::string_view address, int device_number,
                std::string_view protocol = "http");
-    virtual ~AlpacaDome() = default;
+    ~AlpacaDome() override = default;
 
     // Properties
-    double GetAltitude();
-    bool GetAtHome();
-    bool GetAtPark();
-    double GetAzimuth();
-    bool GetCanFindHome();
-    bool GetCanPark();
-    bool GetCanSetAltitude();
-    bool GetCanSetAzimuth();
-    bool GetCanSetPark();
-    bool GetCanSetShutter();
-    bool GetCanSlave();
-    bool GetCanSyncAzimuth();
-    ShutterState GetShutterStatus();
-    bool GetSlaved();
-    void SetSlaved(bool SlavedState);
-    bool GetSlewing();
+    auto getAltitude() -> double;
+    auto getAtHome() -> bool;
+    auto getAtPark() -> bool;
+    auto getAzimuth() -> double;
+    auto getCanFindHome() -> bool;
+    auto getCanPark() -> bool;
+    auto getCanSetAltitude() -> bool;
+    auto getCanSetAzimuth() -> bool;
+    auto getCanSetPark() -> bool;
+    auto getCanSetShutter() -> bool;
+    auto getCanSlave() -> bool;
+    auto getCanSyncAzimuth() -> bool;
+    auto getShutterStatus() -> ShutterState;
+    auto getSlaved() -> bool;
+    void setSlaved(bool slavedState);
+    auto getSlewing() -> bool;
 
     // Methods
-    void AbortSlew();
-    std::future<void> CloseShutter();
-    std::future<void> FindHome();
-    std::future<void> OpenShutter();
-    std::future<void> Park();
-    void SetPark();
-    std::future<void> SlewToAltitude(double Altitude);
-    std::future<void> SlewToAzimuth(double Azimuth);
-    void SyncToAzimuth(double Azimuth);
+    void abortSlew();
+    auto closeShutter() -> std::future<void>;
+    auto findHome() -> std::future<void>;
+    auto openShutter() -> std::future<void>;
+    auto park() -> std::future<void>;
+    void setPark();
+    auto slewToAltitude(double altitude) -> std::future<void>;
+    auto slewToAzimuth(double azimuth) -> std::future<void>;
+    void syncToAzimuth(double azimuth);
 
 private:
     template <typename T>
-    T GetProperty(const std::string& property) const {
-        return GetNumericProperty<T>(property);
+    auto getProperty(const std::string& property) const -> T {
+        return getNumericProperty<T>(property);
     }
 
     template <typename Func>
-    std::future<void> AsyncOperation(Func&& func,
-                                     const std::string& operationName);
+    auto asyncOperation(Func&& func,
+                        const std::string& operationName) -> std::future<void>;
 };

@@ -11,6 +11,7 @@
 #include "atom/macro.hpp"
 
 namespace atom::type {
+
 template <typename T>
 concept PodType = std::is_trivial_v<T> && std::is_standard_layout_v<T>;
 
@@ -22,10 +23,10 @@ concept ValueType = requires(T t) {
 
 template <PodType T, int Growth = 2>
 class PodVector {
-    static ATOM_CONSTEXPR int SIZE_T = sizeof(T);
-    static ATOM_CONSTEXPR int N = 64 / SIZE_T;
+    static constexpr int SIZE_T = sizeof(T);
+    static constexpr int N = 64 / SIZE_T;
 
-    static_assert(N >= 4, "Element size_ too large");
+    static_assert(N >= 4, "Element size too large");
 
 private:
     int size_ = 0;
@@ -36,16 +37,186 @@ private:
 public:
     using size_type = int;
 
-    ATOM_CONSTEXPR PodVector() ATOM_NOEXCEPT = default;
+    class iterator {
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = T*;
+        using reference = T&;
 
-    ATOM_CONSTEXPR PodVector(std::initializer_list<T> il)
+        iterator(pointer ptr) : ptr_(ptr) {}
+
+        auto operator*() const -> reference { return *ptr_; }
+        auto operator->() -> pointer { return ptr_; }
+
+        auto operator++() -> iterator& {
+            ++ptr_;
+            return *this;
+        }
+
+        auto operator++(int) -> iterator {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        auto operator--() -> iterator& {
+            --ptr_;
+            return *this;
+        }
+
+        auto operator--(int) -> iterator {
+            iterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        auto operator+(difference_type offset) const -> iterator {
+            return iterator(ptr_ + offset);
+        }
+
+        auto operator-(difference_type offset) const -> iterator {
+            return iterator(ptr_ - offset);
+        }
+
+        auto operator+=(difference_type offset) -> iterator& {
+            ptr_ += offset;
+            return *this;
+        }
+
+        auto operator-=(difference_type offset) -> iterator& {
+            ptr_ -= offset;
+            return *this;
+        }
+
+        auto operator-(const iterator& other) const -> difference_type {
+            return ptr_ - other.ptr_;
+        }
+
+        auto operator==(const iterator& other) const -> bool {
+            return ptr_ == other.ptr_;
+        }
+
+        auto operator!=(const iterator& other) const -> bool {
+            return ptr_ != other.ptr_;
+        }
+
+        auto operator<(const iterator& other) const -> bool {
+            return ptr_ < other.ptr_;
+        }
+
+        auto operator>(const iterator& other) const -> bool {
+            return ptr_ > other.ptr_;
+        }
+
+        auto operator<=(const iterator& other) const -> bool {
+            return ptr_ <= other.ptr_;
+        }
+
+        auto operator>=(const iterator& other) const -> bool {
+            return ptr_ >= other.ptr_;
+        }
+
+    private:
+        pointer ptr_;
+    };
+
+    class const_iterator {
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const T*;
+        using reference = const T&;
+
+        const_iterator(pointer ptr) : ptr_(ptr) {}
+
+        auto operator*() const -> reference { return *ptr_; }
+        auto operator->() const -> pointer { return ptr_; }
+
+        auto operator++() -> const_iterator& {
+            ++ptr_;
+            return *this;
+        }
+
+        auto operator++(int) -> const_iterator {
+            const_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        auto operator--() -> const_iterator& {
+            --ptr_;
+            return *this;
+        }
+
+        auto operator--(int) -> const_iterator {
+            const_iterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        auto operator+(difference_type offset) const -> const_iterator {
+            return const_iterator(ptr_ + offset);
+        }
+
+        auto operator-(difference_type offset) const -> const_iterator {
+            return const_iterator(ptr_ - offset);
+        }
+
+        auto operator+=(difference_type offset) -> const_iterator& {
+            ptr_ += offset;
+            return *this;
+        }
+
+        auto operator-=(difference_type offset) -> const_iterator& {
+            ptr_ -= offset;
+            return *this;
+        }
+
+        auto operator-(const const_iterator& other) const -> difference_type {
+            return ptr_ - other.ptr_;
+        }
+
+        auto operator==(const const_iterator& other) const -> bool {
+            return ptr_ == other.ptr_;
+        }
+
+        auto operator!=(const const_iterator& other) const -> bool {
+            return ptr_ != other.ptr_;
+        }
+
+        auto operator<(const const_iterator& other) const -> bool {
+            return ptr_ < other.ptr_;
+        }
+
+        auto operator>(const const_iterator& other) const -> bool {
+            return ptr_ > other.ptr_;
+        }
+
+        auto operator<=(const const_iterator& other) const -> bool {
+            return ptr_ <= other.ptr_;
+        }
+
+        auto operator>=(const const_iterator& other) const -> bool {
+            return ptr_ >= other.ptr_;
+        }
+
+    private:
+        pointer ptr_;
+    };
+
+    constexpr PodVector() noexcept = default;
+
+    constexpr PodVector(std::initializer_list<T> il)
         : size_(static_cast<int>(il.size())),
           capacity_(std::max(N, size_)),
           data_(allocator_.allocate(capacity_)) {
         std::ranges::copy(il, data_);
     }
 
-    explicit ATOM_CONSTEXPR PodVector(int size_)
+    explicit constexpr PodVector(int size_)
         : size_(size_),
           capacity_(std::max(N, size_)),
           data_(allocator_.allocate(capacity_)) {}
@@ -57,12 +228,12 @@ public:
         std::memcpy(data_, other.data_, SIZE_T * size_);
     }
 
-    PodVector(PodVector&& other) ATOM_NOEXCEPT
+    PodVector(PodVector&& other) noexcept
         : size_(other.size_),
           capacity_(other.capacity_),
           data_(std::exchange(other.data_, nullptr)) {}
 
-    auto operator=(PodVector&& other) ATOM_NOEXCEPT -> PodVector& {
+    auto operator=(PodVector&& other) noexcept -> PodVector& {
         if (this != &other) {
             if (data_ != nullptr) {
                 allocator_.deallocate(data_, capacity_);
@@ -92,7 +263,7 @@ public:
         new (&data_[size_++]) T(std::forward<Args>(args)...);
     }
 
-    ATOM_CONSTEXPR void reserve(int cap) {
+    constexpr void reserve(int cap) {
         if (cap <= capacity_) [[likely]] {
             return;
         }
@@ -105,9 +276,9 @@ public:
         capacity_ = cap;
     }
 
-    ATOM_CONSTEXPR void popBack() ATOM_NOEXCEPT { size_--; }
+    constexpr void popBack() noexcept { size_--; }
 
-    ATOM_CONSTEXPR auto popxBack() -> T { return std::move(data_[--size_]); }
+    constexpr auto popxBack() -> T { return std::move(data_[--size_]); }
 
     void extend(const PodVector& other) {
         for (const auto& elem : other) {
@@ -121,25 +292,31 @@ public:
         }
     }
 
-    ATOM_CONSTEXPR auto operator[](int index) -> T& { return data_[index]; }
-    ATOM_CONSTEXPR auto operator[](int index) const -> const T& {
+    constexpr auto operator[](int index) -> T& { return data_[index]; }
+    constexpr auto operator[](int index) const -> const T& {
         return data_[index];
     }
 
-    ATOM_CONSTEXPR auto begin() ATOM_NOEXCEPT -> T* { return data_; }
-    ATOM_CONSTEXPR auto end() ATOM_NOEXCEPT -> T* { return data_ + size_; }
-    ATOM_CONSTEXPR auto begin() const ATOM_NOEXCEPT -> const T* { return data_; }
-    ATOM_CONSTEXPR auto end() const ATOM_NOEXCEPT -> const T* { return data_ + size_; }
-    ATOM_CONSTEXPR auto back() -> T& { return data_[size_ - 1]; }
-    ATOM_CONSTEXPR auto back() const -> const T& { return data_[size_ - 1]; }
+    constexpr auto begin() noexcept -> iterator { return iterator(data_); }
+    constexpr auto end() noexcept -> iterator {
+        return iterator(data_ + size_);
+    }
+    constexpr auto begin() const noexcept -> const_iterator {
+        return const_iterator(data_);
+    }
+    constexpr auto end() const noexcept -> const_iterator {
+        return const_iterator(data_ + size_);
+    }
+    constexpr auto back() -> T& { return data_[size_ - 1]; }
+    constexpr auto back() const -> const T& { return data_[size_ - 1]; }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto empty() const ATOM_NOEXCEPT -> bool {
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
         return size_ == 0;
     }
-    ATOM_NODISCARD ATOM_CONSTEXPR auto size() const ATOM_NOEXCEPT -> int { return size_; }
-    ATOM_CONSTEXPR auto data() ATOM_NOEXCEPT -> T* { return data_; }
-    ATOM_CONSTEXPR auto data() const ATOM_NOEXCEPT -> const T* { return data_; }
-    ATOM_CONSTEXPR void clear() ATOM_NOEXCEPT { size_ = 0; }
+    [[nodiscard]] constexpr auto size() const noexcept -> int { return size_; }
+    constexpr auto data() noexcept -> T* { return data_; }
+    constexpr auto data() const noexcept -> const T* { return data_; }
+    constexpr void clear() noexcept { size_ = 0; }
 
     template <typename ValueT>
     void insert(int i, ValueT&& val) {
@@ -153,21 +330,21 @@ public:
         size_++;
     }
 
-    ATOM_CONSTEXPR void erase(int i) {
+    constexpr void erase(int i) {
         std::ranges::copy(data_ + i + 1, data_ + size_, data_ + i);
         size_--;
     }
 
-    ATOM_CONSTEXPR void reverse() { std::ranges::reverse(data_, data_ + size_); }
+    constexpr void reverse() { std::ranges::reverse(data_, data_ + size_); }
 
-    ATOM_CONSTEXPR void resize(int size_) {
+    constexpr void resize(int size_) {
         if (size_ > capacity_) {
             reserve(size_);
         }
         this->size_ = size_;
     }
 
-    auto detach() ATOM_NOEXCEPT -> std::pair<T*, int> {
+    auto detach() noexcept -> std::pair<T*, int> {
         T* p = data_;
         int size = size_;
         data_ = nullptr;
@@ -181,11 +358,11 @@ public:
         }
     }
 
-    ATOM_NODISCARD ATOM_CONSTEXPR auto capacity() const ATOM_NOEXCEPT -> int {
+    [[nodiscard]] constexpr auto capacity() const noexcept -> int {
         return capacity_;
     }
 };
 
 }  // namespace atom::type
 
-#endif
+#endif  // ATOM_TYPE_POD_VECTOR_HPP

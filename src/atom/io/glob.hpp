@@ -1,104 +1,101 @@
 #pragma once
 #include <cassert>
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <regex>
 #include <string>
 #include <vector>
-#include "error/exception.hpp"
+
+#include "atom/error/exception.hpp"
+
 #include "macro.hpp"
 
-#ifdef GLOB_USE_GHC_FILESYSTEM
-#include <ghc/filesystem.hpp>
-#else
-#include <filesystem>
-#endif
+namespace atom::io {
 
-namespace glob {
-
-#ifdef GLOB_USE_GHC_FILESYSTEM
-namespace fs = ghc::filesystem;
-#else
 namespace fs = std::filesystem;
-#endif
 
 namespace {
 ATOM_INLINE auto stringReplace(std::string &str, const std::string &from,
-                               const std::string &to) -> bool {
+                               const std::string &toStr) -> bool {
     std::size_t startPos = str.find(from);
     if (startPos == std::string::npos) {
         return false;
     }
-    str.replace(startPos, from.length(), to);
+    str.replace(startPos, from.length(), toStr);
     return true;
 }
 
 ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
-    std::size_t i = 0;
-    std::size_t n = pattern.size();
+    std::size_t index = 0;
+    std::size_t patternSize = pattern.size();
     std::string resultString;
 
-    while (i < n) {
-        auto c = pattern[i];
-        i += 1;
-        if (c == '*') {
+    while (index < patternSize) {
+        auto currentChar = pattern[index];
+        index += 1;
+        if (currentChar == '*') {
             resultString += ".*";
-        } else if (c == '?') {
+        } else if (currentChar == '?') {
             resultString += ".";
-        } else if (c == '[') {
-            auto j = i;
-            if (j < n && pattern[j] == '!') {
-                j += 1;
+        } else if (currentChar == '[') {
+            auto innerIndex = index;
+            if (innerIndex < patternSize && pattern[innerIndex] == '!') {
+                innerIndex += 1;
             }
-            if (j < n && pattern[j] == ']') {
-                j += 1;
+            if (innerIndex < patternSize && pattern[innerIndex] == ']') {
+                innerIndex += 1;
             }
-            while (j < n && pattern[j] != ']') {
-                j += 1;
+            while (innerIndex < patternSize && pattern[innerIndex] != ']') {
+                innerIndex += 1;
             }
-            if (j >= n) {
+            if (innerIndex >= patternSize) {
                 resultString += "\\[";
             } else {
-                auto stuff =
-                    std::string(pattern.begin() + i, pattern.begin() + j);
+                auto stuff = std::string(pattern.begin() + index,
+                                         pattern.begin() + innerIndex);
+#if USE_ABSL
+                if (!absl::StrContains(stuff, "--")) {
+#else
                 if (stuff.find("--") == std::string::npos) {
+#endif
                     stringReplace(stuff, std::string{"\\"},
                                   std::string{R"(\\)"});
                 } else {
                     std::vector<std::string> chunks;
-                    std::size_t k = 0;
-                    if (pattern[i] == '!') {
-                        k = i + 2;
+                    std::size_t chunkIndex = 0;
+                    if (pattern[index] == '!') {
+                        chunkIndex = index + 2;
                     } else {
-                        k = i + 1;
+                        chunkIndex = index + 1;
                     }
 
                     while (true) {
-                        k = pattern.find("-", k, j);
-                        if (k == std::string::npos) {
+                        chunkIndex = pattern.find("-", chunkIndex, innerIndex);
+                        if (chunkIndex == std::string::npos) {
                             break;
                         }
-                        chunks.emplace_back(pattern.begin() + i,
-                                            pattern.begin() + k);
-                        i = k + 1;
-                        k = k + 3;
+                        chunks.emplace_back(pattern.begin() + index,
+                                            pattern.begin() + chunkIndex);
+                        index = chunkIndex + 1;
+                        chunkIndex = chunkIndex + 3;
                     }
 
-                    chunks.emplace_back(pattern.begin() + i,
-                                        pattern.begin() + j);
+                    chunks.emplace_back(pattern.begin() + index,
+                                        pattern.begin() + innerIndex);
                     // Escape backslashes and hyphens for set difference (--).
                     // Hyphens that create ranges shouldn't be escaped.
                     bool first = false;
-                    for (auto &s : chunks) {
-                        stringReplace(s, std::string{"\\"},
+                    for (auto &chunk : chunks) {
+                        stringReplace(chunk, std::string{"\\"},
                                       std::string{R"(\\)"});
-                        stringReplace(s, std::string{"-"},
+                        stringReplace(chunk, std::string{"-"},
                                       std::string{R"(\-)"});
                         if (first) {
-                            stuff += s;
+                            stuff += chunk;
                             first = false;
                         } else {
-                            stuff += "-" + s;
+                            stuff += "-" + chunk;
                         }
                     }
                 }
@@ -111,13 +108,13 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
                     std::regex(std::string{R"([&~|])"}),  // pattern
                     std::string{R"(\\\1)"});              // repl
                 stuff = result;
-                i = j + 1;
+                index = innerIndex + 1;
                 if (stuff[0] == '!') {
                     stuff = "^" + std::string(stuff.begin() + 1, stuff.end());
                 } else if (stuff[0] == '^' || stuff[0] == '[') {
                     stuff = "\\\\" + stuff;
                 }
-                resultString = resultString + "[" + stuff + "]";
+                resultString += "[" + stuff + "]";
             }
         } else {
             // SPECIAL_CHARS
@@ -129,17 +126,22 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
                 "()[]{}?*+-|^$\\.&~# \t\n\r\v\f";
             static std::map<int, std::string> specialCharactersMap;
             if (specialCharactersMap.empty()) {
-                for (auto &sc : specialCharacters) {
-                    specialCharactersMap.insert(
-                        std::make_pair(static_cast<int>(sc),
-                                       std::string{"\\"} + std::string(1, sc)));
+                for (auto &specialChar : specialCharacters) {
+                    specialCharactersMap.insert(std::make_pair(
+                        static_cast<int>(specialChar),
+                        std::string{"\\"} + std::string(1, specialChar)));
                 }
             }
 
-            if (specialCharacters.find(c) != std::string::npos) {
-                resultString += specialCharactersMap[static_cast<int>(c)];
+#if USE_ABSL
+            if (absl::StrContains(specialCharacters, currentChar)) {
+#else
+            if (specialCharacters.find(currentChar) != std::string::npos) {
+#endif
+                resultString +=
+                    specialCharactersMap[static_cast<int>(currentChar)];
             } else {
-                resultString += c;
+                resultString += currentChar;
             }
         }
     }
@@ -178,17 +180,21 @@ ATOM_INLINE auto expandTilde(fs::path path) -> fs::path {
 #else
     const char *homeVariable = "USER";
 #endif
-    const char *home = std::getenv(homeVariable);
+    char *home = nullptr;
+    size_t len = 0;
+    _dupenv_s(&home, &len, homeVariable);
     if (home == nullptr) {
         THROW_INVALID_ARGUMENT(
             "error: Unable to expand `~` - HOME environment variable not set.");
     }
 
-    std::string s = path.string();
-    if (s[0] == '~') {
-        s = std::string(home) + s.substr(1, s.size() - 1);
-        return fs::path(s);
+    std::string pathStr = path.string();
+    if (pathStr[0] == '~') {
+        pathStr = std::string(home) + pathStr.substr(1, pathStr.size() - 1);
+        free(home);
+        return fs::path(pathStr);
     } else {
+        free(home);
         return path;
     }
 }
@@ -243,11 +249,11 @@ ATOM_INLINE auto rlistdir(const fs::path &dirname,
                           bool dironly) -> std::vector<fs::path> {
     std::vector<fs::path> result;
     auto names = iterDirectory(dirname, dironly);
-    for (auto &x : names) {
-        if (!isHidden(x.string())) {
-            result.push_back(x);
-            for (auto &y : rlistdir(x, dironly)) {
-                result.push_back(y);
+    for (auto &name : names) {
+        if (!isHidden(name.string())) {
+            result.push_back(name);
+            for (auto &subName : rlistdir(name, dironly)) {
+                result.push_back(subName);
             }
         }
     }
@@ -276,16 +282,9 @@ ATOM_INLINE auto glob1(const fs::path &dirname, const std::string &pattern,
     // std::cout << "In glob1\n";
     auto names = iterDirectory(dirname, dironly);
     std::vector<fs::path> filteredNames;
-    for (auto &n : names) {
-        if (!isHidden(n.string())) {
-            filteredNames.push_back(n.filename());
-            // if (n.is_relative()) {
-            //   // std::cout << "Filtered (Relative): " << n << "\n";
-            //   filtered_names.push_back(fs::relative(n));
-            // } else {
-            //   // std::cout << "Filtered (Absolute): " << n << "\n";
-            //   filtered_names.push_back(n.filename());
-            // }
+    for (auto &name : names) {
+        if (!isHidden(name.string())) {
+            filteredNames.push_back(name.filename());
         }
     }
     return filter(filteredNames, pattern);
@@ -364,11 +363,11 @@ ATOM_INLINE auto glob(const std::string &pathname, bool recursive = false,
         globInDir = glob0;
     }
 
-    for (auto &d : dirs) {
-        for (auto &name : globInDir(d, BASENAME.string(), dironly)) {
+    for (auto &dir : dirs) {
+        for (auto &name : globInDir(dir, BASENAME.string(), dironly)) {
             fs::path subresult = name;
             if (name.parent_path().empty()) {
-                subresult = d / name;
+                subresult = dir / name;
             }
             result.push_back(subresult);
         }
@@ -379,16 +378,18 @@ ATOM_INLINE auto glob(const std::string &pathname, bool recursive = false,
 
 }  // namespace
 
-static ATOM_INLINE std::vector<fs::path> glob(const std::string &pathname) {
+static ATOM_INLINE auto glob(const std::string &pathname)
+    -> std::vector<fs::path> {
     return glob(pathname, false);
 }
 
-static ATOM_INLINE std::vector<fs::path> rglob(const std::string &pathname) {
+static ATOM_INLINE auto rglob(const std::string &pathname)
+    -> std::vector<fs::path> {
     return glob(pathname, true);
 }
 
-static ATOM_INLINE std::vector<fs::path> glob(
-    const std::vector<std::string> &pathnames) {
+static ATOM_INLINE auto glob(const std::vector<std::string> &pathnames)
+    -> std::vector<fs::path> {
     std::vector<fs::path> result;
     for (const auto &pathname : pathnames) {
         for (auto &match : glob(pathname, false)) {
@@ -398,8 +399,8 @@ static ATOM_INLINE std::vector<fs::path> glob(
     return result;
 }
 
-static ATOM_INLINE std::vector<fs::path> rglob(
-    const std::vector<std::string> &pathnames) {
+static ATOM_INLINE auto rglob(const std::vector<std::string> &pathnames)
+    -> std::vector<fs::path> {
     std::vector<fs::path> result;
     for (const auto &pathname : pathnames) {
         for (auto &match : glob(pathname, true)) {
@@ -409,14 +410,14 @@ static ATOM_INLINE std::vector<fs::path> rglob(
     return result;
 }
 
-static ATOM_INLINE std::vector<fs::path> glob(
-    const std::initializer_list<std::string> &pathnames) {
+static ATOM_INLINE auto glob(const std::initializer_list<std::string>
+                                 &pathnames) -> std::vector<fs::path> {
     return glob(std::vector<std::string>(pathnames));
 }
 
-static ATOM_INLINE std::vector<fs::path> rglob(
-    const std::initializer_list<std::string> &pathnames) {
+static ATOM_INLINE auto rglob(const std::initializer_list<std::string>
+                                  &pathnames) -> std::vector<fs::path> {
     return rglob(std::vector<std::string>(pathnames));
 }
 
-}  // namespace glob
+}  // namespace atom::io

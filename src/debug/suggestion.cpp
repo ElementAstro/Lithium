@@ -13,6 +13,7 @@
 #include <queue>
 
 namespace lithium::debug {
+
 SuggestionEngine::SuggestionEngine(const std::vector<std::string>& dataset,
                                    int maxSuggestions)
     : dataset_(dataset), maxSuggestions_(maxSuggestions) {
@@ -25,20 +26,20 @@ auto SuggestionEngine::suggest(std::string_view input, MatchType matchType)
     std::string inputLower(input.size(), '\0');
     std::transform(input.begin(), input.end(), inputLower.begin(), ::tolower);
 
-    std::priority_queue<std::pair<int, std::string>> pq;
+    std::priority_queue<std::pair<int, std::string>> priorityQueue;
     for (const auto& [lowerItem, originalItem] : index_) {
         if (matches(inputLower, lowerItem, matchType)) {
             int score = calculateScore(inputLower, lowerItem);
-            pq.emplace(score, originalItem);
-            if (pq.size() > maxSuggestions_) {
-                pq.pop();
+            priorityQueue.emplace(score, originalItem);
+            if (priorityQueue.size() > static_cast<size_t>(maxSuggestions_)) {
+                priorityQueue.pop();
             }
         }
     }
 
-    while (!pq.empty()) {
-        suggestions.push_back(pq.top().second);
-        pq.pop();
+    while (!priorityQueue.empty()) {
+        suggestions.push_back(priorityQueue.top().second);
+        priorityQueue.pop();
     }
     std::reverse(suggestions.begin(), suggestions.end());
     return suggestions;
@@ -68,8 +69,8 @@ auto SuggestionEngine::calculateScore(const std::string& input,
                                       const std::string& item) -> int {
     int score = 0;
     size_t inputPos = 0;
-    for (char c : item) {
-        if (inputPos < input.size() && c == input[inputPos]) {
+    for (char character : item) {
+        if (inputPos < input.size() && character == input[inputPos]) {
             score += 2;
             inputPos++;
         } else {
@@ -78,4 +79,5 @@ auto SuggestionEngine::calculateScore(const std::string& input,
     }
     return score;
 }
+
 }  // namespace lithium::debug

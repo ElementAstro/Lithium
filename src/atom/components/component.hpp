@@ -15,16 +15,12 @@ Description: Basic Component Definition
 #ifndef ATOM_COMPONENT_HPP
 #define ATOM_COMPONENT_HPP
 
-#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "dispatch.hpp"
-#include "error/exception.hpp"
-#include "macro.hpp"
 #include "module_macro.hpp"
-#include "types.hpp"
 #include "var.hpp"
 
 #include "atom/function/constructor.hpp"
@@ -32,6 +28,7 @@ Description: Basic Component Definition
 #include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/type/pointer.hpp"
 
 class Component : public std::enable_shared_from_this<Component> {
 public:
@@ -94,21 +91,34 @@ public:
      *
      * @return The name of the plugin.
      */
-    std::string getName() const;
+    auto getName() const -> std::string;
 
     /**
      * @brief Gets the type information of the plugin.
      *
      * @return The type information of the plugin.
      */
-    atom::meta::TypeInfo getTypeInfo() const;
+    auto getTypeInfo() const -> atom::meta::TypeInfo;
 
+    /**
+     * @brief Sets the type information of the plugin.
+     *
+     * @param typeInfo The type information of the plugin.
+     */
     void setTypeInfo(atom::meta::TypeInfo typeInfo);
 
     // -------------------------------------------------------------------
     // Variable methods
     // -------------------------------------------------------------------
 
+    /**
+     * @brief Adds a variable to the component.
+     * @param name The name of the variable.
+     * @param initialValue The initial value of the variable.
+     * @param description The description of the variable.
+     * @param alias The alias of the variable.
+     * @param group The group of the variable.
+     */
     template <typename T>
     void addVariable(const std::string& name, T initialValue,
                      const std::string& description = "",
@@ -118,11 +128,22 @@ public:
                                         group);
     }
 
+    /**
+     * @brief Sets the range of a variable.
+     * @param name The name of the variable.
+     * @param min The minimum value of the variable.
+     * @param max The maximum value of the variable.
+     */
     template <typename T>
     void setRange(const std::string& name, T min, T max) {
         m_VariableManager_->setRange(name, min, max);
     }
 
+    /**
+     * @brief Sets the options of a variable.
+     * @param name The name of the variable.
+     * @param options The options of the variable.
+     */
     void setStringOptions(const std::string& name,
                           const std::vector<std::string>& options) {
         m_VariableManager_->setStringOptions(name, options);
@@ -134,11 +155,16 @@ public:
      * @return A shared pointer to the variable.
      */
     template <typename T>
-    std::shared_ptr<Trackable<T>> getVariable(const std::string& name) {
+    auto getVariable(const std::string& name) -> std::shared_ptr<Trackable<T>> {
         return m_VariableManager_->getVariable<T>(name);
     }
 
-    [[nodiscard]] bool hasVariable(const std::string& name) const;
+    /**
+     * @brief Gets a variable by name.
+     * @param name The name of the variable.
+     * @return A shared pointer to the variable.
+     */
+    [[nodiscard]] auto hasVariable(const std::string& name) const -> bool;
 
     /**
      * @brief Sets the value of a variable.
@@ -152,13 +178,33 @@ public:
         m_VariableManager_->setValue(name, newValue);
     }
 
-    std::vector<std::string> getVariableNames() const;
+    /**
+     * @brief Gets the value of a variable.
+     * @param name The name of the variable.
+     * @return The value of the variable.
+     */
+    auto getVariableNames() const -> std::vector<std::string>;
 
-    std::string getVariableDescription(const std::string& name) const;
+    /**
+     * @brief Gets the description of a variable.
+     * @param name The name of the variable.
+     * @return The description of the variable.
+     */
+    auto getVariableDescription(const std::string& name) const -> std::string;
 
-    std::string getVariableAlias(const std::string& name) const;
+    /**
+     * @brief Gets the alias of a variable.
+     * @param name The name of the variable.
+     * @return The alias of the variable.
+     */
+    auto getVariableAlias(const std::string& name) const -> std::string;
 
-    std::string getVariableGroup(const std::string& name) const;
+    /**
+     * @brief Gets the group of a variable.
+     * @param name The name of the variable.
+     * @return The group of the variable.
+     */
+    auto getVariableGroup(const std::string& name) const -> std::string;
 
     // -------------------------------------------------------------------
     // Function methods
@@ -430,112 +476,6 @@ private:
             m_TypeCaster_)};  ///< The command dispatcher for
 };
 
-ATOM_INLINE Component::Component(std::string name) : m_name_(std::move(name)) {}
-
-ATOM_INLINE auto Component::getInstance() const
-    -> std::weak_ptr<const Component> {
-    return shared_from_this();
-}
-
-ATOM_INLINE auto Component::initialize() -> bool {
-    LOG_F(INFO, "Initializing component: {}", m_name_);
-    return true;
-}
-
-ATOM_INLINE auto Component::destroy() -> bool {
-    LOG_F(INFO, "Destroying component: {}", m_name_);
-    return true;
-}
-
-ATOM_INLINE auto Component::getName() const -> std::string { return m_name_; }
-
-ATOM_INLINE auto Component::getTypeInfo() const -> atom::meta::TypeInfo {
-    return m_typeInfo_;
-}
-
-ATOM_INLINE void Component::setTypeInfo(atom::meta::TypeInfo typeInfo) {
-    m_typeInfo_ = typeInfo;
-}
-
-ATOM_INLINE void Component::addAlias(const std::string& name,
-                                     const std::string& alias) const {
-    m_CommandDispatcher_->addAlias(name, alias);
-}
-
-ATOM_INLINE void Component::addGroup(const std::string& name,
-                                     const std::string& group) const {
-    m_CommandDispatcher_->addGroup(name, group);
-}
-
-ATOM_INLINE void Component::setTimeout(
-    const std::string& name, std::chrono::milliseconds timeout) const {
-    m_CommandDispatcher_->setTimeout(name, timeout);
-}
-
-ATOM_INLINE void Component::removeCommand(const std::string& name) const {
-    m_CommandDispatcher_->removeCommand(name);
-}
-
-ATOM_INLINE auto Component::getCommandsInGroup(const std::string& group) const
-    -> std::vector<std::string> {
-    return m_CommandDispatcher_->getCommandsInGroup(group);
-}
-
-ATOM_INLINE auto Component::getCommandDescription(const std::string& name) const
-    -> std::string {
-    return m_CommandDispatcher_->getCommandDescription(name);
-}
-
-#if ENABLE_FASTHASH
-ATOM_INLINE emhash::HashSet<std::string> Component::getCommandAliases(
-    const std::string& name) const
-#else
-ATOM_INLINE auto Component::getCommandAliases(const std::string& name) const
-    -> std::unordered_set<std::string>
-#endif
-{
-    return m_CommandDispatcher_->getCommandAliases(name);
-}
-
-ATOM_INLINE auto Component::getNeededComponents() -> std::vector<std::string> {
-    return {};
-}
-
-ATOM_INLINE void Component::addOtherComponent(
-    const std::string& name, const std::weak_ptr<Component>& component) {
-    if (m_OtherComponents_.contains(name)) {
-        THROW_OBJ_ALREADY_EXIST(name);
-    }
-    m_OtherComponents_[name] = component;
-}
-
-ATOM_INLINE void Component::removeOtherComponent(const std::string& name) {
-    m_OtherComponents_.erase(name);
-}
-
-ATOM_INLINE void Component::clearOtherComponents() {
-    m_OtherComponents_.clear();
-}
-
-ATOM_INLINE auto Component::getOtherComponent(const std::string& name)
-    -> std::weak_ptr<Component> {
-    if (m_OtherComponents_.contains(name)) {
-        return m_OtherComponents_[name];
-    }
-    return {};
-}
-
-ATOM_INLINE bool Component::has(const std::string& name) const {
-    return m_CommandDispatcher_->has(name);
-}
-
-ATOM_INLINE bool Component::hasType(std::string_view name) const {
-    if (auto it = m_classes_.find(name); it != m_classes_.end()) {
-        return true;
-    }
-    return false;
-}
-
 template <typename SourceType, typename DestinationType>
 auto Component::hasConversion() const -> bool {
     if constexpr (std::is_same_v<SourceType, DestinationType>) {
@@ -544,41 +484,6 @@ auto Component::hasConversion() const -> bool {
     return m_TypeConverter_->canConvert(
         atom::meta::userType<SourceType>(),
         atom::meta::userType<DestinationType>());
-}
-
-ATOM_INLINE auto Component::getAllCommands() const -> std::vector<std::string> {
-    if (m_CommandDispatcher_ == nullptr) {
-        THROW_OBJ_UNINITIALIZED(
-            "Component command dispatch is not initialized");
-    }
-    return m_CommandDispatcher_->getAllCommands();
-}
-
-ATOM_INLINE auto Component::getRegisteredTypes() const
-    -> std::vector<std::string> {
-    return m_TypeCaster_->getRegisteredTypes();
-}
-
-ATOM_INLINE auto Component::runCommand(
-    const std::string& name, const std::vector<std::any>& args) -> std::any {
-    auto cmd = getAllCommands();
-
-    if (auto it = std::ranges::find(cmd, name); it != cmd.end()) {
-        return m_CommandDispatcher_->dispatch(name, args);
-    }
-    for (const auto& [key, value] : m_OtherComponents_) {
-        if (!value.expired() && value.lock()->has(name)) {
-            return value.lock()->dispatch(name, args);
-        }
-        LOG_F(ERROR, "Component {} has expired", key);
-        m_OtherComponents_.erase(key);
-    }
-
-    THROW_EXCEPTION("Component ", name, " not found");
-}
-
-ATOM_INLINE void Component::doc(const std::string& description) {
-    m_doc_ = description;
 }
 
 template <typename T>
@@ -596,35 +501,11 @@ void Component::defConversion(std::function<std::any(const std::any&)> func) {
     m_TypeCaster_->registerConversion<SourceType, DestinationType>(func);
 }
 
-ATOM_INLINE void Component::defClassConversion(
-    const std::shared_ptr<atom::meta::TypeConversionBase>& conversion) {
-    m_TypeConverter_->addConversion(conversion);
-}
-
 template <typename Base, typename Derived>
 void Component::defBaseClass() {
     static_assert(std::is_base_of_v<Base, Derived>,
                   "Derived must be derived from Base");
     m_TypeConverter_->addBaseClass<Base, Derived>();
-}
-
-ATOM_INLINE auto Component::hasVariable(const std::string& name) const -> bool {
-    return m_VariableManager_->has(name);
-}
-
-ATOM_INLINE auto Component::getVariableDescription(
-    const std::string& name) const -> std::string {
-    return m_VariableManager_->getDescription(name);
-}
-
-ATOM_INLINE auto Component::getVariableAlias(const std::string& name) const
-    -> std::string {
-    return m_VariableManager_->getAlias(name);
-}
-
-ATOM_INLINE auto Component::getVariableGroup(const std::string& name) const
-    -> std::string {
-    return m_VariableManager_->getGroup(name);
 }
 
 template <typename Callable>

@@ -9,35 +9,36 @@ class AlpacaObservingConditions : public AlpacaDevice {
 public:
     AlpacaObservingConditions(std::string_view address, int device_number,
                               std::string_view protocol = "http");
-    virtual ~AlpacaObservingConditions() = default;
+    ~AlpacaObservingConditions() override = default;
 
     // Properties
-    double GetAveragePeriod();
-    void SetAveragePeriod(double period);
-    std::optional<double> GetCloudCover();
-    std::optional<double> GetDewPoint();
-    std::optional<double> GetHumidity();
-    std::optional<double> GetPressure();
-    std::optional<double> GetRainRate();
-    std::optional<double> GetSkyBrightness();
-    std::optional<double> GetSkyQuality();
-    std::optional<double> GetSkyTemperature();
-    std::optional<double> GetStarFWHM();
-    std::optional<double> GetTemperature();
-    std::optional<double> GetWindDirection();
-    std::optional<double> GetWindGust();
-    std::optional<double> GetWindSpeed();
+    auto getAveragePeriod() const -> double;
+    void setAveragePeriod(double period);
+    auto getCloudCover() const -> std::optional<double>;
+    auto getDewPoint() const -> std::optional<double>;
+    auto getHumidity() const -> std::optional<double>;
+    auto getPressure() const -> std::optional<double>;
+    auto getRainRate() const -> std::optional<double>;
+    auto getSkyBrightness() const -> std::optional<double>;
+    auto getSkyQuality() const -> std::optional<double>;
+    auto getSkyTemperature() const -> std::optional<double>;
+    auto getStarFWHM() const -> std::optional<double>;
+    auto getTemperature() const -> std::optional<double>;
+    auto getWindDirection() const -> std::optional<double>;
+    auto getWindGust() const -> std::optional<double>;
+    auto getWindSpeed() const -> std::optional<double>;
 
     // Methods
-    void Refresh();
-    std::string SensorDescription(std::string_view SensorName);
-    double TimeSinceLastUpdate(std::string_view SensorName);
+    void refresh();
+    auto sensorDescription(std::string_view sensorName) const -> std::string;
+    auto timeSinceLastUpdate(std::string_view sensorName) const -> double;
 
 private:
     template <typename T>
-    std::optional<T> GetOptionalProperty(const std::string& property) const {
+    auto getOptionalProperty(const std::string& property) const
+        -> std::optional<T> {
         try {
-            return GetNumericProperty<T>(property);
+            return getNumericProperty<T>(property);
         } catch (const std::exception&) {
             return std::nullopt;
         }

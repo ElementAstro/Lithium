@@ -23,8 +23,9 @@ void TableOutputStyle::print(
     if (widths.empty()) {
         widths.resize(data[0].size(), 0);
         for (const auto& row : data) {
-            for (size_t i = 0; i < row.size(); ++i) {
-                widths[i] = std::max(widths[i], row[i].size());
+#pragma unroll
+            for (size_t index = 0; index < row.size(); ++index) {
+                widths[index] = std::max(widths[index], row[index].size());
             }
         }
     }
@@ -34,19 +35,22 @@ void TableOutputStyle::print(
         printSeparator(widths);
     }
 
-    for (size_t r = (showHeader ? 1 : 0); r < data.size(); ++r) {
-        printRow(data[r], widths);
+#pragma unroll
+    for (size_t rowIndex = (showHeader ? 1 : 0); rowIndex < data.size();
+         ++rowIndex) {
+        printRow(data[rowIndex], widths);
     }
 }
 
 void TableOutputStyle::printRow(const std::vector<std::string>& row,
                                 const std::vector<size_t>& widths) const {
-    for (size_t i = 0; i < row.size(); ++i) {
-        std::string content = row[i];
-        size_t width = widths[i];
+#pragma unroll
+    for (size_t index = 0; index < row.size(); ++index) {
+        std::string content = row[index];
+        size_t width = widths[index];
         std::string alignedContent;
 
-        switch (columnAlignments[i]) {
+        switch (columnAlignments[index]) {
             case Alignment::LEFT:
                 alignedContent = std::format("{:<{}}", content, width);
                 break;
@@ -67,6 +71,7 @@ void TableOutputStyle::printRow(const std::vector<std::string>& row,
 }
 
 void TableOutputStyle::printSeparator(const std::vector<size_t>& widths) const {
+#pragma unroll
     for (size_t width : widths) {
         std::cout << std::string(width, '-') << "-+-";
     }
@@ -75,10 +80,12 @@ void TableOutputStyle::printSeparator(const std::vector<size_t>& widths) const {
 
 void CSVOutputStyle::print(
     const std::vector<std::vector<std::string>>& data) const {
+#pragma unroll
     for (const auto& row : data) {
-        for (size_t i = 0; i < row.size(); ++i) {
-            std::cout << row[i];
-            if (i < row.size() - 1) {
+#pragma unroll
+        for (size_t index = 0; index < row.size(); ++index) {
+            std::cout << row[index];
+            if (index < row.size() - 1) {
                 std::cout << ",";
             }
         }
@@ -93,17 +100,20 @@ void JSONOutputStyle::print(
     }
 
     std::cout << "[\n";
-    for (size_t r = 0; r < data.size(); ++r) {
+#pragma unroll
+    for (size_t rowIndex = 0; rowIndex < data.size(); ++rowIndex) {
         std::cout << "  {";
-        for (size_t c = 0; c < data[r].size(); ++c) {
-            std::cout << "\"" << (r == 0 ? "header" : "data") << c << "\": \""
-                      << data[r][c] << "\"";
-            if (c < data[r].size() - 1) {
+#pragma unroll
+        for (size_t colIndex = 0; colIndex < data[rowIndex].size();
+             ++colIndex) {
+            std::cout << "\"" << (rowIndex == 0 ? "header" : "data") << colIndex
+                      << "\": \"" << data[rowIndex][colIndex] << "\"";
+            if (colIndex < data[rowIndex].size() - 1) {
                 std::cout << ", ";
             }
         }
         std::cout << "}";
-        if (r < data.size() - 1) {
+        if (rowIndex < data.size() - 1) {
             std::cout << ",";
         }
         std::cout << '\n';

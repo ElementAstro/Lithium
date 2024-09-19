@@ -19,6 +19,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#undef min
 #else
 #include <fcntl.h>
 #include <sys/mman.h>

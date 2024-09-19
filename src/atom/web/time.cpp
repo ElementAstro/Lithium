@@ -7,8 +7,6 @@
 #include "time.hpp"
 
 #include <chrono>
-#include <fstream>
-#include <iostream>
 #include <mutex>
 
 #ifdef _WIN32  // Windows
@@ -54,7 +52,7 @@ public:
         sysTime.wHour = hour;
         sysTime.wMinute = minute;
         sysTime.wSecond = second;
-        if (!SetSystemTime(&sysTime)) {
+        if (SetSystemTime(&sysTime) == 0) {
             LOG_F(ERROR,
                   "Failed to set system time to {}-{:02d}-{:02d} "
                   "{:02d}:{:02d}:{:02d}. Error code: {}",
@@ -67,27 +65,27 @@ public:
         }
     }
 
-    bool setSystemTimezone(const std::string &timezone) {
+    auto setSystemTimezone(const std::string &timezone) -> bool {
         std::lock_guard lock(mutex_);
-        DWORD tz_id;
-        if (!getTimeZoneInformationByName(timezone, &tz_id)) {
+        DWORD tzId;
+        if (!getTimeZoneInformationByName(timezone, &tzId)) {
             LOG_F(ERROR, "Error getting time zone id for {}: {}", timezone,
                   GetLastError());
             return false;
         }
-        TIME_ZONE_INFORMATION tz_info;
-        if (!GetTimeZoneInformation(&tz_info)) {
+        TIME_ZONE_INFORMATION tzInfo;
+        if (GetTimeZoneInformation(&tzInfo) == TIME_ZONE_ID_INVALID) {
             LOG_F(ERROR, "Error getting current time zone information: {}",
                   GetLastError());
             return false;
         }
-        if (tz_info.StandardBias != -static_cast<int>(tz_id)) {
+        if (tzInfo.StandardBias != -static_cast<int>(tzId)) {
             LOG_F(ERROR,
-                  "Time zone id obtained does not match offset: {} != {}",
-                  tz_id, -tz_info.StandardBias);
+                  "Time zone id obtained does not match offset: {} != {}", tzId,
+                  -tzInfo.StandardBias);
             return false;
         }
-        if (!SetTimeZoneInformation(&tz_info)) {
+        if (SetTimeZoneInformation(&tzInfo) == 0) {
             LOG_F(ERROR, "Error setting time zone to {}: {}", timezone,
                   GetLastError());
             return false;
@@ -95,94 +93,98 @@ public:
         return true;
     }
 
-    bool syncTimeFromRTC() {
+    auto syncTimeFromRTC() -> bool {
         std::lock_guard lock(mutex_);
-        time_t now = time(nullptr);
-        SYSTEMTIME local_time;
-        GetLocalTime(&local_time);
+        SYSTEMTIME localTime;
+        GetLocalTime(&localTime);
 
-        TIME_ZONE_INFORMATION tz_info;
-        GetTimeZoneInformation(&tz_info);
-        long utc_diff_ms = -tz_info.Bias * 60 * 1000;
+        TIME_ZONE_INFORMATION tzInfo;
+        GetTimeZoneInformation(&tzInfo);
 
         SYSTEMTIME epoch = {1970, 1, 4, 1, 0, 0, 0, 0};
-        FILETIME epoch_ft, local_ft;
-        SystemTimeToFileTime(&epoch, &epoch_ft);
-        SystemTimeToFileTime(&local_time, &local_ft);
-        ULARGE_INTEGER epoch_ui, local_ui;
-        epoch_ui.LowPart = epoch_ft.dwLowDateTime;
-        epoch_ui.HighPart = epoch_ft.dwHighDateTime;
-        local_ui.LowPart = local_ft.dwLowDateTime;
-        local_ui.HighPart = local_ft.dwHighDateTime;
-        long long local_timestamp =
-            (local_ui.QuadPart - epoch_ui.QuadPart) / 10000000LL;
+        FILETIME epochFt;
+        SystemTimeToFileTime(&epoch, &epochFt);
+        ULARGE_INTEGER epochUi;
+        epochUi.LowPart = epochFt.dwLowDateTime;
+        epochUi.HighPart = epochFt.dwHighDateTime;
 
-        time_t rtc_timestamp;
-        // RTC读取代码...
+        FILETIME localFt;
+        SystemTimeToFileTime(&localTime, &localFt);
+        ULARGE_INTEGER localUi;
+        localUi.LowPart = localFt.dwLowDateTime;
+        localUi.HighPart = localFt.dwHighDateTime;
 
-        long ms_offset =
-            static_cast<int>(local_timestamp - rtc_timestamp) * 1000L;
-        SYSTEMTIME new_time;
-        GetLocalTime(&new_time);
-        FILETIME new_ft;
-        SystemTimeToFileTime(&new_time, &new_ft);
-        ULARGE_INTEGER new_ui;
-        new_ui.LowPart = new_ft.dwLowDateTime;
-        new_ui.HighPart = new_ft.dwHighDateTime;
-        long long new_timestamp = new_ui.QuadPart / 10000000LL +
-                                  static_cast<long long>(ms_offset) / 1000LL;
-        FILETIME ft;
-        ft.dwLowDateTime = static_cast<DWORD>(new_timestamp);
-        ft.dwHighDateTime = static_cast<DWORD>(new_timestamp >> 32);
+        long long localTimestamp =
+            (localUi.QuadPart - epochUi.QuadPart) / 10000000LL;
+
+        time_t rtcTimestamp =
+            0;  // Initialize rtcTimestamp to avoid uninitialized use
+
+        long msOffset = static_cast<int>(localTimestamp - rtcTimestamp) * 1000L;
+        SYSTEMTIME newTime;
+        GetLocalTime(&newTime);
+        FILETIME newFt;
+        SystemTimeToFileTime(&newTime, &newFt);
+        ULARGE_INTEGER newUi;
+        newUi.LowPart = newFt.dwLowDateTime;
+        newUi.HighPart = newFt.dwHighDateTime;
+        long long newTimestamp = newUi.QuadPart / 10000000LL +
+                                 static_cast<long long>(msOffset) / 1000LL;
+        FILETIME fileTime;
+        fileTime.dwLowDateTime = static_cast<DWORD>(newTimestamp);
+        fileTime.dwHighDateTime = static_cast<DWORD>(newTimestamp >> 32);
         if (!system::isRoot()) {
             LOG_F(ERROR,
                   "Permission denied. Need root privilege to set system time.");
             return false;
         }
-        SetSystemTime(&local_time);
+        SetSystemTime(&localTime);
         return true;
     }
 
 private:
-    bool getTimeZoneInformationByName(const std::string &timezone,
-                                      DWORD *tz_id) {
+    auto getTimeZoneInformationByName(const std::string &timezone,
+                                      DWORD *tzId) -> bool {
         HKEY hkey;
-        LPCTSTR reg_path = TEXT(
+        LPCTSTR regPath = TEXT(
             "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\\");
         LONG ret =
-            RegOpenKeyEx(HKEY_LOCAL_MACHINE, reg_path, 0, KEY_READ, &hkey);
+            RegOpenKeyEx(HKEY_LOCAL_MACHINE, regPath, 0, KEY_READ, &hkey);
         if (ret != ERROR_SUCCESS) {
             return false;
         }
 
-        TCHAR sub_key[MAX_PATH], disp_name[MAX_PATH];
-        FILETIME ft_last_write_time;
+        TCHAR subKey[MAX_PATH];
+        TCHAR dispName[MAX_PATH];
+        FILETIME ftLastWriteTime;
         DWORD index = 0;
-        DWORD size_sub_key = MAX_PATH;
+        DWORD sizeSubKey = MAX_PATH;
 
-        while (RegEnumKeyEx(hkey, index++, sub_key, &size_sub_key, NULL, NULL,
-                            NULL, &ft_last_write_time) == ERROR_SUCCESS) {
-            HKEY sub_hkey;
-            if (RegOpenKeyEx(hkey, sub_key, 0, KEY_READ, &sub_hkey) ==
+        while (RegEnumKeyEx(hkey, index++, subKey, &sizeSubKey, nullptr,
+                            nullptr, nullptr,
+                            &ftLastWriteTime) == ERROR_SUCCESS) {
+            HKEY subHkey;
+            if (RegOpenKeyEx(hkey, subKey, 0, KEY_READ, &subHkey) ==
                 ERROR_SUCCESS) {
-                DWORD size_disp_name = MAX_PATH;
-                if (RegQueryValueEx(sub_hkey, TEXT("Display"), NULL, NULL,
-                                    reinterpret_cast<LPBYTE>(disp_name),
-                                    &size_disp_name) == ERROR_SUCCESS) {
-                    if (timezone == disp_name) {
-                        DWORD size_tz_id = sizeof(DWORD);
-                        if (RegQueryValueEx(sub_hkey, TEXT("TZI"), NULL, NULL,
-                                            reinterpret_cast<LPBYTE>(tz_id),
-                                            &size_tz_id) == ERROR_SUCCESS) {
-                            RegCloseKey(sub_hkey);
+                DWORD sizeDispName = MAX_PATH;
+                if (RegQueryValueEx(subHkey, TEXT("Display"), nullptr, nullptr,
+                                    reinterpret_cast<LPBYTE>(dispName),
+                                    &sizeDispName) == ERROR_SUCCESS) {
+                    if (timezone == dispName) {
+                        DWORD sizeTzId = sizeof(DWORD);
+                        if (RegQueryValueEx(subHkey, TEXT("TZI"), nullptr,
+                                            nullptr,
+                                            reinterpret_cast<LPBYTE>(tzId),
+                                            &sizeTzId) == ERROR_SUCCESS) {
+                            RegCloseKey(subHkey);
                             RegCloseKey(hkey);
                             return true;
                         }
                     }
                 }
-                RegCloseKey(sub_hkey);
+                RegCloseKey(subHkey);
             }
-            size_sub_key = MAX_PATH;
+            sizeSubKey = MAX_PATH;
         }
         RegCloseKey(hkey);
         return false;
@@ -199,7 +201,6 @@ public:
         }
 
         struct tm newTime = {0};
-        std::time_t now = std::time(nullptr);
         newTime.tm_sec = second;
         newTime.tm_min = minute;
         newTime.tm_hour = hour;
@@ -216,7 +217,8 @@ public:
             return;
         }
 
-        if (std::abs(std::difftime(now, std::mktime(&newTime))) < 2) {
+        if (std::abs(std::difftime(std::time(nullptr), std::mktime(&newTime))) <
+            2) {
             DLOG_F(INFO,
                    "System time has been set to {}-{:02d}-{:02d} "
                    "{:02d}:{:02d}:{:02d}.",
@@ -232,7 +234,7 @@ public:
     auto setSystemTimezone(const std::string &timezone) -> bool {
         std::lock_guard lock(mutex_);
         struct tm newTime = {0};
-        if (strptime("20200101", "%Y%m%d", &newTime) == NULL) {
+        if (strptime("20200101", "%Y%m%d", &newTime) == nullptr) {
             LOG_F(ERROR, "Failed to initialize struct tm.");
             return false;
         }
@@ -252,9 +254,8 @@ public:
         return true;
     }
 
-    bool syncTimeFromRTC() {
+    auto syncTimeFromRTC() -> bool {
         std::lock_guard lock(mutex_);
-        time_t now = time(nullptr);
         const char *rtcPath = "/sys/class/rtc/rtc0/time";
         struct stat rtcStat;
         if (stat(rtcPath, &rtcStat) != 0) {
@@ -282,22 +283,10 @@ public:
         rtcTm.tm_sec = second;
         time_t rtcTimestamp = mktime(&rtcTm);
 
-        long long localTimestamp = static_cast<long long>(now) * 1000000LL;
-        long usOffset = static_cast<int>(
-            (localTimestamp - rtcTimestamp * 1000000LL) / 1000LL);
-
         struct timeval tv;
         gettimeofday(&tv, nullptr);
-        tv.tv_sec += usOffset / 1000000;
-        tv.tv_usec += usOffset % 1000000;
-        if (tv.tv_usec >= 1000000) {
-            tv.tv_sec += 1;
-            tv.tv_usec -= 1000000;
-        }
-        if (tv.tv_sec < now - 60 || tv.tv_sec > now + 60) {
-            LOG_F(ERROR, "RTC time is too far away from current time");
-            return false;
-        }
+        tv.tv_sec = rtcTimestamp;
+        tv.tv_usec = 0;
         if (settimeofday(&tv, nullptr) != 0) {
             LOG_F(ERROR, "Failed to adjust system time: {}", strerror(errno));
             return false;
@@ -306,9 +295,10 @@ public:
     }
 #endif
 
-    std::time_t getNtpTime(const std::string &hostname) {
+public:
+    auto getNtpTime(const std::string &hostname) -> std::time_t {
         constexpr int NTP_PACKET_SIZE = 48;
-        uint8_t packetBuffer[NTP_PACKET_SIZE] = {0};
+        std::array<uint8_t, NTP_PACKET_SIZE> packetBuffer = {0};
 
 #ifdef _WIN32
         WSADATA wsaData;
@@ -324,7 +314,7 @@ public:
             return 0;
         }
 
-        sockaddr_in serverAddr = {0};
+        sockaddr_in serverAddr = {};
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(123);
         inet_pton(AF_INET, hostname.c_str(), &serverAddr.sin_addr);
@@ -338,7 +328,7 @@ public:
         packetBuffer[14] = 49;
         packetBuffer[15] = 52;
 
-        if (sendto(socketFd, reinterpret_cast<char *>(packetBuffer),
+        if (sendto(socketFd, reinterpret_cast<char *>(packetBuffer.data()),
                    NTP_PACKET_SIZE, 0,
                    reinterpret_cast<sockaddr *>(&serverAddr),
                    sizeof(serverAddr)) < 0) {
@@ -355,10 +345,10 @@ public:
             return 0;
         }
 
-        sockaddr_in serverResponseAddr = {0};
+        sockaddr_in serverResponseAddr = {};
         socklen_t addrLen = sizeof(serverResponseAddr);
 
-        if (recvfrom(socketFd, reinterpret_cast<char *>(packetBuffer),
+        if (recvfrom(socketFd, reinterpret_cast<char *>(packetBuffer.data()),
                      NTP_PACKET_SIZE, 0,
                      reinterpret_cast<sockaddr *>(&serverResponseAddr),
                      &addrLen) < 0) {
@@ -374,8 +364,9 @@ public:
 #endif
 
         uint64_t timestamp = 0;
-        for (int i = 40; i <= 43; i++)
+        for (int i = 40; i <= 43; i++) {
             timestamp = (timestamp << 8) | packetBuffer[i];
+        }
 
         timestamp -= 2208988800UL;
 
@@ -394,7 +385,9 @@ TimeManager::TimeManager() : impl_(std::make_unique<TimeManagerImpl>()) {}
 
 TimeManager::~TimeManager() = default;
 
-auto TimeManager::getSystemTime() -> std::time_t { return impl_->getSystemTime(); }
+auto TimeManager::getSystemTime() -> std::time_t {
+    return impl_->getSystemTime();
+}
 
 void TimeManager::setSystemTime(int year, int month, int day, int hour,
                                 int minute, int second) {

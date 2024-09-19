@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-This script automates the generation of CMake build configuration files for C++ projects. It supports multi-directory
-project structures, the creation of custom FindXXX.cmake files for third-party libraries, and the use of JSON configuration
-files for specifying project settings.
+This script automates the generation of CMake build configuration files for C++ projects.
+It supports multi-directory project structures, the creation of custom FindXXX.cmake files
+for third-party libraries, and the use of JSON configuration files for specifying project settings.
 
 Key features:
 1. Multi-directory support with separate CMakeLists.txt for each subdirectory.
@@ -116,8 +116,8 @@ file(GLOB_RECURSE SOURCES "{config.sources}")
 
     # Dependencies (find_package)
     if config.dependencies:
-        for dep in config.dependencies:
-            cmake_template += f'find_package({dep} REQUIRED)\n'
+        for dependency in config.dependencies:
+            cmake_template += f'find_package({dependency} REQUIRED)\n'
 
     # Subdirectory handling for multi-directory support
     if config.subdirs:
@@ -259,15 +259,15 @@ if __name__ == "__main__":
 
     if args.json:
         # Generate CMakeLists.txt from JSON configuration
-        config = generate_from_json(args.json)
-        cmake_content = generate_cmake(config)
+        project_config = generate_from_json(args.json)
+        cmake_content = generate_cmake(project_config)
         save_file(cmake_content)
 
         # Generate FindXXX.cmake files for each dependency specified in the JSON file
-        for dep in config.dependencies:
-            find_cmake_content = generate_find_cmake(dep)
+        for dependency in project_config.dependencies:
+            find_cmake_content = generate_find_cmake(dependency)
             save_file(find_cmake_content, directory="cmake",
-                      filename=f"Find{dep}.cmake")
+                      filename=f"Find{dependency}.cmake")
 
     if args.find_package:
         # Generate a single FindXXX.cmake file for the specified dependency

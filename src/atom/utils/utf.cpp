@@ -13,15 +13,16 @@ namespace atom::utils {
 // platforms
 auto utF16toUtF8(std::u16string_view str) -> std::string {
 #if defined(_WIN32) || defined(_WIN64)
-    if (str.empty())
-        return std::string();
-    int size_needed = WideCharToMultiByte(
+    if (str.empty()) {
+        return {};
+    }
+    int sizeNeeded = WideCharToMultiByte(
         CP_UTF8, 0, reinterpret_cast<const wchar_t *>(str.data()), str.size(),
         nullptr, 0, nullptr, nullptr);
-    std::string result(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0,
-                        reinterpret_cast<const wchar_t *>(str.data()),
-                        str.size(), &result[0], size_needed, nullptr, nullptr);
+    std::string result(sizeNeeded, 0);
+    WideCharToMultiByte(
+        CP_UTF8, 0, reinterpret_cast<const wchar_t *>(str.data()), str.size(),
+        result.data(), sizeNeeded, nullptr, nullptr);
     return result;
 #else
     std::string result;
@@ -46,13 +47,14 @@ auto utF16toUtF8(std::u16string_view str) -> std::string {
 // platforms
 auto utF8toUtF16(std::string_view str) -> std::u16string {
 #if defined(_WIN32) || defined(_WIN64)
-    if (str.empty())
-        return std::u16string();
-    int size_needed =
+    if (str.empty()) {
+        return {};
+    }
+    int sizeNeeded =
         MultiByteToWideChar(CP_UTF8, 0, str.data(), str.size(), nullptr, 0);
-    std::u16string result(size_needed, 0);
+    std::u16string result(sizeNeeded, 0);
     MultiByteToWideChar(CP_UTF8, 0, str.data(), str.size(),
-                        reinterpret_cast<wchar_t *>(&result[0]), size_needed);
+                        reinterpret_cast<wchar_t *>(result.data()), sizeNeeded);
     return result;
 #else
     std::u16string result;
@@ -120,40 +122,46 @@ auto utF8toUtF32(std::string_view str) -> std::u32string {
     std::u32string result;
     size_t i = 0;
     while (i < str.size()) {
-        unsigned char c = static_cast<unsigned char>(str[i++]);
+        auto c = static_cast<unsigned char>(str[i++]);
         if (c <= 0x7F) {
             result.push_back(static_cast<char32_t>(c));
         } else if (c <= 0xDF) {
-            if (i >= str.size())
+            if (i >= str.size()) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-8 string: unexpected end of input");
-            unsigned char c2 = static_cast<unsigned char>(str[i++]);
-            if ((c2 & 0xC0) != 0x80)
+            }
+            auto c2 = static_cast<unsigned char>(str[i++]);
+            if ((c2 & 0xC0) != 0x80) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-8 string: invalid continuation byte");
+            }
             result.push_back(((c & 0x1F) << 6) | (c2 & 0x3F));
         } else if (c <= 0xEF) {
-            if (i + 1 >= str.size())
+            if (i + 1 >= str.size()) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-8 string: unexpected end of input");
-            unsigned char c2 = static_cast<unsigned char>(str[i++]);
-            unsigned char c3 = static_cast<unsigned char>(str[i++]);
-            if ((c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80)
+            }
+            auto c2 = static_cast<unsigned char>(str[i++]);
+            auto c3 = static_cast<unsigned char>(str[i++]);
+            if ((c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-8 string: invalid continuation byte");
+            }
             result.push_back(((c & 0x0F) << 12) | ((c2 & 0x3F) << 6) |
                              (c3 & 0x3F));
         } else if (c <= 0xF7) {
-            if (i + 2 >= str.size())
+            if (i + 2 >= str.size()) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-8 string: unexpected end of input");
-            unsigned char c2 = static_cast<unsigned char>(str[i++]);
-            unsigned char c3 = static_cast<unsigned char>(str[i++]);
-            unsigned char c4 = static_cast<unsigned char>(str[i++]);
+            }
+            auto c2 = static_cast<unsigned char>(str[i++]);
+            auto c3 = static_cast<unsigned char>(str[i++]);
+            auto c4 = static_cast<unsigned char>(str[i++]);
             if ((c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80 ||
-                (c4 & 0xC0) != 0x80)
+                (c4 & 0xC0) != 0x80) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-8 string: invalid continuation byte");
+            }
             result.push_back(((c & 0x07) << 18) | ((c2 & 0x3F) << 12) |
                              ((c3 & 0x3F) << 6) | (c4 & 0x3F));
         } else {
@@ -175,15 +183,15 @@ auto surrogateToCodepoint(char16_t high, char16_t low) -> char32_t {
 // UTF-16 to UTF-32 conversion
 auto utF16toUtF32(std::u16string_view str) -> std::u32string {
     std::u32string result;
-    const auto *it = str.begin();
-    while (it != str.end()) {
-        char16_t codeUnit = *it++;
+    auto iterator = str.begin();  // Renamed 'it' to 'iterator' and fixed type
+    while (iterator != str.end()) {
+        char16_t codeUnit = *iterator++;
         if (isHighSurrogate(codeUnit)) {
-            if (it == str.end() || !isLowSurrogate(*it)) {
+            if (iterator == str.end() || !isLowSurrogate(*iterator)) {
                 THROW_INVALID_ARGUMENT(
                     "Invalid UTF-16 string: incomplete surrogate pair");
             }
-            char32_t codePoint = surrogateToCodepoint(codeUnit, *it++);
+            char32_t codePoint = surrogateToCodepoint(codeUnit, *iterator++);
             result.push_back(codePoint);
         } else if (isLowSurrogate(codeUnit)) {
             THROW_INVALID_ARGUMENT(

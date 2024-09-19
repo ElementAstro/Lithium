@@ -1,9 +1,6 @@
 #pragma once
 
-#include <chrono>
 #include <future>
-#include <optional>
-
 #include "device.hpp"
 
 class AlpacaCoverCalibrator : public AlpacaDevice {
@@ -28,25 +25,25 @@ public:
 
     AlpacaCoverCalibrator(const std::string& address, int device_number,
                           const std::string& protocol = "http");
-    virtual ~AlpacaCoverCalibrator() = default;
+    ~AlpacaCoverCalibrator() override = default;
 
     // Properties
-    int GetBrightness();
-    CalibratorStatus GetCalibratorState();
-    CoverStatus GetCoverState();
-    int GetMaxBrightness();
+    auto getBrightness() -> int;
+    auto getCalibratorState() -> CalibratorStatus;
+    auto getCoverState() -> CoverStatus;
+    auto getMaxBrightness() -> int;
 
     // Methods
-    std::future<void> CalibratorOff();
-    std::future<void> CalibratorOn(int BrightnessVal);
-    std::future<void> CloseCover();
-    void HaltCover();
-    std::future<void> OpenCover();
+    auto calibratorOff() -> std::future<void>;
+    auto calibratorOn(int brightnessVal) -> std::future<void>;
+    auto closeCover() -> std::future<void>;
+    void haltCover();
+    auto openCover() -> std::future<void>;
 
 private:
     template <typename Func>
-    std::future<void> AsyncOperation(Func&& func,
-                                     const std::string& operationName);
+    auto asyncOperation(Func&& func,
+                        const std::string& operationName) -> std::future<void>;
 
-    std::future<void> m_current_operation;
+    std::future<void> currentOperation_;
 };

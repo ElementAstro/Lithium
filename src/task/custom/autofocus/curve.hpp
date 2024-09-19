@@ -4,13 +4,14 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "macro.hpp"
 
 enum class ModelType { POLYNOMIAL, GAUSSIAN, LORENTZIAN };
 
 struct DataPoint {
     double position;
     double sharpness;
-};
+} ATOM_ALIGNAS(16);
 
 class FocusCurveFitter {
 public:
@@ -18,10 +19,10 @@ public:
     ~FocusCurveFitter();
 
     void addDataPoint(double position, double sharpness);
-    std::vector<double> fitCurve();
+    auto fitCurve() -> std::vector<double>;
     void autoSelectModel();
-    std::vector<std::pair<double, double>> calculateConfidenceIntervals(
-        double confidence_level = 0.95);
+    auto calculateConfidenceIntervals(double confidence_level = 0.95)
+        -> std::vector<std::pair<double, double>>;
     void visualize(const std::string& filename = "focus_curve.png");
     void preprocessData();
     void realTimeFitAndPredict(double new_position);

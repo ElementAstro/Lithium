@@ -2,7 +2,9 @@
 #define LITHIUM_SEARCH_CROODS_HPP
 
 #include <cmath>
+#include <concepts>
 #include <format>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <vector>
@@ -77,213 +79,240 @@ constexpr double SOLARMASS = 1.98847e30;
 constexpr double SOLARRADIUS = 6.957e8;
 constexpr double PARSEC = 3.0857e16;
 
-template <std::floating_point T>
-constexpr T LUMEN(T wavelength) {
-    return 1.464128843e-3 / (wavelength * wavelength);
+constexpr auto lumen(double wavelength) -> double {
+    constexpr double MAGIC_NUMBER = 1.464128843e-3;
+    return MAGIC_NUMBER / (wavelength * wavelength);
 }
 
-template <std::floating_point T>
-constexpr T REDSHIFT(T observed, T rest) {
+constexpr auto redshift(double observed, double rest) -> double {
     return (observed - rest) / rest;
 }
 
-template <std::floating_point T>
-constexpr T DOPPLER(T redshift, T speed) {
+constexpr auto doppler(double redshift, double speed) -> double {
     return redshift * speed;
 }
 
-template <std::floating_point T>
-T rangeHA(T r) {
-    while (r < -12.0)
-        r += 24.0;
-    while (r >= 12.0)
-        r -= 24.0;
-    return r;
-}
+template <typename T>
+auto rangeHA(T range) -> T {
+    constexpr double MAGIC_NUMBER24 = 24.0;
+    constexpr double MAGIC_NUMBER12 = 12.0;
 
-template <std::floating_point T>
-T range24(T r) {
-    while (r < 0.0)
-        r += 24.0;
-    while (r > 24.0)
-        r -= 24.0;
-    return r;
-}
-
-template <std::floating_point T>
-T range360(T r) {
-    while (r < 0.0)
-        r += 360.0;
-    while (r > 360.0)
-        r -= 360.0;
-    return r;
-}
-
-template <std::floating_point T>
-T rangeDec(T decdegrees) {
-    if ((decdegrees >= 270.0) && (decdegrees <= 360.0))
-        return (decdegrees - 360.0);
-    if ((decdegrees >= 180.0) && (decdegrees < 270.0))
-        return (180.0 - decdegrees);
-    if ((decdegrees >= 90.0) && (decdegrees < 180.0))
-        return (180.0 - decdegrees);
-    return decdegrees;
-}
-
-template <std::floating_point T>
-T get_local_hour_angle(T sideral_time, T ra) {
-    T HA = sideral_time - ra;
-    return rangeHA(HA);
-}
-
-template <std::floating_point T>
-std::pair<T, T> get_alt_az_coordinates(T Ha, T Dec, T Lat) {
-    using namespace std::numbers;
-    Ha *= pi_v<T> / 180.0;
-    Dec *= pi_v<T> / 180.0;
-    Lat *= pi_v<T> / 180.0;
-    T alt = std::asin(std::sin(Dec) * std::sin(Lat) +
-                      std::cos(Dec) * std::cos(Lat) * std::cos(Ha));
-    T az = std::acos((std::sin(Dec) - std::sin(alt) * std::sin(Lat)) /
-                     (std::cos(alt) * std::cos(Lat)));
-    alt *= 180.0 / pi_v<T>;
-    az *= 180.0 / pi_v<T>;
-    if (std::sin(Ha) >= 0.0)
-        az = 360 - az;
-    return {alt, az};
-}
-
-template <std::floating_point T>
-T estimate_geocentric_elevation(T Lat, T El) {
-    using namespace std::numbers;
-    Lat *= pi_v<T> / 180.0;
-    Lat = std::sin(Lat);
-    El += Lat * (EARTHRADIUSPOLAR - EARTHRADIUSEQUATORIAL);
-    return El;
-}
-
-template <std::floating_point T>
-T estimate_field_rotation_rate(T Alt, T Az, T Lat) {
-    using namespace std::numbers;
-    Alt *= pi_v<T> / 180.0;
-    Az *= pi_v<T> / 180.0;
-    Lat *= pi_v<T> / 180.0;
-    T ret = std::cos(Lat) * std::cos(Az) / std::cos(Alt);
-    ret *= 180.0 / pi_v<T>;
-    return ret;
-}
-
-template <std::floating_point T>
-T estimate_field_rotation(T HA, T rate) {
-    HA *= rate;
-    while (HA >= 360.0)
-        HA -= 360.0;
-    while (HA < 0)
-        HA += 360.0;
-    return HA;
-}
-
-template <std::floating_point T>
-constexpr T as2rad(T as) {
-    using namespace std::numbers;
-    return as * pi_v<T> / (60.0 * 60.0 * 12.0);
-}
-
-template <std::floating_point T>
-constexpr T rad2as(T rad) {
-    using namespace std::numbers;
-    return rad * (60.0 * 60.0 * 12.0) / pi_v<T>;
-}
-
-template <std::floating_point T>
-T estimate_distance(T parsecs, T parallax_radius) {
-    return parallax_radius / std::sin(as2rad(parsecs));
-}
-
-template <std::floating_point T>
-constexpr T m2au(T m) {
-    return m / ASTRONOMICALUNIT;
-}
-
-template <std::floating_point T>
-T calc_delta_magnitude(T mag_ratio, std::span<const T> spectrum,
-                       std::span<const T> ref_spectrum) {
-    T delta_mag = 0;
-    for (size_t l = 0; l < spectrum.size(); l++) {
-        delta_mag += spectrum[l] * mag_ratio * ref_spectrum[l] / spectrum[l];
+    if (range < -MAGIC_NUMBER12) {
+        range += MAGIC_NUMBER24;
     }
-    delta_mag /= spectrum.size();
-    return delta_mag;
+    while (range >= MAGIC_NUMBER12) {
+        range -= MAGIC_NUMBER24;
+    }
+    return range;
 }
 
-template <std::floating_point T>
-T calc_star_mass(T delta_mag, T ref_size) {
-    return delta_mag * ref_size;
+template <typename T>
+auto range24(T range) -> T {
+    constexpr double MAGIC_NUMBER24 = 24.0;
+
+    if (range < 0.0) {
+        range += MAGIC_NUMBER24;
+    }
+    while (range > MAGIC_NUMBER24) {
+        range -= MAGIC_NUMBER24;
+    }
+    return range;
 }
 
-template <std::floating_point T>
-T estimate_orbit_radius(T obs_lambda, T ref_lambda, T period) {
+template <typename T>
+auto range360(T range) -> T {
+    constexpr double MAGIC_NUMBER360 = 360.0;
+
+    if (range < 0.0) {
+        range += MAGIC_NUMBER360;
+    }
+    while (range > MAGIC_NUMBER360) {
+        range -= MAGIC_NUMBER360;
+    }
+    return range;
+}
+
+template <typename T>
+auto rangeDec(T decDegrees) -> T {
+    constexpr double MAGIC_NUMBER360 = 360.0;
+    constexpr double MAGIC_NUMBER180 = 180.0;
+    constexpr double MAGIC_NUMBER90 = 90.0;
+    constexpr double MAGIC_NUMBER270 = 270.0;
+
+    if (decDegrees >= MAGIC_NUMBER270 && decDegrees <= MAGIC_NUMBER360) {
+        return decDegrees - MAGIC_NUMBER360;
+    }
+    if (decDegrees >= MAGIC_NUMBER180 && decDegrees < MAGIC_NUMBER270) {
+        return MAGIC_NUMBER180 - decDegrees;
+    }
+    if (decDegrees >= MAGIC_NUMBER90 && decDegrees < MAGIC_NUMBER180) {
+        return MAGIC_NUMBER180 - decDegrees;
+    }
+    return decDegrees;
+}
+
+template <typename T>
+auto getLocalHourAngle(T siderealTime, T rightAscension) -> T {
+    T hourAngle = siderealTime - rightAscension;
+    return range24(hourAngle);
+}
+
+template <typename T>
+auto getAltAzCoordinates(T hourAngle, T declination,
+                         T latitude) -> std::pair<T, T> {
     using namespace std::numbers;
-    return pi_v<T> * 2 * DOPPLER(REDSHIFT(obs_lambda, ref_lambda), LIGHTSPEED) /
-           period;
+    hourAngle *= pi_v<T> / 180.0;
+    declination *= pi_v<T> / 180.0;
+    latitude *= pi_v<T> / 180.0;
+
+    T altitude = std::asin(std::sin(declination) * std::sin(latitude) +
+                           std::cos(declination) * std::cos(latitude) *
+                               std::cos(hourAngle));
+    T azimuth = std::acos(
+        (std::sin(declination) - std::sin(altitude) * std::sin(latitude)) /
+        (std::cos(altitude) * std::cos(latitude)));
+
+    altitude *= 180.0 / pi_v<T>;
+    azimuth *= 180.0 / pi_v<T>;
+
+    if (hourAngle > 0) {
+        azimuth = 360 - azimuth;
+    }
+
+    return {altitude, azimuth};
 }
 
-template <std::floating_point T>
-T estimate_secondary_mass(T star_mass, T star_drift, T orbit_radius) {
-    return orbit_radius * std::pow(star_drift * orbit_radius, 3) * 3 *
-           star_mass;
-}
-
-template <std::floating_point T>
-T estimate_secondary_size(T star_size, T dropoff_ratio) {
-    return std::pow(dropoff_ratio * std::pow(star_size, 2), 0.5);
-}
-
-template <std::floating_point T>
-T calc_photon_flux(T rel_magnitude, T filter_bandwidth, T wavelength,
-                   T steradian) {
-    return std::pow(10, rel_magnitude * -0.4) *
-           (LUMEN(wavelength) * steradian * filter_bandwidth);
-}
-
-template <std::floating_point T>
-T calc_rel_magnitude(T photon_flux, T filter_bandwidth, T wavelength,
-                     T steradian) {
-    return std::pow(10, 1.0 / (photon_flux / (LUMEN(wavelength) * steradian *
-                                              filter_bandwidth))) /
-           -0.4;
-}
-
-template <std::floating_point T>
-T estimate_absolute_magnitude(T delta_dist, T delta_mag) {
-    return std::sqrt(delta_dist) * delta_mag;
-}
-
-template <std::floating_point T>
-std::array<T, 2> baseline_2d_projection(T alt, T az,
-                                        const std::array<T, 3>& baseline,
-                                        T wavelength) {
+template <typename T>
+auto estimateGeocentricElevation(T latitude, T elevation) -> T {
     using namespace std::numbers;
-    az *= pi_v<T> / 180.0;
-    alt *= pi_v<T> / 180.0;
-    std::array<T, 2> uvresult;
-    uvresult[0] = (baseline[0] * std::sin(az) + baseline[1] * std::cos(az));
-    uvresult[1] = (baseline[1] * std::sin(alt) * std::sin(az) -
-                   baseline[0] * std::sin(alt) * std::cos(az) +
-                   baseline[2] * std::cos(alt));
-    uvresult[0] *= AIRY / wavelength;
-    uvresult[1] *= AIRY / wavelength;
-    return uvresult;
+    latitude *= pi_v<T> / 180.0;
+    return elevation - (elevation * std::cos(latitude));
 }
 
-template <std::floating_point T>
-T baseline_delay(T alt, T az, const std::array<T, 3>& baseline) {
+template <typename T>
+auto estimateFieldRotationRate(T altitude, T azimuth, T latitude) -> T {
     using namespace std::numbers;
-    az *= pi_v<T> / 180.0;
-    alt *= pi_v<T> / 180.0;
-    return std::cos(az) * baseline[1] * std::cos(alt) -
-           baseline[0] * std::sin(az) * std::cos(alt) +
-           std::sin(alt) * baseline[2];
+    altitude *= pi_v<T> / 180.0;
+    azimuth *= pi_v<T> / 180.0;
+    latitude *= pi_v<T> / 180.0;
+
+    T rate = std::cos(latitude) * std::sin(azimuth) / std::cos(altitude);
+    return rate * 180.0 / pi_v<T>;
+}
+
+template <typename T>
+auto estimateFieldRotation(T hourAngle, T rate) -> T {
+    constexpr double MAGIC_NUMBER360 = 360.0;
+
+    while (hourAngle >= MAGIC_NUMBER360) {
+        hourAngle -= MAGIC_NUMBER360;
+    }
+    while (hourAngle < 0) {
+        hourAngle += MAGIC_NUMBER360;
+    }
+    return hourAngle * rate;
+}
+
+constexpr auto as2rad(double arcSeconds) -> double {
+    using namespace std::numbers;
+    constexpr double MAGIC_NUMBER = 60.0 * 60.0 * 12.0;
+    return arcSeconds * pi_v<double> / MAGIC_NUMBER;
+}
+
+constexpr auto rad2as(double radians) -> double {
+    using namespace std::numbers;
+    constexpr double MAGIC_NUMBER = 60.0 * 60.0 * 12.0;
+    return radians * MAGIC_NUMBER / pi_v<double>;
+}
+
+template <typename T>
+auto estimateDistance(T parsecs, T parallaxRadius) -> T {
+    return parsecs / parallaxRadius;
+}
+
+constexpr auto m2au(double meters) -> double {
+    constexpr double MAGIC_NUMBER = 1.496e+11;
+    return meters / MAGIC_NUMBER;
+}
+
+template <typename T>
+auto calcDeltaMagnitude(T magnitudeRatio, std::span<const T> spectrum) -> T {
+    T deltaMagnitude = 0;
+    for (size_t index = 0; index < spectrum.size(); ++index) {
+        deltaMagnitude += spectrum[index] * magnitudeRatio;
+    }
+    return deltaMagnitude;
+}
+
+template <typename T>
+auto calcStarMass(T deltaMagnitude, T referenceSize) -> T {
+    return referenceSize * std::pow(10, deltaMagnitude / -2.5);
+}
+
+template <typename T>
+auto estimateOrbitRadius(T observedWavelength, T referenceWavelength,
+                         T period) -> T {
+    return (observedWavelength - referenceWavelength) / period;
+}
+
+template <typename T>
+auto estimateSecondaryMass(T starMass, T starDrift, T orbitRadius) -> T {
+    return starMass * std::pow(starDrift / orbitRadius, 2);
+}
+
+template <typename T>
+auto estimateSecondarySize(T starSize, T dropoffRatio) -> T {
+    return starSize * std::sqrt(dropoffRatio);
+}
+
+template <typename T>
+auto calcPhotonFlux(T relativeMagnitude, T filterBandwidth, T wavelength,
+                    T steradian) -> T {
+    constexpr double MAGIC_NUMBER10 = 10;
+    constexpr double MAGIC_NUMBER04 = 0.4;
+
+    return std::pow(MAGIC_NUMBER10, relativeMagnitude * -MAGIC_NUMBER04) *
+           filterBandwidth * wavelength * steradian;
+}
+
+template <typename T>
+auto calcRelMagnitude(T photonFlux, T filterBandwidth, T wavelength,
+                      T steradian) -> T {
+    constexpr double MAGIC_NUMBER04 = 0.4;
+    return std::log10(photonFlux /
+                      (LUMEN(wavelength) * steradian * filterBandwidth)) /
+           -MAGIC_NUMBER04;
+}
+
+template <typename T>
+auto estimateAbsoluteMagnitude(T deltaDistance, T deltaMagnitude) -> T {
+    return deltaMagnitude - 5 * (std::log10(deltaDistance) - 1);
+}
+
+template <typename T>
+auto baseline2dProjection(T altitude, T azimuth) -> std::array<T, 2> {
+    using namespace std::numbers;
+    altitude *= pi_v<T> / 180.0;
+    azimuth *= pi_v<T> / 180.0;
+
+    T x = std::cos(altitude) * std::cos(azimuth);
+    T y = std::cos(altitude) * std::sin(azimuth);
+
+    return {x, y};
+}
+
+template <typename T>
+auto baselineDelay(T altitude, T azimuth,
+                   const std::array<T, 3>& baseline) -> T {
+    using namespace std::numbers;
+    altitude *= pi_v<T> / 180.0;
+    azimuth *= pi_v<T> / 180.0;
+
+    T delay = baseline[0] * std::cos(altitude) * std::cos(azimuth) +
+              baseline[1] * std::cos(altitude) * std::sin(azimuth) +
+              baseline[2] * std::sin(altitude);
+
+    return delay;
 }
 
 // 定义一个表示天体坐标的结构体
@@ -301,7 +330,7 @@ struct GeographicCoords {
 };
 
 // 添加一个日期时间结构体
-struct DateTime {
+struct alignas(32) DateTime {
     int year;
     int month;
     int day;
@@ -312,37 +341,61 @@ struct DateTime {
 
 // 添加一个函数来计算儒略日
 template <std::floating_point T>
-T calculate_julian_date(const DateTime& dt) {
-    int a = (14 - dt.month) / 12;
-    int y = dt.year + 4800 - a;
-    int m = dt.month + 12 * a - 3;
+auto calculateJulianDate(const DateTime& dateTime) -> T {
+    constexpr int MAGIC_NUMBER12 = 12;
+    constexpr int MAGIC_NUMBER24 = 24;
+    constexpr int MAGIC_NUMBER1440 = 1440;
+    constexpr int MAGIC_NUMBER86400 = 86400;
+    constexpr int MAGIC_NUMBER32045 = 32045;
+    constexpr int MAGIC_NUMBER4800 = 4800;
+    constexpr int MAGIC_NUMBER14 = 14;
+    constexpr int MAGIC_NUMBER5 = 5;
+    constexpr int MAGIC_NUMBER153 = 153;
+    constexpr int MAGIC_NUMBER365 = 365;
+    constexpr int MAGIC_NUMBER100 = 100;
+    constexpr int MAGIC_NUMBER400 = 400;
 
-    T jd = dt.day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 -
-           32045 + (dt.hour - 12) / 24.0 + dt.minute / 1440.0 +
-           dt.second / 86400.0;
+    int a = (MAGIC_NUMBER14 - dateTime.month) / MAGIC_NUMBER12;
+    int y = dateTime.year + MAGIC_NUMBER4800 - a;
+    int m = dateTime.month + MAGIC_NUMBER12 * a - 3;
 
-    return jd;
+    T julianDate = dateTime.day + (MAGIC_NUMBER153 * m + 2) / MAGIC_NUMBER5 +
+                   MAGIC_NUMBER365 * y + y / 4 - y / MAGIC_NUMBER100 +
+                   y / MAGIC_NUMBER400 - MAGIC_NUMBER32045 +
+                   (dateTime.hour - MAGIC_NUMBER12) / MAGIC_NUMBER24 +
+                   dateTime.minute / MAGIC_NUMBER1440 +
+                   dateTime.second / MAGIC_NUMBER86400;
+
+    return julianDate;
 }
 
-// 添加一个函数来计算恒星时
-template <std::floating_point T>
-T calculate_sidereal_time(const DateTime& dt, T longitude) {
-    T jd = calculate_julian_date<T>(dt);
-    T t = (jd - 2451545.0) / 36525.0;
-    T theta = 280.46061837 + 360.98564736629 * (jd - 2451545.0) +
-              0.000387933 * t * t - t * t * t / 38710000.0;
+template <typename T>
+auto calculateSiderealTime(const DateTime& dateTime, T /*longitude*/) -> T {
+    constexpr double MAGIC_NUMBER2451545 = 2451545.0;
+    constexpr double MAGIC_NUMBER36525 = 36525.0;
+    constexpr double MAGIC_NUMBER28046061837 = 280.46061837;
+    constexpr double MAGIC_NUMBER36098564736629 = 360.98564736629;
+    constexpr double MAGIC_NUMBER0000387933 = 0.000387933;
+    constexpr double MAGIC_NUMBER38710000 = 38710000.0;
+    constexpr double MAGIC_NUMBER15 = 15.0;
 
-    theta = range360(theta);
-    theta += longitude;
+    T julianDate = calculateJulianDate<T>(dateTime);
+    T t = (julianDate - MAGIC_NUMBER2451545) / MAGIC_NUMBER36525;
 
-    return theta / 15.0;  // 转换为小时
+    T theta = MAGIC_NUMBER28046061837 +
+              MAGIC_NUMBER36098564736629 * (julianDate - MAGIC_NUMBER2451545) +
+              MAGIC_NUMBER0000387933 * t * t - t * t * t / MAGIC_NUMBER38710000;
+
+    return theta / MAGIC_NUMBER15;  // 转换为小时
 }
 
 // 添加一个函数来计算大气折射
 template <std::floating_point T>
-T calculate_refraction(T altitude, T temperature = 10.0, T pressure = 1010.0) {
-    if (altitude < -0.5)
+auto calculateRefraction(T altitude, T temperature = 10.0,
+                         T pressure = 1010.0) -> T {
+    if (altitude < -0.5) {
         return 0.0;  // 天体在地平线以下，不考虑折射
+    }
 
     T R;
     if (altitude > 15.0) {
@@ -360,11 +413,10 @@ T calculate_refraction(T altitude, T temperature = 10.0, T pressure = 1010.0) {
     return R;
 }
 
-// 添加一个函数来计算视差
 template <std::floating_point T>
-CelestialCoords<T> apply_parallax(const CelestialCoords<T>& coords,
-                                  const GeographicCoords<T>& observer,
-                                  T distance, const DateTime& dt) {
+auto applyParallax(const CelestialCoords<T>& coords,
+                   const GeographicCoords<T>& observer, T distance,
+                   const DateTime& dt) -> CelestialCoords<T> {
     T lst = calculate_sidereal_time(dt, observer.longitude);
     T ha = lst - coords.ra;
 
@@ -390,10 +442,9 @@ CelestialCoords<T> apply_parallax(const CelestialCoords<T>& coords,
     return {range24(newRA), rangeDec(newDec)};
 }
 
-// 添加一个函数来计算黄道坐标
 template <std::floating_point T>
-std::pair<T, T> equatorial_to_ecliptic(const CelestialCoords<T>& coords,
-                                       T obliquity) {
+auto equatorialToEcliptic(const CelestialCoords<T>& coords,
+                          T obliquity) -> std::pair<T, T> {
     T sinDec = std::sin(coords.dec * std::numbers::pi / 180.0);
     T cosDec = std::cos(coords.dec * std::numbers::pi / 180.0);
     T sinRA = std::sin(coords.ra * std::numbers::pi / 12.0);
@@ -412,8 +463,8 @@ std::pair<T, T> equatorial_to_ecliptic(const CelestialCoords<T>& coords,
 
 // 添加一个函数来计算前进
 template <std::floating_point T>
-T calculate_precession(const CelestialCoords<T>& coords, const DateTime& from,
-                       const DateTime& to) {
+auto calculatePrecession(const CelestialCoords<T>& coords, const DateTime& from,
+                         const DateTime& to) -> T {
     auto jd1 = calculate_julian_date<T>(from);
     auto jd2 = calculate_julian_date<T>(to);
 
@@ -456,7 +507,7 @@ T calculate_precession(const CelestialCoords<T>& coords, const DateTime& from,
 
 // 添加一个函数来格式化赤经
 template <std::floating_point T>
-std::string format_ra(T ra) {
+auto formatRa(T ra) -> std::string {
     int hours = static_cast<int>(ra);
     int minutes = static_cast<int>((ra - hours) * 60);
     double seconds = ((ra - hours) * 60 - minutes) * 60;
@@ -466,7 +517,7 @@ std::string format_ra(T ra) {
 
 // 添加一个函数来格式化赤纬
 template <std::floating_point T>
-std::string format_dec(T dec) {
+auto formatDec(T dec) -> std::string {
     char sign = (dec >= 0) ? '+' : '-';
     dec = std::abs(dec);
     int degrees = static_cast<int>(dec);

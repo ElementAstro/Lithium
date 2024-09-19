@@ -1,63 +1,69 @@
 #include "device.hpp"
 #include <format>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 
-int AlpacaDevice::s_client_id = std::random_device{}() % 65536;
-int AlpacaDevice::s_client_trans_id = 1;
-std::mutex AlpacaDevice::s_ctid_mutex;
+#include "atom/error/exception.hpp"
+
+int AlpacaDevice::clientId = std::random_device{}() % 65536;
+int AlpacaDevice::clientTransId = 1;
+std::mutex AlpacaDevice::clientTransIdMutex;
 
 AlpacaDevice::AlpacaDevice(const std::string& address,
-                           const std::string& device_type, int device_number,
+                           const std::string& deviceType, int deviceNumber,
                            const std::string& protocol)
-    : m_address(address),
-      m_device_type(device_type),
-      m_device_number(device_number),
-      m_api_version(1) {
-    m_base_url = std::format("{}://{}/api/v{}/{}/{}", protocol, address,
-                             m_api_version, device_type, device_number);
+    : address_(address),
+      deviceType_(deviceType),
+      deviceNumber_(deviceNumber),
+      apiVersion_(1) {
+    baseUrl_ = std::format("{}://{}/api/v{}/{}/{}", protocol, address,
+                           apiVersion_, deviceType, deviceNumber);
 
-    m_curl = std::unique_ptr<CURL, std::function<void(CURL*)>>(
+    curl_ = std::unique_ptr<CURL, std::function<void(CURL*)>>(
         curl_easy_init(), [](CURL* curl) { curl_easy_cleanup(curl); });
-    if (!m_curl) {
-        throw std::runtime_error("Failed to initialize CURL");
+    if (!curl_) {
+        THROW_CURL_INITIALIZATION_ERROR("Failed to initialize CURL");
     }
 }
 
 AlpacaDevice::~AlpacaDevice() = default;
 
-std::string AlpacaDevice::Action(const std::string& ActionName,
-                                 const std::vector<std::string>& Parameters) {
-    nlohmann::json params = {{"Action", ActionName},
-                             {"Parameters", Parameters}};
-    return Put("action", params)["Value"];
+auto AlpacaDevice::action(const std::string& actionName,
+                          const std::vector<std::string>& parameters)
+    -> std::string {
+    json params = {{"Action", actionName}, {"Parameters", parameters}};
+    return put("action", params)["Value"];
 }
 
-void AlpacaDevice::CommandBlind(const std::string& Command, bool Raw) {
-    Put("commandblind",
-        {{"Command", Command}, {"Raw", Raw ? "true" : "false"}});
+void AlpacaDevice::commandBlind(const std::string& command, bool raw) {
+    put("commandblind",
+        {{"Command", command}, {"Raw", raw ? "true" : "false"}});
 }
 
-bool AlpacaDevice::CommandBool(const std::string& Command, bool Raw) {
-    return Put("commandbool", {{"Command", Command},
-                               {"Raw", Raw ? "true" : "false"}})["Value"];
+auto AlpacaDevice::commandBool(const std::string& command, bool raw) -> bool {
+    return put("commandbool", {{"Command", command},
+                               {"Raw", raw ? "true" : "false"}})["Value"];
 }
 
-std::string AlpacaDevice::CommandString(const std::string& Command, bool Raw) {
-    return Put("commandstring", {{"Command", Command},
-                                 {"Raw", Raw ? "true" : "false"}})["Value"];
+auto AlpacaDevice::commandString(const std::string& command,
+                                 bool raw) -> std::string {
+    return put("commandstring", {{"Command", command},
+                                 {"Raw", raw ? "true" : "false"}})["Value"];
 }
 
-bool AlpacaDevice::GetConnected() { return Get("connected"); }
+auto AlpacaDevice::getConnected() -> bool { return get("connected"); }
 
-void AlpacaDevice::SetConnected(bool ConnectedState) {
-    Put("connected", {{"Connected", ConnectedState ? "true" : "false"}});
+void AlpacaDevice::setConnected(bool connectedState) {
+    put("connected", {{"Connected", connectedState ? "true" : "false"}});
 }
 
-std::string AlpacaDevice::GetDescription() { return Get("description"); }
+auto AlpacaDevice::getDescription() -> std::string {
+    return get("description");
+}
 
-std::vector<std::string> AlpacaDevice::GetDriverInfo() {
-    std::string info = Get("driverinfo");
+auto AlpacaDevice::getDriverInfo() -> std::vector<std::string> {
+    std::string info = get("driverinfo");
     std::vector<std::string> result;
     std::istringstream iss(info);
     std::string item;
@@ -67,97 +73,102 @@ std::vector<std::string> AlpacaDevice::GetDriverInfo() {
     return result;
 }
 
-std::string AlpacaDevice::GetDriverVersion() { return Get("driverversion"); }
-
-int AlpacaDevice::GetInterfaceVersion() {
-    return std::stoi(Get("interfaceversion").get<std::string>());
+auto AlpacaDevice::getDriverVersion() -> std::string {
+    return get("driverversion");
 }
 
-std::string AlpacaDevice::GetName() { return Get("name"); }
-
-std::vector<std::string> AlpacaDevice::GetSupportedActions() {
-    return Get("supportedactions").get<std::vector<std::string>>();
+auto AlpacaDevice::getInterfaceVersion() -> int {
+    return std::stoi(get("interfaceversion").get<std::string>());
 }
 
-nlohmann::json AlpacaDevice::Get(
-    const std::string& attribute,
-    const std::map<std::string, std::string>& params) {
-    std::string url = m_base_url + "/" + attribute;
+auto AlpacaDevice::getName() -> std::string { return get("name"); }
 
-    std::string query_string;
+auto AlpacaDevice::getSupportedActions() -> std::vector<std::string> {
+    return get("supportedactions").get<std::vector<std::string>>();
+}
+
+auto AlpacaDevice::get(const std::string& attribute,
+                       const std::map<std::string, std::string>& params)
+    -> json {
+    std::string url = baseUrl_ + "/" + attribute;
+
+    std::string queryString;
     for (const auto& [key, value] : params) {
-        if (!query_string.empty())
-            query_string += "&";
-        query_string += key + "=" + value;
+        if (!queryString.empty()) {
+            queryString += "&";
+        }
+        queryString.append(key).append("=").append(value);
     }
 
     {
-        std::lock_guard<std::mutex> lock(s_ctid_mutex);
-        if (!query_string.empty())
-            query_string += "&";
-        query_string += std::format("ClientTransactionID={}&ClientID={}",
-                                    s_client_trans_id++, s_client_id);
+        std::lock_guard<std::mutex> lock(clientTransIdMutex);
+        if (!queryString.empty()) {
+            queryString += "&";
+        }
+        queryString += std::format("ClientTransactionID={}&ClientID={}",
+                                   clientTransId++, clientId);
     }
 
-    if (!query_string.empty()) {
-        url += "?" + query_string;
+    if (!queryString.empty()) {
+        url += "?" + queryString;
     }
 
-    std::string response_string;
-    curl_easy_setopt(m_curl.get(), CURLOPT_URL, url.c_str());
-    curl_easy_setopt(m_curl.get(), CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(m_curl.get(), CURLOPT_WRITEDATA, &response_string);
+    std::string responseString;
+    curl_easy_setopt(curl_.get(), CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl_.get(), CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl_.get(), CURLOPT_WRITEDATA, &responseString);
 
-    CURLcode res = curl_easy_perform(m_curl.get());
+    CURLcode res = curl_easy_perform(curl_.get());
     if (res != CURLE_OK) {
         throw std::runtime_error(
             std::format("CURL error: {}", curl_easy_strerror(res)));
     }
 
-    nlohmann::json response = nlohmann::json::parse(response_string);
-    CheckError(response);
+    json response = json::parse(responseString);
+    checkError(response);
     return response["Value"];
 }
 
-nlohmann::json AlpacaDevice::Put(
-    const std::string& attribute,
-    const std::map<std::string, std::string>& data) {
-    std::string url = m_base_url + "/" + attribute;
+auto AlpacaDevice::put(const std::string& attribute,
+                       const std::map<std::string, std::string>& data) -> json {
+    std::string url = baseUrl_ + "/" + attribute;
 
-    std::string post_fields;
+    std::string postFields;
     for (const auto& [key, value] : data) {
-        if (!post_fields.empty())
-            post_fields += "&";
-        post_fields += key + "=" + value;
+        if (!postFields.empty()) {
+            postFields += "&";
+        }
+        postFields.append(key).append("=").append(value);
     }
 
     {
-        std::lock_guard<std::mutex> lock(s_ctid_mutex);
-        if (!post_fields.empty())
-            post_fields += "&";
-        post_fields += std::format("ClientTransactionID={}&ClientID={}",
-                                   s_client_trans_id++, s_client_id);
+        std::lock_guard<std::mutex> lock(clientTransIdMutex);
+        if (!postFields.empty()) {
+            postFields += "&";
+        }
+        postFields += std::format("ClientTransactionID={}&ClientID={}",
+                                  clientTransId++, clientId);
     }
 
-    std::string response_string;
-    curl_easy_setopt(m_curl.get(), CURLOPT_URL, url.c_str());
-    curl_easy_setopt(m_curl.get(), CURLOPT_POSTFIELDS, post_fields.c_str());
-    curl_easy_setopt(m_curl.get(), CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(m_curl.get(), CURLOPT_WRITEDATA, &response_string);
+    std::string responseString;
+    curl_easy_setopt(curl_.get(), CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl_.get(), CURLOPT_POSTFIELDS, postFields.c_str());
+    curl_easy_setopt(curl_.get(), CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl_.get(), CURLOPT_WRITEDATA, &responseString);
 
-    CURLcode res = curl_easy_perform(m_curl.get());
+    CURLcode res = curl_easy_perform(curl_.get());
     if (res != CURLE_OK) {
         throw std::runtime_error(
             std::format("CURL error: {}", curl_easy_strerror(res)));
     }
 
-    nlohmann::json response = nlohmann::json::parse(response_string);
-    CheckError(response);
+    json response = json::parse(responseString);
+    checkError(response);
     return response;
 }
 
-size_t AlpacaDevice::WriteCallback(void* contents, size_t size, size_t nmemb,
-                                   std::string* s) {
+auto AlpacaDevice::writeCallback(void* contents, size_t size, size_t nmemb,
+                                 std::string* s) -> size_t {
     size_t newLength = size * nmemb;
     try {
         s->append((char*)contents, newLength);
@@ -167,7 +178,7 @@ size_t AlpacaDevice::WriteCallback(void* contents, size_t size, size_t nmemb,
     return newLength;
 }
 
-void AlpacaDevice::CheckError(const nlohmann::json& response) {
+void AlpacaDevice::checkError(const json& response) {
     int errorNumber = response["ErrorNumber"];
     std::string errorMessage = response["ErrorMessage"];
 

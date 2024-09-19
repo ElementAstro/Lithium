@@ -14,14 +14,15 @@ Description: Crash Report
 
 #include "crash.hpp"
 
-#include <unistd.h>
-#include <cstdlib>
-#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
 
 #include "atom/error/stacktrace.hpp"
 #include "atom/log/loguru.hpp"
@@ -35,37 +36,40 @@ Description: Crash Report
 #include "platform.hpp"
 
 namespace atom::system {
+
 auto getSystemInfo() -> std::string {
     std::stringstream sss;
 
     auto osInfo = getOperatingSystemInfo();
-    sss << "System Information:" << std::endl;
-    sss << "- Operating system: " << osInfo.osName << " " << osInfo.osVersion
-        << std::endl;
-    sss << "- Architecture: " << osInfo.architecture << std::endl;
-    sss << "- Kernel version: " << osInfo.kernelVersion << std::endl;
-    sss << "- Computer name: " << osInfo.computerName << std::endl;
-    sss << "- Compiler: " << osInfo.compiler << std::endl;
-    sss << "- GUI: " << (ATOM_HAS_GUI() ? "Yes" : "No") << std::endl;
+    sss << "System Information:\n";
+    sss << "-------------------\n";
+    sss << "Operating system: " << osInfo.osName << " " << osInfo.osVersion
+        << "\n";
+    sss << "Architecture: " << osInfo.architecture << "\n";
+    sss << "Kernel version: " << osInfo.kernelVersion << "\n";
+    sss << "Computer name: " << osInfo.computerName << "\n";
+    sss << "Compiler: " << osInfo.compiler << "\n";
+    sss << "GUI: " << (ATOM_HAS_GUI() ? "Yes" : "No") << "\n\n";
 
-    sss << "CPU:" << std::endl;
-    sss << "- Usage: " << getCurrentCpuUsage() << "%" << std::endl;
-    sss << "- Model: " << getCPUModel() << std::endl;
-    sss << "- Frequency: " << getProcessorFrequency() << " GHz" << std::endl;
-    sss << "- Temperature: " << getCurrentCpuTemperature() << " °C"
-        << std::endl;
-    sss << "- Core: " << getNumberOfPhysicalCPUs() << std::endl;
-    sss << "- Package: " << getNumberOfPhysicalPackages() << std::endl;
+    sss << "CPU Information:\n";
+    sss << "----------------\n";
+    sss << "Usage: " << getCurrentCpuUsage() << "%\n";
+    sss << "Model: " << getCPUModel() << "\n";
+    sss << "Frequency: " << getProcessorFrequency() << " GHz\n";
+    sss << "Temperature: " << getCurrentCpuTemperature() << " °C\n";
+    sss << "Cores: " << getNumberOfPhysicalCPUs() << "\n";
+    sss << "Packages: " << getNumberOfPhysicalPackages() << "\n\n";
 
-    sss << "Current Memory Status:" << std::endl;
-    sss << "- Usage: " << getMemoryUsage() << "%" << std::endl;
-    sss << "- Total: " << getTotalMemorySize() << " MB" << std::endl;
-    sss << "- Free: " << getAvailableMemorySize() << " MB" << std::endl;
+    sss << "Memory Status:\n";
+    sss << "--------------\n";
+    sss << "Usage: " << getMemoryUsage() << "%\n";
+    sss << "Total: " << getTotalMemorySize() << " MB\n";
+    sss << "Free: " << getAvailableMemorySize() << " MB\n\n";
 
-    sss << "Disk:" << std::endl;
-    sss << "- Usage: " << std::endl;
+    sss << "Disk Usage:\n";
+    sss << "-----------\n";
     for (const auto &[drive, usage] : getDiskUsage()) {
-        sss << "- " << drive << ": " << usage << "%" << std::endl;
+        sss << drive << ": " << usage << "%\n";
     }
 
     return sss.str();
@@ -79,34 +83,37 @@ void saveCrashLog(std::string_view error_msg) {
     }
 
     std::stringstream sss;
-    sss << "Program crashed at: " << utils::getChinaTimestampString()
-        << std::endl;
-    sss << "Error messsage: " << error_msg << std::endl;
+    sss << "Program crashed at: " << utils::getChinaTimestampString() << "\n";
+    sss << "Error message: " << error_msg << "\n\n";
 
-    sss << "==================== StackTrace ====================" << std::endl;
+    sss << "==================== Stack Trace ====================\n";
     atom::error::StackTrace stackTrace;
-    sss << stackTrace.toString() << std::endl;
-    sss << "==================== System Information ===================="
-        << std::endl;
-    sss << systemInfo << std::endl;
-    sss << "================= Environment Variables Information "
-           "=================="
-        << std::endl;
+    sss << stackTrace.toString() << "\n\n";
+
+    sss << "==================== System Information ====================\n";
+    sss << systemInfo << "\n";
+
+    sss << "================= Environment Variables ===================\n";
     if (environmentInfo.empty()) {
-        sss << "Failed to get environment information." << std::endl;
+        sss << "Failed to get environment information.\n";
     } else {
-        sss << environmentInfo << std::endl;
+        sss << environmentInfo << "\n";
     }
 
     QuoteManager quotes;
     quotes.loadQuotesFromJson("./quotes.json");
-    sss << "============ Famous saying: " << quotes.getRandomQuote()
-        << " ============" << std::endl;
+    sss << "============ Famous Saying: " << quotes.getRandomQuote()
+        << " ============\n";
 
     std::stringstream ssss;
     std::time_t now = std::time(nullptr);
-    ssss << "crash_report/crash_"
-         << std::put_time(std::localtime(&now), "%Y%m%d_%H%M%S") << ".log";
+    std::tm localTime;
+    if (localtime_s(&localTime, &now) != 0) {
+        // Handle error
+        THROW_RUNTIME_ERROR("Failed to get local time.");
+    }
+    ssss << "crash_report/crash_" << std::put_time(&localTime, "%Y%m%d_%H%M%S")
+         << ".log";
     std::filesystem::path dirPath("crash_report");
     if (!std::filesystem::exists(dirPath)) {
         std::filesystem::create_directory(dirPath);
@@ -117,4 +124,5 @@ void saveCrashLog(std::string_view error_msg) {
         ofs.close();
     }
 }
+
 }  // namespace atom::system

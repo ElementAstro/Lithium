@@ -16,6 +16,13 @@
 
 namespace lithium::debug {
 
+constexpr float PERCENTAGE_MULTIPLIER = 100.0f;
+constexpr int MILLISECONDS_IN_A_SECOND = 1000;
+constexpr int SECONDS_IN_A_MINUTE = 60;
+constexpr int MILLISECONDS_IN_A_MINUTE =
+    MILLISECONDS_IN_A_SECOND * SECONDS_IN_A_MINUTE;
+constexpr int SLEEP_DURATION_MS = 100;
+
 auto getColorCode(Color color) -> std::string {
     switch (color) {
         case Color::Red:
@@ -32,13 +39,15 @@ auto getColorCode(Color color) -> std::string {
 }
 
 void ProgressBar::printProgressBar() {
-    float progress = static_cast<float>(current) / total;
-    int pos = static_cast<int>(progress * width);
+    float progress = static_cast<float>(current) / static_cast<float>(total);
+    int pos = static_cast<int>(progress * static_cast<float>(width));
 
-    std::system(CLEAR_SCREEN);
+    // Clear screen in a thread-safe manner
+    std::cout << "\033[2J\033[1;1H";
 
     std::cout << getColorCode(color);
     std::cout << "[";
+#pragma unroll
     for (int i = 0; i < width; ++i) {
         if (i < pos) {
             std::cout << completeChar;
@@ -55,10 +64,13 @@ void ProgressBar::printProgressBar() {
                            std::chrono::steady_clock::now() - start_time)
                            .count();
         int remaining = static_cast<int>((elapsed * total) / current - elapsed);
-        std::cout << int(progress * 100.0) << " % (ETA: " << remaining / 60000
-                  << "m " << (remaining / 1000) % 60 << "s)";
+        std::cout << static_cast<int>(progress * PERCENTAGE_MULTIPLIER)
+                  << " % (ETA: " << remaining / MILLISECONDS_IN_A_MINUTE << "m "
+                  << (remaining / MILLISECONDS_IN_A_SECOND) %
+                         SECONDS_IN_A_MINUTE
+                  << "s)";
     } else {
-        std::cout << int(progress * 100.0) << " %";
+        std::cout << static_cast<int>(progress * PERCENTAGE_MULTIPLIER) << " %";
     }
 
     std::cout << "\033[0m" << std::endl;  // Reset color
@@ -84,19 +96,22 @@ void ProgressBar::start() {
     std::cout << HIDE_CURSOR;  // Hide cursor
 
     future = std::async(std::launch::async, [this]() {
+#pragma unroll
         while (running) {
             std::unique_lock lock(mutex);
             cv.wait(lock, [this]() { return !paused || !running; });
 
-            if (!running)
+            if (!running) {
                 break;
+            }
 
             printProgressBar();
 
             if (++current > total) {
                 running = false;
             } else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(SLEEP_DURATION_MS));
             }
         }
 

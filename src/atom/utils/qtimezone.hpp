@@ -7,7 +7,21 @@
 #include <string>
 #include <vector>
 
+#include "atom/error/exception.hpp"
+
 namespace atom::utils {
+class GetTimeException : public error::Exception {
+    using Exception::Exception;
+};
+
+#define THROW_GET_TIME_ERROR(...)                                       \
+    throw atom::utils::GetTimeException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                        ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_NESTED_GET_TIME_ERROR(...)          \
+    atom::utils::GetTimeException::rethrowNested( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
+
 class QDateTime;
 /**
  * @brief A class representing a time zone.

@@ -1,9 +1,8 @@
 #include "astap.hpp"
 
+#include "atom/async/async.hpp"
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
-
-#include "atom/async/async.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
@@ -12,6 +11,7 @@
 #include "macro.hpp"
 
 #include <fitsio.h>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <optional>
@@ -43,8 +43,8 @@ auto AstapSolver::destroy() -> bool {
 }
 
 [[nodiscard]]
-auto AstapSolver::connect(const std::string &name, int timeout,
-                          int maxRetry) -> bool {
+auto AstapSolver::connect(const std::string &name, int /*timeout*/,
+                          int /*maxRetry*/) -> bool {
     if (name.empty() || !atom::io::isFileNameValid(name) ||
         !atom::io::isFileExists(name)) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
@@ -95,14 +95,14 @@ auto AstapSolver::scanSolver() -> bool {
     }
 
     auto astapCliPath = atom::system::getAppPath("astap-cli");
-    if (!atom::io::isExecutableFile(astapCliPath, "astap-cli")) {
+    if (!atom::io::isExecutableFile(astapCliPath.string(), "astap-cli")) {
         LOG_F(ERROR, "Failed to execute {}: Astap not installed",
               ATOM_FUNC_NAME);
         return false;
     }
 
-    solverPath_ = astapCliPath;
-    solverVersion_ = atom::system::getAppVersion(astapCliPath);
+    solverPath_ = astapCliPath.string();
+    solverVersion_ = atom::system::getAppVersion(astapCliPath.string());
     if (solverVersion_.empty()) {
         LOG_F(ERROR, "Failed to execute {}: Astap version not retrieved",
               ATOM_FUNC_NAME);
@@ -138,18 +138,24 @@ auto AstapSolver::solveImage(std::string_view image,
         std::ostringstream command;
         command << solverPath_ << " -f " << image;
 
-        if (target_ra)
+        if (target_ra) {
             command << " -ra " << *target_ra;
-        if (target_dec)
+        }
+        if (target_dec) {
             command << " -dec " << *target_dec;
-        if (fov)
+        }
+        if (fov) {
             command << " -fov " << *fov;
-        if (update)
+        }
+        if (update) {
             command << " -update";
-        if (timeout)
+        }
+        if (timeout != 0) {
             command << " -timeout " << timeout;
-        if (debug)
+        }
+        if (debug != 0) {
             command << " -debug";
+        }
 
         LOG_F(INFO, "Executing command: {}", command.str());
 
@@ -161,8 +167,8 @@ auto AstapSolver::solveImage(std::string_view image,
             atom::async::BackoffStrategy::EXPONENTIAL,
             std::chrono::milliseconds(timeout * 1000),
             [] { LOG_F(INFO, "Retrying command..."); },
-            [](const std::exception &e) {
-                LOG_F(ERROR, "Exception: {}", e.what());
+            [](const std::exception &ex) {
+                LOG_F(ERROR, "Exception: {}", ex.what());
             },
             [] { LOG_F(INFO, "Retry complete."); }, command.str());
 
@@ -189,8 +195,8 @@ auto AstapSolver::solveImage(std::string_view image,
             LOG_F(ERROR, "Failed to solve the image");
             result.error = "Failed to solve the image";
         }
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to execute {}: {}", ATOM_FUNC_NAME, e.what());
+    } catch (const std::exception &ex) {
+        LOG_F(ERROR, "Failed to execute {}: {}", ATOM_FUNC_NAME, ex.what());
         return false;
     }
 
@@ -212,17 +218,26 @@ auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
         return retStruct;
     }
 
-    double solvedRa, solvedDec, xPixelArcsec, yPixelArcsec, rotation;
-    double xPixelSize, yPixelSize;
-    char comment[FLEN_COMMENT];
+    double solvedRa;
+    double solvedDec;
+    double xPixelArcsec;
+    double yPixelArcsec;
+    double rotation;
+    double xPixelSize;
+    double yPixelSize;
+    std::array<char, FLEN_COMMENT> comment;
 
-    fits_read_key(fptr, TDOUBLE, "CRVAL1", &solvedRa, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CRVAL2", &solvedDec, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CDELT1", &xPixelArcsec, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CDELT2", &yPixelArcsec, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "CROTA1", &rotation, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "X    PIXSZ", &xPixelSize, comment, &status);
-    fits_read_key(fptr, TDOUBLE, "YPIXSZ", &yPixelSize, comment, &status);
+    fits_read_key(fptr, TDOUBLE, "CRVAL1", &solvedRa, comment.data(), &status);
+    fits_read_key(fptr, TDOUBLE, "CRVAL2", &solvedDec, comment.data(), &status);
+    fits_read_key(fptr, TDOUBLE, "CDELT1", &xPixelArcsec, comment.data(),
+                  &status);
+    fits_read_key(fptr, TDOUBLE, "CDELT2", &yPixelArcsec, comment.data(),
+                  &status);
+    fits_read_key(fptr, TDOUBLE, "CROTA1", &rotation, comment.data(), &status);
+    fits_read_key(fptr, TDOUBLE, "X    PIXSZ", &xPixelSize, comment.data(),
+                  &status);
+    fits_read_key(fptr, TDOUBLE, "YPIXSZ", &yPixelSize, comment.data(),
+                  &status);
 
     fits_close_file(fptr, &status);
     if (status != 0) {
@@ -234,8 +249,9 @@ auto AstapSolver::readSolveResult(std::string_view image) -> SolveResult {
     retStruct.dec = std::to_string(solvedDec);
     retStruct.rotation = std::to_string(rotation);
 
-    double xFocalLength = xPixelSize / xPixelArcsec * 206.625;
-    double yFocalLength = yPixelSize / yPixelArcsec * 206.625;
+    constexpr double arcsecToRad = 206.625;
+    double xFocalLength = xPixelSize / xPixelArcsec * arcsecToRad;
+    double yFocalLength = yPixelSize / yPixelArcsec * arcsecToRad;
 
     retStruct.fovX = xFocalLength;
     retStruct.fovY = yFocalLength;

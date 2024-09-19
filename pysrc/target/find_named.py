@@ -109,7 +109,9 @@ def calculate_light_star_info(star: SimpleLightStarInfo, observation_location: E
 
 
 def get_light_star_list(observation_location: EarthLocation, observation_time: datetime.datetime,
-                        max_magnitude: int = 2, range_filter: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+                        max_magnitude: int = 2, range_filter: Optional[List[str]] = None,
+                        constellation_filter: Optional[str] = None, constellation_zh_filter: Optional[str] = None,
+                        name_filter: Optional[str] = None, show_name_filter: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Get a list of stars visible at a given location and time with optional filtering.
 
@@ -118,6 +120,10 @@ def get_light_star_list(observation_location: EarthLocation, observation_time: d
         observation_time (datetime.datetime): The time of observation.
         max_magnitude (int): Maximum magnitude of stars to include.
         range_filter (Optional[List[str]]): Cardinal directions to filter the stars.
+        constellation_filter (Optional[str]): Constellation to filter the stars.
+        constellation_zh_filter (Optional[str]): Constellation Chinese name to filter the stars.
+        name_filter (Optional[str]): Star name to filter the stars.
+        show_name_filter (Optional[str]): Star Chinese name to filter the stars.
 
     Returns:
         List[Dict[str, Any]]: List of dictionaries containing star information.
@@ -137,7 +143,11 @@ def get_light_star_list(observation_location: EarthLocation, observation_time: d
     for star in light_star_list:
         calculate_light_star_info(star, observation_location, observation_time)
         if star.alt is not None and star.alt > 20:
-            if not range_filter or star.sky in range_filter:
+            if (not range_filter or star.sky in range_filter) and \
+               (not constellation_filter or star.constellation == constellation_filter) and \
+               (not constellation_zh_filter or star.constellation_zh == constellation_zh_filter) and \
+               (not name_filter or star.name == name_filter) and \
+               (not show_name_filter or star.show_name == show_name_filter):
                 filtered_star_list.append(star.__dict__)
                 logger.debug(
                     f"Star {star.name} is visible and added to the list.")
@@ -157,7 +167,7 @@ if __name__ == "__main__":
         lat=40.7128*u.deg, lon=-74.0060*u.deg, height=10*u.m)
 
     # Observation time: Current time in UTC
-    observation_time = datetime.now().astimezone(ZoneInfo("UTC"))
+    observation_time = datetime.datetime.now().astimezone(ZoneInfo("UTC"))
 
     # Maximum magnitude of stars to display
     max_magnitude = 2
@@ -165,10 +175,13 @@ if __name__ == "__main__":
     # Range filter: Only show stars in the north and east skies
     range_filter = ['north', 'east']
 
+    # Constellation filter: Only show stars in the Orion constellation
+    constellation_filter = 'Ori'
+
     # Call the function to get the list of visible stars
     try:
         visible_stars = get_light_star_list(
-            observation_location, observation_time, max_magnitude, range_filter)
+            observation_location, observation_time, max_magnitude, range_filter, constellation_filter)
 
         # Print the results
         if visible_stars:

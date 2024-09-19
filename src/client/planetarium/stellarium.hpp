@@ -3,8 +3,9 @@
 #include <asio.hpp>
 #include <future>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
+
+#include "atom/type/json.hpp"
 
 class Stellarium {
 public:

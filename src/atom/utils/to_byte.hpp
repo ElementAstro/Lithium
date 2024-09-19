@@ -14,6 +14,8 @@
 #include <variant>
 #include <vector>
 
+#include "atom/function/concept.hpp"
+
 namespace atom::utils {
 
 /**
@@ -24,9 +26,8 @@ namespace atom::utils {
  * function available.
  */
 template <typename T>
-concept Serializable =
-    std::is_arithmetic_v<T> || std::is_enum_v<T> ||
-    std::same_as<T, std::string> || requires(T a) { serialize(a); };
+concept Serializable = Number<T> || Enum<T> || String<T> || Char<T> ||
+                       requires(const T& t) { serialize(t); };
 
 /**
  * @brief Serializes a serializable type into a vector of bytes.
@@ -42,7 +43,7 @@ concept Serializable =
  * data.
  */
 template <Serializable T>
-std::vector<uint8_t> serialize(const T& data) {
+auto serialize(const T& data) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes(sizeof(T));
     std::memcpy(bytes.data(), &data, sizeof(T));
     return bytes;
@@ -58,7 +59,7 @@ std::vector<uint8_t> serialize(const T& data) {
  * @return std::vector<uint8_t> A vector of bytes representing the serialized
  * string.
  */
-inline std::vector<uint8_t> serialize(const std::string& str) {
+inline auto serialize(const std::string& str) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes;
     size_t size = str.size();
     bytes.resize(sizeof(size) + size);
@@ -80,15 +81,15 @@ inline std::vector<uint8_t> serialize(const std::string& str) {
  * vector.
  */
 template <typename T>
-std::vector<uint8_t> serialize(const std::vector<T>& vec) {
+auto serialize(const std::vector<T>& vec) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes;
     size_t size = vec.size();
-    auto size_bytes = serialize(size);
-    bytes.insert(bytes.end(), size_bytes.begin(), size_bytes.end());
+    auto sizeBytes = serialize(size);
+    bytes.insert(bytes.end(), sizeBytes.begin(), sizeBytes.end());
 
     for (const auto& item : vec) {
-        auto item_bytes = serialize(item);
-        bytes.insert(bytes.end(), item_bytes.begin(), item_bytes.end());
+        auto itemBytes = serialize(item);
+        bytes.insert(bytes.end(), itemBytes.begin(), itemBytes.end());
     }
     return bytes;
 }
@@ -106,15 +107,15 @@ std::vector<uint8_t> serialize(const std::vector<T>& vec) {
  * list.
  */
 template <typename T>
-std::vector<uint8_t> serialize(const std::list<T>& list) {
+auto serialize(const std::list<T>& list) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes;
     size_t size = list.size();
-    auto size_bytes = serialize(size);
-    bytes.insert(bytes.end(), size_bytes.begin(), size_bytes.end());
+    auto sizeBytes = serialize(size);
+    bytes.insert(bytes.end(), sizeBytes.begin(), sizeBytes.end());
 
     for (const auto& item : list) {
-        auto item_bytes = serialize(item);
-        bytes.insert(bytes.end(), item_bytes.begin(), item_bytes.end());
+        auto itemBytes = serialize(item);
+        bytes.insert(bytes.end(), itemBytes.begin(), itemBytes.end());
     }
     return bytes;
 }
@@ -134,17 +135,17 @@ std::vector<uint8_t> serialize(const std::list<T>& list) {
  * map.
  */
 template <typename Key, typename Value>
-std::vector<uint8_t> serialize(const std::map<Key, Value>& map) {
+auto serialize(const std::map<Key, Value>& map) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes;
     size_t size = map.size();
-    auto size_bytes = serialize(size);
-    bytes.insert(bytes.end(), size_bytes.begin(), size_bytes.end());
+    auto sizeBytes = serialize(size);
+    bytes.insert(bytes.end(), sizeBytes.begin(), sizeBytes.end());
 
     for (const auto& [key, value] : map) {
-        auto key_bytes = serialize(key);
-        auto value_bytes = serialize(value);
-        bytes.insert(bytes.end(), key_bytes.begin(), key_bytes.end());
-        bytes.insert(bytes.end(), value_bytes.begin(), value_bytes.end());
+        auto keyBytes = serialize(key);
+        auto valueBytes = serialize(value);
+        bytes.insert(bytes.end(), keyBytes.begin(), keyBytes.end());
+        bytes.insert(bytes.end(), valueBytes.begin(), valueBytes.end());
     }
     return bytes;
 }
@@ -163,15 +164,15 @@ std::vector<uint8_t> serialize(const std::map<Key, Value>& map) {
  * optional.
  */
 template <typename T>
-std::vector<uint8_t> serialize(const std::optional<T>& opt) {
+auto serialize(const std::optional<T>& opt) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes;
-    bool has_value = opt.has_value();
-    auto has_value_bytes = serialize(has_value);
-    bytes.insert(bytes.end(), has_value_bytes.begin(), has_value_bytes.end());
+    bool hasValue = opt.has_value();
+    auto hasValueBytes = serialize(hasValue);
+    bytes.insert(bytes.end(), hasValueBytes.begin(), hasValueBytes.end());
 
-    if (has_value) {
-        auto value_bytes = serialize(opt.value());
-        bytes.insert(bytes.end(), value_bytes.begin(), value_bytes.end());
+    if (hasValue) {
+        auto valueBytes = serialize(opt.value());
+        bytes.insert(bytes.end(), valueBytes.begin(), valueBytes.end());
     }
     return bytes;
 }
@@ -189,16 +190,16 @@ std::vector<uint8_t> serialize(const std::optional<T>& opt) {
  * variant.
  */
 template <typename... Ts>
-std::vector<uint8_t> serialize(const std::variant<Ts...>& var) {
+auto serialize(const std::variant<Ts...>& var) -> std::vector<uint8_t> {
     std::vector<uint8_t> bytes;
     size_t index = var.index();
-    auto index_bytes = serialize(index);
-    bytes.insert(bytes.end(), index_bytes.begin(), index_bytes.end());
+    auto indexBytes = serialize(index);
+    bytes.insert(bytes.end(), indexBytes.begin(), indexBytes.end());
 
     std::visit(
         [&bytes](const auto& value) {
-            auto value_bytes = serialize(value);
-            bytes.insert(bytes.end(), value_bytes.begin(), value_bytes.end());
+            auto valueBytes = serialize(value);
+            bytes.insert(bytes.end(), valueBytes.begin(), valueBytes.end());
         },
         var);
     return bytes;
@@ -219,7 +220,7 @@ std::vector<uint8_t> serialize(const std::variant<Ts...>& var) {
  * type.
  */
 template <Serializable T>
-T deserialize(const std::span<const uint8_t>& bytes, size_t& offset) {
+auto deserialize(const std::span<const uint8_t>& bytes, size_t& offset) -> T {
     if (bytes.size() < offset + sizeof(T)) {
         throw std::runtime_error(
             "Invalid data: too short to contain the expected type.");
@@ -241,9 +242,9 @@ T deserialize(const std::span<const uint8_t>& bytes, size_t& offset) {
  * @return std::string The deserialized string.
  * @throws std::runtime_error if the size of the string or the data is invalid.
  */
-std::string deserializeString(const std::span<const uint8_t>& bytes,
-                              size_t& offset) {
-    size_t size = deserialize<size_t>(bytes, offset);
+inline auto deserializeString(const std::span<const uint8_t>& bytes,
+                              size_t& offset) -> std::string {
+    auto size = deserialize<size_t>(bytes, offset);
     if (bytes.size() < offset + size) {
         throw std::runtime_error("Invalid data: size mismatch.");
     }
@@ -265,9 +266,9 @@ std::string deserializeString(const std::span<const uint8_t>& bytes,
  * @return std::vector<T> The deserialized vector.
  */
 template <typename T>
-std::vector<T> deserializeVector(const std::span<const uint8_t>& bytes,
-                                 size_t& offset) {
-    size_t size = deserialize<size_t>(bytes, offset);
+auto deserializeVector(const std::span<const uint8_t>& bytes,
+                       size_t& offset) -> std::vector<T> {
+    auto size = deserialize<size_t>(bytes, offset);
     std::vector<T> vec;
     vec.reserve(size);
 
@@ -291,9 +292,9 @@ std::vector<T> deserializeVector(const std::span<const uint8_t>& bytes,
  * @return std::list<T> The deserialized list.
  */
 template <typename T>
-std::list<T> deserializeList(const std::span<const uint8_t>& bytes,
-                             size_t& offset) {
-    size_t size = deserialize<size_t>(bytes, offset);
+auto deserializeList(const std::span<const uint8_t>& bytes,
+                     size_t& offset) -> std::list<T> {
+    auto size = deserialize<size_t>(bytes, offset);
     std::list<T> list;
 
     for (size_t i = 0; i < size; ++i) {
@@ -319,9 +320,9 @@ std::list<T> deserializeList(const std::span<const uint8_t>& bytes,
  * @return std::map<Key, Value> The deserialized map.
  */
 template <typename Key, typename Value>
-std::map<Key, Value> deserializeMap(const std::span<const uint8_t>& bytes,
-                                    size_t& offset) {
-    size_t size = deserialize<size_t>(bytes, offset);
+auto deserializeMap(const std::span<const uint8_t>& bytes,
+                    size_t& offset) -> std::map<Key, Value> {
+    auto size = deserialize<size_t>(bytes, offset);
     std::map<Key, Value> map;
 
     for (size_t i = 0; i < size; ++i) {
@@ -348,10 +349,10 @@ std::map<Key, Value> deserializeMap(const std::span<const uint8_t>& bytes,
  * @return std::optional<T> The deserialized optional.
  */
 template <typename T>
-std::optional<T> deserializeOptional(const std::span<const uint8_t>& bytes,
-                                     size_t& offset) {
-    bool has_value = deserialize<bool>(bytes, offset);
-    if (has_value) {
+auto deserializeOptional(const std::span<const uint8_t>& bytes,
+                         size_t& offset) -> std::optional<T> {
+    bool hasValue = deserialize<bool>(bytes, offset);
+    if (hasValue) {
         return deserialize<T>(bytes, offset);
     }
     return std::nullopt;
@@ -373,8 +374,8 @@ std::optional<T> deserializeOptional(const std::span<const uint8_t>& bytes,
  * @return Variant The constructed variant.
  */
 template <typename Variant, std::size_t... Is>
-Variant constructVariant(const std::span<const uint8_t>& bytes, size_t& offset,
-                         size_t index, std::index_sequence<Is...>) {
+auto constructVariant(const std::span<const uint8_t>& bytes, size_t& offset,
+                      size_t index, std::index_sequence<Is...>) -> Variant {
     Variant var;
     (
         [&](auto I) {
@@ -402,9 +403,9 @@ Variant constructVariant(const std::span<const uint8_t>& bytes, size_t& offset,
  * @throws std::runtime_error if the index of the variant is out of range.
  */
 template <typename... Ts>
-std::variant<Ts...> deserializeVariant(const std::span<const uint8_t>& bytes,
-                                       size_t& offset) {
-    size_t index = deserialize<size_t>(bytes, offset);
+auto deserializeVariant(const std::span<const uint8_t>& bytes,
+                        size_t& offset) -> std::variant<Ts...> {
+    auto index = deserialize<size_t>(bytes, offset);
     if (index >= sizeof...(Ts)) {
         throw std::runtime_error("Invalid data: variant index out of range.");
     }
@@ -442,7 +443,7 @@ inline void saveToFile(const std::vector<uint8_t>& data,
  * @return std::vector<uint8_t> A vector of bytes representing the loaded data.
  * @throws std::runtime_error if the file cannot be opened for reading.
  */
-inline std::vector<uint8_t> loadFromFile(const std::string& filename) {
+inline auto loadFromFile(const std::string& filename) -> std::vector<uint8_t> {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
         throw std::runtime_error("Could not open file for reading: " +

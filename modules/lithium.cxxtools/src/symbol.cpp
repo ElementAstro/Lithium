@@ -1,10 +1,13 @@
 #include <array>
+#include <atomic>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <memory>
 #include <regex>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -13,6 +16,7 @@
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "macro.hpp"
+#include "yaml-cpp/yaml.h"
 
 using json = nlohmann::json;
 
@@ -54,6 +58,32 @@ auto parseReadelfOutput(const std::string& output) -> std::vector<Symbol> {
     }
 
     return symbols;
+}
+
+// 多线程解析符号
+auto parseSymbolsInParallel(const std::string& output,
+                            int threadCount) -> std::vector<Symbol> {
+    std::vector<std::future<std::vector<Symbol>>> futures;
+    std::vector<Symbol> resultSymbols;
+
+    size_t chunkSize = output.size() / threadCount;
+    for (int i = 0; i < threadCount; ++i) {
+        futures.push_back(std::async([&, i] {
+            size_t start = i * chunkSize;
+            size_t end =
+                (i == threadCount - 1) ? output.size() : start + chunkSize;
+            return parseReadelfOutput(output.substr(start, end - start));
+        }));
+    }
+
+    for (auto& future : futures) {
+        auto symbols = future.get();
+        resultSymbols.insert(resultSymbols.end(),
+                             std::make_move_iterator(symbols.begin()),
+                             std::make_move_iterator(symbols.end()));
+    }
+
+    return resultSymbols;
 }
 
 auto filterSymbolsByType(const std::vector<Symbol>& symbols,
@@ -135,6 +165,30 @@ void exportSymbolsToJson(const std::vector<Symbol>& symbols,
     file << j.dump(4);  // Pretty print with 4 spaces
 }
 
+void exportSymbolsToYaml(const std::vector<Symbol>& symbols,
+                         const std::string& filename) {
+    YAML::Emitter out;
+    out << YAML::BeginSeq;
+    for (const auto& symbol : symbols) {
+        out << YAML::BeginMap;
+        out << YAML::Key << "address" << YAML::Value << symbol.address;
+        out << YAML::Key << "type" << YAML::Value << symbol.type;
+        out << YAML::Key << "bind" << YAML::Value << symbol.bind;
+        out << YAML::Key << "visibility" << YAML::Value << symbol.visibility;
+        out << YAML::Key << "name" << YAML::Value << symbol.name;
+        out << YAML::Key << "demangled_name" << YAML::Value
+            << symbol.demangledName;
+        out << YAML::EndMap;
+    }
+    out << YAML::EndSeq;
+
+    std::ofstream file(filename);
+    if (!file) {
+        THROW_FAIL_TO_OPEN_FILE("Failed to open YAML file for writing");
+    }
+    file << out.c_str();
+}
+
 auto filterSymbolsByCondition(const std::vector<Symbol>& symbols,
                               const std::function<bool(const Symbol&)>&
                                   condition) -> std::vector<Symbol> {
@@ -148,7 +202,7 @@ auto filterSymbolsByCondition(const std::vector<Symbol>& symbols,
 }
 
 void analyzeLibrary(const std::string& libraryPath,
-                    const std::string& outputFormat) {
+                    const std::string& outputFormat, int threadCount) {
     LOG_F(INFO, "Analyzing library: {}", libraryPath);
 
     // 使用 readelf 获取 ELF 特定信息
@@ -156,9 +210,10 @@ void analyzeLibrary(const std::string& libraryPath,
     std::string readelfOutput = exec(readelfCmd.c_str());
     LOG_F(INFO, "Readelf output: {}", readelfOutput);
 
-    // 解析 readelf 输出
-    std::vector<Symbol> symbols = parseReadelfOutput(readelfOutput);
-    LOG_F(INFO, "Parsing readelf output...");
+    // 解析 readelf 输出 (并行)
+    std::vector<Symbol> symbols =
+        parseSymbolsInParallel(readelfOutput, threadCount);
+    LOG_F(INFO, "Parsing readelf output in parallel...");
 
     // 解码符号名
     for (auto& symbol : symbols) {
@@ -177,6 +232,9 @@ void analyzeLibrary(const std::string& libraryPath,
     } else if (outputFormat == "json") {
         exportSymbolsToJson(symbols, "symbols.json");
         LOG_F(INFO, "Exported symbols to symbols.json.");
+    } else if (outputFormat == "yaml") {
+        exportSymbolsToYaml(symbols, "symbols.yaml");
+        LOG_F(INFO, "Exported symbols to symbols.yaml.");
     } else {
         LOG_F(ERROR, "Unsupported output format: {}", outputFormat);
         THROW_INVALID_ARGUMENT("Unsupported output format");
@@ -184,17 +242,38 @@ void analyzeLibrary(const std::string& libraryPath,
 }
 
 auto main(int argc, char* argv[]) -> int {
-    if (argc != 3) {
+    loguru::init(argc, argv);
+
+    if (argc < 3 || argc > 4) {
         LOG_F(ERROR, "Invalid number of arguments");
-        LOG_F(ERROR, "Usage: {} <path_to_library> <output_format (csv/json)>");
+        LOG_F(ERROR,
+              "Usage: {} <path_to_library> <output_format (csv/json/yaml)> "
+              "[thread_count]",
+              argv[0]);
         return 1;
     }
 
     std::string libraryPath = argv[1];
     std::string outputFormat = argv[2];
+    int threadCount =
+        std::thread::hardware_concurrency();  // 默认使用系统线程数
+
+    if (argc == 4) {
+        try {
+            threadCount = std::stoi(argv[3]);
+        } catch (const std::invalid_argument& e) {
+            LOG_F(ERROR, "Invalid thread count provided, must be an integer.");
+            return 1;
+        }
+
+        if (threadCount <= 0) {
+            LOG_F(ERROR, "Thread count must be a positive integer.");
+            return 1;
+        }
+    }
 
     try {
-        analyzeLibrary(libraryPath, outputFormat);
+        analyzeLibrary(libraryPath, outputFormat, threadCount);
     } catch (const std::exception& ex) {
         LOG_F(ERROR, "Error: {}", ex.what());
         return 1;

@@ -15,11 +15,9 @@ Description: A simple UDP server.
 #ifndef ATOM_CONNECTION_UDP_HPP
 #define ATOM_CONNECTION_UDP_HPP
 
-#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace atom::connection {
 /**

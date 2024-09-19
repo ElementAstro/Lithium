@@ -10,7 +10,6 @@
 #define ATOM_META_SIGNATURE_HPP
 
 #include <array>
-#include <cctype>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -19,19 +18,33 @@
 #include "macro.hpp"
 
 namespace atom::meta {
-struct FunctionSignature {
+struct alignas(128) FunctionSignature {
+public:
     constexpr FunctionSignature(
         std::string_view name,
         std::array<std::pair<std::string_view, std::string_view>, 2> parameters,
         std::optional<std::string_view> returnType)
-        : name(name),
-          parameters(std::move(parameters)),
-          returnType(returnType) {}
+        : name_(name),
+          parameters_(std::move(parameters)),
+          returnType_(returnType) {}
 
-    std::string_view name;
-    std::array<std::pair<std::string_view, std::string_view>, 2> parameters;
-    std::optional<std::string_view> returnType;
-} ATOM_ALIGNAS(128);
+    [[nodiscard]] auto getName() const -> std::string_view { return name_; }
+
+    [[nodiscard]] auto getParameters() const
+        -> const std::array<std::pair<std::string_view, std::string_view>, 2>& {
+        return parameters_;
+    }
+
+    [[nodiscard]] auto getReturnType() const
+        -> std::optional<std::string_view> {
+        return returnType_;
+    }
+
+private:
+    std::string_view name_;
+    std::array<std::pair<std::string_view, std::string_view>, 2> parameters_;
+    std::optional<std::string_view> returnType_;
+};
 
 constexpr auto parseFunctionDefinition(
     const std::string_view DEFINITION) noexcept
@@ -71,6 +84,7 @@ constexpr auto parseFunctionDefinition(
     while (paramStart < params.size() && paramIndex < parameters.size()) {
         size_t paramEnd = params.size();
         int bracketCount = 0;
+#pragma unroll
         for (size_t i = paramStart; i < params.size(); ++i) {
             if (params[i] == ',' && bracketCount == 0) {
                 paramEnd = i;

@@ -2,19 +2,21 @@
 #define ATOM_UTILS_ARGUMENT_PARSER_HPP
 
 #include <any>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "exception.hpp"
 #include "macro.hpp"
 
 namespace atom::utils {
+
 class ArgumentParser {
 public:
-    enum class ArgType { STRING, INTEGER, FLOAT, BOOLEAN, AUTO };
+    enum class ArgType { STRING, INTEGER, FLOAT, BOOLEAN, FILEPATH, AUTO };
 
     ArgumentParser() = default;
 
@@ -77,13 +79,13 @@ private:
     std::string description_;
     std::string epilog_;
 
-    auto detectType(const std::any& value) const -> ArgType;
+    static auto detectType(const std::any& value) -> ArgType;
 
-    auto parseValue(ArgType type, const std::string& value) const -> std::any;
+    static auto parseValue(ArgType type, const std::string& value) -> std::any;
 
-    auto argTypeToString(ArgType type) const -> std::string;
+    static auto argTypeToString(ArgType type) -> std::string;
 
-    auto anyToString(const std::any& value) const -> std::string;
+    static auto anyToString(const std::any& value) -> std::string;
 };
 
 ATOM_INLINE ArgumentParser::ArgumentParser(const std::string& program_name) {
@@ -153,12 +155,12 @@ ATOM_INLINE void ArgumentParser::parse(int argc, char* argv[]) {
                         arguments_[arg].value =
                             parseValue(arguments_[arg].type, argv[++i]);
                     } else {
-                        throw std::invalid_argument("Value for argument " +
-                                                    arg + " not provided");
+                        THROW_INVALID_ARGUMENT("Value for argument " + arg +
+                                               " not provided");
                     }
                 }
             } else {
-                throw std::invalid_argument("Unknown argument: " + arg);
+                THROW_INVALID_ARGUMENT("Unknown argument: " + arg);
             }
         } else {
             positional_arguments_.push_back(arg);
@@ -168,14 +170,14 @@ ATOM_INLINE void ArgumentParser::parse(int argc, char* argv[]) {
     for (const auto& [name, argument] : arguments_) {
         if (argument.required && !argument.value.has_value() &&
             !argument.defaultValue.has_value()) {
-            throw std::invalid_argument("Required argument " + name +
-                                        " not provided");
+            THROW_INVALID_ARGUMENT("Required argument " + name +
+                                   " not provided");
         }
     }
 }
 
 template <typename T>
-std::optional<T> ArgumentParser::get(const std::string& name) const {
+auto ArgumentParser::get(const std::string& name) const -> std::optional<T> {
     if (arguments_.find(name) != arguments_.end()) {
         if (arguments_.at(name).value.has_value()) {
             std::cout << typeid(arguments_.at(name).value.value()).name()
@@ -183,7 +185,7 @@ std::optional<T> ArgumentParser::get(const std::string& name) const {
             if (arguments_.at(name).value.has_value()) {
                 return std::any_cast<T>(arguments_.at(name).value.value());
             }
-            throw std::invalid_argument("Invalid value for argument " + name);
+            THROW_INVALID_ARGUMENT("Invalid value for argument " + name);
         }
         if (arguments_.at(name).defaultValue.has_value()) {
             return std::any_cast<T>(arguments_.at(name).defaultValue);
@@ -243,8 +245,7 @@ ATOM_INLINE void ArgumentParser::printHelp() const {
     std::cout << "\n" << epilog_ << std::endl;
 }
 
-ATOM_INLINE auto ArgumentParser::detectType(const std::any& value) const
-    -> ArgType {
+ATOM_INLINE auto ArgumentParser::detectType(const std::any& value) -> ArgType {
     if (value.type() == typeid(int)) {
         return ArgType::INTEGER;
     }
@@ -257,11 +258,14 @@ ATOM_INLINE auto ArgumentParser::detectType(const std::any& value) const
     if (value.type() == typeid(std::string)) {
         return ArgType::STRING;
     }
+    if (value.type() == typeid(std::filesystem::path)) {
+        return ArgType::FILEPATH;
+    }
     return ArgType::STRING;  // Default to string if undetectable
 }
 
 ATOM_INLINE auto ArgumentParser::parseValue(
-    ArgType type, const std::string& value) const -> std::any {
+    ArgType type, const std::string& value) -> std::any {
     switch (type) {
         case ArgType::STRING:
             return value;
@@ -277,6 +281,8 @@ ATOM_INLINE auto ArgumentParser::parseValue(
         }
         case ArgType::BOOLEAN:
             return value == "true";
+        case ArgType::FILEPATH:
+            return std::filesystem::path(value);
         case ArgType::AUTO: {
             if (value == "true" || value == "false") {
                 return value == "true";
@@ -294,12 +300,11 @@ ATOM_INLINE auto ArgumentParser::parseValue(
             return value;
         }
         default:
-            throw std::invalid_argument("Unknown argument type");
+            THROW_INVALID_ARGUMENT("Unknown argument type");
     }
 }
 
-ATOM_INLINE auto ArgumentParser::argTypeToString(ArgType type) const
-    -> std::string {
+ATOM_INLINE auto ArgumentParser::argTypeToString(ArgType type) -> std::string {
     switch (type) {
         case ArgType::STRING:
             return "string";
@@ -309,6 +314,8 @@ ATOM_INLINE auto ArgumentParser::argTypeToString(ArgType type) const
             return "float";
         case ArgType::BOOLEAN:
             return "bool";
+        case ArgType::FILEPATH:
+            return "filepath";
         case ArgType::AUTO:
             return "auto";
         default:
@@ -316,7 +323,7 @@ ATOM_INLINE auto ArgumentParser::argTypeToString(ArgType type) const
     }
 }
 
-ATOM_INLINE auto ArgumentParser::anyToString(const std::any& value) const
+ATOM_INLINE auto ArgumentParser::anyToString(const std::any& value)
     -> std::string {
     try {
         if (value.type() == typeid(std::string)) {
@@ -341,6 +348,9 @@ ATOM_INLINE auto ArgumentParser::anyToString(const std::any& value) const
                 result += v;
             }
             return result;
+        }
+        if (value.type() == typeid(std::filesystem::path)) {
+            return std::any_cast<std::filesystem::path>(value).string();
         }
     } catch (const std::bad_any_cast&) {
         return "unknown";

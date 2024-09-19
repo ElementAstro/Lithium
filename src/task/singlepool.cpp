@@ -25,53 +25,64 @@ public:
     SingleThreadPoolPrivate();
     ~SingleThreadPoolPrivate();
 
-    std::atomic<bool> isThreadAboutToQuit{false};
-    std::atomic<bool> isFunctionAboutToQuit{true};
-    std::function<void(const std::atomic_bool&)> pendingFunction;
-    std::function<void(const std::atomic_bool&)> runningFunction;
-    std::mutex runLock;
-    std::condition_variable acquireCondition;
-    std::condition_variable releasedCondition;
-    std::thread workerThread;
+    // Delete copy constructor and copy assignment operator
+    SingleThreadPoolPrivate(const SingleThreadPoolPrivate&) = delete;
+    SingleThreadPoolPrivate& operator=(const SingleThreadPoolPrivate&) = delete;
+
+    // Delete move constructor and move assignment operator
+    SingleThreadPoolPrivate(SingleThreadPoolPrivate&&) = delete;
+    SingleThreadPoolPrivate& operator=(SingleThreadPoolPrivate&&) = delete;
+
+private:
+    std::atomic<bool> isThreadAboutToQuit_{false};
+    std::atomic<bool> isFunctionAboutToQuit_{true};
+    std::function<void(const std::atomic_bool&)> pendingFunction_;
+    std::function<void(const std::atomic_bool&)> runningFunction_;
+    std::mutex runLock_;
+    std::condition_variable acquireCondition_;
+    std::condition_variable releasedCondition_;
+    std::thread workerThread_;
 
     void workerFunction();
+
+    friend class SingleThreadPool;
 };
 
 SingleThreadPoolPrivate::SingleThreadPoolPrivate() {
     // Launch a worker thread to manage tasks
-    workerThread = std::thread(&SingleThreadPoolPrivate::workerFunction, this);
+    workerThread_ = std::thread(&SingleThreadPoolPrivate::workerFunction, this);
 }
 
 SingleThreadPoolPrivate::~SingleThreadPoolPrivate() {
-    isThreadAboutToQuit = true;
-    acquireCondition.notify_one();
-    if (workerThread.joinable()) {
-        workerThread.join();
+    isThreadAboutToQuit_ = true;
+    acquireCondition_.notify_one();
+    if (workerThread_.joinable()) {
+        workerThread_.join();
     }
 }
 
 void SingleThreadPoolPrivate::workerFunction() {
-    std::unique_lock lock(runLock);
-    while (!isThreadAboutToQuit) {
-        acquireCondition.wait(lock, [this] {
-            return pendingFunction != nullptr || isThreadAboutToQuit;
+    std::unique_lock lock(runLock_);
+    while (!isThreadAboutToQuit_) {
+        acquireCondition_.wait(lock, [this] {
+            return pendingFunction_ != nullptr || isThreadAboutToQuit_;
         });
 
-        if (isThreadAboutToQuit) {
+        if (isThreadAboutToQuit_) {
             break;
         }
 
-        isFunctionAboutToQuit = false;
-        runningFunction = std::move(pendingFunction);
-        releasedCondition.notify_all();
+        isFunctionAboutToQuit_ = false;
+        runningFunction_ = std::move(pendingFunction_);
+        releasedCondition_.notify_all();
 
         lock.unlock();
-        if (runningFunction) {
-            runningFunction(isFunctionAboutToQuit);
+        if (runningFunction_) {
+            runningFunction_(isFunctionAboutToQuit_);
         }
         lock.lock();
 
-        runningFunction = nullptr;
+        runningFunction_ = nullptr;
     }
 }
 
@@ -86,20 +97,20 @@ auto SingleThreadPool::start(
         return false;
     }
 
-    auto d = d_ptr_;
-    std::unique_lock lock(d->runLock);
-    if (d->runningFunction != nullptr) {
+    auto dPtr = d_ptr_;
+    std::unique_lock lock(dPtr->runLock_);
+    if (dPtr->runningFunction_ != nullptr) {
         return false;
     }
 
-    d->pendingFunction = functionToRun;
-    d->isFunctionAboutToQuit = true;
-    d->acquireCondition.notify_one();
+    dPtr->pendingFunction_ = functionToRun;
+    dPtr->isFunctionAboutToQuit_ = true;
+    dPtr->acquireCondition_.notify_one();
 
     // Wait until the function starts running (when not on the worker thread)
-    if (std::this_thread::get_id() != d->workerThread.get_id()) {
-        d->releasedCondition.wait(
-            lock, [d] { return d->pendingFunction == nullptr; });
+    if (std::this_thread::get_id() != dPtr->workerThread_.get_id()) {
+        dPtr->releasedCondition_.wait(
+            lock, [dPtr] { return dPtr->pendingFunction_ == nullptr; });
     }
 
     return true;
@@ -111,15 +122,15 @@ void SingleThreadPool::startDetach(
         return;
     }
 
-    auto d = d_ptr_;
-    std::unique_lock lock(d->runLock);
-    if (d->runningFunction != nullptr) {
+    auto dPtr = d_ptr_;
+    std::unique_lock lock(dPtr->runLock_);
+    if (dPtr->runningFunction_ != nullptr) {
         return;
     }
 
-    d->pendingFunction = functionToRun;
-    d->isFunctionAboutToQuit = true;
-    d->acquireCondition.notify_one();
+    dPtr->pendingFunction_ = functionToRun;
+    dPtr->isFunctionAboutToQuit_ = true;
+    dPtr->acquireCondition_.notify_one();
 }
 
 auto SingleThreadPool::tryStart(
@@ -128,20 +139,20 @@ auto SingleThreadPool::tryStart(
         return false;
     }
 
-    auto d = d_ptr_;
-    std::unique_lock lock(d->runLock, std::try_to_lock);
-    if (!lock.owns_lock() || d->runningFunction != nullptr) {
+    auto dPtr = d_ptr_;
+    std::unique_lock lock(dPtr->runLock_, std::try_to_lock);
+    if (!lock.owns_lock() || dPtr->runningFunction_ != nullptr) {
         return false;
     }
 
-    d->pendingFunction = functionToRun;
-    d->isFunctionAboutToQuit = true;
-    d->acquireCondition.notify_one();
+    dPtr->pendingFunction_ = functionToRun;
+    dPtr->isFunctionAboutToQuit_ = true;
+    dPtr->acquireCondition_.notify_one();
 
     // Wait until the function starts running (when not on the worker thread)
-    if (std::this_thread::get_id() != d->workerThread.get_id()) {
-        d->releasedCondition.wait(
-            lock, [d] { return d->pendingFunction == nullptr; });
+    if (std::this_thread::get_id() != dPtr->workerThread_.get_id()) {
+        dPtr->releasedCondition_.wait(
+            lock, [dPtr] { return dPtr->pendingFunction_ == nullptr; });
     }
 
     return true;
@@ -149,17 +160,19 @@ auto SingleThreadPool::tryStart(
 
 void SingleThreadPool::tryStartDetach(
     const std::function<void(const std::atomic_bool&)>& functionToRun) {
-    if (!functionToRun)
+    if (!functionToRun) {
         return;
+    }
 
-    auto d = d_ptr_;
-    std::unique_lock lock(d->runLock, std::try_to_lock);
-    if (!lock.owns_lock() || d->runningFunction != nullptr)
+    auto dPtr = d_ptr_;
+    std::unique_lock lock(dPtr->runLock_, std::try_to_lock);
+    if (!lock.owns_lock() || dPtr->runningFunction_ != nullptr) {
         return;
+    }
 
-    d->pendingFunction = functionToRun;
-    d->isFunctionAboutToQuit = true;
-    d->acquireCondition.notify_one();
+    dPtr->pendingFunction_ = functionToRun;
+    dPtr->isFunctionAboutToQuit_ = true;
+    dPtr->acquireCondition_.notify_one();
 }
 
 void SingleThreadPool::quit() { start(nullptr); }

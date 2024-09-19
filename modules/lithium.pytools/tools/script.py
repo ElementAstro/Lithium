@@ -4,17 +4,24 @@
 Project Management Script
 
 This script provides a utility to manage Python projects using a JSON configuration file.
-It can install dependencies, execute predefined scripts, and list available scripts.
+It can install dependencies, execute predefined scripts, list available scripts, clean temporary files,
+run tests, and deploy the project.
 
 Features:
 - Install dependencies from a JSON configuration file
 - Execute predefined scripts
 - List available scripts
+- Clean temporary files and directories
+- Run project tests
+- Deploy the project
 
 Usage:
     python project_manager.py build --config project.json
     python project_manager.py --list --config project.json
     python project_manager.py install --config project.json
+    python project_manager.py clean --config project.json
+    python project_manager.py test --config project.json
+    python project_manager.py deploy --config project.json
 
 Author:
     Max Qian <lightapt.com>
@@ -23,120 +30,148 @@ License:
     GPL-3.0-or-later
 """
 
+import argparse
 import json
 import subprocess
-import sys
-from pathlib import Path
-from typing import Dict
+import os
+import shutil
+from typing import List, Dict
 
-def load_config(file_path: Path) -> Dict:
+
+def load_config(config_file: str) -> Dict:
     """
     Load the JSON configuration file.
 
     Args:
-        file_path (Path): Path to the JSON configuration file.
+        config_file (str): Path to the JSON configuration file.
 
     Returns:
-        Dict: Parsed JSON data as a dictionary.
+        dict: The loaded configuration as a dictionary.
 
     Raises:
-        SystemExit: If the file is not found, cannot be read, or contains invalid JSON.
+        FileNotFoundError: If the configuration file is not found.
+        json.JSONDecodeError: If the configuration file contains invalid JSON.
     """
-    try:
-        with file_path.open(encoding='utf-8') as file:
-            return json.load(file)
-    except json.JSONDecodeError as e:
-        print(f"Invalid JSON: {e}")
-        sys.exit(1)
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        sys.exit(1)
-    except IOError as e:
-        print(f"Error reading file: {e}")
-        sys.exit(1)
+    with open(config_file, 'r', encoding='utf-8') as file:
+        return json.load(file)
 
-def run_command(command: str):
+
+def install_dependencies(dependencies: List[str]):
     """
-    Run a shell command.
+    Install the project dependencies using pip.
 
     Args:
-        command (str): The command to run.
+        dependencies (List[str]): A list of dependencies to install.
 
-    Raises:
-        SystemExit: If the command returns a non-zero exit code.
+    Returns:
+        None
     """
-    print(f"Running command: {command}")
-    result = subprocess.run(command, shell=True)
-    if result.returncode != 0:
-        print(f"Command failed with exit code {result.returncode}")
-        sys.exit(result.returncode)
+    for dependency in dependencies:
+        subprocess.run([sys.executable, "-m", "pip",
+                       "install", dependency], check=True)
 
-def install_dependencies(dependencies: Dict[str, str]):
+
+def execute_script(script: str):
     """
-    Install dependencies specified in the JSON file.
+    Execute a predefined script.
 
     Args:
-        dependencies (Dict[str, str]): A dictionary of package names and versions.
-    """
-    for package, version in dependencies.items():
-        if version.startswith("^"):
-            version = version[1:]
-        command = f"{sys.executable} -m pip install {package}=={version}"
-        run_command(command)
+        script (str): The script to execute.
 
-def execute_script(config: Dict, script_name: str):
+    Returns:
+        None
     """
-    Execute a script based on the script name from the JSON configuration.
+    subprocess.run(script, shell=True, check=True)
+
+
+def list_scripts(scripts: Dict[str, str]):
+    """
+    List all available scripts in the configuration.
 
     Args:
-        config (Dict): Parsed JSON data as a dictionary.
-        script_name (str): Name of the script to run.
+        scripts (Dict[str, str]): A dictionary of script names and their commands.
 
-    Raises:
-        SystemExit: If the script name is not found in the configuration.
+    Returns:
+        None
     """
-    scripts = config.get("scripts", {})
-    command = scripts.get(script_name)
-
-    if command is None:
-        print(f"No such script: {script_name}")
-        sys.exit(1)
-
-    run_command(command)
-
-def list_scripts(config: Dict):
-    """
-    List all available scripts in the configuration file.
-
-    Args:
-        config (Dict): Parsed JSON data as a dictionary.
-    """
-    scripts = config.get("scripts", {})
     print("Available scripts:")
-    for script in scripts:
-        print(f"- {script}")
+    for name, command in scripts.items():
+        print(f"{name}: {command}")
+
+
+def clean_project(temp_dirs: List[str]):
+    """
+    Clean temporary files and directories in the project.
+
+    Args:
+        temp_dirs (List[str]): A list of temporary directories to clean.
+
+    Returns:
+        None
+    """
+    for temp_dir in temp_dirs:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+            print(f"Removed {temp_dir}")
+
+
+def run_tests(test_command: str):
+    """
+    Run the project tests.
+
+    Args:
+        test_command (str): The command to run the tests.
+
+    Returns:
+        None
+    """
+    subprocess.run(test_command, shell=True, check=True)
+
+
+def deploy_project(deploy_command: str):
+    """
+    Deploy the project.
+
+    Args:
+        deploy_command (str): The command to deploy the project.
+
+    Returns:
+        None
+    """
+    subprocess.run(deploy_command, shell=True, check=True)
+
 
 def main():
     """
-    Main function to run the project management script.
-    """
-    import argparse
+    Main function to parse command-line arguments and execute the corresponding actions.
 
-    parser = argparse.ArgumentParser(description="Project Management Script")
-    parser.add_argument("script", type=str, help="Script to run (e.g., build, lint, test, clean, install)")
-    parser.add_argument("--config", type=Path, default=Path("project.json"), help="Path to the JSON configuration file")
-    parser.add_argument("--list", action="store_true", help="List all available scripts")
+    Returns:
+        None
+    """
+    parser = argparse.ArgumentParser(
+        description="Python Project Management Utility")
+    parser.add_argument("action", choices=[
+                        "build", "install", "list", "clean", "test", "deploy"], help="Action to perform")
+    parser.add_argument("--config", required=True,
+                        help="Path to the JSON configuration file")
 
     args = parser.parse_args()
+
     config = load_config(args.config)
 
-    if args.list:
-        list_scripts(config)
-    elif args.script == "install":
-        dependencies = config.get("dependencies", {})
-        install_dependencies(dependencies)
-    else:
-        execute_script(config, args.script)
+    if args.action == "install":
+        install_dependencies(config.get("dependencies", []))
+    elif args.action == "build":
+        execute_script(config.get("scripts", {}).get("build", ""))
+    elif args.action == "list":
+        list_scripts(config.get("scripts", {}))
+    elif args.action == "clean":
+        clean_project(config.get("temp_dirs", []))
+    elif args.action == "test":
+        run_tests(config.get("scripts", {}).get("test", ""))
+    elif args.action == "deploy":
+        deploy_project(config.get("scripts", {}).get("deploy", ""))
+
 
 if __name__ == "__main__":
     main()

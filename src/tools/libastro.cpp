@@ -1,180 +1,230 @@
 #include "libastro.hpp"
 #include <cmath>
-#include <numbers>
 
 namespace lithium {
 
 namespace {
 
 // Utility functions for internal use
-double getObliquity(double jd) {
-    double t = (jd - JD2000) / 36525.0;
-    return 23.439291 - 0.0130042 * t - 1.64e-7 * t * t + 5.04e-7 * t * t * t;
+constexpr double CENTURY = 36525.0;
+constexpr double ARCSEC_TO_DEG = 1.0 / 3600.0;
+constexpr double OBLIQUITY_COEFF1 = 23.439291;
+constexpr double OBLIQUITY_COEFF2 = -0.0130042;
+constexpr double OBLIQUITY_COEFF3 = -1.64e-7;
+constexpr double OBLIQUITY_COEFF4 = 5.04e-7;
+
+auto getObliquity(double julianDate) -> double {
+    double centuriesSinceJ2000 = (julianDate - JD2000) / CENTURY;
+    return OBLIQUITY_COEFF1 + OBLIQUITY_COEFF2 * centuriesSinceJ2000 +
+           OBLIQUITY_COEFF3 * centuriesSinceJ2000 * centuriesSinceJ2000 +
+           OBLIQUITY_COEFF4 * centuriesSinceJ2000 * centuriesSinceJ2000 *
+               centuriesSinceJ2000;
 }
 
 }  // anonymous namespace
 
-std::tuple<double, double> getNutation(double jd) {
-    double t = (jd - JD2000) / 36525.0;
-    double omega =
-        125.04452 - 1934.136261 * t + 0.0020708 * t * t + t * t * t / 450000;
-    double L = 280.4665 + 36000.7698 * t;
-    double Ls = 218.3165 + 481267.8813 * t;
+auto getNutation(double julianDate) -> std::tuple<double, double> {
+    double centuriesSinceJ2000 = (julianDate - JD2000) / CENTURY;
+    double omega = 125.04452 - 1934.136261 * centuriesSinceJ2000 +
+                   0.0020708 * centuriesSinceJ2000 * centuriesSinceJ2000 +
+                   centuriesSinceJ2000 * centuriesSinceJ2000 *
+                       centuriesSinceJ2000 / 450000;
+    double meanLongitudeSun = 280.4665 + 36000.7698 * centuriesSinceJ2000;
+    double meanLongitudeMoon = 218.3165 + 481267.8813 * centuriesSinceJ2000;
 
-    double nutation_lon = -17.2 * std::sin(degToRad(omega)) -
-                          1.32 * std::sin(2 * degToRad(L)) -
-                          0.23 * std::sin(2 * degToRad(Ls)) +
-                          0.21 * std::sin(2 * degToRad(omega));
-    double nutation_obl =
-        9.2 * std::cos(degToRad(omega)) + 0.57 * std::cos(2 * degToRad(L)) +
-        0.1 * std::cos(2 * degToRad(Ls)) - 0.09 * std::cos(2 * degToRad(omega));
+    double nutationLongitude =
+        -17.2 * std::sin(degToRad(omega)) -
+        1.32 * std::sin(2 * degToRad(meanLongitudeSun)) -
+        0.23 * std::sin(2 * degToRad(meanLongitudeMoon)) +
+        0.21 * std::sin(2 * degToRad(omega));
+    double nutationObliquity = 9.2 * std::cos(degToRad(omega)) +
+                               0.57 * std::cos(2 * degToRad(meanLongitudeSun)) +
+                               0.1 * std::cos(2 * degToRad(meanLongitudeMoon)) -
+                               0.09 * std::cos(2 * degToRad(omega));
 
-    return {nutation_lon / 3600.0, nutation_obl / 3600.0};
+    return {nutationLongitude * ARCSEC_TO_DEG,
+            nutationObliquity * ARCSEC_TO_DEG};
 }
 
-EquatorialCoordinates applyNutation(const EquatorialCoordinates& position,
-                                    double jd, bool reverse) {
-    auto [nutation_lon, nutation_obl] = getNutation(jd);
-    double obliquity = degToRad(getObliquity(jd));
+auto applyNutation(const EquatorialCoordinates& position, double julianDate,
+                   bool reverse) -> EquatorialCoordinates {
+    auto [nutationLongitude, nutationObliquity] = getNutation(julianDate);
+    double obliquity = degToRad(getObliquity(julianDate));
 
-    double ra = degToRad(position.rightAscension * 15);
-    double dec = degToRad(position.declination);
+    double rightAscension = degToRad(position.rightAscension * 15);
+    double declination = degToRad(position.declination);
 
     double sign = reverse ? -1 : 1;
 
-    double delta_ra = (std::cos(obliquity) +
-                       std::sin(obliquity) * std::sin(ra) * std::tan(dec)) *
-                          nutation_lon -
-                      (std::cos(ra) * std::tan(dec)) * nutation_obl;
-    double delta_dec = (std::sin(obliquity) * std::cos(ra)) * nutation_lon +
-                       std::sin(ra) * nutation_obl;
+    double deltaRightAscension =
+        (std::cos(obliquity) + std::sin(obliquity) * std::sin(rightAscension) *
+                                   std::tan(declination)) *
+            nutationLongitude -
+        (std::cos(rightAscension) * std::tan(declination)) * nutationObliquity;
+    double deltaDeclination =
+        (std::sin(obliquity) * std::cos(rightAscension)) * nutationLongitude +
+        std::sin(rightAscension) * nutationObliquity;
 
-    return {radToDeg(ra + sign * degToRad(delta_ra)) / 15.0,
-            radToDeg(dec + sign * degToRad(delta_dec))};
+    return {
+        radToDeg(rightAscension + sign * degToRad(deltaRightAscension)) / 15.0,
+        radToDeg(declination + sign * degToRad(deltaDeclination))};
 }
 
-EquatorialCoordinates applyAberration(const EquatorialCoordinates& position,
-                                      double jd) {
-    double t = (jd - JD2000) / 36525.0;
-    double e = 0.016708634 - 0.000042037 * t - 0.0000001267 * t * t;
-    double pi = 102.93735 + 1.71946 * t + 0.00046 * t * t;
-    double lon = 280.46646 + 36000.77983 * t + 0.0003032 * t * t;
+auto applyAberration(const EquatorialCoordinates& position,
+                     double julianDate) -> EquatorialCoordinates {
+    double centuriesSinceJ2000 = (julianDate - JD2000) / CENTURY;
+    double eccentricity =
+        0.016708634 - 0.000042037 * centuriesSinceJ2000 -
+        0.0000001267 * centuriesSinceJ2000 * centuriesSinceJ2000;
+    double perihelionLongitude =
+        102.93735 + 1.71946 * centuriesSinceJ2000 +
+        0.00046 * centuriesSinceJ2000 * centuriesSinceJ2000;
+    double meanLongitude =
+        280.46646 + 36000.77983 * centuriesSinceJ2000 +
+        0.0003032 * centuriesSinceJ2000 * centuriesSinceJ2000;
 
-    double ra = degToRad(position.rightAscension * 15);
-    double dec = degToRad(position.declination);
+    double rightAscension = degToRad(position.rightAscension * 15);
+    double declination = degToRad(position.declination);
 
-    double k = 20.49552 / 3600.0;  // Constant of aberration
+    double aberrationConstant =
+        20.49552 * ARCSEC_TO_DEG;  // Constant of aberration
 
-    double delta_ra =
-        -k *
-        (std::cos(ra) * std::cos(degToRad(lon)) * std::cos(degToRad(pi)) +
-         std::sin(ra) * std::sin(degToRad(lon))) /
-        std::cos(dec);
-    double delta_dec =
-        -k * (std::sin(degToRad(pi)) *
-              (std::sin(dec) * std::cos(degToRad(lon)) -
-               std::cos(dec) * std::sin(ra) * std::sin(degToRad(lon))));
+    double deltaRightAscension =
+        -aberrationConstant *
+        (std::cos(rightAscension) * std::cos(degToRad(meanLongitude)) *
+             std::cos(degToRad(perihelionLongitude)) +
+         std::sin(rightAscension) * std::sin(degToRad(meanLongitude))) /
+        std::cos(declination);
+    double deltaDeclination =
+        -aberrationConstant *
+        (std::sin(degToRad(perihelionLongitude)) *
+         (std::sin(declination) * std::cos(degToRad(meanLongitude)) -
+          std::cos(declination) * std::sin(rightAscension) *
+              std::sin(degToRad(meanLongitude))));
 
-    return {radToDeg(ra + degToRad(delta_ra)) / 15.0,
-            radToDeg(dec + degToRad(delta_dec))};
+    return {radToDeg(rightAscension + degToRad(deltaRightAscension)) / 15.0,
+            radToDeg(declination + degToRad(deltaDeclination))};
 }
 
-EquatorialCoordinates applyPrecession(const EquatorialCoordinates& position,
-                                      double fromJD, double toJD) {
-    double t = (fromJD - JD2000) / 36525.0;
-    double T = (toJD - fromJD) / 36525.0;
+auto applyPrecession(const EquatorialCoordinates& position,
+                     double fromJulianDate,
+                     double toJulianDate) -> EquatorialCoordinates {
+    double centuriesSinceJ2000 = (fromJulianDate - JD2000) / CENTURY;
+    double centuriesBetweenDates = (toJulianDate - fromJulianDate) / CENTURY;
 
-    double zeta = (2306.2181 + 1.39656 * t - 0.000139 * t * t) * T +
-                  (0.30188 - 0.000344 * t) * T * T + 0.017998 * T * T * T;
-    double z = (2306.2181 + 1.39656 * t - 0.000139 * t * t) * T +
-               (1.09468 + 0.000066 * t) * T * T + 0.018203 * T * T * T;
-    double theta = (2004.3109 - 0.85330 * t - 0.000217 * t * t) * T -
-                   (0.42665 + 0.000217 * t) * T * T - 0.041833 * T * T * T;
+    double zeta = (2306.2181 + 1.39656 * centuriesSinceJ2000 -
+                   0.000139 * centuriesSinceJ2000 * centuriesSinceJ2000) *
+                      centuriesBetweenDates +
+                  (0.30188 - 0.000344 * centuriesSinceJ2000) *
+                      centuriesBetweenDates * centuriesBetweenDates +
+                  0.017998 * centuriesBetweenDates * centuriesBetweenDates *
+                      centuriesBetweenDates;
+    double z = (2306.2181 + 1.39656 * centuriesSinceJ2000 -
+                0.000139 * centuriesSinceJ2000 * centuriesSinceJ2000) *
+                   centuriesBetweenDates +
+               (1.09468 + 0.000066 * centuriesSinceJ2000) *
+                   centuriesBetweenDates * centuriesBetweenDates +
+               0.018203 * centuriesBetweenDates * centuriesBetweenDates *
+                   centuriesBetweenDates;
+    double theta = (2004.3109 - 0.85330 * centuriesSinceJ2000 -
+                    0.000217 * centuriesSinceJ2000 * centuriesSinceJ2000) *
+                       centuriesBetweenDates -
+                   (0.42665 + 0.000217 * centuriesSinceJ2000) *
+                       centuriesBetweenDates * centuriesBetweenDates -
+                   0.041833 * centuriesBetweenDates * centuriesBetweenDates *
+                       centuriesBetweenDates;
 
-    zeta = degToRad(zeta / 3600.0);
-    z = degToRad(z / 3600.0);
-    theta = degToRad(theta / 3600.0);
+    zeta = degToRad(zeta * ARCSEC_TO_DEG);
+    z = degToRad(z * ARCSEC_TO_DEG);
+    theta = degToRad(theta * ARCSEC_TO_DEG);
 
-    double ra = degToRad(position.rightAscension * 15);
-    double dec = degToRad(position.declination);
+    double rightAscension = degToRad(position.rightAscension * 15);
+    double declination = degToRad(position.declination);
 
-    double A = std::cos(dec) * std::sin(ra + zeta);
-    double B = std::cos(theta) * std::cos(dec) * std::cos(ra + zeta) -
-               std::sin(theta) * std::sin(dec);
-    double C = std::sin(theta) * std::cos(dec) * std::cos(ra + zeta) +
-               std::cos(theta) * std::sin(dec);
+    double A = std::cos(declination) * std::sin(rightAscension + zeta);
+    double B = std::cos(theta) * std::cos(declination) *
+                   std::cos(rightAscension + zeta) -
+               std::sin(theta) * std::sin(declination);
+    double C = std::sin(theta) * std::cos(declination) *
+                   std::cos(rightAscension + zeta) +
+               std::cos(theta) * std::sin(declination);
 
-    double ra_new = std::atan2(A, B) + z;
-    double dec_new = std::asin(C);
+    double newRightAscension = std::atan2(A, B) + z;
+    double newDeclination = std::asin(C);
 
-    return {radToDeg(ra_new) / 15.0, radToDeg(dec_new)};
+    return {radToDeg(newRightAscension) / 15.0, radToDeg(newDeclination)};
 }
 
-EquatorialCoordinates observedToJ2000(const EquatorialCoordinates& observed,
-                                      double jd) {
-    auto temp = applyAberration(observed, jd);
-    temp = applyNutation(temp, jd, true);
-    return applyPrecession(temp, jd, JD2000);
+auto observedToJ2000(const EquatorialCoordinates& observed,
+                     double julianDate) -> EquatorialCoordinates {
+    auto temp = applyAberration(observed, julianDate);
+    temp = applyNutation(temp, julianDate, true);
+    return applyPrecession(temp, julianDate, JD2000);
 }
 
-EquatorialCoordinates j2000ToObserved(const EquatorialCoordinates& j2000,
-                                      double jd) {
-    auto temp = applyPrecession(j2000, JD2000, jd);
-    temp = applyNutation(temp, jd);
-    return applyAberration(temp, jd);
+auto j2000ToObserved(const EquatorialCoordinates& j2000,
+                     double julianDate) -> EquatorialCoordinates {
+    auto temp = applyPrecession(j2000, JD2000, julianDate);
+    temp = applyNutation(temp, julianDate);
+    return applyAberration(temp, julianDate);
 }
 
-HorizontalCoordinates equatorialToHorizontal(
-    const EquatorialCoordinates& object, const GeographicCoordinates& observer,
-    double jd) {
-    double lst = range360(280.46061837 + 360.98564736629 * (jd - 2451545.0) +
-                          observer.longitude);
-    double ha = range360(lst - object.rightAscension * 15);
+auto equatorialToHorizontal(const EquatorialCoordinates& object,
+                            const GeographicCoordinates& observer,
+                            double julianDate) -> HorizontalCoordinates {
+    double localSiderealTime =
+        range360(280.46061837 + 360.98564736629 * (julianDate - JD2000) +
+                 observer.longitude);
+    double hourAngle = range360(localSiderealTime - object.rightAscension * 15);
 
-    double sin_alt = std::sin(degToRad(object.declination)) *
-                         std::sin(degToRad(observer.latitude)) +
-                     std::cos(degToRad(object.declination)) *
-                         std::cos(degToRad(observer.latitude)) *
-                         std::cos(degToRad(ha));
-    double alt = radToDeg(std::asin(sin_alt));
+    double sinAltitude = std::sin(degToRad(object.declination)) *
+                             std::sin(degToRad(observer.latitude)) +
+                         std::cos(degToRad(object.declination)) *
+                             std::cos(degToRad(observer.latitude)) *
+                             std::cos(degToRad(hourAngle));
+    double altitude = radToDeg(std::asin(sinAltitude));
 
-    double cos_az =
+    double cosAzimuth =
         (std::sin(degToRad(object.declination)) -
-         std::sin(degToRad(alt)) * std::sin(degToRad(observer.latitude))) /
-        (std::cos(degToRad(alt)) * std::cos(degToRad(observer.latitude)));
-    double az = radToDeg(std::acos(cos_az));
+         std::sin(degToRad(altitude)) * std::sin(degToRad(observer.latitude))) /
+        (std::cos(degToRad(altitude)) * std::cos(degToRad(observer.latitude)));
+    double azimuth = radToDeg(std::acos(cosAzimuth));
 
-    if (std::sin(degToRad(ha)) > 0) {
-        az = 360 - az;
+    if (std::sin(degToRad(hourAngle)) > 0) {
+        azimuth = 360 - azimuth;
     }
 
-    return {range360(az + 180), alt};
+    return {range360(azimuth + 180), altitude};
 }
 
-EquatorialCoordinates horizontalToEquatorial(
-    const HorizontalCoordinates& object, const GeographicCoordinates& observer,
-    double jd) {
-    double alt = degToRad(object.altitude);
-    double az = degToRad(range360(object.azimuth + 180));
-    double lat = degToRad(observer.latitude);
+auto horizontalToEquatorial(const HorizontalCoordinates& object,
+                            const GeographicCoordinates& observer,
+                            double julianDate) -> EquatorialCoordinates {
+    double altitude = degToRad(object.altitude);
+    double azimuth = degToRad(range360(object.azimuth + 180));
+    double latitude = degToRad(observer.latitude);
 
-    double sin_dec = std::sin(alt) * std::sin(lat) +
-                     std::cos(alt) * std::cos(lat) * std::cos(az);
-    double dec = radToDeg(std::asin(sin_dec));
+    double sinDeclination =
+        std::sin(altitude) * std::sin(latitude) +
+        std::cos(altitude) * std::cos(latitude) * std::cos(azimuth);
+    double declination = radToDeg(std::asin(sinDeclination));
 
-    double cos_ha = (std::sin(alt) - std::sin(lat) * std::sin(degToRad(dec))) /
-                    (std::cos(lat) * std::cos(degToRad(dec)));
-    double ha = radToDeg(std::acos(cos_ha));
+    double cosHourAngle =
+        (std::sin(altitude) -
+         std::sin(latitude) * std::sin(degToRad(declination))) /
+        (std::cos(latitude) * std::cos(degToRad(declination)));
+    double hourAngle = radToDeg(std::acos(cosHourAngle));
 
-    if (std::sin(az) > 0) {
-        ha = 360 - ha;
+    if (std::sin(azimuth) > 0) {
+        hourAngle = 360 - hourAngle;
     }
 
-    double lst = range360(280.46061837 + 360.98564736629 * (jd - 2451545.0) +
-                          observer.longitude);
-    double ra = range360(lst - ha) / 15.0;
+    double localSiderealTime =
+        range360(280.46061837 + 360.98564736629 * (julianDate - JD2000) +
+                 observer.longitude);
+    double rightAscension = range360(localSiderealTime - hourAngle) / 15.0;
 
-    return {ra, dec};
+    return {rightAscension, declination};
 }
 
 }  // namespace lithium

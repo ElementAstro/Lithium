@@ -15,13 +15,13 @@ Description: Basic Component Types Definition and Some Utilities
 #ifndef ATOM_COMPONENT_TYPES_HPP
 #define ATOM_COMPONENT_TYPES_HPP
 
-#define ATOM_COMPONENT_TYPE_COUNT
-
 #include <algorithm>
 #include <array>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 // Helper to get the number of enum entries using constexpr reflection
 template <typename Enum>
@@ -62,6 +62,25 @@ struct EnumReflection {
         }
         return std::nullopt;
     }
+
+    [[nodiscard]] auto getAllEnums() const -> std::vector<Enum> {
+        std::vector<Enum> enums;
+        enums.reserve(data.size());
+        for (const auto& [key, _] : data) {
+            enums.push_back(key);
+        }
+        return enums;
+    }
+
+    [[nodiscard]] auto getAllEnumStrings() const
+        -> std::vector<std::string_view> {
+        std::vector<std::string_view> strings;
+        strings.reserve(data.size());
+        for (const auto& [_, value] : data) {
+            strings.push_back(value);
+        }
+        return strings;
+    }
 };
 
 enum class ComponentType {
@@ -83,4 +102,4 @@ constexpr auto COMPONENT_TYPE_REFLECTION =
          {ComponentType::EXECUTABLE, "executable"},
          {ComponentType::TASK, "task"}});
 
-#endif
+#endif  // ATOM_COMPONENT_TYPES_HPP

@@ -23,6 +23,7 @@ Description: Simple wrapper for executing commands.
 #include <sstream>
 #include <stdexcept>
 #include <thread>
+#include "env.hpp"
 
 #ifdef _WIN32
 #define SETENV(name, value) SetEnvironmentVariableA(name, value)
@@ -43,8 +44,8 @@ Description: Simple wrapper for executing commands.
 #include "macro.hpp"
 
 #include "atom/error/exception.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/system/process.hpp"
-
 #include "atom/utils/to_string.hpp"
 
 #ifdef _WIN32
@@ -68,7 +69,11 @@ auto executeCommandInternal(
 
     auto pipeDeleter = [](FILE *pipe) {
         if (pipe != nullptr) {
+#ifdef _MSC_VER
+            _pclose(pipe);
+#else
             pclose(pipe);
+#endif
         }
     };
 
@@ -111,8 +116,13 @@ auto executeCommandInternal(
 
     // 写入输入
     if (!input.empty()) {
-        fwrite(input.c_str(), sizeof(char), input.size(), pipe.get());
-        fflush(pipe.get());
+        if (fwrite(input.c_str(), sizeof(char), input.size(), pipe.get()) !=
+            input.size()) {
+            THROW_RUNTIME_ERROR("Error: failed to write input to pipe.");
+        }
+        if (fflush(pipe.get()) != 0) {
+            THROW_RUNTIME_ERROR("Error: failed to flush pipe.");
+        }
     }
 
     constexpr std::size_t BUFFER_SIZE = 4096;
@@ -173,7 +183,11 @@ auto executeCommandStream(
 
     auto pipeDeleter = [](FILE *pipe) {
         if (pipe != nullptr) {
+#ifdef _MSC_VER
+            _pclose(pipe);
+#else
             pclose(pipe);
+#endif
         }
     };
 
@@ -289,6 +303,7 @@ void executeCommands(const std::vector<std::string> &commands) {
     std::vector<std::thread> threads;
     std::vector<std::string> errors;
 
+    threads.reserve(commands.size());
     for (const auto &command : commands) {
         threads.emplace_back([&command, &errors]() {
             try {
@@ -327,8 +342,11 @@ auto executeCommandWithEnv(const std::string &command,
         std::lock_guard lock(envMutex);
 
         for (const auto &var : envVars) {
-            char *oldValue = std::getenv(var.first.c_str());
-            if (oldValue != nullptr) {
+            std::lock_guard lock(envMutex);
+            std::shared_ptr<utils::Env> env;
+            GET_OR_CREATE_PTR(env, utils::Env, "LITHIUM.ENV");
+            auto oldValue = env->getEnv(var.first);
+            if (!oldValue.empty()) {
                 oldEnvVars[var.first] = std::string(oldValue);
             }
             SETENV(var.first.c_str(), var.second.c_str());

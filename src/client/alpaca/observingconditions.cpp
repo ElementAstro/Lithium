@@ -7,74 +7,74 @@ AlpacaObservingConditions::AlpacaObservingConditions(std::string_view address,
     : AlpacaDevice(std::string(address), "observingconditions", device_number,
                    std::string(protocol)) {}
 
-double AlpacaObservingConditions::GetAveragePeriod() {
-    return GetNumericProperty<double>("averageperiod");
+auto AlpacaObservingConditions::getAveragePeriod() const -> double {
+    return getNumericProperty<double>("averageperiod");
 }
 
-void AlpacaObservingConditions::SetAveragePeriod(double period) {
-    Put("averageperiod", {{"AveragePeriod", std::to_string(period)}});
+void AlpacaObservingConditions::setAveragePeriod(double period) {
+    put("averageperiod", {{"AveragePeriod", std::to_string(period)}});
 }
 
-std::optional<double> AlpacaObservingConditions::GetCloudCover() {
-    return GetOptionalProperty<double>("cloudcover");
+auto AlpacaObservingConditions::getCloudCover() const -> std::optional<double> {
+    return getOptionalProperty<double>("cloudcover");
 }
 
-std::optional<double> AlpacaObservingConditions::GetDewPoint() {
-    return GetOptionalProperty<double>("dewpoint");
+auto AlpacaObservingConditions::getDewPoint() const -> std::optional<double> {
+    return getOptionalProperty<double>("dewpoint");
 }
 
-std::optional<double> AlpacaObservingConditions::GetHumidity() {
-    return GetOptionalProperty<double>("humidity");
+auto AlpacaObservingConditions::getHumidity() const -> std::optional<double> {
+    return getOptionalProperty<double>("humidity");
 }
 
-std::optional<double> AlpacaObservingConditions::GetPressure() {
-    return GetOptionalProperty<double>("pressure");
+auto AlpacaObservingConditions::getPressure() const -> std::optional<double> {
+    return getOptionalProperty<double>("pressure");
 }
 
-std::optional<double> AlpacaObservingConditions::GetRainRate() {
-    return GetOptionalProperty<double>("rainrate");
+auto AlpacaObservingConditions::getRainRate() const -> std::optional<double> {
+    return getOptionalProperty<double>("rainrate");
 }
 
-std::optional<double> AlpacaObservingConditions::GetSkyBrightness() {
-    return GetOptionalProperty<double>("skybrightness");
+auto AlpacaObservingConditions::getSkyBrightness() const -> std::optional<double> {
+    return getOptionalProperty<double>("skybrightness");
 }
 
-std::optional<double> AlpacaObservingConditions::GetSkyQuality() {
-    return GetOptionalProperty<double>("skyquality");
+auto AlpacaObservingConditions::getSkyQuality() const -> std::optional<double> {
+    return getOptionalProperty<double>("skyquality");
 }
 
-std::optional<double> AlpacaObservingConditions::GetSkyTemperature() {
-    return GetOptionalProperty<double>("skytemperature");
+auto AlpacaObservingConditions::getSkyTemperature() const -> std::optional<double> {
+    return getOptionalProperty<double>("skytemperature");
 }
 
-std::optional<double> AlpacaObservingConditions::GetStarFWHM() {
-    return GetOptionalProperty<double>("starfwhm");
+auto AlpacaObservingConditions::getStarFWHM() const -> std::optional<double> {
+    return getOptionalProperty<double>("starfwhm");
 }
 
-std::optional<double> AlpacaObservingConditions::GetTemperature() {
-    return GetOptionalProperty<double>("temperature");
+auto AlpacaObservingConditions::getTemperature() const -> std::optional<double> {
+    return getOptionalProperty<double>("temperature");
 }
 
-std::optional<double> AlpacaObservingConditions::GetWindDirection() {
-    return GetOptionalProperty<double>("winddirection");
+auto AlpacaObservingConditions::getWindDirection() const -> std::optional<double> {
+    return getOptionalProperty<double>("winddirection");
 }
 
-std::optional<double> AlpacaObservingConditions::GetWindGust() {
-    return GetOptionalProperty<double>("windgust");
+auto AlpacaObservingConditions::getWindGust() const -> std::optional<double> {
+    return getOptionalProperty<double>("windgust");
 }
 
-std::optional<double> AlpacaObservingConditions::GetWindSpeed() {
-    return GetOptionalProperty<double>("windspeed");
+auto AlpacaObservingConditions::getWindSpeed() const -> std::optional<double> {
+    return getOptionalProperty<double>("windspeed");
 }
 
-void AlpacaObservingConditions::Refresh() { Put("refresh"); }
-
-std::string AlpacaObservingConditions::SensorDescription(
-    std::string_view SensorName) {
-    return Get("sensordescription", {{"SensorName", std::string(SensorName)}});
+void AlpacaObservingConditions::refresh() {
+    put("refresh");
 }
 
-double AlpacaObservingConditions::TimeSinceLastUpdate(
-    std::string_view SensorName) {
-    return GetNumericProperty<double>("timesincelastupdate");
+auto AlpacaObservingConditions::sensorDescription(std::string_view sensorName) const -> std::string {
+    return get("sensordescription", {{"SensorName", std::string(sensorName)}});
+}
+
+auto AlpacaObservingConditions::timeSinceLastUpdate(std::string_view sensorName) const -> double {
+    return getNumericProperty<double>("timesincelastupdate");
 }

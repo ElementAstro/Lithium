@@ -19,12 +19,33 @@ private:
 public:
     Property() = default;
 
-    Property(std::function<T()> get) : getter_(std::move(get)) {}
+    explicit Property(std::function<T()> get) : getter_(std::move(get)) {}
 
     Property(std::function<T()> get, std::function<void(T)> set)
         : getter_(std::move(get)), setter_(std::move(set)) {}
 
-    Property(const T& defaultValue) : value_(defaultValue) {}
+    explicit Property(const T& defaultValue) : value_(defaultValue) {}
+
+    // Destructor
+    ~Property() = default;
+
+    // Copy constructor
+    Property(const Property& other)
+        : value_(other.value_),
+          getter_(other.getter_),
+          setter_(other.setter_),
+          onChange_(other.onChange_) {}
+
+    // Copy assignment operator
+    auto operator=(const Property& other) -> Property& {
+        if (this != &other) {
+            value_ = other.value_;
+            getter_ = other.getter_;
+            setter_ = other.setter_;
+            onChange_ = other.onChange_;
+        }
+        return *this;
+    }
 
     // Move constructor
     Property(Property&& other) noexcept
@@ -44,7 +65,7 @@ public:
         return *this;
     }
 
-    operator T() const {
+    explicit operator T() const {
         if (getter_) {
             return getter_();
         }
@@ -84,10 +105,10 @@ public:
     }
 
     // Friend function for stream output
-    friend auto operator<<(std::ostream& os,
+    friend auto operator<<(std::ostream& outputStream,
                            const Property& prop) -> std::ostream& {
-        os << static_cast<T>(prop);
-        return os;
+        outputStream << static_cast<T>(prop);
+        return outputStream;
     }
 
     // Comparison operators

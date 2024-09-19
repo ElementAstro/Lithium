@@ -20,7 +20,7 @@ Description: A Small Vector Implementation
 #include <cstddef>
 #include <initializer_list>
 #include <limits>
-#include <type_traits>
+#include <utility>
 #include "error/exception.hpp"
 #include "macro.hpp"
 
@@ -41,19 +41,13 @@ public:
 
     SmallVector() = default;
 
-    template <typename InputIt,
-              typename = std::enable_if_t<!std::is_integral_v<InputIt>>>
+    template <std::input_iterator InputIt>
     SmallVector(InputIt first, InputIt last) {
         assign(first, last);
     }
 
     explicit SmallVector(size_type count, const T& value = T()) {
         assign(count, value);
-    }
-
-    template <typename InputIt>
-    SmallVector(InputIt first, InputIt last) {
-        assign(first, last);
     }
 
     SmallVector(std::initializer_list<T> init) { assign(init); }
@@ -96,19 +90,19 @@ public:
             deallocate();
             allocate(count);
         }
-        std::fill_n(begin(), count, value);
+        std::ranges::fill_n(begin(), count, value);
         size_ = count;
     }
 
-    template <typename InputIt>
+    template <std::input_iterator InputIt>
     void assign(InputIt first, InputIt last) {
         clear();
-        size_type count = std::distance(first, last);
+        size_type count = std::ranges::distance(first, last);
         if (count > capacity()) {
             deallocate();
             allocate(count);
         }
-        std::copy(first, last, begin());
+        std::ranges::copy(first, last, begin());
         size_ = count;
     }
 
@@ -205,7 +199,7 @@ public:
     void reserve(size_type new_cap) {
         if (new_cap > capacity()) {
             T* newData = allocate(new_cap);
-            std::move(begin(), end(), newData);
+            std::ranges::move(*this, newData);
             deallocate();
             data_ = newData;
             capacity_ = new_cap;
@@ -232,36 +226,36 @@ public:
         if (size() + count > capacity()) {
             size_type newCap = std::max(size() + count, capacity() * 2);
             T* newData = allocate(newCap);
-            std::move(begin(), begin() + index, newData);
-            std::fill_n(newData + index, count, value);
-            std::move(begin() + index, end(), newData + index + count);
+            std::ranges::move(begin(), begin() + index, newData);
+            std::ranges::fill_n(newData + index, count, value);
+            std::ranges::move(begin() + index, end(), newData + index + count);
             deallocate();
             data_ = newData;
             capacity_ = newCap;
         } else {
-            std::move_backward(begin() + index, end(), end() + count);
-            std::fill_n(begin() + index, count, value);
+            std::ranges::move_backward(begin() + index, end(), end() + count);
+            std::ranges::fill_n(begin() + index, count, value);
         }
         size_ += count;
         return begin() + index;
     }
 
-    template <typename InputIt>
+    template <std::input_iterator InputIt>
     auto insert(const_iterator pos, InputIt first, InputIt last) -> iterator {
         size_type index = pos - begin();
-        size_type count = std::distance(first, last);
+        size_type count = std::ranges::distance(first, last);
         if (size() + count > capacity()) {
             size_type newCap = std::max(size() + count, capacity() * 2);
             T* newData = allocate(newCap);
-            std::move(begin(), begin() + index, newData);
-            std::copy(first, last, newData + index);
-            std::move(begin() + index, end(), newData + index + count);
+            std::ranges::move(begin(), begin() + index, newData);
+            std::ranges::copy(first, last, newData + index);
+            std::ranges::move(begin() + index, end(), newData + index + count);
             deallocate();
             data_ = newData;
             capacity_ = newCap;
         } else {
-            std::move_backward(begin() + index, end(), end() + count);
-            std::copy(first, last, begin() + index);
+            std::ranges::move_backward(begin() + index, end(), end() + count);
+            std::ranges::copy(first, last, begin() + index);
         }
         size_ += count;
         return begin() + index;
@@ -277,14 +271,14 @@ public:
         if (size() == capacity()) {
             size_type newCap = capacity() == 0 ? 1 : capacity() * 2;
             T* newData = allocate(newCap);
-            std::move(begin(), begin() + index, newData);
+            std::ranges::move(begin(), begin() + index, newData);
             new (newData + index) T(std::forward<Args>(args)...);
-            std::move(begin() + index, end(), newData + index + 1);
+            std::ranges::move(begin() + index, end(), newData + index + 1);
             deallocate();
             data_ = newData;
             capacity_ = newCap;
         } else {
-            std::move_backward(begin() + index, end(), end() + 1);
+            std::ranges::move_backward(begin() + index, end(), end() + 1);
             *(begin() + index) = T(std::forward<Args>(args)...);
         }
         ++size_;
@@ -296,12 +290,12 @@ public:
     auto erase(const_iterator first, const_iterator last) -> iterator {
         size_type index = first - begin();
         size_type count = last - first;
-        std::move(begin() + index + count, end(), begin() + index);
+        std::ranges::move(begin() + index + count, end(), begin() + index);
         size_ -= count;
         return begin() + index;
     }
 
-    void pushBack(const T& value) { emplace_back(value); }
+    void pushBack(const T& value) { emplaceBack(value); }
 
     void pushBack(T&& value) { emplaceBack(std::move(value)); }
 

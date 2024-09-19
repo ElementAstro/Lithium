@@ -19,9 +19,10 @@ Dependencies:
 import json
 import logging
 import os
-import sys
 import clang.cindex
 from clang.cindex import CursorKind
+import argparse
+
 
 def camel_to_snake(name):
     """
@@ -47,33 +48,48 @@ def camel_to_snake(name):
 
     return ''.join(snake_case)
 
+
 class FunctionRegistry:
+    """
+    Registry to store function information.
+    """
+
     def __init__(self):
         self.functions = []
         self.total_function_count = 0
 
     def add_function(self, function_info):
+        """
+        Add a function to the registry.
+        Args:
+            function_info (dict): Information about the function.
+        """
         self.functions.append(function_info)
         self.total_function_count += 1
 
     def print_function_details(self):
+        """
+        Print details of all functions in the registry.
+        """
         for function in self.functions:
             print(f"Function Name: {function['name']}")
             for param in function['parameters']:
                 print(f"    Param: {param['name']} - {param['type']}")
         print(f"Total functions: {self.total_function_count}")
 
+
 # 创建全局变量
 function_registry = FunctionRegistry()
 
+
 def parse_namespace(cursor) -> dict:
-    '''
+    """
     Parse a CursorKind.NAMESPACE cursor and return its information as a dictionary.
     Args:
         cursor (Cursor): The CursorKind.NAMESPACE cursor to parse.
     Returns:
         dict: A dictionary containing the namespace information.
-    '''
+    """
     namespace_info = {
         "type": "namespace",
         "name": cursor.spelling,
@@ -84,6 +100,7 @@ def parse_namespace(cursor) -> dict:
         if child_info:
             namespace_info["children"].append(child_info)
     return namespace_info
+
 
 def parse_class(cursor):
     """
@@ -96,7 +113,10 @@ def parse_class(cursor):
     class_info = {
         "type": "class",
         "name": cursor.spelling,
-        "base_classes": [c.spelling for c in cursor.get_children() if c.kind == CursorKind.CXX_BASE_SPECIFIER], # type: ignore
+        "base_classes": [
+            c.spelling for c in cursor.get_children()
+            if c.kind == CursorKind.CXX_BASE_SPECIFIER
+        ],
         "constructors": [],
         "destructor": None,
         "member_variables": [],
@@ -104,11 +124,11 @@ def parse_class(cursor):
     }
 
     for child in cursor.get_children():
-        if child.kind == CursorKind.CONSTRUCTOR: # type: ignore
+        if child.kind == CursorKind.CONSTRUCTOR:
             class_info["constructors"].append(parse_function(child))
-        elif child.kind == CursorKind.DESTRUCTOR: # type: ignore
+        elif child.kind == CursorKind.DESTRUCTOR:
             class_info["destructor"] = parse_function(child)
-        elif child.kind == CursorKind.FIELD_DECL: # type: ignore
+        elif child.kind == CursorKind.FIELD_DECL:
             class_info["member_variables"].append(parse_variable(child))
         else:
             child_info = parse_cursor(child)
@@ -116,7 +136,15 @@ def parse_class(cursor):
                 class_info["children"].append(child_info)
     return class_info
 
+
 def parse_struct(cursor):
+    """
+    Parse a CursorKind.STRUCT_DECL cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.STRUCT_DECL cursor to parse.
+    Returns:
+        dict: A dictionary containing the struct information.
+    """
     struct_info = {
         "type": "struct",
         "name": cursor.spelling,
@@ -124,7 +152,7 @@ def parse_struct(cursor):
         "children": []
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.FIELD_DECL: # type: ignore
+        if child.kind == CursorKind.FIELD_DECL:
             struct_info["member_variables"].append(parse_variable(child))
         else:
             child_info = parse_cursor(child)
@@ -132,8 +160,19 @@ def parse_struct(cursor):
                 struct_info["children"].append(child_info)
     return struct_info
 
+
 def parse_function(cursor):
-    attributes = [attr.spelling for attr in cursor.get_children() if attr.kind == CursorKind.ANNOTATE_ATTR] # type: ignore
+    """
+    Parse a CursorKind.FUNCTION_DECL cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.FUNCTION_DECL cursor to parse.
+    Returns:
+        dict: A dictionary containing the function information.
+    """
+    attributes = [
+        attr.spelling for attr in cursor.get_children()
+        if attr.kind == CursorKind.ANNOTATE_ATTR
+    ]
     function_info = {
         "type": "function",
         "name": cursor.spelling,
@@ -142,14 +181,22 @@ def parse_function(cursor):
         "attributes": attributes  # 新增属性标签字段
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.PARM_DECL: # type: ignore
+        if child.kind == CursorKind.PARM_DECL:
             function_info["parameters"].append({
                 "name": child.spelling,
                 "type": child.type.spelling
             })
     return function_info
 
+
 def parse_template(cursor):
+    """
+    Parse a CursorKind.TEMPLATE_DECL cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.TEMPLATE_DECL cursor to parse.
+    Returns:
+        dict: A dictionary containing the template information.
+    """
     template_info = {
         "type": "template",
         "name": cursor.spelling,
@@ -157,7 +204,7 @@ def parse_template(cursor):
         "children": []
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.TEMPLATE_TYPE_PARAMETER: # type: ignore
+        if child.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
             template_info["template_parameters"].append(child.spelling)
         else:
             child_info = parse_cursor(child)
@@ -165,21 +212,37 @@ def parse_template(cursor):
                 template_info["children"].append(child_info)
     return template_info
 
+
 def parse_enum(cursor):
+    """
+    Parse a CursorKind.ENUM_DECL cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.ENUM_DECL cursor to parse.
+    Returns:
+        dict: A dictionary containing the enum information.
+    """
     enum_info = {
         "type": "enum",
         "name": cursor.spelling,
         "constants": []
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.ENUM_CONSTANT_DECL: # type: ignore
+        if child.kind == CursorKind.ENUM_CONSTANT_DECL:
             enum_info["constants"].append({
                 "name": child.spelling,
                 "value": child.enum_value
             })
     return enum_info
 
+
 def parse_macro(cursor):
+    """
+    Parse a CursorKind.MACRO_DEFINITION cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.MACRO_DEFINITION cursor to parse.
+    Returns:
+        dict: A dictionary containing the macro information.
+    """
     macro_info = {
         "type": "macro",
         "name": cursor.spelling,
@@ -187,7 +250,15 @@ def parse_macro(cursor):
     }
     return macro_info
 
+
 def parse_variable(cursor):
+    """
+    Parse a CursorKind.VAR_DECL cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.VAR_DECL cursor to parse.
+    Returns:
+        dict: A dictionary containing the variable information.
+    """
     variable_info = {
         "type": "variable",
         "name": cursor.spelling,
@@ -195,13 +266,22 @@ def parse_variable(cursor):
     }
     return variable_info
 
+
 def parse_typedef(cursor):
+    """
+    Parse a CursorKind.TYPEDEF_DECL cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.TYPEDEF_DECL cursor to parse.
+    Returns:
+        dict: A dictionary containing the typedef information.
+    """
     typedef_info = {
         "type": "typedef",
         "name": cursor.spelling,
         "underlying_type": cursor.underlying_typedef_type.spelling
     }
     return typedef_info
+
 
 def parse_union(cursor):
     """
@@ -222,33 +302,66 @@ def parse_union(cursor):
             union_info["children"].append(child_info)
     return union_info
 
+
 def parse_documentation(cursor):
+    """
+    Parse documentation comments from a cursor.
+    Args:
+        cursor (Cursor): The cursor to parse documentation from.
+    Returns:
+        str: The parsed documentation string.
+    """
     docstring = ""
     for token in cursor.get_tokens():
-        if token.kind == clang.cindex.TokenKind.COMMENT: # type: ignore
+        if token.kind == clang.cindex.TokenKind.COMMENT:
             docstring += token.spelling.strip('/**/ \t\n') + "\n"
     return docstring.strip()
 
+
 def parse_namespace_alias(cursor):
+    """
+    Parse a CursorKind.NAMESPACE_ALIAS cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.NAMESPACE_ALIAS cursor to parse.
+    Returns:
+        dict: A dictionary containing the namespace alias information.
+    """
     return {
         "type": "namespace_alias",
         "name": cursor.spelling,
         "aliased_namespace": cursor.referenced.spelling  # 获取别名指向的命名空间
     }
 
+
 def parse_using_declaration(cursor):
+    """
+    Parse a CursorKind.USING_DECLARATION cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.USING_DECLARATION cursor to parse.
+    Returns:
+        dict: A dictionary containing the using declaration information.
+    """
     return {
         "type": "using_declaration",
         "name": cursor.spelling,
         "used_name": cursor.referenced.spelling  # 获取using声明使用的名称
     }
 
+
 def parse_template_type_parameter(cursor):
+    """
+    Parse a CursorKind.TEMPLATE_TYPE_PARAMETER cursor and return its information as a dictionary.
+    Args:
+        cursor (Cursor): The CursorKind.TEMPLATE_TYPE_PARAMETER cursor to parse.
+    Returns:
+        dict: A dictionary containing the template type parameter information.
+    """
     return {
         "type": "template_type_parameter",
         "name": cursor.spelling,
-        "default_type": cursor.default_type.spelling if cursor.default_type else None # 获取模板类型参数的默认类型
+        "default_type": cursor.default_type.spelling if cursor.default_type else None  # 获取模板类型参数的默认类型
     }
+
 
 def parse_cursor(cursor):
     """
@@ -265,7 +378,10 @@ def parse_cursor(cursor):
             return parse_class(cursor)
         elif cursor.kind == CursorKind.STRUCT_DECL:
             return parse_struct(cursor)
-        elif cursor.kind in [CursorKind.CXX_METHOD, CursorKind.FUNCTION_DECL, CursorKind.FUNCTION_TEMPLATE]:
+        elif cursor.kind in [
+            CursorKind.CXX_METHOD, CursorKind.FUNCTION_DECL,
+            CursorKind.FUNCTION_TEMPLATE
+        ]:
             return parse_function(cursor)
         elif cursor.kind == CursorKind.ENUM_DECL:
             return parse_enum(cursor)
@@ -290,10 +406,16 @@ def parse_cursor(cursor):
             return parse_template_type_parameter(cursor)
         return None
     except Exception as e:
-        logging.error(f"Failed to parse cursor at {cursor.location}: {str(e)}")
+        logging.error("Failed to parse cursor at %s: %s",
+                      cursor.location, str(e))
         return None
 
+
 class ParentVisitor:
+    """
+    Visitor to record parent-child relationships in the AST.
+    """
+
     def __init__(self):
         self.parent_map = {}
 
@@ -351,6 +473,7 @@ class ParentVisitor:
         for node in path:
             print(f"{node.spelling or node.kind} ({node.kind})")
 
+
 def find_cursor_by_spelling(cursor, spelling):
     """
     Find a cursor by its spelling.
@@ -370,6 +493,7 @@ def find_cursor_by_spelling(cursor, spelling):
             return found
     return None
 
+
 def find_cursor_by_kind(cursor, kind):
     """
     Find a cursor by its kind.
@@ -388,6 +512,7 @@ def find_cursor_by_kind(cursor, kind):
         result.extend(find_cursor_by_kind(child, kind))
     return result
 
+
 def print_ast(cursor, level=0):
     """
     Print the AST starting from the given cursor.
@@ -399,6 +524,7 @@ def print_ast(cursor, level=0):
     print(f"{'  ' * level}{cursor.spelling or cursor.kind} ({cursor.kind})")
     for child in cursor.get_children():
         print_ast(child, level + 1)
+
 
 def parse_cpp_file(file_path):
     """
@@ -424,6 +550,7 @@ def parse_cpp_file(file_path):
 
     return ast_info
 
+
 def parse_hpp_files(directory):
     """
     Parse all C++ header files (.hpp) in a directory and return their AST information as a list of dictionaries.
@@ -437,7 +564,7 @@ def parse_hpp_files(directory):
 
     ast_info_list = []
 
-    for root, dirs, files in os.walk(directory):
+    for root, _, files in os.walk(directory):
         for file in files:
             if file.endswith(".hpp"):
                 file_path = os.path.join(root, file)
@@ -445,6 +572,7 @@ def parse_hpp_files(directory):
                 ast_info_list.append(ast_info)
 
     return ast_info_list
+
 
 def generate_ast_json(directory, output_file):
     """
@@ -461,6 +589,7 @@ def generate_ast_json(directory, output_file):
 
     print(f"AST information written to file: {output_file}")
 
+
 def generate_pybind11_bindings(ast_info_list, bindings_file):
     """
     Generate pybind11 bindings from the AST information.
@@ -468,25 +597,35 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
         ast_info_list (list): A list of dictionaries containing the AST information.
         bindings_file (str): The path to the output pybind11 bindings file.
     """
-    bindings = ['#include <pybind11/pybind11.h>', '#include <pybind11/stl.h>', 'namespace py = pybind11;', 'PYBIND11_MODULE(module_name, m) {']
+    bindings = [
+        '#include <pybind11/pybind11.h>',
+        '#include <pybind11/stl.h>',
+        'namespace py = pybind11;',
+        'PYBIND11_MODULE(module_name, m) {'
+    ]
 
     def generate_function_binding(function_info, namespace=None):
         if namespace:
             function_name = f"{namespace}::{function_info['name']}"
         else:
             function_name = function_info['name']
-        bindings.append(f'    m.def("{camel_to_snake(function_info["name"])}", &{function_name});')
+        bindings.append(
+            f'    m.def("{camel_to_snake(function_info["name"])}", &{
+                function_name});'
+        )
 
     def generate_class_binding(class_info, namespace=None):
         if namespace:
             class_name = f"{namespace}::{class_info['name']}"
         else:
             class_name = class_info['name']
-        bindings.append(f'    py::class_<{class_name}>(m, "{class_info["name"]}")')
+        bindings.append(f'    py::class_<{
+                        class_name}>(m, "{class_info["name"]}")')
 
         # Add constructors
         for constructor in class_info["constructors"]:
-            parameter_types = ", ".join([param["type"] for param in constructor["parameters"]])
+            parameter_types = ", ".join(
+                [param["type"] for param in constructor["parameters"]])
             if parameter_types:
                 bindings.append(f'        .def(py::init<{parameter_types}>())')
             else:
@@ -494,23 +633,28 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
 
         # Add destructor if available
         if class_info["destructor"]:
-            bindings.append(f'        .def("__del__", &{class_name}::{class_info["destructor"]["name"]})')
+            bindings.append(f'        .def("__del__", &{class_name}::{
+                            class_info["destructor"]["name"]})')
 
         # Add member variables
         for member_variable in class_info["member_variables"]:
-            bindings.append(f'        .def_readwrite("{member_variable["name"]}", &{class_name}::{member_variable["name"]})')
+            bindings.append(f'        .def_readwrite("{member_variable["name"]}", &{
+                            class_name}::{member_variable["name"]})')
 
         # Add methods
         for child in class_info['children']:
             if child['type'] == 'function':
                 if namespace:
-                    method_name = f"{namespace}::{class_info['name']}::{child['name']}"
+                    method_name = f"{namespace}::{
+                        class_info['name']}::{child['name']}"
                 else:
                     method_name = f"{class_info['name']}::{child['name']}"
                 if len(child['parameters']) > 0:
-                    bindings.append(f'        .def("{child["name"]}", py::overload_cast<{", ".join([param["type"] for param in child["parameters"]])}>(&{method_name}))')
+                    bindings.append(f'        .def("{child["name"]}", py::overload_cast<{", ".join(
+                        [param["type"] for param in child["parameters"]])}>(&{method_name}))')
                 else:
-                    bindings.append(f'        .def("{child["name"]}", &{method_name})')
+                    bindings.append(
+                        f'        .def("{child["name"]}", &{method_name})')
 
         # Add enumerations
         for child in class_info['children']:
@@ -524,13 +668,16 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
             enum_name = f"{enclosing_class}::{enum_info['name']}"
         else:
             enum_name = enum_info['name']
-        bindings.append(f'    py::enum_<{enum_name}>(m, "{enum_info["name"]}")')
+        bindings.append(f'    py::enum_<{
+                        enum_name}>(m, "{enum_info["name"]}")')
         for constant in enum_info['constants']:
-            bindings.append(f'        .value("{constant["name"]}", {enum_name}::{constant["name"]})')
+            bindings.append(f'        .value("{constant["name"]}", {
+                            enum_name}::{constant["name"]})')
         bindings.append('        .export_values();')
 
     def generate_namespace_binding(namespace_info):
-        bindings.append(f'    py::module_ {namespace_info["name"]} = m.def_submodule("{namespace_info["name"]}");')
+        bindings.append(f'    py::module_ {
+                        namespace_info["name"]} = m.def_submodule("{namespace_info["name"]}");')
         for child in namespace_info['children']:
             if child['type'] == 'function':
                 generate_function_binding(child, namespace_info['name'])
@@ -557,9 +704,9 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
         file.write('\n'.join(bindings))
     print(f"pybind11 bindings written to file: {bindings_file}")
 
-import argparse
 
-parser = argparse.ArgumentParser(description="Generate AST and pybind11 bindings for C++ header files.")
+parser = argparse.ArgumentParser(
+    description="Generate AST and pybind11 bindings for C++ header files.")
 parser.add_argument('directory', help='Directory containing C++ header files')
 parser.add_argument('output_file', help='Output JSON file for AST')
 parser.add_argument('bindings_file', help='Output file for pybind11 bindings')

@@ -200,24 +200,24 @@ public:
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> sharedPtrMap;
+    emhash8::HashMap<std::string, std::any> shared_ptr_map_;
 #else
     std::unordered_map<std::string, std::any>
-        sharedPtrMap; /**< The map that stores the shared pointers and weak
+        shared_ptr_map_; /**< The map that stores the shared pointers and weak
                          pointers. */
 #endif
-    mutable std::shared_mutex mtx; /**< The mutex used for thread-safe access to
-                                      the shared pointer map. */
+    mutable std::shared_mutex mutex_; /**< The mutex used for thread-safe access
+                                      to the shared pointer map. */
 };
 
 template <typename T>
 auto GlobalSharedPtrManager::getSharedPtr(const std::string &key)
     -> std::optional<std::shared_ptr<T>> {
-    std::shared_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+    std::shared_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            return std::any_cast<std::shared_ptr<T>>(it->second);
+            return std::any_cast<std::shared_ptr<T>>(iter->second);
         } catch (const std::bad_any_cast &) {
             return std::nullopt;
         }
@@ -228,20 +228,20 @@ auto GlobalSharedPtrManager::getSharedPtr(const std::string &key)
 template <typename T, typename CreatorFunc>
 auto GlobalSharedPtrManager::getOrCreateSharedPtr(
     const std::string &key, CreatorFunc creator) -> std::shared_ptr<T> {
-    std::unique_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+    std::unique_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            return std::any_cast<std::shared_ptr<T>>(it->second);
+            return std::any_cast<std::shared_ptr<T>>(iter->second);
         } catch (const std::bad_any_cast &) {
             // Key exists but the stored type does not match, replace it
             auto ptr = creator();
-            sharedPtrMap[key] = ptr;
+            shared_ptr_map_[key] = ptr;
             return ptr;
         }
     } else {
         auto ptr = creator();
-        sharedPtrMap[key] = ptr;
+        shared_ptr_map_[key] = ptr;
         return ptr;
     }
 }
@@ -249,11 +249,11 @@ auto GlobalSharedPtrManager::getOrCreateSharedPtr(
 template <typename T>
 auto GlobalSharedPtrManager::getWeakPtr(const std::string &key)
     -> std::weak_ptr<T> {
-    std::shared_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+    std::shared_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            return std::any_cast<std::weak_ptr<T>>(it->second);
+            return std::any_cast<std::weak_ptr<T>>(iter->second);
         } catch (const std::bad_any_cast &) {
             return std::weak_ptr<T>();
         }
@@ -264,25 +264,25 @@ auto GlobalSharedPtrManager::getWeakPtr(const std::string &key)
 template <typename T>
 void GlobalSharedPtrManager::addSharedPtr(const std::string &key,
                                           std::shared_ptr<T> sharedPtr) {
-    std::unique_lock lock(mtx);
-    sharedPtrMap[key] = std::move(sharedPtr);
+    std::unique_lock lock(mutex_);
+    shared_ptr_map_[key] = std::move(sharedPtr);
 }
 
 template <typename T>
 void GlobalSharedPtrManager::addWeakPtr(const std::string &key,
                                         const std::weak_ptr<T> &weakPtr) {
-    std::unique_lock lock(mtx);
-    sharedPtrMap[key] = weakPtr;
+    std::unique_lock lock(mutex_);
+    shared_ptr_map_[key] = weakPtr;
 }
 
 template <typename T>
 auto GlobalSharedPtrManager::getSharedPtrFromWeakPtr(const std::string &key)
     -> std::shared_ptr<T> {
-    std::shared_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+    std::shared_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            return std::any_cast<std::weak_ptr<T>>(it->second).lock();
+            return std::any_cast<std::weak_ptr<T>>(iter->second).lock();
         } catch (const std::bad_any_cast &) {
             return std::shared_ptr<T>();
         }
@@ -291,13 +291,14 @@ auto GlobalSharedPtrManager::getSharedPtrFromWeakPtr(const std::string &key)
 }
 
 template <typename T>
-std::weak_ptr<T> GlobalSharedPtrManager::getWeakPtrFromSharedPtr(
-    const std::string &key) {
-    std::shared_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+auto GlobalSharedPtrManager::getWeakPtrFromSharedPtr(const std::string &key)
+    -> std::weak_ptr<T> {
+    std::shared_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            return std::weak_ptr(std::any_cast<std::shared_ptr<T>>(it->second));
+            return std::weak_ptr(
+                std::any_cast<std::shared_ptr<T>>(iter->second));
         } catch (const std::bad_any_cast &) {
             return std::weak_ptr<T>();
         }
@@ -308,13 +309,13 @@ std::weak_ptr<T> GlobalSharedPtrManager::getWeakPtrFromSharedPtr(
 template <typename T>
 void GlobalSharedPtrManager::addDeleter(
     const std::string &key, const std::function<void(T *)> &deleter) {
-    std::unique_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+    std::unique_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            auto ptr = std::any_cast<std::shared_ptr<T>>(it->second);
+            auto ptr = std::any_cast<std::shared_ptr<T>>(iter->second);
             ptr.reset(ptr.get(), deleter);
-            sharedPtrMap[key] = ptr;
+            shared_ptr_map_[key] = ptr;
         } catch (const std::bad_any_cast &) {
             // Ignore if the stored type does not match
         }
@@ -323,16 +324,17 @@ void GlobalSharedPtrManager::addDeleter(
 
 template <typename T>
 void GlobalSharedPtrManager::deleteObject(const std::string &key, T *ptr) {
-    std::unique_lock lock(mtx);
-    auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end()) {
+    std::unique_lock lock(mutex_);
+    auto iter = shared_ptr_map_.find(key);
+    if (iter != shared_ptr_map_.end()) {
         try {
-            auto deleter = std::any_cast<std::function<void(T *)>>(it->second);
+            auto deleter =
+                std::any_cast<std::function<void(T *)>>(iter->second);
             deleter(ptr);
         } catch (const std::bad_any_cast &) {
             delete ptr;  // Use default delete if no custom deleter is found
         }
-        sharedPtrMap.erase(it);
+        shared_ptr_map_.erase(iter);
     }
 }
 

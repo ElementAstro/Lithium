@@ -33,14 +33,14 @@ public:
         -> std::optional<nlohmann::json>;
 
     static auto writeJsonFile(const fs::path& filePath,
-                              const nlohmann::json& j) -> bool;
+                              const nlohmann::json& jsonData) -> bool;
 
     static void asyncReadJsonFile(
         const fs::path& filePath,
         std::function<void(std::optional<nlohmann::json>)> callback);
 
     static void asyncWriteJsonFile(const fs::path& filePath,
-                                   const nlohmann::json& j,
+                                   const nlohmann::json& jsonData,
                                    std::function<void(bool)> callback);
 
     static void mergeJsonObjects(nlohmann::json& base,
@@ -48,8 +48,9 @@ public:
 
     static void batchAsyncProcess(
         const std::vector<fs::path>& filePaths,
-        std::function<void(std::optional<nlohmann::json>)> process,
-        std::function<void()> onComplete);
+        const std::function<void(const std::optional<nlohmann::json>&)>&
+            process,
+        const std::function<void()>& onComplete);
 
     static void asyncDeleteJsonFile(const fs::path& filePath,
                                     std::function<void(bool)> callback);
@@ -60,8 +61,8 @@ public:
 
     static void batchProcessDirectory(
         const fs::path& directoryPath,
-        std::function<void(std::optional<nlohmann::json>)> process,
-        std::function<void()> onComplete);
+        const std::function<void(const std::optional<nlohmann::json>&)>& process,
+        const std::function<void()>& onComplete);
 };
 
 }  // namespace lithium

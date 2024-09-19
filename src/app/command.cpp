@@ -1,14 +1,19 @@
 #include "command.hpp"
 #include "eventloop.hpp"
 
+#include "atom/log/loguru.hpp"
+
 namespace lithium::app {
 CommandDispatcher::CommandDispatcher(std::shared_ptr<EventLoop> eventLoop)
-    : eventLoop_(std::move(eventLoop)) {}
+    : eventLoop_(std::move(eventLoop)) {
+    LOG_F(INFO, "CommandDispatcher initialized");
+}
 
 void CommandDispatcher::unregisterCommand(const CommandID& id) {
     std::unique_lock lock(mutex_);
     handlers_.erase(id);
     undoHandlers_.erase(id);
+    LOG_F(INFO, "Unregistered command: {}", id);
 }
 
 void CommandDispatcher::recordHistory(const CommandID& id,
@@ -18,6 +23,7 @@ void CommandDispatcher::recordHistory(const CommandID& id,
     if (commandHistory.size() > maxHistorySize_) {
         commandHistory.erase(commandHistory.begin());
     }
+    LOG_F(INFO, "Recorded history for command: {}", id);
 }
 
 void CommandDispatcher::notifySubscribers(const CommandID& id,
@@ -27,6 +33,7 @@ void CommandDispatcher::notifySubscribers(const CommandID& id,
         for (auto& [_, callback] : it->second) {
             callback(id, command);
         }
+        LOG_F(INFO, "Notified subscribers for command: {}", id);
     }
 }
 
@@ -34,6 +41,7 @@ int CommandDispatcher::subscribe(const CommandID& id, EventCallback callback) {
     std::unique_lock lock(mutex_);
     int token = nextSubscriberId_++;
     subscribers_[id][token] = std::move(callback);
+    LOG_F(INFO, "Subscribed to command: {} with token: {}", id, token);
     return token;
 }
 
@@ -44,16 +52,19 @@ void CommandDispatcher::unsubscribe(const CommandID& id, int token) {
     if (callbacks.empty()) {
         subscribers_.erase(id);
     }
+    LOG_F(INFO, "Unsubscribed from command: {} with token: {}", id, token);
 }
 
 void CommandDispatcher::clearHistory() {
     std::unique_lock lock(mutex_);
     history_.clear();
+    LOG_F(INFO, "Cleared all command history");
 }
 
 void CommandDispatcher::clearCommandHistory(const CommandID& id) {
     std::unique_lock lock(mutex_);
     history_.erase(id);
+    LOG_F(INFO, "Cleared history for command: {}", id);
 }
 
 auto CommandDispatcher::getActiveCommands() const -> std::vector<CommandID> {
@@ -63,6 +74,7 @@ auto CommandDispatcher::getActiveCommands() const -> std::vector<CommandID> {
     for (const auto& [id, _] : handlers_) {
         activeCommands.push_back(id);
     }
+    LOG_F(INFO, "Retrieved active commands");
     return activeCommands;
 }
 
@@ -80,6 +92,7 @@ void CommandDispatcher::registerCommand(
             (*undoHandler)(std::any_cast<const CommandType&>(cmd));
         };
     }
+    LOG_F(INFO, "Registered command: {}", id);
 }
 
 template <typename CommandType>
@@ -87,6 +100,7 @@ auto CommandDispatcher::dispatch(
     const CommandID& id, const CommandType& command, int priority,
     std::optional<std::chrono::milliseconds> delay,
     CommandCallback callback) -> std::future<ResultType> {
+    LOG_F(INFO, "Dispatching command: {} with priority: {}", id, priority);
     auto task = [this, id, command, callback]() -> ResultType {
         try {
             std::shared_lock lock(mutex_);
@@ -98,6 +112,7 @@ auto CommandDispatcher::dispatch(
                 ResultType result = command;
                 if (callback)
                     callback(id, result);
+                LOG_F(INFO, "Command {} executed successfully", id);
                 return result;
             } else {
                 throw std::runtime_error("Command not found: " + id);
@@ -107,6 +122,7 @@ auto CommandDispatcher::dispatch(
             if (callback) {
                 callback(id, ex);
             }
+            LOG_F(ERROR, "Command {} execution failed", id);
             return ex;
         }
     };
@@ -121,6 +137,7 @@ auto CommandDispatcher::dispatch(
 template <typename CommandType>
 auto CommandDispatcher::getResult(std::future<ResultType>& resultFuture)
     -> CommandType {
+    LOG_F(INFO, "Getting result for command");
     auto result = resultFuture.get();
     if (std::holds_alternative<std::any>(result)) {
         return std::any_cast<CommandType>(std::get<std::any>(result));
@@ -135,11 +152,13 @@ void CommandDispatcher::undo(const CommandID& id, const CommandType& command) {
     auto it = undoHandlers_.find(id);
     if (it != undoHandlers_.end()) {
         it->second(command);
+        LOG_F(INFO, "Undo command: {}", id);
     }
 }
 
 template <typename CommandType>
 void CommandDispatcher::redo(const CommandID& id, const CommandType& command) {
+    LOG_F(INFO, "Redo command: {}", id);
     dispatch(id, command, 0, std::nullopt).get();
 }
 
@@ -153,6 +172,7 @@ auto CommandDispatcher::getCommandHistory(const CommandID& id)
             history.push_back(std::any_cast<CommandType>(cmd));
         }
     }
+    LOG_F(INFO, "Retrieved command history for: {}", id);
     return history;
 }
 

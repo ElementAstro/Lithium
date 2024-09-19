@@ -12,12 +12,15 @@
                 python net_framework_installer.py --list
                 python net_framework_installer.py --check v4.0.30319
                 python net_framework_installer.py --check v4.0.30319 --download [URL] --install [FILE_PATH] --threads 4 --checksum [SHA256]
+                python net_framework_installer.py --uninstall v4.0.30319
 
 @requires     - Python 3.x
               - Windows operating system
               - `requests` Python library
 
-@author       Your Name
+@note         This script must be run with administrative privileges to install or uninstall .NET Framework versions.
+
+@version      1.1
 @date         Date of creation or last modification
 """
 
@@ -28,6 +31,7 @@ import threading
 import os
 from sys import platform
 import requests
+
 
 def verify_file_checksum(file_path, original_checksum, hash_algo='sha256'):
     """
@@ -45,6 +49,7 @@ def verify_file_checksum(file_path, original_checksum, hash_algo='sha256'):
             _hash.update(chunk)
     return _hash.hexdigest() == original_checksum
 
+
 def check_dotnet_installed(version):
     """
     Checks if a specific version of the .NET Framework is installed by querying the Windows Registry.
@@ -54,12 +59,14 @@ def check_dotnet_installed(version):
     """
     try:
         result = subprocess.run(
-            ["reg", "query", f"HKLM\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\{version}"],
+            ["reg", "query", f"HKLM\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\{
+                version}"],
             capture_output=True, text=True, check=True
         )
         return result.returncode == 0 and version in result.stdout
     except subprocess.CalledProcessError:
         return False
+
 
 def list_installed_dotnets():
     """
@@ -80,6 +87,7 @@ def list_installed_dotnets():
     except subprocess.CalledProcessError:
         print("Failed to query the registry for installed .NET Framework versions.")
 
+
 def download_file_part(url, start, end, filename, idx, results):
     """
     Download a part of a file specified by byte range.
@@ -95,6 +103,7 @@ def download_file_part(url, start, end, filename, idx, results):
     response = requests.get(url, headers=headers, stream=True, timeout=10)
     response.raise_for_status()
     results[idx] = response.content
+
 
 def download_file(url, filename, num_threads=4, expected_checksum=None):
     """
@@ -137,7 +146,8 @@ def download_file(url, filename, num_threads=4, expected_checksum=None):
             os.remove(filename)
             raise ValueError("Checksum verification failed")
 
-def install_software(installer_path : str):
+
+def install_software(installer_path):
     """
     Executes a software installer from a specified path.
 
@@ -149,15 +159,47 @@ def install_software(installer_path : str):
     else:
         print("This script only supports Windows.")
 
+
+def uninstall_dotnet(version):
+    """
+    Uninstall a specific version of the .NET Framework.
+
+    @param version: A string representing the .NET Framework version to uninstall (e.g., 'v4\\Client').
+    """
+    try:
+        result = subprocess.run(
+            ["reg", "delete", f"HKLM\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\{
+                version}", "/f"],
+            capture_output=True, text=True, check=True
+        )
+        if result.returncode == 0:
+            print(f".NET Framework {version} uninstalled successfully.")
+        else:
+            print(f"Failed to uninstall .NET Framework {version}.")
+    except subprocess.CalledProcessError:
+        print(f"Failed to uninstall .NET Framework {version}.")
+
+
 def main():
     """
     Main function to parse command-line arguments and invoke script functionality.
     """
-    parser = argparse.ArgumentParser(description="Check and install .NET Framework versions.")
-    parser.add_argument("--check", metavar="VERSION", help="Check if a specific .NET Framework version is installed.")
-    parser.add_argument("--list", action="store_true", help="List all installed .NET Framework versions.")
-    parser.add_argument("--download", metavar="URL", help="URL to download the .NET Framework installer from.")
-    parser.add_argument("--install", metavar="FILE", help="Path to the .NET Framework installer to run.")
+    parser = argparse.ArgumentParser(
+        description="Check and install .NET Framework versions.")
+    parser.add_argument("--check", metavar="VERSION",
+                        help="Check if a specific .NET Framework version is installed.")
+    parser.add_argument("--list", action="store_true",
+                        help="List all installed .NET Framework versions.")
+    parser.add_argument("--download", metavar="URL",
+                        help="URL to download the .NET Framework installer from.")
+    parser.add_argument("--install", metavar="FILE",
+                        help="Path to the .NET Framework installer to run.")
+    parser.add_argument("--threads", type=int, default=4,
+                        help="Number of threads to use for downloading.")
+    parser.add_argument("--checksum", metavar="SHA256",
+                        help="Expected SHA256 checksum of the downloaded file.")
+    parser.add_argument("--uninstall", metavar="VERSION",
+                        help="Uninstall a specific .NET Framework version.")
 
     args = parser.parse_args()
 
@@ -170,8 +212,13 @@ def main():
         else:
             print(f".NET Framework {args.check} is not installed.")
             if args.download and args.install:
-                download_file(args.download, args.install)
+                download_file(args.download, args.install,
+                              num_threads=args.threads, expected_checksum=args.checksum)
                 install_software(args.install)
+
+    if args.uninstall:
+        uninstall_dotnet(args.uninstall)
+
 
 if __name__ == "__main__":
     main()

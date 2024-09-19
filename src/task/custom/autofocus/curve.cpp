@@ -13,15 +13,15 @@
 class FocusCurveFitter::Impl {
 public:
     std::vector<DataPoint> data_;
-    int polynomial_degree_ = 2;
-    ModelType current_model_ = ModelType::POLYNOMIAL;
+    int polynomialDegree = 2;
+    ModelType currentModel = ModelType::POLYNOMIAL;
 
     void addDataPoint(double position, double sharpness) {
         data_.push_back({position, sharpness});
     }
 
-    std::vector<double> fitCurve() {
-        switch (current_model_) {
+    auto fitCurve() -> std::vector<double> {
+        switch (currentModel) {
             case ModelType::POLYNOMIAL:
                 return fitPolynomialCurve();
             case ModelType::GAUSSIAN:
@@ -32,63 +32,68 @@ public:
         return {};
     }
 
-    std::vector<double> fitPolynomialCurve() {
-        int n = data_.size();
-        int degree = polynomial_degree_;
+    auto fitPolynomialCurve() -> std::vector<double> {
+        auto dataSize = static_cast<int>(data_.size());
+        int degree = polynomialDegree;
 
-        std::vector<std::vector<double>> X(n, std::vector<double>(degree + 1));
-        std::vector<double> y(n);
+        std::vector<std::vector<double>> matrixX(
+            dataSize, std::vector<double>(degree + 1));
+        std::vector<double> vectorY(dataSize);
 
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < dataSize; ++i) {
             for (int j = 0; j <= degree; ++j) {
-                X[i][j] = std::pow(data_[i].position, j);
+                matrixX[i][j] = std::pow(data_[i].position, j);
             }
-            y[i] = data_[i].sharpness;
+            vectorY[i] = data_[i].sharpness;
         }
 
-        auto xt = transpose(X);
-        auto xtX = matrixMultiply(xt, X);
-        auto xty = matrixVectorMultiply(xt, y);
-        return solveLinearSystem(xtX, xty);
+        auto matrixXt = transpose(matrixX);
+        auto matrixXtX = matrixMultiply(matrixXt, matrixX);
+        auto vectorXty = matrixVectorMultiply(matrixXt, vectorY);
+        return solveLinearSystem(matrixXtX, vectorXty);
     }
 
-    std::vector<double> fitGaussianCurve() {
-        auto [min_it, max_it] =
-            std::minmax_element(data_.begin(), data_.end(),
-                                [](const DataPoint& a, const DataPoint& b) {
-                                    return a.sharpness < b.sharpness;
-                                });
+    auto fitGaussianCurve() -> std::vector<double> {
+        auto [min_it, max_it] = std::minmax_element(
+            data_.begin(), data_.end(),
+            [](const DataPoint& point_a, const DataPoint& point_b) {
+                return point_a.sharpness < point_b.sharpness;
+            });
 
         std::vector<double> initialGuess = {
             max_it->sharpness - min_it->sharpness, max_it->position, 1.0,
             min_it->sharpness};
 
         return levenbergMarquardt(
-            initialGuess, [](double x, const std::vector<double>& params) {
-                double A = params[0], mu = params[1], sigma = params[2],
-                       C = params[3];
-                return A * std::exp(-std::pow(x - mu, 2) /
-                                    (2 * std::pow(sigma, 2))) +
-                       C;
+            initialGuess,
+            [](double position, const std::vector<double>& params) {
+                double amplitude = params[0], mean = params[1],
+                       std_dev = params[2], offset = params[3];
+                return amplitude * std::exp(-std::pow(position - mean, 2) /
+                                            (2 * std::pow(std_dev, 2))) +
+                       offset;
             });
     }
 
-    std::vector<double> fitLorentzianCurve() {
-        auto [min_it, max_it] =
-            std::minmax_element(data_.begin(), data_.end(),
-                                [](const DataPoint& a, const DataPoint& b) {
-                                    return a.sharpness < b.sharpness;
-                                });
+    auto fitLorentzianCurve() -> std::vector<double> {
+        auto [min_it, max_it] = std::minmax_element(
+            data_.begin(), data_.end(),
+            [](const DataPoint& point_a, const DataPoint& point_b) {
+                return point_a.sharpness < point_b.sharpness;
+            });
 
         std::vector<double> initialGuess = {
             max_it->sharpness - min_it->sharpness, max_it->position, 1.0,
             min_it->sharpness};
 
         return levenbergMarquardt(
-            initialGuess, [](double x, const std::vector<double>& params) {
-                double A = params[0], x0 = params[1], gamma = params[2],
-                       C = params[3];
-                return A / (1 + std::pow((x - x0) / gamma, 2)) + C;
+            initialGuess,
+            [](double position, const std::vector<double>& params) {
+                double amplitude = params[0], center = params[1],
+                       width = params[2], offset = params[3];
+                return amplitude /
+                           (1 + std::pow((position - center) / width, 2)) +
+                       offset;
             });
     }
 
@@ -99,7 +104,7 @@ public:
         ModelType bestModel = ModelType::POLYNOMIAL;
 
         for (const auto& model : models) {
-            current_model_ = model;
+            currentModel = model;
             auto coeffs = fitCurve();
             double aic = calculateAIC(coeffs);
             if (aic < bestAic) {
@@ -108,22 +113,23 @@ public:
             }
         }
 
-        current_model_ = bestModel;
-        LOG_F(INFO, "Selected model: {}", getModelName(current_model_));
+        currentModel = bestModel;
+        LOG_F(INFO, "Selected model: {}", getModelName(currentModel));
     }
 
-    std::vector<std::pair<double, double>> calculateConfidenceIntervals(
-        double confidence_level = 0.95) {
+    auto calculateConfidenceIntervals(double confidence_level = 0.95)
+        -> std::vector<std::pair<double, double>> {
         auto coeffs = fitCurve();
-        int n = data_.size();
-        int p = coeffs.size();
-        double tValue = calculateTValue(n - p, confidence_level);
+        auto dataSize = static_cast<int>(data_.size());
+        auto coeffsSize = static_cast<int>(coeffs.size());
+        double tValue =
+            calculateTValue(dataSize - coeffsSize, confidence_level);
 
         std::vector<std::pair<double, double>> intervals;
-        for (int i = 0; i < p; ++i) {
-            double se = calculateStandardError(coeffs, i);
-            intervals.emplace_back(coeffs[i] - tValue * se,
-                                   coeffs[i] + tValue * se);
+        for (int i = 0; i < coeffsSize; ++i) {
+            double stdError = calculateStandardError(coeffs, i);
+            intervals.emplace_back(coeffs[i] - tValue * stdError,
+                                   coeffs[i] + tValue * stdError);
         }
         return intervals;
     }
@@ -146,8 +152,10 @@ public:
         auto coeffs = fitCurve();
         double minPos = data_.front().position;
         double maxPos = data_.back().position;
-        for (double pos = minPos; pos <= maxPos;
-             pos += (maxPos - minPos) / 100) {
+        int steps = 100;
+        double stepSize = (maxPos - minPos) / steps;
+        for (int i = 0; i <= steps; ++i) {
+            double pos = minPos + i * stepSize;
             gnuplotScript << pos << " " << evaluateCurve(coeffs, pos) << "\n";
         }
         gnuplotScript << "e\n";
@@ -164,15 +172,16 @@ public:
 
     void preprocessData() {
         std::sort(data_.begin(), data_.end(),
-                  [](const DataPoint& a, const DataPoint& b) {
-                      return a.position < b.position;
+                  [](const DataPoint& point_a, const DataPoint& point_b) {
+                      return point_a.position < point_b.position;
                   });
 
-        data_.erase(std::unique(data_.begin(), data_.end(),
-                                [](const DataPoint& a, const DataPoint& b) {
-                                    return a.position == b.position;
-                                }),
-                    data_.end());
+        data_.erase(
+            std::unique(data_.begin(), data_.end(),
+                        [](const DataPoint& point_a, const DataPoint& point_b) {
+                            return point_a.position == point_b.position;
+                        }),
+            data_.end());
 
         double minPos = data_.front().position;
         double maxPos = data_.back().position;
@@ -203,6 +212,7 @@ public:
     void parallelFitting() {
         int numThreads = std::thread::hardware_concurrency();
         std::vector<std::future<std::vector<double>>> futures;
+        futures.reserve(numThreads);
 
         for (int i = 0; i < numThreads; ++i) {
             futures.push_back(std::async(std::launch::async,
@@ -216,11 +226,11 @@ public:
         }
 
         // Choose the best fit based on MSE
-        auto bestFit =
-            *std::min_element(results.begin(), results.end(),
-                              [this](const auto& a, const auto& b) {
-                                  return calculateMSE(a) < calculateMSE(b);
-                              });
+        auto bestFit = *std::min_element(
+            results.begin(), results.end(),
+            [this](const auto& coeffs_a, const auto& coeffs_b) {
+                return calculateMSE(coeffs_a) < calculateMSE(coeffs_b);
+            });
 
         LOG_F(INFO, "Best parallel fit MSE: {}", calculateMSE(bestFit));
     }
@@ -228,38 +238,39 @@ public:
 private:
     // Helper functions
 
-    static auto matrixVectorMultiply(const std::vector<std::vector<double>>& A,
-                                     const std::vector<double>& v)
-        -> std::vector<double> {
-        int m = A.size();
-        int n = A[0].size();
-        std::vector<double> result(m, 0.0);
+    static auto matrixVectorMultiply(
+        const std::vector<std::vector<double>>& matrix_A,
+        const std::vector<double>& vector_v) -> std::vector<double> {
+        auto matrixARows = static_cast<int>(matrix_A.size());
+        auto matrixACols = static_cast<int>(matrix_A[0].size());
+        std::vector<double> result(matrixARows, 0.0);
 
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                result[i] += A[i][j] * v[j];
+        for (int i = 0; i < matrixARows; ++i) {
+            for (int j = 0; j < matrixACols; ++j) {
+                result[i] += matrix_A[i][j] * vector_v[j];
             }
         }
         return result;
     }
 
-    static auto matrixMultiply(const std::vector<std::vector<double>>& A,
-                               const std::vector<std::vector<double>>& B)
+    static auto matrixMultiply(const std::vector<std::vector<double>>& matrix_A,
+                               const std::vector<std::vector<double>>& matrix_B)
         -> std::vector<std::vector<double>> {
-        int m = A.size();
-        int n = A[0].size();
-        int p = B[0].size();
+        auto matrixARows = static_cast<int>(matrix_A.size());
+        auto matrixACols = static_cast<int>(matrix_A[0].size());
+        auto matrixBCols = static_cast<int>(matrix_B[0].size());
 
-        std::vector<std::vector<double>> C(m, std::vector<double>(p, 0.0));
+        std::vector<std::vector<double>> matrixC(
+            matrixARows, std::vector<double>(matrixBCols, 0.0));
 
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < p; ++j) {
-                for (int k = 0; k < n; ++k) {
-                    C[i][j] += A[i][k] * B[k][j];
+        for (int i = 0; i < matrixARows; ++i) {
+            for (int j = 0; j < matrixBCols; ++j) {
+                for (int k = 0; k < matrixACols; ++k) {
+                    matrixC[i][j] += matrix_A[i][k] * matrix_B[k][j];
                 }
             }
         }
-        return C;
+        return matrixC;
     }
 
     template <typename Func>
@@ -270,37 +281,39 @@ private:
         double lambda = 0.001;
 
         std::vector<double> params = initial_guess;
-        int n = data_.size();
-        int p = initial_guess.size();
+        auto dataSize = static_cast<int>(data_.size());
+        auto paramsSize = static_cast<int>(initial_guess.size());
 
         for (int iter = 0; iter < MAX_ITERATIONS; ++iter) {
-            std::vector<std::vector<double>> J(
-                n, std::vector<double>(p));  // Jacobian matrix
-            std::vector<double> residuals(n);
+            std::vector<std::vector<double>> jacobianMatrix(
+                dataSize,
+                std::vector<double>(paramsSize));  // Jacobian matrix
+            std::vector<double> residuals(dataSize);
 
-            for (int i = 0; i < n; ++i) {
-                double x = data_[i].position;
-                double y = data_[i].sharpness;
-                double modelValue = model(x, params);
-                residuals[i] = y - modelValue;
+            for (int i = 0; i < dataSize; ++i) {
+                double position = data_[i].position;
+                double sharpness = data_[i].sharpness;
+                double modelValue = model(position, params);
+                residuals[i] = sharpness - modelValue;
 
-                for (int j = 0; j < p; ++j) {
+                for (int j = 0; j < paramsSize; ++j) {
                     std::vector<double> paramsDelta = params;
                     paramsDelta[j] += TOLERANCE;
-                    double modelDelta = model(x, paramsDelta);
-                    J[i][j] = (modelDelta - modelValue) / TOLERANCE;
+                    double modelDelta = model(position, paramsDelta);
+                    jacobianMatrix[i][j] =
+                        (modelDelta - modelValue) / TOLERANCE;
                 }
             }
 
-            auto jt = transpose(J);
-            auto jtJ = matrixMultiply(jt, J);
-            for (int i = 0; i < p; ++i) {
+            auto jacobianTranspose = transpose(jacobianMatrix);
+            auto jtJ = matrixMultiply(jacobianTranspose, jacobianMatrix);
+            for (int i = 0; i < paramsSize; ++i) {
                 jtJ[i][i] += lambda;
             }
-            auto jtr = matrixVectorMultiply(jt, residuals);
-            auto deltaParams = solveLinearSystem(jtJ, jtr);
+            auto jtR = matrixVectorMultiply(jacobianTranspose, residuals);
+            auto deltaParams = solveLinearSystem(jtJ, jtR);
 
-            for (int i = 0; i < p; ++i) {
+            for (int i = 0; i < paramsSize; ++i) {
                 params[i] += deltaParams[i];
             }
 
@@ -314,10 +327,10 @@ private:
     }
 
     auto calculateAIC(const std::vector<double>& coeffs) -> double {
-        int n = data_.size();
-        int p = coeffs.size();
+        auto dataSize = static_cast<int>(data_.size());
+        auto coeffsSize = static_cast<int>(coeffs.size());
         double mse = calculateMSE(coeffs);
-        double aic = n * std::log(mse) + 2 * p;
+        double aic = dataSize * std::log(mse) + 2 * coeffsSize;
         return aic;
     }
 
@@ -335,17 +348,18 @@ private:
         return std::sqrt(mse);
     }
 
-    static auto transpose(const std::vector<std::vector<double>>& A)
+    static auto transpose(const std::vector<std::vector<double>>& matrix_A)
         -> std::vector<std::vector<double>> {
-        int m = A.size();
-        int n = A[0].size();
-        std::vector<std::vector<double>> At(n, std::vector<double>(m));
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < n; ++j) {
-                At[j][i] = A[i][j];
+        auto matrixARows = static_cast<int>(matrix_A.size());
+        auto matrixACols = static_cast<int>(matrix_A[0].size());
+        std::vector<std::vector<double>> matrixAt(
+            matrixACols, std::vector<double>(matrixARows));
+        for (int i = 0; i < matrixARows; ++i) {
+            for (int j = 0; j < matrixACols; ++j) {
+                matrixAt[j][i] = matrix_A[i][j];
             }
         }
-        return At;
+        return matrixAt;
     }
 
     auto calculateMSE(const std::vector<double>& coeffs) -> double {
@@ -354,7 +368,7 @@ private:
             double predicted = evaluateCurve(coeffs, point.position);
             mse += std::pow(predicted - point.sharpness, 2);
         }
-        return mse / data_.size();
+        return mse / static_cast<double>(data_.size());
     }
 
     static auto solveLinearSystem(std::vector<std::vector<double>> A,
@@ -392,7 +406,7 @@ private:
     }
 
     auto evaluateCurve(const std::vector<double>& coeffs, double x) -> double {
-        switch (current_model_) {
+        switch (currentModel) {
             case ModelType::POLYNOMIAL:
                 return evaluatePolynomial(coeffs, x);
             case ModelType::GAUSSIAN:

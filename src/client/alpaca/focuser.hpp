@@ -9,30 +9,34 @@ class AlpacaFocuser : public AlpacaDevice {
 public:
     AlpacaFocuser(const std::string& address, int device_number,
                   const std::string& protocol = "http");
-    virtual ~AlpacaFocuser();
+    ~AlpacaFocuser() override;
 
     // Properties
-    bool GetAbsolute();
-    bool GetIsMoving();
-    int GetMaxIncrement();
-    int GetMaxStep();
-    int GetPosition();
-    float GetStepSize();
-    bool GetTempComp();
-    void SetTempComp(bool TempCompState);
-    bool GetTempCompAvailable();
-    std::optional<float> GetTemperature();
+    auto getAbsolute() const -> bool;
+    auto getIsMoving() const -> bool;
+    auto getMaxIncrement() const -> int;
+    auto getMaxStep() const -> int;
+    auto getPosition() const -> int;
+    auto getStepSize() const -> float;
+    auto getTempComp() const -> bool;
+    void setTempComp(bool tempCompState);
+    auto getTempCompAvailable() const -> bool;
+    auto getTemperature() const -> std::optional<float>;
 
     // Methods
-    void Halt();
-    std::future<void> Move(int Position);
+    void halt();
+    auto move(int position) -> std::future<void>;
 
-    // Template method for numeric properties
+    // Disable copy and move constructors and assignment operators
+    AlpacaFocuser(const AlpacaFocuser&) = delete;
+    AlpacaFocuser& operator=(const AlpacaFocuser&) = delete;
+    AlpacaFocuser(AlpacaFocuser&&) = delete;
+    AlpacaFocuser& operator=(AlpacaFocuser&&) = delete;
 
 private:
-    void StartMove(int Position);
-    void MoveThread(int Position);
+    void startMove(int position);
+    void moveThread(int position);
 
-    std::atomic<bool> m_is_moving{false};
-    std::thread m_move_thread;
+    std::atomic<bool> isMoving_{false};
+    std::thread moveThread_;
 };

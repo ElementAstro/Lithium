@@ -2,6 +2,7 @@
 #define ATOM_UTILS_BIT_HPP
 
 #include <bit>
+#include <bitset>
 #include <concepts>
 #include <cstdint>
 #include <limits>
@@ -43,12 +44,7 @@ constexpr auto createMask(uint32_t bits) ATOM_NOEXCEPT -> T {
  */
 template <std::unsigned_integral T>
 constexpr auto countBytes(T value) ATOM_NOEXCEPT -> uint32_t {
-    if constexpr (sizeof(T) <= sizeof(unsigned int)) {
-        return static_cast<uint32_t>(std::popcount(value));
-    } else {
-        return static_cast<uint32_t>(
-            std::popcount(static_cast<unsigned long long>(value)));
-    }
+    return static_cast<uint32_t>(std::popcount(value));
 }
 
 /**
@@ -64,12 +60,8 @@ constexpr auto countBytes(T value) ATOM_NOEXCEPT -> uint32_t {
  */
 template <std::unsigned_integral T>
 constexpr auto reverseBits(T value) ATOM_NOEXCEPT -> T {
-    T reversed = 0;
-    for (int i = 0; i < std::numeric_limits<T>::digits; ++i) {
-        reversed |= ((value >> i) & T{1})
-                    << (std::numeric_limits<T>::digits - i - 1);
-    }
-    return reversed;
+    return std::bit_cast<T>(
+        std::bitset<std::numeric_limits<T>::digits>(value).to_ullong());
 }
 
 /**
@@ -87,9 +79,7 @@ constexpr auto reverseBits(T value) ATOM_NOEXCEPT -> T {
  */
 template <std::unsigned_integral T>
 constexpr auto rotateLeft(T value, int shift) ATOM_NOEXCEPT -> T {
-    const int BITS = std::numeric_limits<T>::digits;
-    shift %= BITS;
-    return (value << shift) | (value >> (BITS - shift));
+    return std::rotl(value, shift);
 }
 
 /**
@@ -107,9 +97,42 @@ constexpr auto rotateLeft(T value, int shift) ATOM_NOEXCEPT -> T {
  */
 template <std::unsigned_integral T>
 constexpr auto rotateRight(T value, int shift) ATOM_NOEXCEPT -> T {
-    const int BITS = std::numeric_limits<T>::digits;
-    shift %= BITS;
-    return (value >> shift) | (value << (BITS - shift));
+    return std::rotr(value, shift);
+}
+
+/**
+ * @brief Merges two bitmasks into one.
+ *
+ * This function merges two bitmasks of type `T` into one by performing a
+ * bitwise OR operation.
+ *
+ * @tparam T The unsigned integral type of the bitmasks.
+ * @param mask1 The first bitmask.
+ * @param mask2 The second bitmask.
+ * @return T The merged bitmask.
+ */
+template <std::unsigned_integral T>
+constexpr auto mergeMasks(T mask1, T mask2) ATOM_NOEXCEPT -> T {
+    return mask1 | mask2;
+}
+
+/**
+ * @brief Splits a bitmask into two parts.
+ *
+ * This function splits a bitmask of type `T` into two parts at the specified
+ * position.
+ *
+ * @tparam T The unsigned integral type of the bitmask.
+ * @param mask The bitmask to split.
+ * @param position The position to split the bitmask.
+ * @return std::pair<T, T> A pair containing the two parts of the split bitmask.
+ */
+template <std::unsigned_integral T>
+constexpr auto splitMask(T mask,
+                         uint32_t position) ATOM_NOEXCEPT -> std::pair<T, T> {
+    T lowerPart = mask & createMask<T>(position);
+    T upperPart = mask & ~createMask<T>(position);
+    return {lowerPart, upperPart};
 }
 
 }  // namespace atom::utils

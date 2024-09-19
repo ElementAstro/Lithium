@@ -21,6 +21,7 @@ Description: UUID Generator
 #include <iomanip>
 #include <limits>
 #include <random>
+#include <sstream>
 
 #if defined(_WIN32)
 // clang-format off
@@ -244,8 +245,8 @@ auto getCPUSerial() -> std::string {
     __cpuid(cpuInfo, 1);
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
-    for (int i = 0; i < 4; i++) {
-        oss << std::setw(8) << cpuInfo[i];
+    for (int i : cpuInfo) {
+        oss << std::setw(8) << i;
     }
     cpuSerial = oss.str();
 

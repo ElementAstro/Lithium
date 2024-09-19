@@ -15,23 +15,23 @@
 
 namespace atom::meta {
 template <typename T>
-constexpr auto getPointer(T *t) noexcept -> T * {
-    return t;
+constexpr auto getPointer(T *ptr) noexcept -> T * {
+    return ptr;
 }
 
 template <typename T>
-auto getPointer(const std::reference_wrapper<T> &t) noexcept -> T * {
-    return &t.get();
+auto getPointer(const std::reference_wrapper<T> &ref) noexcept -> T * {
+    return &ref.get();
 }
 
 template <typename T>
-constexpr auto getPointer(const T &t) noexcept -> const T * {
-    return &t;
+constexpr auto getPointer(const T &ref) noexcept -> const T * {
+    return &ref;
 }
 
 template <typename T>
-constexpr auto removeConstPointer(const T *t) noexcept -> T * {
-    return const_cast<T *>(t);
+constexpr auto removeConstPointer(const T *ptr) noexcept -> T * {
+    return const_cast<T *>(ptr);
 }
 
 template <typename F, typename... Args>
@@ -41,10 +41,10 @@ template <typename F, typename... Args>
 concept nothrow_invocable = std::is_nothrow_invocable_v<F, Args...>;
 
 template <typename F, typename... Args>
-constexpr bool is_invocable_v = invocable<F, Args...>;
+constexpr bool IS_INVOCABLE_V = invocable<F, Args...>;
 
 template <typename F, typename... Args>
-constexpr bool is_nothrow_invocable_v = std::is_nothrow_invocable_v<F, Args...>;
+constexpr bool IS_NOTHROW_INVOCABLE_V = std::is_nothrow_invocable_v<F, Args...>;
 
 template <typename O, typename Ret, typename P1, typename... Param>
 constexpr auto bindFirst(Ret (*func)(P1, Param...), O &&object)
@@ -85,12 +85,13 @@ auto bindFirst(const std::function<Ret(P1, Param...)> &func, O &&object)
 
 template <typename F, typename O, typename Ret, typename Class, typename P1,
           typename... Param>
-constexpr auto bindFirst(const F &fo, O &&object,
+constexpr auto bindFirst(const F &funcObj, O &&object,
                          Ret (Class::*func)(P1, Param...) const)
     requires invocable<F, O, P1, Param...>
 {
-    return [fo, object = std::forward<O>(object), func](Param... param) -> Ret {
-        return (fo.*func)(object, std::forward<Param>(param)...);
+    return [funcObj, object = std::forward<O>(object),
+            func](Param... param) -> Ret {
+        return (funcObj.*func)(object, std::forward<Param>(param)...);
     };
 }
 

@@ -20,8 +20,9 @@
 #include <utility>
 #include <vector>
 #include "atom/async/async.hpp"
-#include "atom/macro.hpp"
-#include "function/type_info.hpp"
+
+#include "macro.hpp"
+
 #if ENABLE_DEBUG
 #include <iostream>
 #endif
@@ -33,23 +34,47 @@
 #include "atom/function/proxy_params.hpp"
 
 namespace atom::meta {
-struct FunctionInfo {
-    std::string returnType;
-    std::vector<std::string> argumentTypes;
-    std::string hash;
 
+struct ATOM_ALIGNAS(128) FunctionInfo {
+private:
+    std::string returnType_;
+    std::vector<std::string> argumentTypes_;
+    std::string hash_;
+
+public:
     FunctionInfo() = default;
 
     void logFunctionInfo() const {
 #if ENABLE_DEBUG
-        std::cout << "Function return type: " << returnType << "\n";
-        for (size_t i = 0; i < argumentTypes.size(); ++i) {
-            std::cout << "Argument " << i + 1 << ": Type = " << argumentTypes[i]
-                      << std::endl;
+        std::cout << "Function return type: " << returnType_ << "\n";
+        for (size_t i = 0; i < argumentTypes_.size(); ++i) {
+            std::cout << "Argument " << i + 1
+                      << ": Type = " << argumentTypes_[i] << std::endl;
         }
 #endif
     }
-} ATOM_ALIGNAS(128);
+
+    [[nodiscard]] auto getReturnType() const -> const std::string & {
+        return returnType_;
+    }
+
+    [[nodiscard]] auto getArgumentTypes() const
+        -> const std::vector<std::string> & {
+        return argumentTypes_;
+    }
+
+    [[nodiscard]] auto getHash() const -> const std::string & { return hash_; }
+
+    void setReturnType(const std::string &returnType) {
+        returnType_ = returnType;
+    }
+
+    void addArgumentType(const std::string &argumentType) {
+        argumentTypes_.push_back(argumentType);
+    }
+
+    void setHash(const std::string &hash) { hash_ = hash; }
+};
 
 // TODO: FIX ME - any cast can not cover all cases
 template <typename T>
@@ -113,7 +138,7 @@ protected:
     std::decay_t<Func> func_;
 
     using Traits = FunctionTraits<Func>;
-    static constexpr std::size_t N = Traits::arity;
+    static constexpr std::size_t ARITY = Traits::arity;
     FunctionInfo info_;
 
 public:
@@ -127,32 +152,31 @@ public:
 protected:
     void collectFunctionInfo() {
         // Collect return type information
-        info_.returnType =
-            DemangleHelper::demangleType<typename Traits::return_type>();
+        info_.setReturnType(
+            DemangleHelper::demangleType<typename Traits::return_type>());
 
         // Collect argument types information
-        collectArgumentTypes(std::make_index_sequence<N>{});
+        collectArgumentTypes(std::make_index_sequence<ARITY>{});
     }
 
     template <std::size_t... Is>
     void collectArgumentTypes(std::index_sequence<Is...> /*unused*/) {
-        (info_.argumentTypes.push_back(
-             DemangleHelper::demangleType<
-                 typename Traits::template argument_t<Is>>()),
+        (info_.addArgumentType(DemangleHelper::demangleType<
+                               typename Traits::template argument_t<Is>>()),
          ...);
     }
 
     void calcFuncInfoHash() {
         // 仅根据参数类型进行区分,返回值不支持,具体是因为在dispatch时不知道返回值的类型
-        if (!info_.argumentTypes.empty()) {
-            info_.hash = std::to_string(
-                atom::algorithm::computeHash(info_.argumentTypes));
+        if (!info_.getArgumentTypes().empty()) {
+            info_.setHash(std::to_string(
+                atom::algorithm::computeHash(info_.getArgumentTypes())));
         }
     }
 
     void logArgumentTypes() const {
 #if ENABLE_DEBUG
-        std::cout << "Function Arity: " << N << "\n";
+        std::cout << "Function Arity: " << arity << "\n";
         info_.logFunctionInfo();
 #endif
     }
@@ -228,7 +252,7 @@ template <typename Func>
 class ProxyFunction : public BaseProxyFunction<Func> {
     using Base = BaseProxyFunction<Func>;
     using Traits = typename Base::Traits;
-    static constexpr std::size_t N = Base::N;
+    static constexpr std::size_t arity = Base::arity;
 
 public:
     explicit ProxyFunction(Func &&func) : Base(std::move(func)) {}
@@ -236,32 +260,32 @@ public:
     auto operator()(const std::vector<std::any> &args) -> std::any {
         this->logArgumentTypes();
         if constexpr (Traits::is_member_function) {
-            if (args.size() != N + 1) {
+            if (args.size() != arity + 1) {
                 THROW_EXCEPTION("Incorrect number of arguments");
             }
             return this->callMemberFunction(args,
-                                            std::make_index_sequence<N>());
+                                            std::make_index_sequence<arity>());
         } else {
 #if ENABLE_DEBUG
-            std::cout << "Function Arity: " << N << "\n";
+            std::cout << "Function Arity: " << arity << "\n";
             std::cout << "Arguments size: " << args.size() << "\n";
 #endif
-            if (args.size() != N) {
+            if (args.size() != arity) {
                 THROW_EXCEPTION("Incorrect number of arguments");
             }
-            return this->callFunction(args, std::make_index_sequence<N>());
+            return this->callFunction(args, std::make_index_sequence<arity>());
         }
     }
 
     auto operator()(const FunctionParams &params) -> std::any {
         this->logArgumentTypes();
         if constexpr (Traits::is_member_function) {
-            if (params.size() != N + 1) {
+            if (params.size() != arity + 1) {
                 THROW_EXCEPTION("Incorrect number of arguments");
             }
             return this->callMemberFunction(params.toVector());
         } else {
-            if (params.size() != N) {
+            if (params.size() != arity) {
                 THROW_EXCEPTION("Incorrect number of arguments");
             }
             return this->callFunction(params.toVector());
@@ -273,7 +297,7 @@ template <typename Func>
 class TimerProxyFunction : public BaseProxyFunction<Func> {
     using Base = BaseProxyFunction<Func>;
     using Traits = typename Base::Traits;
-    static constexpr std::size_t N = Base::N;
+    static constexpr std::size_t arity = Base::arity;
 
 public:
     explicit TimerProxyFunction(Func &&func) : Base(std::move(func)) {}
@@ -282,19 +306,19 @@ public:
                     std::chrono::milliseconds timeout) -> std::any {
         this->logArgumentTypes();
         if constexpr (Traits::is_member_function) {
-            if (args.size() != N + 1) {
+            if (args.size() != arity + 1) {
                 THROW_EXCEPTION(
                     "Incorrect number of arguments for member function");
             }
             return this->callMemberFunctionWithTimeout(
-                args, timeout, std::make_index_sequence<N>());
+                args, timeout, std::make_index_sequence<arity>());
         } else {
-            if (args.size() != N) {
+            if (args.size() != arity) {
                 THROW_EXCEPTION(
                     "Incorrect number of arguments for non-member function");
             }
-            return this->callFunctionWithTimeout(args, timeout,
-                                                 std::make_index_sequence<N>());
+            return this->callFunctionWithTimeout(
+                args, timeout, std::make_index_sequence<arity>());
         }
     }
 

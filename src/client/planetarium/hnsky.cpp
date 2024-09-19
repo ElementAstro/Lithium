@@ -12,15 +12,15 @@ using tcp = asio::ip::tcp;
 
 class HNSKY::Impl {
 public:
-    Impl(const std::string& address, int port)
-        : address_(address), port_(port), socket_(ioContext_) {}
+    Impl(std::string address, int port)
+        : address_(std::move(address)), port_(port), socket_(ioContext_) {}
 
-    std::string getName() const { return "HNSKY"; }
+    [[nodiscard]] static auto getName() -> std::string { return "HNSKY"; }
 
-    bool canGetRotationAngle() const { return false; }
+    [[nodiscard]] static auto canGetRotationAngle() -> bool { return false; }
 
-    std::future<DeepSkyObject> getTarget() {
-        return std::async([this]() {
+    auto getTarget() -> std::future<DeepSkyObject> {
+        return std::async([this]() -> DeepSkyObject {
             std::string command = "GET_TARGET\r\n";
             auto response = sendCommand(command);
             auto info = splitString(response, ' ');
@@ -37,8 +37,8 @@ public:
         });
     }
 
-    std::future<Location> getSite() {
-        return std::async([this]() {
+    auto getSite() -> std::future<Location> {
+        return std::async([this]() -> Location {
             std::string command = "GET_LOCATION\r\n";
             auto response = sendCommand(command);
             auto info = splitString(response, ' ');
@@ -55,9 +55,10 @@ public:
         });
     }
 
-    std::future<double> getRotationAngle() {
-        return std::async(
-            []() { return std::numeric_limits<double>::quiet_NaN(); });
+    static auto getRotationAngle() -> std::future<double> {
+        return std::async([]() -> double {
+            return std::numeric_limits<double>::quiet_NaN();
+        });
     }
 
 private:
@@ -72,7 +73,7 @@ private:
                       resolver.resolve(address_, std::to_string(port_)));
     }
 
-    std::string sendCommand(const std::string& command) {
+    auto sendCommand(const std::string& command) -> std::string {
         connect();
         asio::write(socket_, asio::buffer(command));
 
@@ -87,19 +88,26 @@ private:
         return responseString;
     }
 
-    std::vector<std::string> splitString(const std::string& s, char delimiter) {
+    static auto splitString(const std::string& str,
+                            char delimiter) -> std::vector<std::string> {
         std::vector<std::string> tokens;
         std::string token;
-        std::istringstream tokenStream(s);
+        std::istringstream tokenStream(str);
         while (std::getline(tokenStream, token, delimiter)) {
             tokens.push_back(token);
         }
         return tokens;
     }
 
-    double radianToHour(double radian) const { return radian * 12.0 / M_PI; }
+    [[nodiscard]] static auto radianToHour(double radian) -> double {
+        constexpr double radianToHourFactor = 12.0 / M_PI;
+        return radian * radianToHourFactor;
+    }
 
-    double radianToDegree(double radian) const { return radian * 180.0 / M_PI; }
+    [[nodiscard]] static auto radianToDegree(double radian) -> double {
+        constexpr double radianToDegreeFactor = 180.0 / M_PI;
+        return radian * radianToDegreeFactor;
+    }
 };
 
 // HNSKY public interface implementation
@@ -109,18 +117,20 @@ HNSKY::HNSKY(const std::string& address, int port)
 
 HNSKY::~HNSKY() = default;
 
-std::string HNSKY::getName() const { return pimpl_->getName(); }
+auto HNSKY::getName() const -> std::string { return pimpl_->getName(); }
 
-bool HNSKY::canGetRotationAngle() const {
+auto HNSKY::canGetRotationAngle() const -> bool {
     return pimpl_->canGetRotationAngle();
 }
 
-std::future<HNSKY::DeepSkyObject> HNSKY::getTarget() {
+auto HNSKY::getTarget() -> std::future<HNSKY::DeepSkyObject> {
     return pimpl_->getTarget();
 }
 
-std::future<HNSKY::Location> HNSKY::getSite() { return pimpl_->getSite(); }
+auto HNSKY::getSite() -> std::future<HNSKY::Location> {
+    return pimpl_->getSite();
+}
 
-std::future<double> HNSKY::getRotationAngle() {
+auto HNSKY::getRotationAngle() -> std::future<double> {
     return pimpl_->getRotationAngle();
 }

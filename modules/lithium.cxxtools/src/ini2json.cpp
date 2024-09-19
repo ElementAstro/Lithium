@@ -8,7 +8,9 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -19,12 +21,13 @@
 namespace fs = std::filesystem;
 
 namespace lithium::cxxtools::detail {
+
 auto tab(unsigned level) -> std::string {
     return std::string(static_cast<size_t>(level * 4), ' ');
 }
 
-auto iniToJson(std::string_view iniFilePath,
-               std::string_view jsonFilePath) -> bool {
+auto iniToJson(std::string_view iniFilePath, std::string_view jsonFilePath,
+               char commentChar = ';') -> bool {
     LOG_F(INFO, "Converting INI file to JSON: {}", iniFilePath);
     if (!fs::exists(iniFilePath) || !fs::is_regular_file(iniFilePath)) {
         THROW_FILE_NOT_FOUND("File not found: ", iniFilePath);
@@ -44,7 +47,7 @@ auto iniToJson(std::string_view iniFilePath,
     bool hasAttributes = false;
 
     while (std::getline(in, line)) {
-        auto commentPos = line.find(';');
+        auto commentPos = line.find(commentChar);
         if (commentPos != std::string::npos) {
             line = line.substr(0, commentPos);
         }
@@ -69,7 +72,7 @@ auto iniToJson(std::string_view iniFilePath,
                 sectionOpened = true;
             }
 
-            out << tab(1) << "\"" << line << "\": {" << std::endl;
+            out << tab(1) << std::format("\"{}\": {{", line) << std::endl;
         } else {
             auto pos = line.find('=');
             if (pos == std::string::npos) {
@@ -85,14 +88,16 @@ auto iniToJson(std::string_view iniFilePath,
                 hasAttributes = true;
             }
 
-            out << tab(2) << "\"" << attribute << "\": ";
+            out << tab(2) << std::format("\"{}\": ", attribute);
             if (value.find(':') != std::string::npos) {
                 out << "{" << std::endl;
                 for (const auto& item : atom::utils::explode(value, ',')) {
                     auto kv = atom::utils::explode(item, ':');
                     if (kv.size() == 2) {
-                        out << tab(3) << "\"" << atom::utils::trim(kv[0])
-                            << "\": \"" << atom::utils::trim(kv[1]) << "\","
+                        out << tab(3)
+                            << std::format(R"("{}": "{}",)",
+                                           atom::utils::trim(kv[0]),
+                                           atom::utils::trim(kv[1]))
                             << std::endl;
                     }
                 }
@@ -101,13 +106,14 @@ auto iniToJson(std::string_view iniFilePath,
             } else if (value.find(',') != std::string::npos) {
                 out << "[" << std::endl;
                 for (const auto& item : atom::utils::explode(value, ',')) {
-                    out << tab(3) << "\"" << atom::utils::trim(item) << "\","
+                    out << tab(3)
+                        << std::format("\"{}\",", atom::utils::trim(item))
                         << std::endl;
                 }
                 out.seekp(-2, std::ofstream::cur);  // Remove the last comma
                 out << std::endl << tab(2) << "]";
             } else {
-                out << "\"" << value << "\"";
+                out << std::format("\"{}\"", value);
             }
         }
     }
@@ -139,6 +145,9 @@ int main(int argc, char** argv) {
     program.add_argument("-o", "--output")
         .required()
         .help("path to output JSON file");
+    program.add_argument("-c", "--comment")
+        .default_value(';')
+        .help("comment character used in the INI file");
 
     try {
         program.parse_args(argc, argv);
@@ -149,10 +158,12 @@ int main(int argc, char** argv) {
 
     std::string iniFilePath = program.get<std::string>("--input");
     std::string jsonFilePath = program.get<std::string>("--output");
+    char commentChar = program.get<char>("--comment");
 
     try {
         LOG_F(INFO, "Converting INI to JSON...");
-        if (!iniToJson(iniFilePath, jsonFilePath)) {
+        if (!lithium::cxxtools::detail::iniToJson(iniFilePath, jsonFilePath,
+                                                  commentChar)) {
             LOG_F(ERROR, "Conversion failed.");
             return 1;
         }
@@ -167,8 +178,9 @@ int main(int argc, char** argv) {
 }
 #else
 namespace lithium::cxxtools {
-auto iniToJson(std::string_view ini_file, std::string_view json_file) -> bool {
-    return detail::iniToJson(ini_file, json_file);
+auto iniToJson(std::string_view ini_file, std::string_view json_file,
+               char commentChar = ';') -> bool {
+    return detail::iniToJson(ini_file, json_file, commentChar);
 }
 }  // namespace lithium::cxxtools
 

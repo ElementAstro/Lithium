@@ -1,5 +1,6 @@
 #include "imagepath.hpp"
 
+#include <array>
 #include <charconv>
 #include <filesystem>
 #include <regex>
@@ -23,16 +24,16 @@ auto ImageInfo::toJson() const -> json {
             {"frameNr", frameNr.value_or("")}};
 }
 
-auto ImageInfo::fromJson(const json& j) -> ImageInfo {
+auto ImageInfo::fromJson(const json& jsonObj) -> ImageInfo {
     ImageInfo info;
     try {
-        info.path = j.at("path").get<std::string>();
-        info.dateTime = j.value("dateTime", "");
-        info.imageType = j.value("imageType", "");
-        info.filter = j.value("filter", "");
-        info.sensorTemp = j.value("sensorTemp", "");
-        info.exposureTime = j.value("exposureTime", "");
-        info.frameNr = j.value("frameNr", "");
+        info.path = jsonObj.at("path").get<std::string>();
+        info.dateTime = jsonObj.value("dateTime", "");
+        info.imageType = jsonObj.value("imageType", "");
+        info.filter = jsonObj.value("filter", "");
+        info.sensorTemp = jsonObj.value("sensorTemp", "");
+        info.exposureTime = jsonObj.value("exposureTime", "");
+        info.frameNr = jsonObj.value("frameNr", "");
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Error deserializing ImageInfo from JSON: {}", e.what());
     }
@@ -61,12 +62,14 @@ public:
             return std::nullopt;
         }
 
-        // Assign parts dynamically based on the pattern
-        for (size_t i = 0; i < patterns_.size(); ++i) {
-            const auto& key = patterns_[i];
-            const auto& value = parts[i];
-            if (auto it = parsers_.find(key); it != parsers_.end()) {
-                it->second(info, value);
+// Assign parts dynamically based on the pattern
+#pragma unroll
+        for (size_t index = 0; index < patterns_.size(); ++index) {
+            const auto& key = patterns_[index];
+            const auto& value = parts[index];
+            if (auto parserIter = parsers_.find(key);
+                parserIter != parsers_.end()) {
+                parserIter->second(info, value);
             } else {
                 LOG_F(ERROR, "No parser for key: {}", key);
             }
@@ -99,15 +102,16 @@ private:
     void parsePattern(const std::string& pattern) {
         std::string temp;
         bool inVar = false;
-        for (char ch : pattern) {
-            if (ch == '$') {
+#pragma unroll
+        for (char character : pattern) {
+            if (character == '$') {
                 if (inVar) {
                     patterns_.push_back(temp);
                     temp.clear();
                 }
                 inVar = !inVar;
             } else if (inVar) {
-                temp += ch;
+                temp += character;
             }
         }
 
@@ -142,7 +146,8 @@ private:
                                           : std::nullopt;
         };
 
-        // Set default values for optional fields
+// Set default values for optional fields
+#pragma unroll
         for (const auto& [key, value] : optionalFields_) {
             if (parsers_.find(key) == parsers_.end()) {
                 parsers_[key] = [value](ImageInfo&, const std::string&) {
@@ -153,22 +158,24 @@ private:
     }
 
     static auto validateDateTime(const std::string& dateTime) -> bool {
-        static const std::regex dateTimePattern(
+        static const std::regex kDateTimePattern(
             R"(^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$)");
-        return std::regex_match(dateTime, dateTimePattern);
+        return std::regex_match(dateTime, kDateTimePattern);
     }
 
     static auto formatTemperature(const std::string& temp) -> std::string {
         // Assume temperature is in the format -10.0, format to 1 decimal place
-        float t;
-        auto [ptr, ec] =
-            std::from_chars(temp.data(), temp.data() + temp.size(), t);
+        float temperature;
+        auto [ptr, ec] = std::from_chars(temp.data(), temp.data() + temp.size(),
+                                         temperature);
         if (ec == std::errc()) {
-            char buffer[16];
-            auto [ptr2, ec2] = std::to_chars(buffer, buffer + sizeof(buffer), t,
-                                             std::chars_format::fixed, 1);
+            std::array<char, 16> buffer;
+            auto [ptr2, ec2] =
+                std::to_chars(buffer.data(), buffer.data() + buffer.size(),
+                              temperature, std::chars_format::fixed, 1);
             if (ec2 == std::errc()) {
-                return std::string(buffer, ptr2 - buffer);
+                return {buffer.data(),
+                        static_cast<size_t>(ptr2 - buffer.data())};
             }
         }
         return temp;  // Return as is if parsing fails
@@ -182,8 +189,8 @@ ImagePatternParser::ImagePatternParser(const std::string& pattern,
 ImagePatternParser::~ImagePatternParser() = default;
 
 ImagePatternParser::ImagePatternParser(ImagePatternParser&&) noexcept = default;
-ImagePatternParser& ImagePatternParser::operator=(
-    ImagePatternParser&&) noexcept = default;
+auto ImagePatternParser::operator=(ImagePatternParser&&) noexcept
+    -> ImagePatternParser& = default;
 
 auto ImagePatternParser::parseFilename(const std::string& filename) const
     -> std::optional<ImageInfo> {
@@ -194,8 +201,8 @@ auto ImagePatternParser::serializeToJson(const ImageInfo& info) -> json {
     return info.toJson();
 }
 
-auto ImagePatternParser::deserializeFromJson(const json& j) -> ImageInfo {
-    return ImageInfo::fromJson(j);
+auto ImagePatternParser::deserializeFromJson(const json& jsonObj) -> ImageInfo {
+    return ImageInfo::fromJson(jsonObj);
 }
 
 void ImagePatternParser::addCustomParser(const std::string& key,

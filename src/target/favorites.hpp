@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <optional>
-#include <ranges>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -17,18 +16,20 @@
 
 namespace lithium::target {
 
+using json = nlohmann::json;
+
 template <typename T>
-concept Serializable = requires(T a) {
-    { std::cout << a };  // 输出支持
-    { a == a };          // 可比较
+concept Serializable = requires(T item) {
+    { std::cout << item };  // 输出支持
+    { item == item };       // 可比较
 };
 
 template <Serializable T>
 class FavoritesManager {
 private:
-    std::vector<T> favorites;
-    std::vector<T> backup;
-    std::optional<std::vector<T>> undoBackup;
+    std::vector<T> favorites_;
+    std::vector<T> backup_;
+    std::optional<std::vector<T>> undoBackup_;
 
 public:
     void addFavorite(const T& item);
@@ -38,14 +39,14 @@ public:
     void saveToFile(const std::string& filename) const;
     void loadFromFile(const std::string& filename);
     void sortFavorites();
-    bool findFavorite(const T& item) const;
+    [[nodiscard]] auto findFavorite(const T& item) const -> bool;
     void removeDuplicates();
-    size_t countFavorites() const;
+    [[nodiscard]] auto countFavorites() const -> size_t;
     void backupFavorites();
     void restoreFavorites();
     void clearFavorites();
     void undoLastOperation();
-    std::optional<T> mostFrequentFavorite() const;
+    [[nodiscard]] auto mostFrequentFavorite() const -> std::optional<T>;
 
     // 新增功能
     void batchAddFavorites(const std::vector<T>& items);
@@ -58,16 +59,16 @@ private:
 template <Serializable T>
 void FavoritesManager<T>::addFavorite(const T& item) {
     createUndoBackup();
-    favorites.push_back(item);
+    favorites_.push_back(item);
     LOG_F(INFO, "Added to favorites: {}", item);
 }
 
 template <Serializable T>
 void FavoritesManager<T>::removeFavorite(const T& item) {
     createUndoBackup();
-    auto it = std::ranges::find(favorites, item);
-    if (it != favorites.end()) {
-        favorites.erase(it);
+    auto iter = std::ranges::find(favorites_, item);
+    if (iter != favorites_.end()) {
+        favorites_.erase(iter);
         LOG_F(INFO, "Removed from favorites: {}", item);
     } else {
         LOG_F(ERROR, "Item not found in favorites: {}", item);
@@ -76,20 +77,20 @@ void FavoritesManager<T>::removeFavorite(const T& item) {
 
 template <Serializable T>
 void FavoritesManager<T>::displayFavorites() const {
-    if (favorites.empty()) {
+    if (favorites_.empty()) {
         std::cout << "Favorites list is empty" << std::endl;
         return;
     }
     LOG_F(INFO, "Favorites list:");
-    for (const auto& item : favorites) {
+    for (const auto& item : favorites_) {
         LOG_F(INFO, "- {}", item);
     }
 }
 
 template <Serializable T>
 void FavoritesManager<T>::displayFavoriteByIndex(size_t index) const {
-    if (index < favorites.size()) {
-        LOG_F(INFO, "Favorite at index {}: {}", index, favorites[index]);
+    if (index < favorites_.size()) {
+        LOG_F(INFO, "Favorite at index {}: {}", index, favorites_[index]);
     } else {
         THROW_OUT_OF_RANGE("Index out of range");
     }
@@ -97,10 +98,10 @@ void FavoritesManager<T>::displayFavoriteByIndex(size_t index) const {
 
 template <Serializable T>
 void FavoritesManager<T>::saveToFile(const std::string& filename) const {
-    nlohmann::json j = favorites;
+    json jsonFavorites = favorites_;
     std::ofstream file(filename);
     if (file.is_open()) {
-        file << j.dump(4);  // Pretty print with 4 spaces indent
+        file << jsonFavorites.dump(4);  // Pretty print with 4 spaces indent
         LOG_F(INFO, "Favorites list saved to file: {}", filename);
     } else {
         THROW_FAIL_TO_OPEN_FILE("Unable to open file: {}", filename);
@@ -111,10 +112,10 @@ template <Serializable T>
 void FavoritesManager<T>::loadFromFile(const std::string& filename) {
     std::ifstream file(filename);
     if (file.is_open()) {
-        nlohmann::json j;
-        file >> j;
+        json jsonFavorites;
+        file >> jsonFavorites;
         createUndoBackup();
-        favorites = j.get<std::vector<T>>();
+        favorites_ = jsonFavorites.get<std::vector<T>>();
         LOG_F(INFO, "Favorites list loaded from file: {}", filename);
     } else {
         THROW_FAIL_TO_OPEN_FILE("Unable to open file: {}", filename);
@@ -124,39 +125,39 @@ void FavoritesManager<T>::loadFromFile(const std::string& filename) {
 template <Serializable T>
 void FavoritesManager<T>::sortFavorites() {
     createUndoBackup();
-    std::ranges::sort(favorites);
+    std::ranges::sort(favorites_);
     LOG_F(INFO, "Favorites list sorted");
 }
 
 template <Serializable T>
-bool FavoritesManager<T>::findFavorite(const T& item) const {
-    return std::ranges::find(favorites, item) != favorites.end();
+auto FavoritesManager<T>::findFavorite(const T& item) const -> bool {
+    return std::ranges::find(favorites_, item) != favorites_.end();
 }
 
 template <Serializable T>
 void FavoritesManager<T>::removeDuplicates() {
     createUndoBackup();
-    std::set<T> uniqueFavorites(favorites.begin(), favorites.end());
-    favorites.assign(uniqueFavorites.begin(), uniqueFavorites.end());
+    std::set<T> uniqueFavorites(favorites_.begin(), favorites_.end());
+    favorites_.assign(uniqueFavorites.begin(), uniqueFavorites.end());
     LOG_F(INFO, "Duplicates removed from favorites list");
 }
 
 template <Serializable T>
-size_t FavoritesManager<T>::countFavorites() const {
-    return favorites.size();
+auto FavoritesManager<T>::countFavorites() const -> size_t {
+    return favorites_.size();
 }
 
 template <Serializable T>
 void FavoritesManager<T>::backupFavorites() {
-    backup = favorites;
+    backup_ = favorites_;
     LOG_F(INFO, "Favorites list backed up");
 }
 
 template <Serializable T>
 void FavoritesManager<T>::restoreFavorites() {
-    if (!backup.empty()) {
+    if (!backup_.empty()) {
         createUndoBackup();
-        favorites = backup;
+        favorites_ = backup_;
         LOG_F(INFO, "Favorites list restored from backup");
     } else {
         THROW_FAIL_TO_OPEN_FILE("No backup available");
@@ -166,15 +167,15 @@ void FavoritesManager<T>::restoreFavorites() {
 template <Serializable T>
 void FavoritesManager<T>::clearFavorites() {
     createUndoBackup();
-    favorites.clear();
+    favorites_.clear();
     LOG_F(INFO, "Favorites list cleared");
 }
 
 template <Serializable T>
 void FavoritesManager<T>::undoLastOperation() {
-    if (undoBackup.has_value()) {
-        favorites = undoBackup.value();
-        undoBackup.reset();
+    if (undoBackup_.has_value()) {
+        favorites_ = undoBackup_.value();
+        undoBackup_.reset();
         LOG_F(INFO, "Last operation undone");
     } else {
         THROW_FAIL_TO_OPEN_FILE("No operation to undo");
@@ -182,13 +183,13 @@ void FavoritesManager<T>::undoLastOperation() {
 }
 
 template <Serializable T>
-std::optional<T> FavoritesManager<T>::mostFrequentFavorite() const {
-    if (favorites.empty()) {
+auto FavoritesManager<T>::mostFrequentFavorite() const -> std::optional<T> {
+    if (favorites_.empty()) {
         return std::nullopt;
     }
 
-    std::map<T, size_t> frequencyMap;
-    for (const auto& item : favorites) {
+    std::unordered_map<T, size_t> frequencyMap;
+    for (const auto& item : favorites_) {
         frequencyMap[item]++;
     }
 
@@ -202,13 +203,13 @@ std::optional<T> FavoritesManager<T>::mostFrequentFavorite() const {
 
 template <Serializable T>
 void FavoritesManager<T>::createUndoBackup() {
-    undoBackup = favorites;
+    undoBackup_ = favorites_;
 }
 
 template <Serializable T>
 void FavoritesManager<T>::batchAddFavorites(const std::vector<T>& items) {
     createUndoBackup();
-    favorites.insert(favorites.end(), items.begin(), items.end());
+    favorites_.insert(favorites_.end(), items.begin(), items.end());
     LOG_F(INFO, "Batch added favorites.");
 }
 
@@ -217,7 +218,7 @@ void FavoritesManager<T>::analyzeFavorites() const {
     LOG_F(INFO, "Analyzing favorites...");
 
     std::unordered_map<T, size_t> frequencyMap;
-    for (const auto& item : favorites) {
+    for (const auto& item : favorites_) {
         frequencyMap[item]++;
     }
 

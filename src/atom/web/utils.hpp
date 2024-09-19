@@ -26,7 +26,7 @@ namespace atom::web {
  * @return `true` if a program was found and terminated, `false` otherwise.
  * 如果找到并终止了程序，则返回true；否则返回false。
  */
-bool checkAndKillProgramOnPort(int port);
+auto checkAndKillProgramOnPort(int port) -> bool;
 }  // namespace atom::web
 
 #endif

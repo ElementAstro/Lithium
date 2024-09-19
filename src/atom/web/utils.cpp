@@ -1,3 +1,4 @@
+#include <cstring>
 #include <format>
 #include <string>
 
@@ -7,8 +8,10 @@
 #include <ws2tcpip.h>
 #define WIN_FLAG true
 #define close closesocket
+#ifdef _MSC_VER
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Iphlpapi.lib")
+#endif
 #elif __linux__ || __APPLE__
 #include <cstdio>
 #include <cstring>
@@ -17,7 +20,7 @@
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 
-bool initializeWindowsSocketAPI() {
+auto initializeWindowsSocketAPI() -> bool {
 #ifdef _WIN32
     WSADATA wsaData;
     int ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -29,8 +32,8 @@ bool initializeWindowsSocketAPI() {
     return true;
 }
 
-int createSocket() {
-    int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+auto createSocket() -> int {
+    int sockfd = static_cast<int>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     if (sockfd < 0) {
         LOG_F(ERROR, "Failed to create socket: {}", strerror(errno));
 #ifdef _WIN32
@@ -40,8 +43,8 @@ int createSocket() {
     return sockfd;
 }
 
-bool bindSocket(int sockfd, int port) {
-    struct sockaddr_in addr;
+auto bindSocket(int sockfd, int port) -> bool {
+    struct sockaddr_in addr {};
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -58,7 +61,7 @@ bool bindSocket(int sockfd, int port) {
     return true;
 }
 
-std::string getProcessIDOnPort(int port) {
+auto getProcessIDOnPort(int port) -> std::string {
     std::string cmd;
 #ifdef __cpp_lib_format
     cmd = std::format("{}{}",
@@ -76,34 +79,34 @@ std::string getProcessIDOnPort(int port) {
         atom::system::executeCommand(cmd, false, [](const std::string &line) {
             return line.find("LISTENING") != std::string::npos;
         });
-    pidStr.erase(pidStr.find_last_not_of("\n") + 1);
+    pidStr.erase(pidStr.find_last_not_of('\n') + 1);
     return pidStr;
 }
 
-bool killProcess(const std::string &pid_str) {
-    std::string kill_cmd;
+auto killProcess(const std::string &pidStr) -> bool {
+    std::string killCmd;
 #ifdef __cpp_lib_format
-    kill_cmd = std::format("{}{}", (WIN_FLAG ? "taskkill /F /PID " : "kill "),
-                           pid_str);
+    killCmd =
+        std::format("{}{}", (WIN_FLAG ? "taskkill /F /PID " : "kill "), pidStr);
 #else
-    kill_cmd = fmt::format("{}{}", (WIN_FLAG ? "taskkill /F /PID " : "kill "),
-                           pid_str);
+    killCmd =
+        fmt::format("{}{}", (WIN_FLAG ? "taskkill /F /PID " : "kill "), pidStr);
 #endif
 
-    if (!atom::system::executeCommand(kill_cmd, false,
-                                      [pid_str](const std::string &line) {
-                                          return line.find(pid_str) !=
+    if (!atom::system::executeCommand(killCmd, false,
+                                      [pidStr](const std::string &line) {
+                                          return line.find(pidStr) !=
                                                  std::string::npos;
                                       })
              .empty()) {
-        LOG_F(ERROR, "Failed to kill the process: {}", pid_str);
+        LOG_F(ERROR, "Failed to kill the process: {}", pidStr);
         return false;
     }
-    DLOG_F(INFO, "The process({}) is killed successfully", pid_str);
+    DLOG_F(INFO, "The process({}) is killed successfully", pidStr);
     return true;
 }
 
-bool checkAndKillProgramOnPort(int port) {
+auto checkAndKillProgramOnPort(int port) -> bool {
     if (!initializeWindowsSocketAPI()) {
         return false;
     }
@@ -114,14 +117,14 @@ bool checkAndKillProgramOnPort(int port) {
     }
 
     if (!bindSocket(sockfd, port)) {
-        std::string pid_str = getProcessIDOnPort(port);
-        if (pid_str.empty()) {
+        std::string pidStr = getProcessIDOnPort(port);
+        if (pidStr.empty()) {
             LOG_F(ERROR, "Failed to get the PID of the process on port({}): {}",
-                  port, pid_str);
+                  port, pidStr);
             return false;
         }
 
-        if (!killProcess(pid_str)) {
+        if (!killProcess(pidStr)) {
             return false;
         }
     }

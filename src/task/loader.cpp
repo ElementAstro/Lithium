@@ -6,7 +6,7 @@
  * loading, parsing, and possibly manipulating JSON data.
  *
  * @date 2023-04-03
- * @author Max Qian <lightapt.com>
+ * @autor Max Qian <lightapt.com>
  * @copyright Copyright (C) 2023-2024 Max Qian
  */
 
@@ -22,11 +22,12 @@
 using json = nlohmann::json;
 
 namespace lithium {
-std::shared_ptr<TaskLoader> TaskLoader::createShared() {
+
+auto TaskLoader::createShared() -> std::shared_ptr<TaskLoader> {
     return std::make_shared<TaskLoader>();
 }
 
-std::optional<json> TaskLoader::readJsonFile(const fs::path& filePath) {
+auto TaskLoader::readJsonFile(const fs::path& filePath) -> std::optional<json> {
     try {
         if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
             LOG_F(ERROR, "File not found: {}", filePath.string());
@@ -34,14 +35,14 @@ std::optional<json> TaskLoader::readJsonFile(const fs::path& filePath) {
         }
 
         std::ifstream inputFile(filePath);
-        json j = json::parse(inputFile, nullptr, false);
+        json jsonData = json::parse(inputFile, nullptr, false);
 
-        if (j.is_discarded()) {
+        if (jsonData.is_discarded()) {
             LOG_F(ERROR, "Parse error in file: {}", filePath.string());
             return std::nullopt;
         }
 
-        return j;
+        return jsonData;
     } catch (const json::exception& e) {
         LOG_F(ERROR, "JSON exception in file {}: {}", filePath.string(),
               e.what());
@@ -53,10 +54,10 @@ std::optional<json> TaskLoader::readJsonFile(const fs::path& filePath) {
 }
 
 auto TaskLoader::writeJsonFile(const fs::path& filePath,
-                               const json& j) -> bool {
+                               const json& jsonData) -> bool {
     try {
         std::ofstream outputFile(filePath);
-        outputFile << j.dump(4);
+        outputFile << jsonData.dump(4);
         return true;
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to write JSON to {}: {}", filePath.string(),
@@ -74,15 +75,17 @@ void TaskLoader::asyncReadJsonFile(
     });
 }
 
-void TaskLoader::asyncWriteJsonFile(const fs::path& filePath, const json& j,
+void TaskLoader::asyncWriteJsonFile(const fs::path& filePath,
+                                    const json& jsonData,
                                     std::function<void(bool)> callback) {
-    std::jthread([filePath, j, callback = std::move(callback)]() {
-        bool success = writeJsonFile(filePath, j);
+    std::jthread([filePath, jsonData, callback = std::move(callback)]() {
+        bool success = writeJsonFile(filePath, jsonData);
         callback(success);
     });
 }
 
 void TaskLoader::mergeJsonObjects(json& base, const json& toMerge) {
+#pragma unroll
     for (const auto& [key, value] : toMerge.items()) {
         base[key] = value;
     }
@@ -90,19 +93,21 @@ void TaskLoader::mergeJsonObjects(json& base, const json& toMerge) {
 
 void TaskLoader::batchAsyncProcess(
     const std::vector<fs::path>& filePaths,
-    std::function<void(std::optional<json>)> process,
-    std::function<void()> onComplete) {
+    const std::function<void(const std::optional<json>&)>& process,
+    const std::function<void()>& onComplete) {
     std::atomic<int> filesProcessed = 0;
-    int totalFiles = filePaths.size();
+    int totalFiles = static_cast<int>(filePaths.size());
 
+#pragma unroll
     for (const auto& path : filePaths) {
-        asyncReadJsonFile(path, [&filesProcessed, totalFiles, process,
-                                 onComplete](std::optional<json> j) {
-            process(j);
-            if (++filesProcessed == totalFiles) {
-                onComplete();
-            }
-        });
+        asyncReadJsonFile(path,
+                          [&filesProcessed, totalFiles, &process,
+                           &onComplete](const std::optional<json>& jsonData) {
+                              process(jsonData);
+                              if (++filesProcessed == totalFiles) {
+                                  onComplete();
+                              }
+                          });
     }
 }
 
@@ -118,14 +123,14 @@ void TaskLoader::asyncQueryJsonValue(
     const fs::path& filePath, const std::string& key,
     std::function<void(std::optional<json>)> callback) {
     asyncReadJsonFile(filePath, [key, callback = std::move(callback)](
-                                    std::optional<json> jOpt) {
-        if (!jOpt.has_value()) {
+                                    const std::optional<json>& jsonOpt) {
+        if (!jsonOpt.has_value()) {
             callback(std::nullopt);
             return;
         }
-        const json& j = jOpt.value();
-        if (j.contains(key)) {
-            callback(j[key]);
+        const json& jsonData = jsonOpt.value();
+        if (jsonData.contains(key)) {
+            callback(jsonData[key]);
         } else {
             callback(std::nullopt);
         }
@@ -134,14 +139,15 @@ void TaskLoader::asyncQueryJsonValue(
 
 void TaskLoader::batchProcessDirectory(
     const fs::path& directoryPath,
-    std::function<void(std::optional<json>)> process,
-    std::function<void()> onComplete) {
+    const std::function<void(const std::optional<json>&)>& process,
+    const std::function<void()>& onComplete) {
     if (!fs::exists(directoryPath) || !fs::is_directory(directoryPath)) {
         LOG_F(ERROR, "Invalid directory path: {}", directoryPath.string());
         return;
     }
 
     std::vector<fs::path> filePaths;
+#pragma unroll
     for (const auto& entry : fs::directory_iterator(directoryPath)) {
         if (entry.path().extension() == ".json") {
             filePaths.push_back(entry.path());

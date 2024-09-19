@@ -285,16 +285,12 @@ auto supportsColor() -> bool {
     }
 
     DWORD dwMode = 0;
-    if (!GetConsoleMode(hOut, &dwMode)) {
+    if (GetConsoleMode(hOut, &dwMode) == 0) {
         return false;
     }
 
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(hOut, dwMode)) {
-        return false;
-    }
-
-    return true;
+    return SetConsoleMode(hOut, dwMode) != 0;
 #else
     const char* term = std::getenv("TERM");
     if (term == nullptr) {

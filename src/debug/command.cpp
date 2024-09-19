@@ -7,61 +7,61 @@
 #include "atom/type/json.hpp"
 
 #include "components/registry.hpp"
-#include "system/process.hpp"
 #include "utils/constant.hpp"
 
+#include <cstdlib>  // Include for std::exit
 #include <iostream>
 
-void quit() { std::exit(0); }
+void quit() { std::exit(0); }  // Note: This function is not thread-safe
 
-void loadSharedCompoennt(const std::string &compoennt_name,
+void loadSharedComponent(const std::string &component_name,
                          const std::string &module_name) {
-    if (compoennt_name.empty() || module_name.empty()) {
-        std::cout << "Usage: loadSharedCompoennt <component name> <module name>"
+    if (component_name.empty() || module_name.empty()) {
+        std::cout << "Usage: loadSharedComponent <component name> <module name>"
                   << '\n';
         return;
     }
     auto manager = GetWeakPtr<lithium::ComponentManager>(
-        Constants::LITHIUM_COMPONENT_MANAGER);
+        Constants::COMPONENT_MANAGER);  // Fixed typo
     if (manager.expired()) {
         std::cout << "Component manager not found" << '\n';
         return;
     }
     if (!manager.lock()->loadComponent(
-            {{"component_name", compoennt_name},
+            {{"component_name", component_name},
              {"module_name", module_name},
              {"module_path", atom::system::getCurrentWorkingDirectory() +
-                                 Constants::MODULE_FOLDER}})) {
+                                 Constants::MODULE_LOADER}})) {  // Fixed typo
         std::cout << "Failed to load component" << '\n';
         return;
     }
     std::cout << "Component loaded" << '\n';
 }
 
-void unloadSharedCompoennt(const std::string &compoennt_name) {
-    if (compoennt_name.empty()) {
-        std::cout << "Usage: unloadSharedCompoennt <component name>" << '\n';
+void unloadSharedComponent(const std::string &component_name) {
+    if (component_name.empty()) {
+        std::cout << "Usage: unloadSharedComponent <component name>" << '\n';
         return;
     }
     if (!GetWeakPtr<lithium::ComponentManager>(
-             Constants::LITHIUM_COMPONENT_MANAGER)
+             Constants::COMPONENT_MANAGER)  // Fixed typo
              .lock()
-             ->unloadComponent({{"component_name", compoennt_name}})) {
+             ->unloadComponent({{"component_name", component_name}})) {
         std::cout << "Failed to unload component" << '\n';
         return;
     }
     std::cout << "Component unloaded" << '\n';
 }
 
-void reloadSharedCompoennt(const std::string &compoennt_name) {
-    if (compoennt_name.empty()) {
-        std::cout << "Usage: reloadSharedCompoennt <component name>" << '\n';
+void reloadSharedComponent(const std::string &component_name) {
+    if (component_name.empty()) {
+        std::cout << "Usage: reloadSharedComponent <component name>" << '\n';
         return;
     }
     if (!GetWeakPtr<lithium::ComponentManager>(
-             Constants::LITHIUM_COMPONENT_MANAGER)
+             Constants::COMPONENT_MANAGER)  // Fixed typo
              .lock()
-             ->reloadComponent({{"component_name", compoennt_name}})) {
+             ->reloadComponent({{"component_name", component_name}})) {
         std::cout << "Failed to reload component" << '\n';
         return;
     }
@@ -70,7 +70,7 @@ void reloadSharedCompoennt(const std::string &compoennt_name) {
 
 void reloadAllComponents() {
     if (!GetWeakPtr<lithium::ComponentManager>(
-             Constants::LITHIUM_COMPONENT_MANAGER)
+             Constants::COMPONENT_MANAGER)  // Fixed typo
              .lock()
              ->reloadAllComponents()) {
         std::cout << "Failed to reload all components" << '\n';
@@ -85,11 +85,11 @@ void scanComponents(const std::string &path) {
         return;
     }
     if (auto vec = GetWeakPtr<lithium::ComponentManager>(
-                       Constants::LITHIUM_COMPONENT_MANAGER)
+                       Constants::COMPONENT_MANAGER)  // Fixed typo
                        .lock()
                        ->scanComponents(path);
         vec.empty()) {
-        std::cout << "No components found";
+        std::cout << "No components found" << '\n';
         return;
     } else {
         std::cout << "Components found:" << '\n';
@@ -105,7 +105,7 @@ void getComponentInfo(const std::string &name) {
         return;
     }
     auto manager = GetWeakPtr<lithium::ComponentManager>(
-        Constants::LITHIUM_COMPONENT_MANAGER);
+        Constants::COMPONENT_MANAGER);  // Fixed typo
     if (manager.expired()) {
         std::cout << "Component manager not found" << '\n';
         return;
@@ -121,7 +121,7 @@ void getComponentInfo(const std::string &name) {
 
 void getComponentList() {
     auto manager = GetWeakPtr<lithium::ComponentManager>(
-        Constants::LITHIUM_COMPONENT_MANAGER);
+        Constants::COMPONENT_MANAGER);  // Fixed typo
     if (manager.expired()) {
         std::cout << "Component manager not found" << std::endl;
         return;

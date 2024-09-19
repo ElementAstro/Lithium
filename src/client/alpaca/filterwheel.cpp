@@ -1,8 +1,7 @@
-#include <chrono>
-#include <stdexcept>
-#include <thread>
-
 #include "filterwheel.hpp"
+
+#include <chrono>
+#include <thread>
 
 AlpacaFilterWheel::AlpacaFilterWheel(std::string_view address,
                                      int device_number,
@@ -10,27 +9,29 @@ AlpacaFilterWheel::AlpacaFilterWheel(std::string_view address,
     : AlpacaDevice(std::string(address), "filterwheel", device_number,
                    std::string(protocol)) {}
 
-std::vector<int> AlpacaFilterWheel::GetFocusOffsets() {
-    return GetArrayProperty<int>("focusoffsets");
+auto AlpacaFilterWheel::getFocusOffsets() -> std::vector<int> {
+    return getArrayProperty<int>("focusoffsets");
 }
 
-std::vector<std::string> AlpacaFilterWheel::GetNames() {
-    return GetArrayProperty<std::string>("names");
+auto AlpacaFilterWheel::getNames() -> std::vector<std::string> {
+    return getArrayProperty<std::string>("names");
 }
 
-int AlpacaFilterWheel::GetPosition() {
-    return GetNumericProperty<int>("position");
+auto AlpacaFilterWheel::getPosition() -> int {
+    return getNumericProperty<int>("position");
 }
 
-std::future<void> AlpacaFilterWheel::SetPosition(int Position) {
-    Put("position", {{"Position", std::to_string(Position)}});
+auto AlpacaFilterWheel::setPosition(int position) -> std::future<void> {
+    put("position", {{"Position", std::to_string(position)}});
 
-    return std::async(std::launch::async,
-                      [this, Position]() { WaitForFilterChange(); });
+    return std::async(std::launch::async, [this]() { waitForFilterChange(); });
 }
 
-void AlpacaFilterWheel::WaitForFilterChange() {
-    while (GetPosition() == FILTER_MOVING) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+void AlpacaFilterWheel::waitForFilterChange() {
+    static constexpr int filterMoving = -1;
+    static constexpr int pollIntervalMs = 100;
+
+    while (getPosition() == filterMoving) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
     }
 }

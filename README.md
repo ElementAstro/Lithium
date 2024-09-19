@@ -41,11 +41,14 @@ It is recommended to use the MSYS2 environment and leverage the Tsinghua Univers
 ```shell
 # Add Tsinghua University mirror source
 sed -i 's|https://mirror.msys2.org/|https://mirrors.tuna.tsinghua.edu.cn/msys2/|g' /etc/pacman.d/mirrorlist.mingw64
-sed -i 's|https://mirror.msys2.org/|https://mirrors.tuna.tsinghua.edu.cn/msys2/|g' /etc/pacman.d/mirrorlist
 
 # Update system packages and install build tools and dependencies
 pacman -Syu
 pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-dlfcn mingw-w64-x86_64-cfitsio mingw-w64-x86_64-cmake mingw-w64-x86_64-libzip mingw-w64-x86_64-zlib mingw-w64-x86_64-fmt mingw-w64-x86_64-libnova make mingw-w64-x86_64-gtest
+
+pacman -S mingw-w64-x86_64-clang-analyzer
+pacman -S mingw-w64-x86_64-clang-tools-extra
+pacman -S mingw-w64-x86_64-opencv
 ```
 
 #### Ubuntu/Debian

@@ -14,92 +14,97 @@
 namespace atom::utils {
 class StopWatcher::Impl {
 public:
-    Impl()= default;
+    Impl() = default;
 
     void start() {
-        if (!running) {
+        if (!running_) {
             startTime_ = Clock::now();
-            running = true;
-            paused = false;
-            intervals.clear();
-            intervals.push_back(startTime_);
+            running_ = true;
+            paused_ = false;
+            intervals_.clear();
+            intervals_.push_back(startTime_);
         }
     }
 
     void stop() {
-        if (running && !paused) {
+        if (running_ && !paused_) {
             auto stopTime = Clock::now();
             endTime_ = stopTime;
-            running = false;
-            intervals.push_back(stopTime);
+            running_ = false;
+            intervals_.push_back(stopTime);
             checkCallbacks(stopTime);
         }
     }
 
     void pause() {
-        if (running && !paused) {
+        if (running_ && !paused_) {
             pauseTime_ = Clock::now();
-            paused = true;
-            intervals.push_back(pauseTime_);
+            paused_ = true;
+            intervals_.push_back(pauseTime_);
         }
     }
 
     void resume() {
-        if (running && paused) {
+        if (running_ && paused_) {
             auto resumeTime = Clock::now();
             startTime_ += resumeTime - pauseTime_;
-            paused = false;
-            intervals.push_back(resumeTime);
+            paused_ = false;
+            intervals_.push_back(resumeTime);
         }
     }
 
     void reset() {
-        running = false;
-        paused = false;
-        intervals.clear();
-        callbacks.clear();
+        running_ = false;
+        paused_ = false;
+        intervals_.clear();
+        callbacks_.clear();
     }
 
-    [[nodiscard]] double elapsedMilliseconds() const {
+    [[nodiscard]] auto elapsedMilliseconds() const -> double {
         auto endTimePoint =
-            running ? (paused ? pauseTime_ : Clock::now()) : endTime_;
+            running_ ? (paused_ ? pauseTime_ : Clock::now()) : endTime_;
         return std::chrono::duration<double, std::milli>(endTimePoint -
                                                          startTime_)
             .count();
     }
 
-    [[nodiscard]] double elapsedSeconds() const {
-        return elapsedMilliseconds() / 1000.0;
+    [[nodiscard]] auto elapsedSeconds() const -> double {
+        return elapsedMilliseconds() / K_MILLISECONDS_PER_SECOND;
     }
 
-    [[nodiscard]] std::string elapsedFormatted() const {
+    [[nodiscard]] auto elapsedFormatted() const -> std::string {
         auto totalSeconds = static_cast<int>(elapsedSeconds());
-        int hours = totalSeconds / 3600;
-        int minutes = (totalSeconds % 3600) / 60;
-        int seconds = totalSeconds % 60;
+        int hours = totalSeconds / K_SECONDS_PER_HOUR;
+        int minutes =
+            (totalSeconds % K_SECONDS_PER_HOUR) / K_SECONDS_PER_MINUTE;
+        int seconds = totalSeconds % K_SECONDS_PER_MINUTE;
 
-        std::ostringstream ss;
-        ss << std::setw(2) << std::setfill('0') << hours << ":" << std::setw(2)
-           << std::setfill('0') << minutes << ":" << std::setw(2)
-           << std::setfill('0') << seconds;
-        return ss.str();
+        std::ostringstream stream;
+        stream << std::setw(2) << std::setfill('0') << hours << ":"
+               << std::setw(2) << std::setfill('0') << minutes << ":"
+               << std::setw(2) << std::setfill('0') << seconds;
+        return stream.str();
     }
 
     void registerCallback(std::function<void()> callback, int milliseconds) {
-        callbacks.emplace_back(std::move(callback), milliseconds);
+        callbacks_.emplace_back(std::move(callback), milliseconds);
     }
 
 private:
     using Clock = std::chrono::high_resolution_clock;
     using TimePoint = std::chrono::time_point<Clock>;
 
-    TimePoint startTime_{}, endTime_{}, pauseTime_{};
-    bool running{}, paused{};
-    std::vector<TimePoint> intervals;
-    std::vector<std::pair<std::function<void()>, int>> callbacks;
+    TimePoint startTime_, endTime_, pauseTime_;
+    bool running_{}, paused_{};
+    std::vector<TimePoint> intervals_;
+    std::vector<std::pair<std::function<void()>, int>> callbacks_;
+
+    static constexpr int K_MILLISECONDS_PER_SECOND = 1000;
+    static constexpr int K_SECONDS_PER_MINUTE = 60;
+    static constexpr int K_SECONDS_PER_HOUR = 3600;
 
     void checkCallbacks(const TimePoint& currentTime) {
-        for (const auto& [callback, interval] : callbacks) {
+        for (const auto& [callback, interval] : callbacks_) {
             auto targetTime = startTime_ + std::chrono::milliseconds(interval);
             if (currentTime >= targetTime) {
                 callback();
@@ -114,24 +119,26 @@ StopWatcher::StopWatcher() : pImpl(std::make_unique<Impl>()) {}
 StopWatcher::~StopWatcher() = default;
 
 StopWatcher::StopWatcher(StopWatcher&&) noexcept = default;
-StopWatcher& StopWatcher::operator=(StopWatcher&&) noexcept = default;
+auto StopWatcher::operator=(StopWatcher&&) noexcept -> StopWatcher& = default;
 
-void StopWatcher::start() { pImpl->start(); }
-void StopWatcher::stop() { pImpl->stop(); }
-void StopWatcher::pause() { pImpl->pause(); }
-void StopWatcher::resume() { pImpl->resume(); }
-void StopWatcher::reset() { pImpl->reset(); }
+auto StopWatcher::start() -> void { pImpl->start(); }
+auto StopWatcher::stop() -> void { pImpl->stop(); }
+auto StopWatcher::pause() -> void { pImpl->pause(); }
+auto StopWatcher::resume() -> void { pImpl->resume(); }
+auto StopWatcher::reset() -> void { pImpl->reset(); }
 
-double StopWatcher::elapsedMilliseconds() const {
+auto StopWatcher::elapsedMilliseconds() const -> double {
     return pImpl->elapsedMilliseconds();
 }
-double StopWatcher::elapsedSeconds() const { return pImpl->elapsedSeconds(); }
-std::string StopWatcher::elapsedFormatted() const {
+auto StopWatcher::elapsedSeconds() const -> double {
+    return pImpl->elapsedSeconds();
+}
+auto StopWatcher::elapsedFormatted() const -> std::string {
     return pImpl->elapsedFormatted();
 }
 
-void StopWatcher::registerCallback(std::function<void()> callback,
-                                   int milliseconds) {
+auto StopWatcher::registerCallback(std::function<void()> callback,
+                                   int milliseconds) -> void {
     pImpl->registerCallback(std::move(callback), milliseconds);
 }
 

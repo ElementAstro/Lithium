@@ -87,7 +87,7 @@ public:
      * @brief Add a state to the state machine.
      * @param state The state to add.
      */
-    void addState(StatePtr state);
+    void addState(const StatePtr& state);
 
     /**
      * @brief Set the initial state of the state machine.
@@ -320,7 +320,7 @@ public:
      * @param function The function to execute for the task.
      * @param onTerminate The function to call on termination, if any.
      */
-    Task(const std::string& name, const json& params,
+    Task(std::string name, json params,
          std::function<json(const json&)> function,
          std::optional<std::function<void(const std::exception&)>> onTerminate =
              std::nullopt);

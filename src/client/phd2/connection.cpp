@@ -2,7 +2,7 @@
 
 #include "atom/error/exception.hpp"
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include <Winsock2.h>
 #define POLL WSAPoll
 #else
@@ -10,9 +10,19 @@
 #define POLL poll
 #endif
 
-GuiderConnection::GuiderConnection() : m_terminate_(false) {}
+GuiderConnection::GuiderConnection() : m_terminate_(false) {
+#ifdef _WIN32
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif
+}
 
-GuiderConnection::~GuiderConnection() { disconnect(); }
+GuiderConnection::~GuiderConnection() {
+    disconnect();
+#ifdef _WIN32
+    WSACleanup();
+#endif
+}
 
 auto GuiderConnection::connect(const char *hostname,
                                unsigned short port) -> bool {
@@ -65,7 +75,7 @@ auto GuiderConnection::waitReadable(std::stop_token st) const -> bool {
     pfd.events = POLLIN;
 
     while (!st.stop_requested()) {
-        int ret = poll(&pfd, 1, 500);
+        int ret = POLL(&pfd, 1, 500);
         if (ret == 1) {
             return true;
         }
@@ -121,7 +131,7 @@ auto GuiderConnection::waitWritable(std::stop_token st) const -> bool {
     pfd.events = POLLOUT;
 
     while (!st.stop_requested()) {
-        int ret = poll(&pfd, 1, -1);
+        int ret = POLL(&pfd, 1, -1);
         if (ret == 1) {
             return true;
         }

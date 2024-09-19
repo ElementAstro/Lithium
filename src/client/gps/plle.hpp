@@ -1,8 +1,10 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+
+#include "atom/error/exception.hpp"
+#include "atom/type/json.hpp"
 
 // Struct to store GPS location
 struct Location {

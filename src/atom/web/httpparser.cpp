@@ -14,23 +14,20 @@ Description: Http Header Parser with C++20 features
 
 #include "httpparser.hpp"
 
-#include <algorithm>  // C++20 algorithms
-#include <iostream>
-#include <ranges>  // C++20 ranges
 #include <sstream>
 
 namespace atom::web {
 
 class HttpHeaderParser::HttpHeaderParserImpl {
 public:
-    std::map<std::string, std::vector<std::string>> headers_;
+    std::map<std::string, std::vector<std::string>> headers;
 };
 
 HttpHeaderParser::HttpHeaderParser()
     : m_pImpl(std::make_unique<HttpHeaderParser::HttpHeaderParserImpl>()) {}
 
 void HttpHeaderParser::parseHeaders(const std::string &rawHeaders) {
-    m_pImpl->headers_.clear();
+    m_pImpl->headers.clear();
     std::istringstream iss(rawHeaders);
 
     std::string line;
@@ -43,47 +40,47 @@ void HttpHeaderParser::parseHeaders(const std::string &rawHeaders) {
             key.erase(key.find_last_not_of(' ') + 1);
             value.erase(0, value.find_first_not_of(' '));
 
-            m_pImpl->headers_[key].push_back(value);
+            m_pImpl->headers[key].push_back(value);
         }
     }
 }
 
 void HttpHeaderParser::setHeaderValue(const std::string &key,
                                       const std::string &value) {
-    m_pImpl->headers_[key] = {value};
+    m_pImpl->headers[key] = {value};
 }
 
 void HttpHeaderParser::setHeaders(
     const std::map<std::string, std::vector<std::string>> &headers) {
-    m_pImpl->headers_ = headers;
+    m_pImpl->headers = headers;
 }
 
 void HttpHeaderParser::addHeaderValue(const std::string &key,
                                       const std::string &value) {
-    m_pImpl->headers_[key].push_back(value);
+    m_pImpl->headers[key].push_back(value);
 }
 
-std::optional<std::vector<std::string>> HttpHeaderParser::getHeaderValues(
-    const std::string &key) const {
-    if (auto it = m_pImpl->headers_.find(key); it != m_pImpl->headers_.end()) {
+auto HttpHeaderParser::getHeaderValues(const std::string &key) const
+    -> std::optional<std::vector<std::string>> {
+    if (auto it = m_pImpl->headers.find(key); it != m_pImpl->headers.end()) {
         return it->second;
     }
     return std::nullopt;  // Use optional to represent missing values
 }
 
 void HttpHeaderParser::removeHeader(const std::string &key) {
-    m_pImpl->headers_.erase(key);
+    m_pImpl->headers.erase(key);
 }
 
-std::map<std::string, std::vector<std::string>>
-HttpHeaderParser::getAllHeaders() const {
-    return m_pImpl->headers_;
+auto HttpHeaderParser::getAllHeaders() const
+    -> std::map<std::string, std::vector<std::string>> {
+    return m_pImpl->headers;
 }
 
-bool HttpHeaderParser::hasHeader(const std::string &key) const {
-    return m_pImpl->headers_.contains(key);  // Use C++20 contains method
+auto HttpHeaderParser::hasHeader(const std::string &key) const -> bool {
+    return m_pImpl->headers.contains(key);  // Use C++20 contains method
 }
 
-void HttpHeaderParser::clearHeaders() { m_pImpl->headers_.clear(); }
+void HttpHeaderParser::clearHeaders() { m_pImpl->headers.clear(); }
 
 }  // namespace atom::web

@@ -29,21 +29,29 @@ public:
      */
     ~DownloadManager();
 
+    // 禁用拷贝构造函数和拷贝赋值运算符
+    DownloadManager(const DownloadManager&) = delete;
+    DownloadManager& operator=(const DownloadManager&) = delete;
+
+    // 启用移动构造函数和移动赋值运算符
+    DownloadManager(DownloadManager&&) noexcept = default;
+    DownloadManager& operator=(DownloadManager&&) noexcept = default;
+
     /**
      * @brief 添加下载任务
      * @param url 下载链接
      * @param filepath 本地保存文件路径
      * @param priority 下载任务优先级，数字越大优先级越高
      */
-    void add_task(const std::string& url, const std::string& filepath,
-                  int priority = 0);
+    void addTask(const std::string& url, const std::string& filepath,
+                 int priority = 0);
 
     /**
      * @brief 删除下载任务
      * @param index 要删除的任务在任务列表中的索引
      * @return 是否成功删除任务
      */
-    bool remove_task(size_t index);
+    auto removeTask(size_t index) -> bool;
 
     /**
      * @brief 开始下载任务
@@ -57,54 +65,53 @@ public:
      * @brief 暂停下载任务
      * @param index 要暂停的任务在任务列表中的索引
      */
-    void pause_task(size_t index);
+    void pauseTask(size_t index);
 
     /**
      * @brief 恢复下载任务
      * @param index 要恢复的任务在任务列表中的索引
      */
-    void resume_task(size_t index);
+    void resumeTask(size_t index);
 
     /**
      * @brief 获取已下载的字节数
      * @param index 下载任务在任务列表中的索引
      * @return 已下载的字节数
      */
-    size_t get_downloaded_bytes(size_t index);
+    auto getDownloadedBytes(size_t index) -> size_t;
 
     /**
      * @brief 取消下载任务
      * @param index 要取消的任务在任务列表中的索引
      */
-    void cancel_task(size_t index);
+    void cancelTask(size_t index);
 
     /**
      * @brief 动态调整下载线程数
      * @param thread_count 新的下载线程数
      */
-    void set_thread_count(size_t thread_count);
+    void setThreadCount(size_t thread_count);
 
     /**
      * @brief 设置下载错误重试次数
      * @param retries 每个任务失败时的最大重试次数
      */
-    void set_max_retries(size_t retries);
+    void setMaxRetries(size_t retries);
 
     /**
      * @brief 注册下载完成回调函数
      * @param callback 下载完成时的回调函数，参数为任务索引
      */
-    void on_download_complete(const std::function<void(size_t)>& callback);
+    void onDownloadComplete(const std::function<void(size_t)>& callback);
 
     /**
      * @brief 注册下载进度更新回调函数
      * @param callback 下载进度更新时的回调函数，参数为任务索引和下载百分比
      */
-    void on_progress_update(
-        const std::function<void(size_t, double)>& callback);
+    void onProgressUpdate(const std::function<void(size_t, double)>& callback);
 
-private:
     class Impl;
+private:
     std::unique_ptr<Impl> impl_;  ///< 使用 Pimpl 隐藏实现细节
 };
 

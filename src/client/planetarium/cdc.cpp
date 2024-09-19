@@ -9,11 +9,11 @@ using tcp = asio::ip::tcp;
 
 class CartesDuCiel::Impl {
 public:
-    Impl(const std::string& addr, int prt)
-        : address_(addr), port_(prt), socket_(ioContext_) {}
+    Impl(std::string addr, int prt)
+        : address_(std::move(addr)), port_(prt), socket_(ioContext_) {}
 
-    std::optional<std::pair<std::string, std::pair<double, double>>>
-    getTarget() {
+    auto getTarget()
+        -> std::optional<std::pair<std::string, std::pair<double, double>>> {
         try {
             std::string response = sendQuery("GETSELECTEDOBJECT\r\n");
             if (response.starts_with("OK!")) {
@@ -29,7 +29,7 @@ public:
         }
     }
 
-    std::optional<std::pair<double, double>> getSite() {
+    auto getSite() -> std::optional<std::pair<double, double>> {
         try {
             std::string response = sendQuery("GETOBS\r\n");
             if (response.starts_with("OK!")) {
@@ -51,7 +51,7 @@ private:
     asio::io_context ioContext_;
     tcp::socket socket_;
 
-    std::string sendQuery(const std::string& command) {
+    auto sendQuery(const std::string& command) -> std::string {
         try {
             tcp::resolver resolver(ioContext_);
             auto endpoints = resolver.resolve(address_, std::to_string(port_));
@@ -71,50 +71,53 @@ private:
         }
     }
 
-    std::optional<std::pair<double, double>> extractCoordinates(
-        const std::string& response) {
+    static auto extractCoordinates(const std::string& response)
+        -> std::optional<std::pair<double, double>> {
         std::regex raPattern(
             R"(([0-9]{1,2})(h|:)([0-9]{1,2})(m|:)?([0-9]{1,2}(\.[0-9]+)?)?(s|:))");
         std::regex decPattern(
             R"([\+|-]([0-9]{1,2})(d|:)([0-9]{1,2})(m|:)?([0-9]{1,2}(\.[0-9]+)?)?(s|:))");
 
-        std::smatch raMatch, decMatch;
+        std::smatch raMatch;
+        std::smatch decMatch;
         if (std::regex_search(response, raMatch, raPattern) &&
             std::regex_search(response, decMatch, decPattern)) {
-            double ra = std::stod(raMatch.str());
-            double dec = std::stod(decMatch.str());
-            return std::make_pair(ra, dec);
-        } else {
-            return std::nullopt;
+            double rightAscension = std::stod(raMatch.str());
+            double declination = std::stod(decMatch.str());
+            return std::make_pair(rightAscension, declination);
         }
+        return std::nullopt;
     }
 
-    std::optional<std::pair<double, double>> extractLatLong(
-        const std::string& response) {
+    static auto extractLatLong(const std::string& response)
+        -> std::optional<std::pair<double, double>> {
         std::regex latPattern(R"((?<=LAT:)[\+|-]([0-9]{1,2}):([0-9]{1,2})?)");
         std::regex lonPattern(R"((?<=LON:)[\+|-]([0-9]{1,3}):([0-9]{1,2})?)");
 
-        std::smatch latMatch, lonMatch;
+        std::smatch latMatch;
+        std::smatch lonMatch;
         if (std::regex_search(response, latMatch, latPattern) &&
             std::regex_search(response, lonMatch, lonPattern)) {
             double latitude = std::stod(latMatch.str());
             double longitude = std::stod(lonMatch.str());
             return std::make_pair(latitude, longitude);
-        } else {
-            return std::nullopt;
         }
+        return std::nullopt;
     }
 
-    std::optional<std::pair<std::string, std::pair<double, double>>> getView() {
+    auto getView()
+        -> std::optional<std::pair<std::string, std::pair<double, double>>> {
         try {
             std::string raResponse = sendQuery("GETRA F\r\n");
             std::string decResponse = sendQuery("GETDEC F\r\n");
 
             if (raResponse.starts_with("OK!") &&
                 decResponse.starts_with("OK!")) {
-                double ra = std::stod(raResponse.substr(3));
-                double dec = std::stod(decResponse.substr(3));
-                return std::make_pair("DeepSkyObject", std::make_pair(ra, dec));
+                double rightAscension = std::stod(raResponse.substr(3));
+                double declination = std::stod(decResponse.substr(3));
+                return std::make_pair(
+                    "DeepSkyObject",
+                    std::make_pair(rightAscension, declination));
             }
             return std::nullopt;
         } catch (const std::exception& e) {
@@ -129,11 +132,11 @@ CartesDuCiel::CartesDuCiel(const std::string& addr, int prt)
 
 CartesDuCiel::~CartesDuCiel() = default;
 
-std::optional<std::pair<std::string, std::pair<double, double>>>
-CartesDuCiel::getTarget() {
+auto CartesDuCiel::getTarget()
+    -> std::optional<std::pair<std::string, std::pair<double, double>>> {
     return pimpl_->getTarget();
 }
 
-std::optional<std::pair<double, double>> CartesDuCiel::getSite() {
+auto CartesDuCiel::getSite() -> std::optional<std::pair<double, double>> {
     return pimpl_->getSite();
 }

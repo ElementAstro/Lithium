@@ -17,14 +17,13 @@ Description: Simple HTTP client using libcurl.
 #include <openssl/ssl.h>
 #include <stdexcept>
 
-
 #include "atom/log/loguru.hpp"
 
 namespace atom::web {
-CurlWrapper::CurlWrapper() {
+CurlWrapper::CurlWrapper() : multiHandle(curl_multi_init()) {
     curl_global_init(CURL_GLOBAL_ALL);
     handle = curl_easy_init();
-    if (!handle) {
+    if (handle == nullptr) {
         throw std::runtime_error("Failed to initialize CURL.");
     }
     curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
@@ -34,6 +33,7 @@ CurlWrapper::CurlWrapper() {
 
 CurlWrapper::~CurlWrapper() {
     curl_easy_cleanup(handle);
+    curl_multi_cleanup(multiHandle);
     curl_global_cleanup();
 }
 
@@ -72,16 +72,16 @@ void CurlWrapper::setHeader(const std::string &key, const std::string &value) {
         headersList = curl_slist_append(headersList, header.c_str());
     }
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, headersList);
-    DLOG_F(INFO, "HTTP header: {}", header);
+    DLOG_F(INFO, "HTTP header: {}", key + ": " + value);
 }
 
 void CurlWrapper::setOnErrorCallback(std::function<void(CURLcode)> callback) {
-    onErrorCallback = callback;
+    onErrorCallback = std::move(callback);
 }
 
 void CurlWrapper::setOnResponseCallback(
     std::function<void(const std::string &)> callback) {
-    onResponseCallback = callback;
+    onResponseCallback = std::move(callback);
 }
 
 void CurlWrapper::setTimeout(long timeout) {
@@ -104,7 +104,7 @@ void CurlWrapper::setUploadFile(const std::string &filePath) {
     DLOG_F(INFO, "HTTP upload file: {}", filePath);
 }
 
-std::string CurlWrapper::performRequest() {
+auto CurlWrapper::performRequest() -> std::string {
     std::lock_guard<std::mutex> lock(mutex);
 
     std::string responseData;
@@ -142,36 +142,37 @@ void CurlWrapper::waitAll() {
 
     do {
         while (curl_multi_perform(multiHandle, &stillRunning) ==
-               CURLM_CALL_MULTI_PERFORM)
-            ;
+               CURLM_CALL_MULTI_PERFORM) {
+        }
 
-        while ((msg = curl_multi_info_read(multiHandle, &msgsLeft))) {
+        while ((msg = curl_multi_info_read(multiHandle, &msgsLeft)) !=
+               nullptr) {
             if (msg->msg == CURLMSG_DONE) {
-                CURL *easy_handle = msg->easy_handle;
+                CURL *easyHandle = msg->easy_handle;
                 std::function<void(const std::string &)> *callback;
-                curl_easy_getinfo(easy_handle, CURLINFO_PRIVATE, &callback);
+                curl_easy_getinfo(easyHandle, CURLINFO_PRIVATE, &callback);
                 if (*callback) {
                     (*callback)(responseData);
                 }
                 responseData.clear();
-                curl_multi_remove_handle(multiHandle, easy_handle);
+                curl_multi_remove_handle(multiHandle, easyHandle);
             } else {
                 LOG_F(ERROR,
                       "Error: curl_multi_info_read() returned message with "
                       "unexpected CURLMsg.");
             }
         }
-        if (stillRunning) {
+        if (stillRunning != 0) {
             std::unique_lock<std::mutex> lock(mutex);
             cv.wait(lock);
         }
-    } while (stillRunning);
+    } while (stillRunning != 0);
 }
 
-size_t CurlWrapper::writeCallback(void *contents, size_t size, size_t nmemb,
-                                  void *userp) {
+auto CurlWrapper::writeCallback(void *contents, size_t size, size_t nmemb,
+                                void *userp) -> size_t {
     size_t realsize = size * nmemb;
-    std::string *str = static_cast<std::string *>(userp);
+    auto *str = static_cast<std::string *>(userp);
     str->append(static_cast<char *>(contents), realsize);
     return realsize;
 }

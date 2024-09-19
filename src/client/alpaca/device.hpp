@@ -4,74 +4,88 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <nlohmann/json.hpp>
-#include <random>
 #include <string>
 #include <vector>
 
+#include "atom/error/exception.hpp"
 #include "atom/function/concept.hpp"
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
 
-template <typename T>
-concept JsonCompatible = requires(nlohmann::json j, T t) {
-    { j.get<T>() } -> std::convertible_to<T>;
+template <typename Type>
+concept JsonCompatible = requires(json jsonObj, Type typeObj) {
+    { jsonObj.get<Type>() } -> std::convertible_to<Type>;
 };
+
+class AnotherOperationException : public atom::error::Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_ANOTHER_OPERATION(...)                                \
+    throw AnotherOperationException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                    ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_NESTED_ANOTHER_OPERATION(...)                                  \
+    AnotherOperationException::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                             ATOM_FUNC_NAME, __VA_ARGS__)
 
 class AlpacaDevice {
 public:
-    AlpacaDevice(const std::string& address, const std::string& device_type,
-                 int device_number, const std::string& protocol);
+    AlpacaDevice(const std::string& address, const std::string& deviceType,
+                 int deviceNumber, const std::string& protocol);
     virtual ~AlpacaDevice();
 
     // Common interface methods
-    std::string Action(const std::string& ActionName,
-                       const std::vector<std::string>& Parameters = {});
-    void CommandBlind(const std::string& Command, bool Raw);
-    bool CommandBool(const std::string& Command, bool Raw);
-    std::string CommandString(const std::string& Command, bool Raw);
+    auto action(const std::string& actionName,
+                const std::vector<std::string>& parameters = {}) -> std::string;
+    auto commandBlind(const std::string& command, bool raw) -> void;
+    auto commandBool(const std::string& command, bool raw) -> bool;
+    auto commandString(const std::string& command, bool raw) -> std::string;
 
-    bool GetConnected();
-    void SetConnected(bool ConnectedState);
-    std::string GetDescription();
-    std::vector<std::string> GetDriverInfo();
-    std::string GetDriverVersion();
-    int GetInterfaceVersion();
-    std::string GetName();
-    std::vector<std::string> GetSupportedActions();
+    auto getConnected() -> bool;
+    auto setConnected(bool connectedState) -> void;
+    auto getDescription() -> std::string;
+    auto getDriverInfo() -> std::vector<std::string>;
+    auto getDriverVersion() -> std::string;
+    auto getInterfaceVersion() -> int;
+    auto getName() -> std::string;
+    auto getSupportedActions() -> std::vector<std::string>;
 
-    template <Number T>
-    T GetNumericProperty(const std::string& property_name) {
-        return std::get<T>(Get(property_name));
+    template <Number Type>
+    auto getNumericProperty(const std::string& propertyName) -> Type {
+        return std::get<Type>(get(propertyName));
     }
 
-    template <JsonCompatible T>
-    std::vector<T> GetArrayProperty(
-        const std::string& property,
-        const std::map<std::string, std::string>& parameters = {}) {
-        nlohmann::json response = Get(property, parameters);
-        return response["Value"].get<std::vector<T>>();
+    template <JsonCompatible Type>
+    auto getArrayProperty(const std::string& property,
+                          const std::map<std::string, std::string>& parameters =
+                              {}) -> std::vector<Type> {
+        json response = get(property, parameters);
+        return response["Value"].get<std::vector<Type>>();
     }
 
 protected:
     // HTTP methods
-    nlohmann::json Get(const std::string& attribute,
-                       const std::map<std::string, std::string>& params = {});
-    nlohmann::json Put(const std::string& attribute,
-                       const std::map<std::string, std::string>& data = {});
+    auto get(const std::string& attribute,
+             const std::map<std::string, std::string>& params = {}) -> json;
+    auto put(const std::string& attribute,
+             const std::map<std::string, std::string>& data = {}) -> json;
 
 private:
-    static size_t WriteCallback(void* contents, size_t size, size_t nmemb,
-                                std::string* s);
-    void CheckError(const nlohmann::json& response);
+    static auto writeCallback(void* contents, size_t size, size_t nmemb,
+                              std::string* str) -> size_t;
+    auto checkError(const json& response) -> void;
 
-    std::string m_address;
-    std::string m_device_type;
-    int m_device_number;
-    int m_api_version;
-    std::string m_base_url;
+    std::string address_;
+    std::string deviceType_;
+    int deviceNumber_;
+    int apiVersion_;
+    std::string baseUrl_;
 
-    static int s_client_id;
-    static int s_client_trans_id;
-    static std::mutex s_ctid_mutex;
+    static int clientId;
+    static int clientTransId;
+    static std::mutex clientTransIdMutex;
 
-    std::unique_ptr<CURL, std::function<void(CURL*)>> m_curl;
+    std::unique_ptr<CURL, std::function<void(CURL*)>> curl_;
 };

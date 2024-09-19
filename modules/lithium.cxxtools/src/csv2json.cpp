@@ -28,8 +28,9 @@ auto csvToJson(std::string_view csvFilePath, char delimiter = ',') -> json {
     std::string line;
     bool isFirstLine = true;
     while (std::getline(csvFile, line)) {
-        if (line.empty())
+        if (line.empty()) {
             continue;  // Skip empty lines
+        }
 
         auto fields = atom::utils::splitString(line, delimiter);
 

@@ -1,6 +1,6 @@
 #include "dome.hpp"
+
 #include <chrono>
-#include <stdexcept>
 #include <thread>
 
 AlpacaDome::AlpacaDome(std::string_view address, int device_number,
@@ -8,87 +8,110 @@ AlpacaDome::AlpacaDome(std::string_view address, int device_number,
     : AlpacaDevice(std::string(address), "dome", device_number,
                    std::string(protocol)) {}
 
-double AlpacaDome::GetAltitude() { return GetProperty<double>("altitude"); }
-bool AlpacaDome::GetAtHome() { return GetProperty<bool>("athome"); }
-bool AlpacaDome::GetAtPark() { return GetProperty<bool>("atpark"); }
-double AlpacaDome::GetAzimuth() { return GetProperty<double>("azimuth"); }
-bool AlpacaDome::GetCanFindHome() { return GetProperty<bool>("canfindhome"); }
-bool AlpacaDome::GetCanPark() { return GetProperty<bool>("canpark"); }
-bool AlpacaDome::GetCanSetAltitude() {
-    return GetProperty<bool>("cansetaltitude");
+auto AlpacaDome::getAltitude() -> double {
+    return getProperty<double>("altitude");
 }
-bool AlpacaDome::GetCanSetAzimuth() {
-    return GetProperty<bool>("cansetazimuth");
-}
-bool AlpacaDome::GetCanSetPark() { return GetProperty<bool>("cansetpark"); }
-bool AlpacaDome::GetCanSetShutter() {
-    return GetProperty<bool>("cansetshutter");
-}
-bool AlpacaDome::GetCanSlave() { return GetProperty<bool>("canslave"); }
-bool AlpacaDome::GetCanSyncAzimuth() {
-    return GetProperty<bool>("cansyncazimuth");
-}
-AlpacaDome::ShutterState AlpacaDome::GetShutterStatus() {
-    return static_cast<ShutterState>(GetProperty<int>("shutterstatus"));
-}
-bool AlpacaDome::GetSlaved() { return GetProperty<bool>("slaved"); }
-void AlpacaDome::SetSlaved(bool SlavedState) {
-    Put("slaved", {{"Slaved", SlavedState ? "true" : "false"}});
-}
-bool AlpacaDome::GetSlewing() { return GetProperty<bool>("slewing"); }
 
-void AlpacaDome::AbortSlew() { Put("abortslew"); }
+auto AlpacaDome::getAtHome() -> bool { return getProperty<bool>("athome"); }
+
+auto AlpacaDome::getAtPark() -> bool { return getProperty<bool>("atpark"); }
+
+auto AlpacaDome::getAzimuth() -> double {
+    return getProperty<double>("azimuth");
+}
+
+auto AlpacaDome::getCanFindHome() -> bool {
+    return getProperty<bool>("canfindhome");
+}
+
+auto AlpacaDome::getCanPark() -> bool { return getProperty<bool>("canpark"); }
+
+auto AlpacaDome::getCanSetAltitude() -> bool {
+    return getProperty<bool>("cansetaltitude");
+}
+
+auto AlpacaDome::getCanSetAzimuth() -> bool {
+    return getProperty<bool>("cansetazimuth");
+}
+
+auto AlpacaDome::getCanSetPark() -> bool {
+    return getProperty<bool>("cansetpark");
+}
+
+auto AlpacaDome::getCanSetShutter() -> bool {
+    return getProperty<bool>("cansetshutter");
+}
+
+auto AlpacaDome::getCanSlave() -> bool { return getProperty<bool>("canslave"); }
+
+auto AlpacaDome::getCanSyncAzimuth() -> bool {
+    return getProperty<bool>("cansyncazimuth");
+}
+
+auto AlpacaDome::getShutterStatus() -> ShutterState {
+    return static_cast<ShutterState>(getProperty<int>("shutterstatus"));
+}
+
+auto AlpacaDome::getSlaved() -> bool { return getProperty<bool>("slaved"); }
+
+void AlpacaDome::setSlaved(bool slavedState) {
+    put("slaved", {{"Slaved", slavedState ? "true" : "false"}});
+}
+
+auto AlpacaDome::getSlewing() -> bool { return getProperty<bool>("slewing"); }
+
+void AlpacaDome::abortSlew() { put("abortslew"); }
 
 template <typename Func>
-std::future<void> AlpacaDome::AsyncOperation(Func&& func,
-                                             const std::string& operationName) {
+auto AlpacaDome::asyncOperation(Func&& func, const std::string& operationName)
+    -> std::future<void> {
     return std::async(
         std::launch::async,
         [this, func = std::forward<Func>(func), operationName]() {
             func();
-            while (GetSlewing() ||
+            while (getSlewing() ||
                    (operationName == "shutter" &&
-                    (GetShutterStatus() == ShutterState::ShutterOpening ||
-                     GetShutterStatus() == ShutterState::ShutterClosing))) {
+                    (getShutterStatus() == ShutterState::shutterOpening ||
+                     getShutterStatus() == ShutterState::shutterClosing))) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         });
 }
 
-std::future<void> AlpacaDome::CloseShutter() {
-    return AsyncOperation([this]() { Put("closeshutter"); }, "shutter");
+auto AlpacaDome::closeShutter() -> std::future<void> {
+    return asyncOperation([this]() { put("closeshutter"); }, "shutter");
 }
 
-std::future<void> AlpacaDome::FindHome() {
-    return AsyncOperation([this]() { Put("findhome"); }, "home");
+auto AlpacaDome::findHome() -> std::future<void> {
+    return asyncOperation([this]() { put("findhome"); }, "home");
 }
 
-std::future<void> AlpacaDome::OpenShutter() {
-    return AsyncOperation([this]() { Put("openshutter"); }, "shutter");
+auto AlpacaDome::openShutter() -> std::future<void> {
+    return asyncOperation([this]() { put("openshutter"); }, "shutter");
 }
 
-std::future<void> AlpacaDome::Park() {
-    return AsyncOperation([this]() { Put("park"); }, "park");
+auto AlpacaDome::park() -> std::future<void> {
+    return asyncOperation([this]() { put("park"); }, "park");
 }
 
-void AlpacaDome::SetPark() { Put("setpark"); }
+void AlpacaDome::setPark() { put("setpark"); }
 
-std::future<void> AlpacaDome::SlewToAltitude(double Altitude) {
-    return AsyncOperation(
-        [this, Altitude]() {
-            Put("slewtoaltitude", {{"Altitude", std::to_string(Altitude)}});
+auto AlpacaDome::slewToAltitude(double altitude) -> std::future<void> {
+    return asyncOperation(
+        [this, altitude]() {
+            put("slewtoaltitude", {{"Altitude", std::to_string(altitude)}});
         },
         "slew");
 }
 
-std::future<void> AlpacaDome::SlewToAzimuth(double Azimuth) {
-    return AsyncOperation(
-        [this, Azimuth]() {
-            Put("slewtoazimuth", {{"Azimuth", std::to_string(Azimuth)}});
+auto AlpacaDome::slewToAzimuth(double azimuth) -> std::future<void> {
+    return asyncOperation(
+        [this, azimuth]() {
+            put("slewtoazimuth", {{"Azimuth", std::to_string(azimuth)}});
         },
         "slew");
 }
 
-void AlpacaDome::SyncToAzimuth(double Azimuth) {
-    Put("synctoazimuth", {{"Azimuth", std::to_string(Azimuth)}});
+void AlpacaDome::syncToAzimuth(double azimuth) {
+    put("synctoazimuth", {{"Azimuth", std::to_string(azimuth)}});
 }

@@ -2,32 +2,37 @@
 
 #include <asio.hpp>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <sstream>
 #include <stdexcept>
 
 using asio::ip::tcp;
 using json = nlohmann::json;
 
+namespace {
+constexpr double REVERSE_ANGLE_BASE = 360.0;
+constexpr int HTTP_VERSION_PREFIX_LENGTH = 5;
+constexpr int HTTP_STATUS_OK = 200;
+}  // namespace
+
 class Stellarium::Impl {
 public:
     Impl(const std::string& host, const std::string& port)
-        : baseUrl_("http://" + host + ":" + port), context_() {}
+        : baseUrl_("http://" + host + ":" + port) {}
 
-    std::future<json> getSite() {
+    auto getSite() -> std::future<json> {
         return std::async(std::launch::async, [this]() {
             return fetchJson("/api/main/status")["location"];
         });
     }
 
-    std::future<json> getTarget() {
+    auto getTarget() -> std::future<json> {
         return std::async(std::launch::async, [this]() {
             return fetchJson("/api/objects/info?format=json");
         });
     }
 
-    std::future<double> getRotationAngle() {
-        return std::async(std::launch::async, [this]() {
+    auto getRotationAngle() -> std::future<double> {
+        return std::async(std::launch::async, [this]() -> double {
             json response = fetchJson("/api/stelproperty/list?format=json");
 
             bool isOcularsCcdEnabled =
@@ -38,7 +43,7 @@ public:
 
             double angle = response["Oculars.selectedCCDRotationAngle"]["value"]
                                .get<double>();
-            return 360.0 - angle;  // Reverse angle
+            return REVERSE_ANGLE_BASE - angle;  // Reverse angle
         });
     }
 
@@ -46,12 +51,12 @@ private:
     std::string baseUrl_;
     asio::io_context context_;
 
-    json fetchJson(const std::string& route) {
+    auto fetchJson(const std::string& route) -> json {
         std::string response = get(route);
         return json::parse(response);
     }
 
-    std::string get(const std::string& route) {
+    auto get(const std::string& route) -> std::string {
         tcp::resolver resolver(context_);
         tcp::resolver::results_type endpoints =
             resolver.resolve(baseUrl_, "http");
@@ -76,11 +81,12 @@ private:
         unsigned int statusCode;
         responseStream >> httpVersion >> statusCode;
 
-        if (!responseStream || httpVersion.substr(0, 5) != "HTTP/") {
+        if (!responseStream ||
+            httpVersion.substr(0, HTTP_VERSION_PREFIX_LENGTH) != "HTTP/") {
             throw std::runtime_error("Invalid response");
         }
 
-        if (statusCode != 200) {
+        if (statusCode != HTTP_STATUS_OK) {
             throw std::runtime_error("Request failed with status code " +
                                      std::to_string(statusCode));
         }
@@ -96,10 +102,12 @@ Stellarium::Stellarium(const std::string& host, const std::string& port)
 
 Stellarium::~Stellarium() = default;
 
-std::future<json> Stellarium::getSite() { return pimpl_->getSite(); }
+auto Stellarium::getSite() -> std::future<json> { return pimpl_->getSite(); }
 
-std::future<json> Stellarium::getTarget() { return pimpl_->getTarget(); }
+auto Stellarium::getTarget() -> std::future<json> {
+    return pimpl_->getTarget();
+}
 
-std::future<double> Stellarium::getRotationAngle() {
+auto Stellarium::getRotationAngle() -> std::future<double> {
     return pimpl_->getRotationAngle();
 }

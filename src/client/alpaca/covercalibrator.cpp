@@ -1,77 +1,82 @@
 #include "covercalibrator.hpp"
 #include <stdexcept>
 #include <thread>
+#include "device.hpp"
 
 AlpacaCoverCalibrator::AlpacaCoverCalibrator(const std::string& address,
                                              int device_number,
                                              const std::string& protocol)
     : AlpacaDevice(address, "covercalibrator", device_number, protocol) {}
 
-int AlpacaCoverCalibrator::GetBrightness() {
-    return GetNumericProperty<int>("brightness");
+auto AlpacaCoverCalibrator::getBrightness() -> int {
+    return getNumericProperty<int>("brightness");
 }
 
-AlpacaCoverCalibrator::CalibratorStatus
-AlpacaCoverCalibrator::GetCalibratorState() {
+auto AlpacaCoverCalibrator::getCalibratorState() -> CalibratorStatus {
     return static_cast<CalibratorStatus>(
-        GetNumericProperty<int>("calibratorstate"));
+        getNumericProperty<int>("calibratorstate"));
 }
 
-AlpacaCoverCalibrator::CoverStatus AlpacaCoverCalibrator::GetCoverState() {
-    return static_cast<CoverStatus>(GetNumericProperty<int>("coverstate"));
+auto AlpacaCoverCalibrator::getCoverState() -> CoverStatus {
+    return static_cast<CoverStatus>(getNumericProperty<int>("coverstate"));
 }
 
-int AlpacaCoverCalibrator::GetMaxBrightness() {
-    return GetNumericProperty<int>("maxbrightness");
+auto AlpacaCoverCalibrator::getMaxBrightness() -> int {
+    return getNumericProperty<int>("maxbrightness");
 }
 
 template <typename Func>
-std::future<void> AlpacaCoverCalibrator::AsyncOperation(
-    Func&& func, const std::string& operationName) {
+auto AlpacaCoverCalibrator::asyncOperation(
+    Func&& func, const std::string& operationName) -> std::future<void> {
     return std::async(
         std::launch::async,
         [this, func = std::forward<Func>(func), operationName]() {
-            if (m_current_operation.valid() &&
-                m_current_operation.wait_for(std::chrono::seconds(0)) !=
+            if (currentOperation_.valid() &&
+                currentOperation_.wait_for(std::chrono::seconds(0)) !=
                     std::future_status::ready) {
-                throw std::runtime_error("Another operation is in progress");
+                THROW_ANOTHER_OPERATION("Another operation is in progress");
             }
 
             func();
 
             // Poll the device state until the operation is complete
             while (true) {
-                auto state = operationName == "calibrator"
-                                 ? GetCalibratorState()
-                                 : GetCoverState();
-                if (state != CalibratorStatus::NotReady &&
-                    state != CoverStatus::Moving) {
-                    break;
+                if (operationName == "calibrator") {
+                    auto state = getCalibratorState();
+                    if (state != CalibratorStatus::NotReady) {
+                        break;
+                    }
+                } else {
+                    auto state = getCoverState();
+                    if (state != CoverStatus::Moving) {
+                        break;
+                    }
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         });
 }
 
-std::future<void> AlpacaCoverCalibrator::CalibratorOff() {
-    return AsyncOperation([this]() { Put("calibratoroff"); }, "calibrator");
+auto AlpacaCoverCalibrator::calibratorOff() -> std::future<void> {
+    return asyncOperation([this]() { put("calibratoroff"); }, "calibrator");
 }
 
-std::future<void> AlpacaCoverCalibrator::CalibratorOn(int BrightnessVal) {
-    return AsyncOperation(
-        [this, BrightnessVal]() {
-            Put("calibratoron",
-                {{"Brightness", std::to_string(BrightnessVal)}});
+auto AlpacaCoverCalibrator::calibratorOn(int brightnessVal)
+    -> std::future<void> {
+    return asyncOperation(
+        [this, brightnessVal]() {
+            put("calibratoron",
+                {{"Brightness", std::to_string(brightnessVal)}});
         },
         "calibrator");
 }
 
-std::future<void> AlpacaCoverCalibrator::CloseCover() {
-    return AsyncOperation([this]() { Put("closecover"); }, "cover");
+auto AlpacaCoverCalibrator::closeCover() -> std::future<void> {
+    return asyncOperation([this]() { put("closecover"); }, "cover");
 }
 
-void AlpacaCoverCalibrator::HaltCover() { Put("haltcover"); }
+void AlpacaCoverCalibrator::haltCover() { put("haltcover"); }
 
-std::future<void> AlpacaCoverCalibrator::OpenCover() {
-    return AsyncOperation([this]() { Put("opencover"); }, "cover");
+auto AlpacaCoverCalibrator::openCover() -> std::future<void> {
+    return asyncOperation([this]() { put("opencover"); }, "cover");
 }

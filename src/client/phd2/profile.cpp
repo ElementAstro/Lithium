@@ -2,7 +2,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
+
+#include "atom/type/json.hpp"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -52,7 +53,7 @@ public:
 };
 
 PHD2ProfileSettingHandler::PHD2ProfileSettingHandler()
-    : pimpl(std::make_unique<Impl>()) {}
+    : pImpl(std::make_unique<Impl>()) {}
 PHD2ProfileSettingHandler::~PHD2ProfileSettingHandler() = default;
 PHD2ProfileSettingHandler::PHD2ProfileSettingHandler(
     PHD2ProfileSettingHandler&&) noexcept = default;
@@ -60,7 +61,7 @@ PHD2ProfileSettingHandler& PHD2ProfileSettingHandler::operator=(
     PHD2ProfileSettingHandler&&) noexcept = default;
 
 std::optional<InterfacePHD2Profile>
-PHD2ProfileSettingHandler::load_profile_file() {
+PHD2ProfileSettingHandler::loadProfileFile() {
     if (!fs::exists(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE)) {
         fs::copy_file(ServerConfigData::DEFAULT_PHD2_CONFIG_FILE,
                       ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
@@ -69,22 +70,22 @@ PHD2ProfileSettingHandler::load_profile_file() {
 
     try {
         json phd2_config =
-            pimpl->load_json_file(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE);
-        pimpl->loaded_config_status = InterfacePHD2Profile{
+            pImpl->load_json_file(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE);
+        pImpl->loaded_config_status = InterfacePHD2Profile{
             .name = phd2_config["profile"]["1"]["name"],
             .camera = phd2_config["profile"]["1"]["indi"]["INDIcam"],
-            .camera_ccd = phd2_config["profile"]["1"]["indi"]["INDIcam_ccd"],
-            .pixel_size = phd2_config["profile"]["1"]["camera"]["pixelsize"],
+            .cameraCCD = phd2_config["profile"]["1"]["indi"]["INDIcam_ccd"],
+            .pixelSize = phd2_config["profile"]["1"]["camera"]["pixelsize"],
             .telescope = phd2_config["profile"]["1"]["indi"]["INDImount"],
-            .focal_length = phd2_config["profile"]["1"]["frame"]["focalLength"],
-            .mass_change_threshold =
+            .focalLength = phd2_config["profile"]["1"]["frame"]["focalLength"],
+            .massChangeThreshold =
                 phd2_config["profile"]["1"]["guider"]["onestar"]
                            ["MassChangeThreshold"],
-            .mass_change_flag = phd2_config["profile"]["1"]["guider"]["onestar"]
-                                           ["MassChangeThresholdEnabled"],
-            .calibration_distance =
+            .massChangeFlag = phd2_config["profile"]["1"]["guider"]["onestar"]
+                                         ["MassChangeThresholdEnabled"],
+            .calibrationDistance =
                 phd2_config["profile"]["1"]["scope"]["CalibrationDistance"],
-            .calibration_duration =
+            .calibrationDuration =
                 phd2_config["profile"]["1"]["scope"]["CalibrationDuration"]};
     } catch (const json::exception& e) {
         std::cerr << "JSON parsing error: " << e.what() << std::endl;
@@ -92,82 +93,81 @@ PHD2ProfileSettingHandler::load_profile_file() {
         fs::copy_file(ServerConfigData::DEFAULT_PHD2_CONFIG_FILE,
                       ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
                       fs::copy_options::overwrite_existing);
-        return load_profile_file();  // Recursive call with default config
+        return loadProfileFile();  // Recursive call with default config
     }
 
-    return pimpl->loaded_config_status;
+    return pImpl->loaded_config_status;
 }
 
-bool PHD2ProfileSettingHandler::load_profile(const std::string& profile_name) {
+bool PHD2ProfileSettingHandler::loadProfile(const std::string& profileName) {
     fs::path profile_file =
-        pimpl->phd2_profile_save_path / (profile_name + ".json");
+        pImpl->phd2_profile_save_path / (profileName + ".json");
 
     if (fs::exists(profile_file)) {
         fs::copy_file(profile_file, ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
                       fs::copy_options::overwrite_existing);
-        load_profile_file();
+        loadProfileFile();
         return true;
     } else {
         fs::copy_file(ServerConfigData::DEFAULT_PHD2_CONFIG_FILE,
                       ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
                       fs::copy_options::overwrite_existing);
-        load_profile_file();
+        loadProfileFile();
         return false;
     }
 }
 
-bool PHD2ProfileSettingHandler::new_profile_setting(
-    const std::string& new_profile_name) {
+bool PHD2ProfileSettingHandler::newProfileSetting(
+    const std::string& newProfileName) {
     fs::path new_profile_file =
-        pimpl->phd2_profile_save_path / (new_profile_name + ".json");
+        pImpl->phd2_profile_save_path / (newProfileName + ".json");
 
     if (fs::exists(new_profile_file)) {
-        restore_profile(new_profile_name);
+        restoreProfile(newProfileName);
         return false;
     } else {
         fs::copy_file(ServerConfigData::DEFAULT_PHD2_CONFIG_FILE,
                       ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
                       fs::copy_options::overwrite_existing);
-        load_profile_file();
+        loadProfileFile();
         return true;
     }
 }
 
-bool PHD2ProfileSettingHandler::update_profile(
-    const InterfacePHD2Profile& phd2_profile_setting) {
+bool PHD2ProfileSettingHandler::updateProfile(
+    const InterfacePHD2Profile& phd2ProfileSetting) {
     json phd2_config =
-        pimpl->load_json_file(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE);
+        pImpl->load_json_file(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE);
 
-    phd2_config["profile"]["1"]["name"] = phd2_profile_setting.name;
-    phd2_config["profile"]["1"]["indi"]["INDIcam"] =
-        phd2_profile_setting.camera;
+    phd2_config["profile"]["1"]["name"] = phd2ProfileSetting.name;
+    phd2_config["profile"]["1"]["indi"]["INDIcam"] = phd2ProfileSetting.camera;
     phd2_config["profile"]["1"]["indi"]["INDIcam_ccd"] =
-        phd2_profile_setting.camera_ccd;
+        phd2ProfileSetting.cameraCCD;
     phd2_config["profile"]["1"]["camera"]["pixelsize"] =
-        phd2_profile_setting.pixel_size;
+        phd2ProfileSetting.pixelSize;
     phd2_config["profile"]["1"]["indi"]["INDImount"] =
-        phd2_profile_setting.telescope;
+        phd2ProfileSetting.telescope;
     phd2_config["profile"]["1"]["frame"]["focalLength"] =
-        phd2_profile_setting.focal_length;
+        phd2ProfileSetting.focalLength;
     phd2_config["profile"]["1"]["guider"]["onestar"]["MassChangeThreshold"] =
-        phd2_profile_setting.mass_change_threshold;
+        phd2ProfileSetting.massChangeThreshold;
     phd2_config["profile"]["1"]["guider"]["onestar"]
                ["MassChangeThresholdEnabled"] =
-                   phd2_profile_setting.mass_change_flag;
+                   phd2ProfileSetting.massChangeFlag;
     phd2_config["profile"]["1"]["scope"]["CalibrationDistance"] =
-        phd2_profile_setting.calibration_distance;
+        phd2ProfileSetting.calibrationDistance;
     phd2_config["profile"]["1"]["scope"]["CalibrationDuration"] =
-        phd2_profile_setting.calibration_duration;
+        phd2ProfileSetting.calibrationDuration;
 
-    pimpl->save_json_file(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
+    pImpl->save_json_file(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
                           phd2_config);
     return true;
 }
 
-bool PHD2ProfileSettingHandler::delete_profile(
-    const std::string& to_delete_profile) {
+bool PHD2ProfileSettingHandler::deleteProfile(
+    const std::string& toDeleteProfile) {
     fs::path to_delete_profile_file =
-        pimpl->phd2_profile_save_path / (to_delete_profile + ".json");
+        pImpl->phd2_profile_save_path / (toDeleteProfile + ".json");
     if (fs::exists(to_delete_profile_file)) {
         fs::remove(to_delete_profile_file);
         return true;
@@ -175,9 +175,9 @@ bool PHD2ProfileSettingHandler::delete_profile(
     return false;
 }
 
-void PHD2ProfileSettingHandler::save_profile(const std::string& profile_name) {
+void PHD2ProfileSettingHandler::saveProfile(const std::string& profileName) {
     fs::path profile_file =
-        pimpl->phd2_profile_save_path / (profile_name + ".json");
+        pImpl->phd2_profile_save_path / (profileName + ".json");
     if (fs::exists(ServerConfigData::PHD2_HIDDEN_CONFIG_FILE)) {
         if (fs::exists(profile_file)) {
             fs::remove(profile_file);
@@ -187,28 +187,28 @@ void PHD2ProfileSettingHandler::save_profile(const std::string& profile_name) {
     }
 }
 
-bool PHD2ProfileSettingHandler::restore_profile(
-    const std::string& to_restore_profile) {
+bool PHD2ProfileSettingHandler::restoreProfile(
+    const std::string& toRestoreProfile) {
     fs::path to_restore_file =
-        pimpl->phd2_profile_save_path / (to_restore_profile + ".json");
+        pImpl->phd2_profile_save_path / (toRestoreProfile + ".json");
     if (fs::exists(to_restore_file)) {
         fs::copy_file(to_restore_file,
                       ServerConfigData::PHD2_HIDDEN_CONFIG_FILE,
                       fs::copy_options::overwrite_existing);
-        load_profile_file();
+        loadProfileFile();
         return true;
     } else {
-        new_profile_setting(to_restore_profile);
+        newProfileSetting(toRestoreProfile);
         return false;
     }
 }
 
 // New functionality implementations
 
-std::vector<std::string> PHD2ProfileSettingHandler::list_profiles() const {
+std::vector<std::string> PHD2ProfileSettingHandler::listProfiles() const {
     std::vector<std::string> profiles;
     for (const auto& entry :
-         fs::directory_iterator(pimpl->phd2_profile_save_path)) {
+         fs::directory_iterator(pImpl->phd2_profile_save_path)) {
         if (entry.path().extension() == ".json") {
             profiles.push_back(entry.path().stem().string());
         }
@@ -216,41 +216,41 @@ std::vector<std::string> PHD2ProfileSettingHandler::list_profiles() const {
     return profiles;
 }
 
-bool PHD2ProfileSettingHandler::export_profile(
-    const std::string& profile_name, const fs::path& export_path) const {
+bool PHD2ProfileSettingHandler::exportProfile(
+    const std::string& profileName, const fs::path& exportPath) const {
     fs::path source_file =
-        pimpl->phd2_profile_save_path / (profile_name + ".json");
+        pImpl->phd2_profile_save_path / (profileName + ".json");
     if (fs::exists(source_file)) {
-        fs::copy_file(source_file, export_path,
+        fs::copy_file(source_file, exportPath,
                       fs::copy_options::overwrite_existing);
         return true;
     }
     return false;
 }
 
-bool PHD2ProfileSettingHandler::import_profile(
-    const fs::path& import_path, const std::string& new_profile_name) {
-    if (fs::exists(import_path)) {
+bool PHD2ProfileSettingHandler::importProfile(
+    const fs::path& importPath, const std::string& newProfileName) {
+    if (fs::exists(importPath)) {
         fs::path destination_file =
-            pimpl->phd2_profile_save_path / (new_profile_name + ".json");
-        fs::copy_file(import_path, destination_file,
+            pImpl->phd2_profile_save_path / (newProfileName + ".json");
+        fs::copy_file(importPath, destination_file,
                       fs::copy_options::overwrite_existing);
         return true;
     }
     return false;
 }
 
-bool PHD2ProfileSettingHandler::compare_profiles(
+bool PHD2ProfileSettingHandler::compareProfiles(
     const std::string& profile1, const std::string& profile2) const {
-    fs::path file1 = pimpl->phd2_profile_save_path / (profile1 + ".json");
-    fs::path file2 = pimpl->phd2_profile_save_path / (profile2 + ".json");
+    fs::path file1 = pImpl->phd2_profile_save_path / (profile1 + ".json");
+    fs::path file2 = pImpl->phd2_profile_save_path / (profile2 + ".json");
 
     if (!fs::exists(file1) || !fs::exists(file2)) {
         return false;
     }
 
-    json config1 = pimpl->load_json_file(file1);
-    json config2 = pimpl->load_json_file(file2);
+    json config1 = pImpl->load_json_file(file1);
+    json config2 = pImpl->load_json_file(file2);
 
     std::cout << "Comparing profiles: " << profile1 << " and " << profile2
               << std::endl;
@@ -273,17 +273,17 @@ bool PHD2ProfileSettingHandler::compare_profiles(
     return true;
 }
 
-void PHD2ProfileSettingHandler::print_profile_details(
-    const std::string& profile_name) const {
+void PHD2ProfileSettingHandler::printProfileDetails(
+    const std::string& profileName) const {
     fs::path profile_file =
-        pimpl->phd2_profile_save_path / (profile_name + ".json");
+        pImpl->phd2_profile_save_path / (profileName + ".json");
     if (fs::exists(profile_file)) {
-        json config = pimpl->load_json_file(profile_file);
-        std::cout << "Profile: " << profile_name << std::endl;
+        json config = pImpl->load_json_file(profile_file);
+        std::cout << "Profile: " << profileName << std::endl;
         std::cout << "Details:" << std::endl;
         std::cout << config.dump(4) << std::endl;
     } else {
-        std::cout << "Profile " << profile_name << " does not exist."
+        std::cout << "Profile " << profileName << " does not exist."
                   << std::endl;
     }
 }

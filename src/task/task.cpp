@@ -23,36 +23,38 @@
 
 #include "task.hpp"
 
+#include <utility>
+
 // StateMachine method implementations
 
-void StateMachine::addState(StatePtr state) {
+void StateMachine::addState(const StatePtr& state) {
     states[state->getName()] = state;
 }
 
 void StateMachine::setInitialState(const std::string& stateName) {
-    auto it = states.find(stateName);
-    if (it != states.end()) {
-        currentState = it->second;
+    auto stateIter = states.find(stateName);
+    if (stateIter != states.end()) {
+        currentState = stateIter->second;
         currentState->onEnter();
     }
 }
 
 void StateMachine::transitionTo(const std::string& stateName) {
-    auto it = states.find(stateName);
-    if (it != states.end() && currentState != it->second) {
+    auto stateIter = states.find(stateName);
+    if (stateIter != states.end() && currentState != stateIter->second) {
         currentState->onExit();
-        currentState = it->second;
+        currentState = stateIter->second;
         currentState->onEnter();
     }
 }
 
 void StateMachine::handleEvent(std::shared_ptr<Event> event) {
     if (currentState) {
-        currentState->handleEvent(event);
+        currentState->handleEvent(std::move(event));
     }
 }
 
-StateMachine::StatePtr StateMachine::getCurrentState() const {
+auto StateMachine::getCurrentState() const -> StateMachine::StatePtr {
     return currentState;
 }
 
@@ -121,11 +123,10 @@ void FailedState::onEnter() {}
 void FailedState::onExit() {}
 
 Task::Task(
-    const std::string& name, const json& params,
-    std::function<json(const json&)> function,
+    std::string name, json params, std::function<json(const json&)> function,
     std::optional<std::function<void(const std::exception&)>> onTerminate)
-    : name(name),
-      params(params),
+    : name(std::move(name)),
+      params(std::move(params)),
       function(std::move(function)),
       onTerminate(std::move(onTerminate)) {
     statusMachine.addState(std::make_shared<PendingState>(*this));
@@ -143,8 +144,8 @@ void Task::run() {
     try {
         result = function(params);
         complete();
-    } catch (const std::exception& e) {
-        fail(e);
+    } catch (const std::exception& exception) {
+        fail(exception);
     }
 }
 
@@ -153,10 +154,10 @@ void Task::complete() {
     statusMachine.handleEvent(std::make_shared<TaskEvent>(TaskEvent::Complete));
 }
 
-void Task::fail(const std::exception& e) {
+void Task::fail(const std::exception& exception) {
     setStatus(Status::Failed);
     if (onTerminate) {
-        (*onTerminate)(e);
+        (*onTerminate)(exception);
     }
     statusMachine.handleEvent(std::make_shared<TaskEvent>(TaskEvent::Fail));
 }
@@ -178,9 +179,9 @@ void Task::registerCustomFunction(Status status, CustomFunction function) {
 }
 
 void Task::executeCustomFunctions(Status status) {
-    auto it = customFunctions.find(status);
-    if (it != customFunctions.end()) {
-        for (const auto& function : it->second) {
+    auto customFuncIter = customFunctions.find(status);
+    if (customFuncIter != customFunctions.end()) {
+        for (const auto& function : customFuncIter->second) {
             function(*this);
         }
     }

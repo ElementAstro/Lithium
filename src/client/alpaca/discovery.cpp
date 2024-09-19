@@ -1,11 +1,16 @@
 #include "discovery.hpp"
 
 #ifdef _WIN32
-#include <iphlpapi.h>
+// clang-format off
+#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "iphlpapi.lib")
+#include <iphlpapi.h>
+// clang-format on
+#ifdef _NSC_VER
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Iphlpapi.lib")
+#endif
 #else
 #include <arpa/inet.h>
 #include <ifaddrs.h>
@@ -17,11 +22,11 @@
 #endif
 
 #include <algorithm>
-#include <chrono>
-#include <format>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <thread>
+#include <vector>
+
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
@@ -31,11 +36,11 @@ public:
     static constexpr const char* ALPACA_DISCOVERY = "alpacadiscovery1";
     static constexpr const char* ALPACA_RESPONSE = "AlpacaPort";
 
-    std::vector<std::string> searchIPv4(int numQuery, int timeout);
+    auto searchIPv4(int numQuery, int timeout) -> std::vector<std::string>;
 
 private:
-    std::vector<std::string> getInterfaces();
-    void sendBroadcast(int sock, const std::string& interface);
+    auto getInterfaces() -> std::vector<std::string>;
+    void sendBroadcast(int sock, const std::string& interfaceA);
     void receiveResponses(int sock, std::vector<std::string>& addresses);
 };
 
@@ -43,13 +48,13 @@ AlpacaDiscovery::AlpacaDiscovery() : pImpl(std::make_unique<Impl>()) {}
 
 AlpacaDiscovery::~AlpacaDiscovery() = default;
 
-std::vector<std::string> AlpacaDiscovery::searchIPv4(int numQuery,
-                                                     int timeout) {
+auto AlpacaDiscovery::searchIPv4(int numQuery,
+                                 int timeout) -> std::vector<std::string> {
     return pImpl->searchIPv4(numQuery, timeout);
 }
 
-std::vector<std::string> AlpacaDiscovery::Impl::searchIPv4(int numQuery,
-                                                           int timeout) {
+auto AlpacaDiscovery::Impl::searchIPv4(int numQuery, int timeout)
+    -> std::vector<std::string> {
     std::vector<std::string> addresses;
 
 #ifdef _WIN32
@@ -71,7 +76,7 @@ std::vector<std::string> AlpacaDiscovery::Impl::searchIPv4(int numQuery,
         throw std::runtime_error("Failed to set socket option");
     }
 
-    struct timeval tv;
+    struct timeval tv {};
     tv.tv_sec = timeout;
     tv.tv_usec = 0;
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&tv),
@@ -79,11 +84,11 @@ std::vector<std::string> AlpacaDiscovery::Impl::searchIPv4(int numQuery,
         throw std::runtime_error("Failed to set socket timeout");
     }
 
-    std::vector<std::string> interfaces = getInterfaces();
+    std::vector<std::string> interfaceAs = getInterfaces();
 
     for (int i = 0; i < numQuery; ++i) {
-        for (const auto& interface : interfaces) {
-            sendBroadcast(sock, interface);
+        for (const auto& iface : interfaceAs) {
+            sendBroadcast(sock, iface);
         }
 
         receiveResponses(sock, addresses);
@@ -99,8 +104,8 @@ std::vector<std::string> AlpacaDiscovery::Impl::searchIPv4(int numQuery,
     return addresses;
 }
 
-std::vector<std::string> AlpacaDiscovery::Impl::getInterfaces() {
-    std::vector<std::string> interfaces;
+auto AlpacaDiscovery::Impl::getInterfaces() -> std::vector<std::string> {
+    std::vector<std::string> interfaceAs;
 
 #ifdef _WIN32
     ULONG bufferSize = 15000;
@@ -108,7 +113,7 @@ std::vector<std::string> AlpacaDiscovery::Impl::getInterfaces() {
     DWORD retVal = 0;
 
     do {
-        pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(bufferSize);
+        pAddresses = *static_cast<PIP_ADAPTER_ADDRESSES*>(malloc(bufferSize));
         if (pAddresses == nullptr) {
             throw std::runtime_error(
                 "Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
@@ -130,11 +135,11 @@ std::vector<std::string> AlpacaDiscovery::Impl::getInterfaces() {
                 pCurrAddresses->FirstUnicastAddress;
             if (pUnicast != nullptr) {
                 for (; pUnicast != nullptr; pUnicast = pUnicast->Next) {
-                    sockaddr_in* pAddr = reinterpret_cast<sockaddr_in*>(
+                    auto* pAddr = reinterpret_cast<sockaddr_in*>(
                         pUnicast->Address.lpSockaddr);
                     char ip[INET_ADDRSTRLEN];
                     inet_ntop(AF_INET, &(pAddr->sin_addr), ip, INET_ADDRSTRLEN);
-                    interfaces.push_back(ip);
+                    interfaceAs.emplace_back(ip);
                 }
             }
         }
@@ -148,7 +153,7 @@ std::vector<std::string> AlpacaDiscovery::Impl::getInterfaces() {
     struct ifaddrs* ifa = nullptr;
 
     if (getifaddrs(&ifAddrStruct) == -1) {
-        throw std::runtime_error("Failed to get network interfaces");
+        throw std::runtime_error("Failed to get network interfaceAs");
     }
 
     for (ifa = ifAddrStruct; ifa != nullptr; ifa = ifa->ifa_next) {
@@ -159,7 +164,7 @@ std::vector<std::string> AlpacaDiscovery::Impl::getInterfaces() {
             void* tmpAddrPtr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
             char addressBuffer[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
-            interfaces.push_back(addressBuffer);
+            interfaceAs.emplace_back(addressBuffer);
         }
     }
 
@@ -167,33 +172,33 @@ std::vector<std::string> AlpacaDiscovery::Impl::getInterfaces() {
         freeifaddrs(ifAddrStruct);
 #endif
 
-    return interfaces;
+    return interfaceAs;
 }
 
 void AlpacaDiscovery::Impl::sendBroadcast(int sock,
-                                          const std::string& interface) {
-    struct sockaddr_in broadcastAddr;
-    memset(&broadcastAddr, 0, sizeof(broadcastAddr));
+                                          const std::string& interfaceA) {
+    struct sockaddr_in broadcastAddr {};
     broadcastAddr.sin_family = AF_INET;
     broadcastAddr.sin_port = htons(PORT);
 
-    if (interface == "127.0.0.1") {
+    if (interfaceA == "127.0.0.1") {
         broadcastAddr.sin_addr.s_addr = inet_addr("127.255.255.255");
     } else {
         broadcastAddr.sin_addr.s_addr = inet_addr("255.255.255.255");
     }
 
-    if (sendto(sock, ALPACA_DISCOVERY, strlen(ALPACA_DISCOVERY), 0,
+    if (sendto(sock, ALPACA_DISCOVERY,
+               static_cast<int>(strlen(ALPACA_DISCOVERY)), 0,
                (struct sockaddr*)&broadcastAddr, sizeof(broadcastAddr)) == -1) {
-        std::cerr << "Failed to send broadcast on interface "
-                  << interface << std::endl;
+        std::cerr << "Failed to send broadcast on interfaceA " << interfaceA
+                  << std::endl;
     }
 }
 
 void AlpacaDiscovery::Impl::receiveResponses(
     int sock, std::vector<std::string>& addresses) {
     char buffer[1024];
-    struct sockaddr_in senderAddr;
+    struct sockaddr_in senderAddr {};
     socklen_t senderAddrLen = sizeof(senderAddr);
 
     while (true) {

@@ -108,7 +108,6 @@ endif()
 # Include directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
-include_directories(${CMAKE_SOURCE_DIR}/driverlibs/)
 include_directories(${lithium_src_dir})
 include_directories(${lithium_module_dir})
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp/oatpp)

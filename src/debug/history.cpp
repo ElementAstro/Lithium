@@ -1,14 +1,25 @@
 #include "history.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
 namespace lithium::debug {
+
+namespace {
+    std::mutex g_timeMutex;
+    std::string safeAsctime(const std::time_t* time) {
+        std::lock_guard<std::mutex> lock(g_timeMutex);
+        return std::asctime(std::localtime(time));
+    }
+}
+
 CommandHistory::CommandHistory(size_t maxSize, std::string userName)
     : maxSize_(maxSize), userName_(std::move(userName)) {
     loadFromFile();
@@ -49,7 +60,7 @@ void CommandHistory::redo() {
 void CommandHistory::printHistory() const {
     for (const auto& entry : history_) {
         std::cout << std::format("{} {}", entry.command,
-                                 std::asctime(std::localtime(&entry.timestamp)));
+                                 safeAsctime(&entry.timestamp));
     }
 }
 
@@ -59,7 +70,7 @@ void CommandHistory::search(const std::string& keyword) const {
              return entry.command.find(keyword) != std::string::npos;
          })) {
         std::cout << entry.command << " (Time: "
-                  << std::asctime(std::localtime(&entry.timestamp)) << ")"
+                  << safeAsctime(&entry.timestamp) << ")"
                   << std::endl;
     }
 }
@@ -71,8 +82,8 @@ void CommandHistory::addAlias(const std::string& alias,
 }
 
 void CommandHistory::executeAlias(const std::string& alias) {
-    if (auto it = aliases_.find(alias); it != aliases_.end()) {
-        addCommand(it->second);
+    if (auto aliasIter = aliases_.find(alias); aliasIter != aliases_.end()) {
+        addCommand(aliasIter->second);
     } else {
         std::cout << "Alias not found." << std::endl;
     }
@@ -83,7 +94,7 @@ void CommandHistory::deleteCommand(size_t index) {
         std::cout << "Index out of range." << std::endl;
         return;
     }
-    history_.erase(history_.begin() + index);
+    history_.erase(history_.begin() + static_cast<std::ptrdiff_t>(index));
     saveToFile();
 }
 
@@ -99,14 +110,14 @@ void CommandHistory::printFrequencyReport() const {
     }
 }
 
-void CommandHistory::filterHistoryByTime(const std::time_t startTime,
-                                         const std::time_t endTime) const {
+void CommandHistory::filterHistoryByTime(const std::time_t start_time,
+                                         const std::time_t end_time) const {
     for (const auto& entry :
          history_ | std::views::filter([&](const auto& entry) {
-             return entry.timestamp >= startTime && entry.timestamp <= endTime;
+             return entry.timestamp >= start_time && entry.timestamp <= end_time;
          })) {
         std::cout << std::format("{} ({})", entry.timestamp,
-                                 std::asctime(std::localtime(&entry.timestamp)))
+                                 safeAsctime(&entry.timestamp))
                   << std::endl;
     }
 }
@@ -122,15 +133,15 @@ void CommandHistory::updateFrequency(const std::string& command) {
 }
 
 void CommandHistory::saveToFile() const {
-    json j;
+    json jsonObj;
     for (const auto& entry : history_) {
-        j["history"].push_back(
+        jsonObj["history"].push_back(
             {{"command", entry.command}, {"timestamp", entry.timestamp}});
     }
-    j["aliases"] = aliases_;
-    j["frequency"] = frequency_;
+    jsonObj["aliases"] = aliases_;
+    jsonObj["frequency"] = frequency_;
     std::ofstream file(userName_ + "_history.json");
-    file << j.dump(4);
+    file << jsonObj.dump(4);
 }
 
 void CommandHistory::loadFromFile() {
@@ -139,13 +150,13 @@ void CommandHistory::loadFromFile() {
         return;
     }
 
-    json j;
-    file >> j;
-    for (const auto& entry : j["history"]) {
+    json jsonObj;
+    file >> jsonObj;
+    for (const auto& entry : jsonObj["history"]) {
         history_.push_back({entry["command"], entry["timestamp"]});
     }
-    aliases_ = j["aliases"].get<decltype(aliases_)>();
-    frequency_ = j["frequency"].get<decltype(frequency_)>();
+    aliases_ = jsonObj["aliases"].get<decltype(aliases_)>();
+    frequency_ = jsonObj["frequency"].get<decltype(frequency_)>();
 }
 
 }  // namespace lithium::debug

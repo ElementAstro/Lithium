@@ -1,12 +1,12 @@
+"""
+This module provides a JSONTCPServer class for handling JSON-formatted commands over TCP.
+"""
+
 import asyncio
 import json
 import subprocess
-import logging
 from typing import Dict, Any
-
-# Set up logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+from loguru import logger
 
 
 class JSONTCPServer:
@@ -52,12 +52,12 @@ class JSONTCPServer:
                     if not data:
                         break
                     message = data.decode().strip()
-                    logging.info(f"Received {message} from {client_info}")
+                    logger.info("Received {} from {}", message, client_info)
                     response = await self.process_command(json.loads(message))
                     writer.write((json.dumps(response) + '\n').encode())
                     await writer.drain()
-            except Exception as e:
-                logging.error(f"Error handling client {client_info}: {e}")
+            except (json.JSONDecodeError, subprocess.SubprocessError) as e:
+                logger.error("Error handling client {}: {}", client_info, e)
             finally:
                 self.disconnect_client(writer)
                 self.log_client_activity(client_info, "disconnected")
@@ -77,12 +77,12 @@ class JSONTCPServer:
                 return {"response": command['message']}
             elif command['command'] == 'run':
                 result = subprocess.run(
-                    command['cmd'], shell=True, capture_output=True, text=True)
+                    command['cmd'], shell=True, capture_output=True, text=True, check=True)
                 return {"response": result.stdout}
             else:
                 return {"error": "Unknown command"}
-        except Exception as e:
-            logging.error(f"Error processing command: {e}")
+        except (subprocess.CalledProcessError, KeyError) as e:
+            logger.error("Error processing command: {}", e)
             return {"error": str(e)}
 
     async def start_server(self):
@@ -91,7 +91,7 @@ class JSONTCPServer:
         """
         self.server = await asyncio.start_server(self.handle_client, self.host, self.port)
         addr = self.server.sockets[0].getsockname()
-        logging.info(f'Serving on {addr}')
+        logger.info("Serving on {}", addr)
 
         async with self.server:
             await self.server.serve_forever()
@@ -103,7 +103,7 @@ class JSONTCPServer:
         if self.server:
             self.server.close()
             await self.server.wait_closed()
-            logging.info('Server stopped')
+            logger.info("Server stopped")
 
         for client in self.clients:
             client.close()
@@ -140,10 +140,13 @@ class JSONTCPServer:
             client_info: Information about the client.
             activity (str): The activity to log (e.g., "connected", "disconnected").
         """
-        logging.info(f"Client {client_info} {activity}")
+        logger.info("Client {} {}", client_info, activity)
 
 
 async def main():
+    """
+    Main function to run the JSONTCPServer.
+    """
     server = JSONTCPServer(host='127.0.0.1', port=8888)
     await server.start_server()
 

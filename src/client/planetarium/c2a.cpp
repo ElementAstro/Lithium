@@ -7,34 +7,36 @@
 using asio::ip::tcp;
 
 // Coordinates
-Coordinates::Coordinates(double ra, double dec) : ra(ra), dec(dec) {}
+Coordinates::Coordinates(double rightAscension, double declination)
+    : rightAscension(rightAscension), declination(declination) {}
 
 // DeepSkyObject
-DeepSkyObject::DeepSkyObject(const std::string& name, const Coordinates& coords)
-    : name(name), coords(coords) {}
+DeepSkyObject::DeepSkyObject(const std::string& name,
+                             const Coordinates& coordinates)
+    : name(name), coordinates(coordinates) {}
 
 // Location
-Location::Location(double lat, double lon, double elev)
-    : latitude(lat), longitude(lon), elevation(elev) {}
+Location::Location(double latitude, double longitude, double elevation)
+    : latitude(latitude), longitude(longitude), elevation(elevation) {}
 
 // PlanetariumException
 PlanetariumException::PlanetariumException(const std::string& msg)
-    : message(msg) {}
+    : message_(msg) {}
 
-const char* PlanetariumException::what() const noexcept {
-    return message.c_str();
+auto PlanetariumException::what() const noexcept -> const char* {
+    return message_.c_str();
 }
 
 // C2A Implementation
 class C2A::Impl {
 public:
-    Impl(const std::string& addr, int port) : address(addr), port(port) {}
+    Impl(const std::string& addr, int port) : address_(addr), port_(port) {}
 
-    DeepSkyObject getTarget() {
+    auto getTarget() -> DeepSkyObject {
         try {
-            tcp::socket socket(context);
-            tcp::resolver resolver(context);
-            auto endpoints = resolver.resolve(address, std::to_string(port));
+            tcp::socket socket(context_);
+            tcp::resolver resolver(context_);
+            auto endpoints = resolver.resolve(address_, std::to_string(port_));
             asio::connect(socket, endpoints);
 
             const std::string command = "GetRa;GetDe;\r\n";
@@ -43,7 +45,7 @@ public:
             const auto response = readResponse(socket);
             if (!response.empty()) {
                 const auto coords = parseCoordinates(response);
-                return DeepSkyObject("Target", coords);
+                return {"Target", coords};
             } else {
                 throw PlanetariumException(
                     "Failed to get coordinates from C2A.");
@@ -54,11 +56,11 @@ public:
         }
     }
 
-    Location getSite() {
+    auto getSite() -> Location {
         try {
-            tcp::socket socket(context);
-            tcp::resolver resolver(context);
-            auto endpoints = resolver.resolve(address, std::to_string(port));
+            tcp::socket socket(context_);
+            tcp::resolver resolver(context_);
+            auto endpoints = resolver.resolve(address_, std::to_string(port_));
             asio::connect(socket, endpoints);
 
             const std::string command = "GetLatitude;GetLongitude;\r\n";
@@ -78,11 +80,11 @@ public:
     }
 
 private:
-    std::string address;
-    int port;
-    asio::io_context context;
+    std::string address_;
+    int port_;
+    asio::io_context context_;
 
-    std::string readResponse(tcp::socket& socket) {
+    static auto readResponse(tcp::socket& socket) -> std::string {
         asio::streambuf buf;
         asio::read_until(socket, buf, "\r\n");
         std::istream responseStream(&buf);
@@ -91,32 +93,32 @@ private:
         return response;
     }
 
-    Coordinates parseCoordinates(const std::string& response) {
-        const auto tokens = splitResponse(response, ';');
-        if (tokens.size() < 2) {
+    auto parseCoordinates(const std::string& response) -> Coordinates {
+        const auto TOKENS = splitResponse(response, ';');
+        if (TOKENS.size() < 2) {
             throw PlanetariumException("Invalid response format.");
         }
 
-        double ra = std::stod(tokens[0]);
-        double dec = std::stod(tokens[1]);
+        double rightAscension = std::stod(TOKENS[0]);
+        double declination = std::stod(TOKENS[1]);
 
-        return Coordinates(ra, dec);
+        return {rightAscension, declination};
     }
 
-    Location parseLocation(const std::string& response) {
-        const auto tokens = splitResponse(response, ';');
-        if (tokens.size() < 2) {
+    auto parseLocation(const std::string& response) -> Location {
+        const auto TOKENS = splitResponse(response, ';');
+        if (TOKENS.size() < 2) {
             throw PlanetariumException("Invalid response format.");
         }
 
-        double latitude = std::stod(tokens[0]);
-        double longitude = std::stod(tokens[1]);
+        double latitude = std::stod(TOKENS[0]);
+        double longitude = std::stod(TOKENS[1]);
 
-        return Location(latitude, longitude, 0.0);
+        return {latitude, longitude, 0.0};
     }
 
-    std::vector<std::string> splitResponse(const std::string& response,
-                                           char delimiter) {
+    static auto splitResponse(const std::string& response,
+                              char delimiter) -> std::vector<std::string> {
         std::vector<std::string> tokens;
         std::string token;
         std::istringstream tokenStream(response);
@@ -131,10 +133,10 @@ private:
 
 // C2A public interface
 C2A::C2A(const std::string& addr, int port)
-    : pimpl(std::make_unique<Impl>(addr, port)) {}
+    : pimpl_(std::make_unique<Impl>(addr, port)) {}
 
 C2A::~C2A() = default;
 
-DeepSkyObject C2A::getTarget() { return pimpl->getTarget(); }
+auto C2A::getTarget() -> DeepSkyObject { return pimpl_->getTarget(); }
 
-Location C2A::getSite() { return pimpl->getSite(); }
+auto C2A::getSite() -> Location { return pimpl_->getSite(); }

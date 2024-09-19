@@ -1,7 +1,6 @@
 #include "focuser.hpp"
 
 #include <chrono>
-#include <format>
 #include <stdexcept>
 #include <thread>
 
@@ -10,84 +9,90 @@ AlpacaFocuser::AlpacaFocuser(const std::string& address, int device_number,
     : AlpacaDevice(address, "focuser", device_number, protocol) {}
 
 AlpacaFocuser::~AlpacaFocuser() {
-    if (m_move_thread.joinable()) {
-        m_move_thread.join();
+    if (moveThread_.joinable()) {
+        moveThread_.join();
     }
 }
 
-bool AlpacaFocuser::GetAbsolute() {
-    return GetNumericProperty<bool>("absolute");
+auto AlpacaFocuser::getAbsolute() const -> bool {
+    return getNumericProperty<bool>("absolute");
 }
 
-bool AlpacaFocuser::GetIsMoving() { return m_is_moving.load(); }
-
-int AlpacaFocuser::GetMaxIncrement() {
-    return GetNumericProperty<int>("maxincrement");
+auto AlpacaFocuser::getIsMoving() const -> bool {
+    return isMoving_.load();
 }
 
-int AlpacaFocuser::GetMaxStep() { return GetNumericProperty<int>("maxstep"); }
-
-int AlpacaFocuser::GetPosition() { return GetNumericProperty<int>("position"); }
-
-float AlpacaFocuser::GetStepSize() {
-    return GetNumericProperty<float>("stepsize");
+auto AlpacaFocuser::getMaxIncrement() const -> int {
+    return getNumericProperty<int>("maxincrement");
 }
 
-bool AlpacaFocuser::GetTempComp() {
-    return GetNumericProperty<bool>("tempcomp");
+auto AlpacaFocuser::getMaxStep() const -> int {
+    return getNumericProperty<int>("maxstep");
 }
 
-void AlpacaFocuser::SetTempComp(bool TempCompState) {
-    Put("tempcomp", {{"TempComp", TempCompState ? "true" : "false"}});
+auto AlpacaFocuser::getPosition() const -> int {
+    return getNumericProperty<int>("position");
 }
 
-bool AlpacaFocuser::GetTempCompAvailable() {
-    return GetNumericProperty<bool>("tempcompavailable");
+auto AlpacaFocuser::getStepSize() const -> float {
+    return getNumericProperty<float>("stepsize");
 }
 
-std::optional<float> AlpacaFocuser::GetTemperature() {
+auto AlpacaFocuser::getTempComp() const -> bool {
+    return getNumericProperty<bool>("tempcomp");
+}
+
+void AlpacaFocuser::setTempComp(bool tempCompState) {
+    put("tempcomp", {{"TempComp", tempCompState ? "true" : "false"}});
+}
+
+auto AlpacaFocuser::getTempCompAvailable() const -> bool {
+    return getNumericProperty<bool>("tempcompavailable");
+}
+
+auto AlpacaFocuser::getTemperature() const -> std::optional<float> {
     try {
-        return GetNumericProperty<float>("temperature");
+        return getNumericProperty<float>("temperature");
     } catch (const std::runtime_error& e) {
         // If temperature is not implemented, return nullopt
         return std::nullopt;
     }
 }
 
-void AlpacaFocuser::Halt() {
-    Put("halt");
-    m_is_moving.store(false);
+void AlpacaFocuser::halt() {
+    put("halt");
+    isMoving_.store(false);
 }
 
-void AlpacaFocuser::StartMove(int Position) {
-    Put("move", {{"Position", std::to_string(Position)}});
+void AlpacaFocuser::startMove(int position) {
+    put("move", {{"Position", std::to_string(position)}});
 }
 
-void AlpacaFocuser::MoveThread(int Position) {
-    m_is_moving.store(true);
-    StartMove(Position);
+void AlpacaFocuser::moveThread(int position) {
+    isMoving_.store(true);
+    startMove(position);
 
-    // Poll the IsMoving property until the move is complete
-    while (GetNumericProperty<bool>("ismoving")) {
+    // Poll the isMoving property until the move is complete
+    while (getNumericProperty<bool>("ismoving")) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    m_is_moving.store(false);
+    isMoving_.store(false);
 }
 
-std::future<void> AlpacaFocuser::Move(int Position) {
+auto AlpacaFocuser::move(int position) -> std::future<void> {
     // If a move is already in progress, wait for it to complete
-    if (m_move_thread.joinable()) {
-        m_move_thread.join();
+    if (moveThread_.joinable()) {
+        moveThread_.join();
     }
 
     // Start a new move thread
-    m_move_thread = std::thread(&AlpacaFocuser::MoveThread, this, Position);
+    moveThread_ = std::thread(&AlpacaFocuser::moveThread, this, position);
 
     // Return a future that will be ready when the move is complete
     return std::async(std::launch::deferred, [this]() {
-        if (m_move_thread.joinable()) {
-            m_move_thread.join();
+        if (moveThread_.joinable()) {
+            moveThread_.join();
         }
     });
 }

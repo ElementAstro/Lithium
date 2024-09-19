@@ -50,10 +50,10 @@ private:
     std::condition_variable cv_;
 
 #ifdef _WIN32
-    PROCESS_INFORMATION procInfo;
-    HANDLE childStdinWrite{NULL};
-    HANDLE childStdoutRead{NULL};
-    HANDLE childStderrRead{NULL};
+    PROCESS_INFORMATION procInfo_{};
+    HANDLE childStdinWrite_{nullptr};
+    HANDLE childStdoutRead_{nullptr};
+    HANDLE childStderrRead_{nullptr};
 #else
     pid_t childPid_{-1};
     int childStdin_{-1};
@@ -79,23 +79,23 @@ void QProcess::start(const std::string& program,
     impl_->start(program, args);
 }
 
-bool QProcess::waitForStarted(int timeoutMs) {
+auto QProcess::waitForStarted(int timeoutMs) -> bool {
     return impl_->waitForStarted(timeoutMs);
 }
 
-bool QProcess::waitForFinished(int timeoutMs) {
+auto QProcess::waitForFinished(int timeoutMs) -> bool {
     return impl_->waitForFinished(timeoutMs);
 }
 
-bool QProcess::isRunning() const { return impl_->isRunning(); }
+auto QProcess::isRunning() const -> bool { return impl_->isRunning(); }
 
 void QProcess::write(const std::string& data) { impl_->write(data); }
 
-std::string QProcess::readAllStandardOutput() {
+auto QProcess::readAllStandardOutput() -> std::string {
     return impl_->readAllStandardOutput();
 }
 
-std::string QProcess::readAllStandardError() {
+auto QProcess::readAllStandardError() -> std::string {
     return impl_->readAllStandardError();
 }
 
@@ -155,7 +155,7 @@ auto QProcess::Impl::waitForStarted(int timeoutMs) -> bool {
 auto QProcess::Impl::waitForFinished(int timeoutMs) -> bool {
 #ifdef _WIN32
     DWORD waitResult = WaitForSingleObject(
-        procInfo.hProcess, timeoutMs < 0 ? INFINITE : timeoutMs);
+        procInfo_.hProcess, timeoutMs < 0 ? INFINITE : timeoutMs);
     return waitResult == WAIT_OBJECT_0;
 #else
     if (childPid_ == -1) {
@@ -188,7 +188,7 @@ auto QProcess::Impl::waitForFinished(int timeoutMs) -> bool {
 auto QProcess::Impl::isRunning() const -> bool {
 #ifdef _WIN32
     DWORD exitCode;
-    GetExitCodeProcess(procInfo.hProcess, &exitCode);
+    GetExitCodeProcess(procInfo_.hProcess, &exitCode);
     return exitCode == STILL_ACTIVE;
 #else
     if (childPid_ == -1) {
@@ -202,7 +202,7 @@ auto QProcess::Impl::isRunning() const -> bool {
 void QProcess::Impl::write(const std::string& data) {
 #ifdef _WIN32
     DWORD written;
-    WriteFile(childStdinWrite, data.c_str(), data.size(), &written, nullptr);
+    WriteFile(childStdinWrite_, data.c_str(), data.size(), &written, nullptr);
 #else
     if (childStdin_ != -1) {
         ::write(childStdin_, data.c_str(), data.size());
@@ -214,18 +214,21 @@ auto QProcess::Impl::readAllStandardOutput() -> std::string {
 #ifdef _WIN32
     std::string output;
     DWORD read;
-    CHAR buffer[4096];
-    while (ReadFile(childStdoutRead, buffer, sizeof(buffer), &read, nullptr) &&
+    constexpr size_t BUFFER_SIZE = 4096;
+    std::array<CHAR, BUFFER_SIZE> buffer;
+    while ((ReadFile(childStdoutRead_, buffer.data(), buffer.size(), &read,
+                     nullptr) != 0) &&
            read > 0) {
-        output.append(buffer, read);
+        output.append(buffer.data(), read);
     }
     return output;
 #else
     std::string output;
-    char buffer[4096];
+    constexpr size_t bufferSize = 4096;
+    std::array<char, bufferSize> buffer;
     ssize_t count;
-    while ((count = ::read(childStdout_, buffer, sizeof(buffer))) > 0) {
-        output.append(buffer, count);
+    while ((count = ::read(childStdout_, buffer.data(), buffer.size())) > 0) {
+        output.append(buffer.data(), count);
     }
     return output;
 #endif
@@ -235,18 +238,21 @@ auto QProcess::Impl::readAllStandardError() -> std::string {
 #ifdef _WIN32
     std::string output;
     DWORD read;
-    CHAR buffer[4096];
-    while (ReadFile(childStderrRead, buffer, sizeof(buffer), &read, nullptr) &&
+    constexpr size_t BUFFER_SIZE = 4096;
+    std::array<CHAR, BUFFER_SIZE> buffer;
+    while ((ReadFile(childStderrRead_, buffer.data(), buffer.size(), &read,
+                     nullptr) != 0) &&
            read > 0) {
-        output.append(buffer, read);
+        output.append(buffer.data(), read);
     }
     return output;
 #else
     std::string output;
-    char buffer[4096];
+    constexpr size_t bufferSize = 4096;
+    std::array<char, bufferSize> buffer;
     ssize_t count;
-    while ((count = ::read(childStderr_, buffer, sizeof(buffer))) > 0) {
-        output.append(buffer, count);
+    while ((count = ::read(childStderr_, buffer.data(), buffer.size())) > 0) {
+        output.append(buffer.data(), count);
     }
     return output;
 #endif
@@ -255,9 +261,9 @@ auto QProcess::Impl::readAllStandardError() -> std::string {
 void QProcess::Impl::terminate() {
     if (running_) {
 #ifdef _WIN32
-        TerminateProcess(procInfo.hProcess, 0);
-        CloseHandle(procInfo.hProcess);
-        CloseHandle(procInfo.hThread);
+        TerminateProcess(procInfo_.hProcess, 0);
+        CloseHandle(procInfo_.hProcess);
+        CloseHandle(procInfo_.hThread);
 #else
         kill(childPid_, SIGTERM);
 #endif
@@ -270,24 +276,24 @@ void QProcess::Impl::startWindowsProcess() {
     SECURITY_ATTRIBUTES saAttr;
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
+    saAttr.lpSecurityDescriptor = nullptr;
 
-    HANDLE childStdoutWrite = NULL;
-    HANDLE childStdinRead = NULL;
-    HANDLE childStderrWrite = NULL;
+    HANDLE childStdoutWrite = nullptr;
+    HANDLE childStdinRead = nullptr;
+    HANDLE childStderrWrite = nullptr;
 
-    if (!CreatePipe(&childStdoutRead, &childStdoutWrite, &saAttr, 0) ||
-        !SetHandleInformation(childStdoutRead, HANDLE_FLAG_INHERIT, 0)) {
+    if ((CreatePipe(&childStdoutRead_, &childStdoutWrite, &saAttr, 0) == 0) ||
+        (SetHandleInformation(childStdoutRead_, HANDLE_FLAG_INHERIT, 0) == 0)) {
         THROW_SYSTEM_COLLAPSE("Failed to create stdout pipe");
     }
 
-    if (!CreatePipe(&childStdinRead, &childStdinWrite, &saAttr, 0) ||
-        !SetHandleInformation(childStdinWrite, HANDLE_FLAG_INHERIT, 0)) {
+    if ((CreatePipe(&childStdinRead, &childStdinWrite_, &saAttr, 0) == 0) ||
+        (SetHandleInformation(childStdinWrite_, HANDLE_FLAG_INHERIT, 0) == 0)) {
         THROW_SYSTEM_COLLAPSE("Failed to create stdin pipe");
     }
 
-    if (!CreatePipe(&childStderrRead, &childStderrWrite, &saAttr, 0) ||
-        !SetHandleInformation(childStderrRead, HANDLE_FLAG_INHERIT, 0)) {
+    if ((CreatePipe(&childStderrRead_, &childStderrWrite, &saAttr, 0) == 0) ||
+        (SetHandleInformation(childStderrRead_, HANDLE_FLAG_INHERIT, 0) == 0)) {
         THROW_SYSTEM_COLLAPSE("Failed to create stderr pipe");
     }
 
@@ -299,26 +305,27 @@ void QProcess::Impl::startWindowsProcess() {
     siStartInfo.hStdInput = childStdinRead;
     siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-    ZeroMemory(&procInfo, sizeof(PROCESS_INFORMATION));
+    ZeroMemory(&procInfo_, sizeof(PROCESS_INFORMATION));
 
-    std::string cmdLine = program;
-    for (const auto& arg : args) {
+    std::string cmdLine = program_;
+    for (const auto& arg : args_) {
         cmdLine += " " + arg;
     }
 
     char* envBlock = nullptr;
-    if (!environment.empty()) {
+    if (!environment_.empty()) {
         std::string envString;
-        for (const auto& envVar : environment) {
+        for (const auto& envVar : environment_) {
             envString += envVar + '\0';
         }
         envString += '\0';
         envBlock = const_cast<char*>(envString.c_str());
     }
 
-    if (!CreateProcess(NULL, cmdLine.data(), NULL, NULL, TRUE, 0, envBlock,
-                       workingDirectory ? workingDirectory->c_str() : NULL,
-                       &siStartInfo, &procInfo)) {
+    if (!CreateProcess(nullptr, cmdLine.data(), nullptr, nullptr, TRUE, 0,
+                       envBlock,
+                       workingDirectory_ ? workingDirectory_->c_str() : nullptr,
+                       &siStartInfo, &procInfo_)) {
         THROW_SYSTEM_COLLAPSE("Failed to start process");
     }
 

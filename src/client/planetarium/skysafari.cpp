@@ -6,190 +6,212 @@
 
 class SkySafariController::Impl {
 public:
-    bool initialize(const std::string& host, int port) {
+    auto initialize(const std::string& /*host*/, int /*port*/) -> bool {
         // Actual connection code would go here
-        m_connected = true;
-        return m_connected;
+        connected_ = true;
+        return connected_;
     }
 
-    std::string processCommand(std::string_view command) {
-        if (command.starts_with("GR"))
+    auto processCommand(std::string_view command) -> std::string {
+        if (command.starts_with("GR")) {
             return getRightAscension();
-        else if (command.starts_with("GD"))
+        } else if (command.starts_with("GD")) {
             return getDeclination();
-        else if (command.starts_with("Sr"))
+        } else if (command.starts_with("Sr")) {
             return setRightAscension(command.substr(2));
-        else if (command.starts_with("Sd"))
+        } else if (command.starts_with("Sd")) {
             return setDeclination(command.substr(2));
-        else if (command == "MS")
+        } else if (command == "MS") {
             return goTo();
-        else if (command == "CM")
+        } else if (command == "CM") {
             return sync();
-        else if (command == "Q")
+        } else if (command == "Q") {
             return abort();
-        else if (command == "GG")
+        } else if (command == "GG") {
             return getUTCOffset();
-        else if (command.starts_with("SG"))
+        } else if (command.starts_with("SG")) {
             return setUTCOffset(command.substr(2));
-        else if (command.starts_with("St"))
+        } else if (command.starts_with("St")) {
             return setLatitude(command.substr(2));
-        else if (command.starts_with("Sg"))
+        } else if (command.starts_with("Sg")) {
             return setLongitude(command.substr(2));
-        else if (command == "MP")
+        } else if (command == "MP") {
             return park() ? "1" : "0";
-        else if (command == "MU")
+        } else if (command == "MU") {
             return unpark() ? "1" : "0";
+        }
         // Add other command handlers here
 
         return "1";  // Default response for unrecognized commands
     }
 
     void setTargetCoordinates(const Coordinates& coords) {
-        m_targetCoords = coords;
+        targetCoords_ = coords;
     }
     void setGeographicCoordinates(const GeographicCoordinates& coords) {
-        m_geoCoords = coords;
+        geoCoords_ = coords;
     }
-    void setDateTime(const DateTime& dt) { m_dateTime = dt; }
-    void setSlewRate(SlewRate rate) { m_slewRate = rate; }
+    void setDateTime(const DateTime& dateTime) { dateTime_ = dateTime; }
+    void setSlewRate(SlewRate rate) { slewRate_ = rate; }
 
-    bool startSlew(Direction direction) {
-        m_slewingDirection = direction;
+    auto startSlew(Direction direction) -> bool {
+        slewingDirection_ = direction;
         // Actual slew start code would go here
         return true;
     }
 
-    bool stopSlew(Direction direction) {
-        if (m_slewingDirection == direction) {
-            m_slewingDirection = std::nullopt;
+    auto stopSlew(Direction direction) -> bool {
+        if (slewingDirection_ == direction) {
+            slewingDirection_ = std::nullopt;
             // Actual slew stop code would go here
             return true;
         }
         return false;
     }
 
-    bool park() {
+    auto park() -> bool {
         // Actual park code would go here
-        m_parked = true;
+        parked_ = true;
         return true;
     }
 
-    bool unpark() {
+    auto unpark() -> bool {
         // Actual unpark code would go here
-        m_parked = false;
+        parked_ = false;
         return true;
     }
 
-    Coordinates getCurrentCoordinates() const {
-        return m_currentCoords.value_or(Coordinates{0, 0});
+    [[nodiscard]] auto getCurrentCoordinates() const -> Coordinates {
+        return currentCoords_.value_or(Coordinates{0, 0});
     }
-    GeographicCoordinates getGeographicCoordinates() const {
-        return m_geoCoords.value_or(GeographicCoordinates{0, 0});
+    [[nodiscard]] auto getGeographicCoordinates() const
+        -> GeographicCoordinates {
+        return geoCoords_.value_or(GeographicCoordinates{0, 0});
     }
-    DateTime getDateTime() const { return m_dateTime.value_or(DateTime{}); }
-    SlewRate getSlewRate() const { return m_slewRate; }
-    bool isConnected() const { return m_connected; }
-    bool isParked() const { return m_parked; }
+    [[nodiscard]] auto getDateTime() const -> DateTime {
+        return dateTime_.value_or(DateTime{});
+    }
+    [[nodiscard]] auto getSlewRate() const -> SlewRate { return slewRate_; }
+    [[nodiscard]] auto isConnected() const -> bool { return connected_; }
+    [[nodiscard]] auto isParked() const -> bool { return parked_; }
 
 private:
-    bool m_connected = false;
-    bool m_parked = false;
-    std::optional<Coordinates> m_currentCoords;
-    std::optional<Coordinates> m_targetCoords;
-    std::optional<GeographicCoordinates> m_geoCoords;
-    std::optional<DateTime> m_dateTime;
-    SlewRate m_slewRate = SlewRate::CENTERING;
-    std::optional<Direction> m_slewingDirection;
+    bool connected_ = false;
+    bool parked_ = false;
+    std::optional<Coordinates> currentCoords_;
+    std::optional<Coordinates> targetCoords_;
+    std::optional<GeographicCoordinates> geoCoords_;
+    std::optional<DateTime> dateTime_;
+    SlewRate slewRate_ = SlewRate::CENTERING;
+    std::optional<Direction> slewingDirection_;
 
-    static std::string hoursToSexagesimal(double hours) {
-        int h = static_cast<int>(hours);
-        int m = static_cast<int>((hours - h) * 60);
-        int s = static_cast<int>(((hours - h) * 60 - m) * 60);
-        return std::format("{:02d}:{:02d}:{:02d}", h, m, s);
+    static auto hoursToSexagesimal(double hours) -> std::string {
+        constexpr int SECONDS_IN_MINUTE = 60;
+        int hoursInt = static_cast<int>(hours);
+        int minutes = static_cast<int>((hours - hoursInt) * SECONDS_IN_MINUTE);
+        int seconds = static_cast<int>(
+            ((hours - hoursInt) * SECONDS_IN_MINUTE - minutes) *
+            SECONDS_IN_MINUTE);
+        return std::format("{:02d}:{:02d}:{:02d}", hoursInt, minutes, seconds);
     }
 
-    static std::string degreesToSexagesimal(double degrees) {
+    static auto degreesToSexagesimal(double degrees) -> std::string {
+        constexpr int SECONDS_IN_MINUTE = 60;
         char sign = degrees >= 0 ? '+' : '-';
         degrees = std::abs(degrees);
-        int d = static_cast<int>(degrees);
-        int m = static_cast<int>((degrees - d) * 60);
-        int s = static_cast<int>(((degrees - d) * 60 - m) * 60);
-        return std::format("{}{:02d}:{:02d}:{:02d}", sign, d, m, s);
+        int degreesInt = static_cast<int>(degrees);
+        int minutes =
+            static_cast<int>((degrees - degreesInt) * SECONDS_IN_MINUTE);
+        int seconds = static_cast<int>(
+            ((degrees - degreesInt) * SECONDS_IN_MINUTE - minutes) *
+            SECONDS_IN_MINUTE);
+        return std::format("{}{:02d}:{:02d}:{:02d}", sign, degreesInt, minutes,
+                           seconds);
     }
 
-    std::string getRightAscension() {
-        if (!m_currentCoords)
+    auto getRightAscension() -> std::string {
+        if (!currentCoords_) {
             return "Error";
-        return hoursToSexagesimal(m_currentCoords->ra) + '#';
+        }
+        return hoursToSexagesimal(currentCoords_->ra) + '#';
     }
 
-    std::string getDeclination() {
-        if (!m_currentCoords)
+    auto getDeclination() -> std::string {
+        if (!currentCoords_) {
             return "Error";
-        return degreesToSexagesimal(m_currentCoords->dec) + '#';
+        }
+        return degreesToSexagesimal(currentCoords_->dec) + '#';
     }
 
-    std::string setRightAscension(std::string_view ra) {
-        if (!m_targetCoords)
-            m_targetCoords = Coordinates{};
-        m_targetCoords->ra = std::stod(std::string(ra));
+    auto setRightAscension(std::string_view ra) -> std::string {
+        if (!targetCoords_) {
+            targetCoords_ = Coordinates{};
+        }
+        targetCoords_->ra = std::stod(std::string(ra));
         return "1";
     }
 
-    std::string setDeclination(std::string_view dec) {
-        if (!m_targetCoords)
-            m_targetCoords = Coordinates{};
-        m_targetCoords->dec = std::stod(std::string(dec));
+    auto setDeclination(std::string_view dec) -> std::string {
+        if (!targetCoords_) {
+            targetCoords_ = Coordinates{};
+        }
+        targetCoords_->dec = std::stod(std::string(dec));
         return "1";
     }
 
-    std::string goTo() {
-        if (!m_targetCoords)
+    auto goTo() -> std::string {
+        if (!targetCoords_) {
             return "2<Not Ready>#";
+        }
 
         // Actual GOTO implementation would go here
-        m_currentCoords = m_targetCoords;
+        currentCoords_ = targetCoords_;
         return "0";
     }
 
-    std::string sync() {
-        if (!m_targetCoords)
+    auto sync() -> std::string {
+        if (!targetCoords_) {
             return "Error";
+        }
 
-        m_currentCoords = m_targetCoords;
+        currentCoords_ = targetCoords_;
         return " M31 EX GAL MAG 3.5 SZ178.0'#";
     }
 
-    std::string abort() {
-        m_slewingDirection = std::nullopt;
+    auto abort() -> std::string {
+        slewingDirection_ = std::nullopt;
         // Actual abort implementation would go here
         return "1";
     }
 
-    std::string getUTCOffset() {
-        if (!m_dateTime)
+    auto getUTCOffset() -> std::string {
+        if (!dateTime_) {
             return "Error";
-        return std::format("{:.1f}", m_dateTime->utcOffset);
+        }
+        return std::format("{:.1f}", dateTime_->utcOffset);
     }
 
-    std::string setUTCOffset(std::string_view offset) {
-        if (!m_dateTime)
-            m_dateTime = DateTime{};
-        m_dateTime->utcOffset = std::stod(std::string(offset));
+    auto setUTCOffset(std::string_view offset) -> std::string {
+        if (!dateTime_) {
+            dateTime_ = DateTime{};
+        }
+        dateTime_->utcOffset = std::stod(std::string(offset));
         return "1";
     }
 
-    std::string setLatitude(std::string_view lat) {
-        if (!m_geoCoords)
-            m_geoCoords = GeographicCoordinates{};
-        m_geoCoords->latitude = std::stod(std::string(lat));
+    auto setLatitude(std::string_view lat) -> std::string {
+        if (!geoCoords_) {
+            geoCoords_ = GeographicCoordinates{};
+        }
+        geoCoords_->latitude = std::stod(std::string(lat));
         return "1";
     }
 
-    std::string setLongitude(std::string_view lon) {
-        if (!m_geoCoords)
-            m_geoCoords = GeographicCoordinates{};
-        m_geoCoords->longitude = std::stod(std::string(lon));
+    auto setLongitude(std::string_view lon) -> std::string {
+        if (!geoCoords_) {
+            geoCoords_ = GeographicCoordinates{};
+        }
+        geoCoords_->longitude = std::stod(std::string(lon));
         return "1";
     }
 };
@@ -201,14 +223,16 @@ SkySafariController::~SkySafariController() = default;
 
 SkySafariController::SkySafariController(SkySafariController&&) noexcept =
     default;
-SkySafariController& SkySafariController::operator=(
-    SkySafariController&&) noexcept = default;
+auto SkySafariController::operator=(SkySafariController&&) noexcept
+    -> SkySafariController& = default;
 
-bool SkySafariController::initialize(const std::string& host, int port) {
+auto SkySafariController::initialize(const std::string& host,
+                                     int port) -> bool {
     return pImpl->initialize(host, port);
 }
 
-std::string SkySafariController::processCommand(std::string_view command) {
+auto SkySafariController::processCommand(std::string_view command)
+    -> std::string {
     return pImpl->processCommand(command);
 }
 
@@ -221,44 +245,45 @@ void SkySafariController::setGeographicCoordinates(
     pImpl->setGeographicCoordinates(coords);
 }
 
-void SkySafariController::setDateTime(const DateTime& dt) {
-    pImpl->setDateTime(dt);
+void SkySafariController::setDateTime(const DateTime& dateTime) {
+    pImpl->setDateTime(dateTime);
 }
 
 void SkySafariController::setSlewRate(SlewRate rate) {
     pImpl->setSlewRate(rate);
 }
 
-bool SkySafariController::startSlew(Direction direction) {
+auto SkySafariController::startSlew(Direction direction) -> bool {
     return pImpl->startSlew(direction);
 }
 
-bool SkySafariController::stopSlew(Direction direction) {
+auto SkySafariController::stopSlew(Direction direction) -> bool {
     return pImpl->stopSlew(direction);
 }
 
-bool SkySafariController::park() { return pImpl->park(); }
+auto SkySafariController::park() -> bool { return pImpl->park(); }
 
-bool SkySafariController::unpark() { return pImpl->unpark(); }
+auto SkySafariController::unpark() -> bool { return pImpl->unpark(); }
 
-SkySafariController::Coordinates SkySafariController::getCurrentCoordinates()
-    const {
+auto SkySafariController::getCurrentCoordinates() const -> Coordinates {
     return pImpl->getCurrentCoordinates();
 }
 
-SkySafariController::GeographicCoordinates
-SkySafariController::getGeographicCoordinates() const {
+auto SkySafariController::getGeographicCoordinates() const
+    -> GeographicCoordinates {
     return pImpl->getGeographicCoordinates();
 }
 
-SkySafariController::DateTime SkySafariController::getDateTime() const {
+auto SkySafariController::getDateTime() const -> DateTime {
     return pImpl->getDateTime();
 }
 
-SkySafariController::SlewRate SkySafariController::getSlewRate() const {
+auto SkySafariController::getSlewRate() const -> SlewRate {
     return pImpl->getSlewRate();
 }
 
-bool SkySafariController::isConnected() const { return pImpl->isConnected(); }
+auto SkySafariController::isConnected() const -> bool {
+    return pImpl->isConnected();
+}
 
-bool SkySafariController::isParked() const { return pImpl->isParked(); }
+auto SkySafariController::isParked() const -> bool { return pImpl->isParked(); }

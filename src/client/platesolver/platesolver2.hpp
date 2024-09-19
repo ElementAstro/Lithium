@@ -4,24 +4,26 @@
 
 class Platesolve2Solver : public AtomSolver {
 public:
-    Platesolve2Solver(std::string executableLocation);
+    explicit Platesolve2Solver(std::string executableLocation);
 
-    PlateSolveResult solve(const std::string& imageFilePath,
-                           const std::optional<Coordinates>& initialCoordinates,
-                           double fovW, double fovH, int imageWidth,
-                           int imageHeight) override;
+    auto solve(const std::string& imageFilePath,
+               const std::optional<Coordinates>& initialCoordinates,
+               double fovW, double fovH, int imageWidth,
+               int imageHeight) -> PlateSolveResult override;
 
 protected:
-    std::string getOutputPath(const std::string& imageFilePath) const override;
+    [[nodiscard]] auto getOutputPath(const std::string& imageFilePath) const
+        -> std::string override;
 
 private:
-    std::string m_executableLocation;
+    std::string executableLocation_;
 
-    std::string getArguments(
+    [[nodiscard]] auto getArguments(
         const std::string& imageFilePath,
         const std::optional<Coordinates>& initialCoordinates, double fovW,
-        double fovH, int regions) const;
+        double fovH, int regions) const -> std::string;
 
-    PlateSolveResult readResult(const std::string& outputFilePath,
-                                int imageWidth, int imageHeight) const;
+    [[nodiscard]] auto readResult(const std::string& outputFilePath,
+                                  int imageWidth,
+                                  int imageHeight) const -> PlateSolveResult;
 };

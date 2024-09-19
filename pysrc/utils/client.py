@@ -1,8 +1,23 @@
+"""
+This module provides a JSONTCPClient class for communicating with a server over TCP using JSON messages.
+"""
+
 import asyncio
 import json
 
 
 class JSONTCPClient:
+    """
+    A client for communicating with a server over TCP using JSON messages.
+
+    Attributes:
+        host (str): The server's hostname or IP address.
+        port (int): The server's port number.
+        max_retries (int): The maximum number of connection retries.
+        reader (StreamReader): The stream reader for the connection.
+        writer (StreamWriter): The stream writer for the connection.
+    """
+
     def __init__(self, host='127.0.0.1', port=8888, max_retries=5):
         """
         Initialize the JSONTCPClient with the server's host, port, and maximum number of retries.
@@ -74,8 +89,13 @@ class JSONTCPClient:
 
             response = await self.receive_message()
             print(f'Received: {response}')
+        except (ConnectionResetError, BrokenPipeError) as e:
+            print(f'Connection error: {e}')
+            await self.reconnect()
+        except json.JSONDecodeError as e:
+            print(f'JSON error: {e}')
         except Exception as e:
-            print(f'Error: {e}')
+            print(f'Unexpected error: {e}')
             await self.reconnect()
 
     async def receive_message(self):
@@ -88,8 +108,11 @@ class JSONTCPClient:
         try:
             response = await self.reader.readline()
             return response.decode().strip()
+        except (ConnectionResetError, BrokenPipeError) as e:
+            print(f'Connection error: {e}')
+            return None
         except Exception as e:
-            print(f'Error receiving message: {e}')
+            print(f'Unexpected error receiving message: {e}')
             return None
 
     async def ping(self):
@@ -103,8 +126,11 @@ class JSONTCPClient:
             await self.send_message({"command": "ping"})
             response = await self.receive_message()
             return response == "pong"
+        except (ConnectionResetError, BrokenPipeError) as e:
+            print(f'Ping connection error: {e}')
+            return False
         except Exception as e:
-            print(f'Ping error: {e}')
+            print(f'Unexpected ping error: {e}')
             return False
 
     def set_max_retries(self, max_retries):
@@ -124,6 +150,9 @@ class JSONTCPClient:
 
 
 async def main():
+    """
+    Main function to run the JSONTCPClient and send predefined commands.
+    """
     client = JSONTCPClient(host='127.0.0.1', port=8888)
 
     commands = [

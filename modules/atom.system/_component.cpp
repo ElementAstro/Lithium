@@ -33,7 +33,7 @@ SystemComponent::SystemComponent(const std::string &name) : Component(name) {
         "Run a system command with environment variables");
     def("run_command_status", &executeCommandWithStatus, "os",
         "Run a system command and get its status");
-    def("getlogin", &getlogin, "os", "Get current user name");
+    def("getlogin", &getLogin, "os", "Get current user name");
 
     def("user_group", &getUserGroups, "user", "Get current user groups");
     def("user_id", &getUserId, "user", "Get current user ID");

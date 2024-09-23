@@ -24,7 +24,9 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_LIBS
     loguru
+    MINIZIP::minizip
     ZLIB::ZLIB
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Build Object Library
@@ -43,7 +45,6 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

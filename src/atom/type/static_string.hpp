@@ -18,9 +18,11 @@ Description: A Static String Implementation
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <stdexcept>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <string>
 
 /**
  * @brief A class representing a static string with a fixed maximum size.
@@ -36,7 +38,7 @@ public:
     /**
      * @brief Default constructor. Constructs an empty StaticString.
      */
-    consteval StaticString() noexcept : size_(0) { data_[0] = '\0'; }
+    constexpr StaticString() noexcept : size_(0) { data_[0] = '\0'; }
 
     /**
      * @brief Constructor accepting a C-style string literal.
@@ -44,9 +46,22 @@ public:
      * @param str The C-style string literal to initialize the StaticString
      * with.
      */
-    explicit consteval StaticString(const std::array<char, N + 1>& str) noexcept
+    explicit constexpr StaticString(const std::array<char, N + 1>& str) noexcept
         : size_(N) {
         std::copy_n(str.begin(), N + 1, data_.begin());
+    }
+
+    /**
+     * @brief Constructor accepting a std::string.
+     *
+     * @param str The std::string to initialize the StaticString with.
+     */
+    explicit StaticString(const std::string& str) noexcept : size_(str.size()) {
+        if (str.size() > N) {
+            throw std::runtime_error("String size exceeds StaticString capacity");
+        }
+        std::copy_n(str.begin(), str.size(), data_.begin());
+        data_[str.size()] = '\0';
     }
 
     /**

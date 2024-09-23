@@ -1,75 +1,120 @@
 #include "atom/utils/switch.hpp"
 #include <gtest/gtest.h>
-#include <string>
 
 using namespace atom::utils;
 
-// Test fixture for StringSwitch
-class StringSwitchTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        // Initialize the switch with some cases
-        switch_.registerCase("case1", [](int x) { EXPECT_EQ(x, 1); });
-        switch_.registerCase("case2", [](int x) { EXPECT_EQ(x, 2); });
-        switch_.setDefault(std::nullopt);
-    }
-
-    void TearDown() override { switch_.clearCases(); }
-
-    StringSwitch<int> switch_;
-};
-
-// Test case registration
-TEST_F(StringSwitchTest, RegisterCase) {
-    switch_.registerCase("case3", [](int x) { EXPECT_EQ(x, 3); });
-    EXPECT_TRUE(switch_.match("case3", 3));
+TEST(StringSwitchTest, RegisterCase) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    auto cases = switcher.getCases();
+    ASSERT_EQ(cases.size(), 1);
+    ASSERT_EQ(cases[0], "case1");
 }
 
-// Test case unregistration
-TEST_F(StringSwitchTest, UnregisterCase) {
-    switch_.unregisterCase("case1");
-    EXPECT_FALSE(switch_.match("case1", 1));
+TEST(StringSwitchTest, RegisterDuplicateCase) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    ASSERT_THROW(
+        switcher.registerCase(
+            "case1",
+            [](int x) {
+                return std::variant<std::monostate, int, std::string>(x);
+            }),
+        std::runtime_error);
 }
 
-// Test case matching
-TEST_F(StringSwitchTest, MatchCase) {
-    EXPECT_TRUE(switch_.match("case1", 1));
-    EXPECT_TRUE(switch_.match("case2", 2));
-    EXPECT_FALSE(switch_.match("case3", 3));
+TEST(StringSwitchTest, UnregisterCase) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    switcher.unregisterCase("case1");
+    auto cases = switcher.getCases();
+    ASSERT_TRUE(cases.empty());
 }
 
-// Test default function
-TEST_F(StringSwitchTest, DefaultFunction) {
-    switch_.setDefault([](int x) { EXPECT_EQ(x, 4); });
-    EXPECT_TRUE(switch_.match("unknown", 4));
+TEST(StringSwitchTest, MatchCase) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    auto result = switcher.match("case1", 42);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(std::get<int>(result.value()), 42);
 }
 
-// Test clear cases
-TEST_F(StringSwitchTest, ClearCases) {
-    switch_.clearCases();
-    EXPECT_FALSE(switch_.match("case1", 1));
-    EXPECT_FALSE(switch_.match("case2", 2));
+TEST(StringSwitchTest, MatchUnregisteredCase) {
+    StringSwitch<int> switcher;
+    auto result = switcher.match("case1", 42);
+    ASSERT_FALSE(result.has_value());
 }
 
-// Test get cases
-TEST_F(StringSwitchTest, GetCases) {
-    auto cases = switch_.getCases();
-    EXPECT_EQ(cases.size(), 2);
-    EXPECT_TRUE(std::find(cases.begin(), cases.end(), "case1") != cases.end());
-    EXPECT_TRUE(std::find(cases.begin(), cases.end(), "case2") != cases.end());
+TEST(StringSwitchTest, DefaultFunction) {
+    StringSwitch<int> switcher;
+    switcher.setDefault([](int x) {
+        return std::variant<std::monostate, int, std::string>(x * 2);
+    });
+    auto result = switcher.match("case1", 21);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(std::get<int>(result.value()), 42);
 }
 
-// Test duplicate case registration
-TEST_F(StringSwitchTest, DuplicateCase) {
-    EXPECT_THROW(switch_.registerCase("case1", [](ATOM_UNUSED int x) {}),
-                 atom::error::ObjectAlreadyExist);
+TEST(StringSwitchTest, ClearCases) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    switcher.clearCases();
+    auto cases = switcher.getCases();
+    ASSERT_TRUE(cases.empty());
 }
 
-// Test C++20 designated initializers
-TEST(StringSwitchCpp20Test, DesignatedInitializers) {
-    StringSwitch<int> switch_{{"case1", [](int x) { EXPECT_EQ(x, 1); }},
-                              {"case2", [](int x) { EXPECT_EQ(x, 2); }}};
+TEST(StringSwitchTest, GetCases) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    switcher.registerCase("case2", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    auto cases = switcher.getCases();
+    ASSERT_EQ(cases.size(), 2);
+    ASSERT_EQ(cases[0], "case1");
+    ASSERT_EQ(cases[1], "case2");
+}
 
-    EXPECT_TRUE(switch_.match("case1", 1));
-    EXPECT_TRUE(switch_.match("case2", 2));
+TEST(StringSwitchTest, MatchWithSpan) {
+    StringSwitch<int> switcher;
+    switcher.registerCase("case1", [](int x) {
+        return std::variant<std::monostate, int, std::string>(x);
+    });
+    std::vector<int> args = {42};
+    auto result = switcher.matchWithSpan("case1", std::span<int>(args));
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(std::get<int>(result.value()), 42);
+}
+
+TEST(StringSwitchTest, InitializerList) {
+    StringSwitch<int> switcher(
+        {{"case1",
+          [](int x) {
+              return std::variant<std::monostate, int, std::string>(x);
+          }},
+         {"case2", [](int x) {
+              return std::variant<std::monostate, int, std::string>(x * 2);
+          }}});
+    auto cases = switcher.getCases();
+    ASSERT_EQ(cases.size(), 2);
+    ASSERT_EQ(cases[0], "case1");
+    ASSERT_EQ(cases[1], "case2");
+    auto result1 = switcher.match("case1", 21);
+    ASSERT_TRUE(result1.has_value());
+    ASSERT_EQ(std::get<int>(result1.value()), 21);
+    auto result2 = switcher.match("case2", 21);
+    ASSERT_TRUE(result2.has_value());
+    ASSERT_EQ(std::get<int>(result2.value()), 42);
 }

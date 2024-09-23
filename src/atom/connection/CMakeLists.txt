@@ -45,6 +45,12 @@ set(${PROJECT_NAME}_LIBS
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
+if (WIN32)
+list(APPEND ${PROJECT_NAME}_LIBS
+    ws2_32
+)
+endif()
+
 if (ENABLE_SSH)
 find_package(LibSSH REQUIRED)
 list(APPEND ${PROJECT_NAME}_LIBS

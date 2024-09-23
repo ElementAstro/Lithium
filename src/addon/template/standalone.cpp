@@ -35,8 +35,10 @@ struct LocalDriver {
     InteractionMethod method;
 };
 
+#if !defined(_WIN32) && !defined(_WIN64)
 constexpr char SEM_NAME[] = "/driver_semaphore";
 constexpr char SHM_NAME[] = "/driver_shm";
+#endif
 constexpr char FIFO_NAME[] = "/tmp/driver_fifo";
 
 class StandAloneComponentImpl {
@@ -197,14 +199,20 @@ auto StandAloneComponent::createSharedMemory()
 #if defined(_WIN32) || defined(_WIN64)
 void StandAloneComponent::startWindowsProcess(
     const std::string& driver_name,
-    std::variant<std::pair<int, int>, std::pair<int, int*>> io) {
-    auto [inHandle, outHandle] = std::get<std::pair<int, int>>(io);
+    std::variant<std::pair<int, int>, std::pair<int, int*>> ioVariant) {
+    auto [inHandle, outHandle] = std::get<std::pair<int, int>>(ioVariant);
 
-    SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
-    HANDLE hStdinRead, hStdinWrite, hStdoutRead, hStdoutWrite;
+    SECURITY_ATTRIBUTES securityAttributes = {sizeof(SECURITY_ATTRIBUTES),
+                                              nullptr, TRUE};
+    HANDLE hStdinRead;
+    HANDLE hStdinWrite;
+    HANDLE hStdoutRead;
+    HANDLE hStdoutWrite;
 
-    if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0) ||
-        !CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0)) {
+    if (CreatePipe(&hStdinRead, &hStdinWrite, &securityAttributes, 0) ==
+            FALSE ||
+        CreatePipe(&hStdoutRead, &hStdoutWrite, &securityAttributes, 0) ==
+            FALSE) {
         LOG_F(ERROR, "Failed to create pipes");
         return;
     }
@@ -212,17 +220,19 @@ void StandAloneComponent::startWindowsProcess(
     SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
     SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0);
 
-    STARTUPINFO si = {sizeof(STARTUPINFO)};
-    si.hStdError = hStdoutWrite;
-    si.hStdOutput = hStdoutWrite;
-    si.hStdInput = hStdinRead;
-    si.dwFlags |= STARTF_USESTDHANDLES;
+    STARTUPINFO startupInfo = {};
+    startupInfo.cb = sizeof(STARTUPINFO);
+    startupInfo.hStdError = hStdoutWrite;
+    startupInfo.hStdOutput = hStdoutWrite;
+    startupInfo.hStdInput = hStdinRead;
+    startupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-    PROCESS_INFORMATION pi;
+    PROCESS_INFORMATION processInfo;
     std::string cmd = driver_name;
 
     if (!CreateProcess(nullptr, cmd.data(), nullptr, nullptr, TRUE,
-                       CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+                       CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo,
+                       &processInfo)) {
         LOG_F(ERROR, "Failed to start process");
         return;
     }
@@ -231,7 +241,7 @@ void StandAloneComponent::startWindowsProcess(
     CloseHandle(hStdinRead);
 
     impl_->driver.processHandle =
-        static_cast<int>(reinterpret_cast<intptr_t>(pi.hProcess));
+        static_cast<int>(reinterpret_cast<intptr_t>(processInfo.hProcess));
     impl_->driver.io = std::make_pair(
         _open_osfhandle(reinterpret_cast<intptr_t>(hStdinWrite), 0),
         _open_osfhandle(reinterpret_cast<intptr_t>(hStdoutRead), 0));
@@ -446,6 +456,26 @@ void StandAloneComponent::sendMessageToDriver(std::string_view message) {
                 // This is a simple example, you might want to implement a more
                 // robust solution
                 *arg.second = std::atoi(message.data());
+            } else if constexpr (std::is_same_v<T,
+                                                std::pair<int, std::string>>) {
+                // For string-based communication
+                arg.second = message;
+            } else if constexpr (std::is_same_v<
+                                     T, std::pair<int, std::vector<char>>>) {
+                // For vector-based communication
+                arg.second.assign(message.begin(), message.end());
+            } else if constexpr (std::is_same_v<
+                                     T,
+                                     std::pair<int,
+                                               std::shared_ptr<std::string>>>) {
+                // For shared pointer to string
+                *arg.second = message;
+            } else if constexpr (std::is_same_v<
+                                     T,
+                                     std::pair<int,
+                                               std::unique_ptr<std::string>>>) {
+                // For unique pointer to string
+                *arg.second = message;
             }
         },
         impl_->driver.io);

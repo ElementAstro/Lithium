@@ -12,8 +12,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Add source files
 set(SOURCE_FILES
-    _component.cpp
-    _main.cpp
+    component.cpp
 )
 
 # Create the module library

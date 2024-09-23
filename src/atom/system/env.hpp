@@ -24,156 +24,180 @@ Description: Environment variable management
 
 namespace atom::utils {
 /**
- * @brief 环境变量类，用于获取和设置程序的环境变量、命令行参数等信息。
+ * @brief Environment variable class for managing program environment variables,
+ * command-line arguments, and other related information.
  */
 class Env {
 public:
     /**
-     * @brief 构造函数，初始化环境变量信息。
-     * @param argc 命令行参数数量。
-     * @param argv 命令行参数数组。
+     * @brief Default constructor that initializes environment variable
+     * information.
+     */
+    Env();
+
+    /**
+     * @brief Constructor that initializes environment variable information with
+     * command-line arguments.
+     * @param argc Number of command-line arguments.
+     * @param argv Array of command-line arguments.
      */
     explicit Env(int argc, char** argv);
 
     /**
-     * @brief 构造函数，初始化环境变量信息。
-     * @param argc 命令行参数数量。
-     * @param argv 命令行参数数组。
+     * @brief Static method to create a shared pointer to an Env object.
+     * @param argc Number of command-line arguments.
+     * @param argv Array of command-line arguments.
+     * @return Shared pointer to an Env object.
      */
     static auto createShared(int argc, char** argv) -> std::shared_ptr<Env>;
 
+    /**
+     * @brief Static method to get the current environment variables.
+     * @return Unordered map of environment variables.
+     */
     static auto Environ() -> std::unordered_map<std::string, std::string>;
 
     /**
-     * @brief 添加一个键值对到环境变量中。
-     * @param key 键名。
-     * @param val 键值。
+     * @brief Adds a key-value pair to the environment variables.
+     * @param key The key name.
+     * @param val The value associated with the key.
      */
     void add(const std::string& key, const std::string& val);
 
     /**
-     * @brief 判断环境变量中是否存在指定的键名。
-     * @param key 键名。
-     * @return 如果存在则返回 true，否则返回 false。
+     * @brief Checks if a key exists in the environment variables.
+     * @param key The key name.
+     * @return True if the key exists, otherwise false.
      */
     bool has(const std::string& key);
 
     /**
-     * @brief 从环境变量中删除指定的键值对。
-     * @param key 键名。
+     * @brief Deletes a key-value pair from the environment variables.
+     * @param key The key name.
      */
     void del(const std::string& key);
 
     /**
-     * @brief 获取指定键名的键值，如果不存在则返回默认值。
-     * @param key 键名。
-     * @param default_value 默认值。
-     * @return 键值或默认值。
+     * @brief Gets the value associated with a key, or returns a default value
+     * if the key does not exist.
+     * @param key The key name.
+     * @param default_value The default value to return if the key does not
+     * exist.
+     * @return The value associated with the key, or the default value.
      */
     ATOM_NODISCARD auto get(const std::string& key,
                             const std::string& default_value = "")
         -> std::string;
 
     /**
-     * @brief 添加一个命令行参数和描述到帮助信息列表中。
-     * @param key 参数名。
-     * @param desc 参数描述。
+     * @brief Adds a command-line argument and its description to the help
+     * information list.
+     * @param key The argument name.
+     * @param desc The argument description.
      */
     void addHelp(const std::string& key, const std::string& desc);
 
     /**
-     * @brief 从帮助信息列表中删除指定的参数信息。
-     * @param key 参数名。
+     * @brief Removes a command-line argument from the help information list.
+     * @param key The argument name.
      */
     void removeHelp(const std::string& key);
 
     /**
-     * @brief 打印程序的帮助信息。包含所有已添加的命令行参数和描述。
+     * @brief Prints the program's help information, including all added
+     * command-line arguments and their descriptions.
      */
     void printHelp();
 
     /**
-     * @brief 设置指定键名的环境变量值。
-     * @param key 键名。
-     * @param val 键值。
-     * @return 如果设置成功则返回 true，否则返回 false。
+     * @brief Sets the value of an environment variable.
+     * @param key The key name.
+     * @param val The value to set.
+     * @return True if the environment variable was set successfully, otherwise
+     * false.
      */
     auto setEnv(const std::string& key, const std::string& val) -> bool;
 
     /**
-     * @brief 获取指定键名的环境变量值，如果不存在则返回默认值。
-     * @param key 键名。
-     * @param default_value 默认值。
-     * @return 键值或默认值。
+     * @brief Gets the value of an environment variable, or returns a default
+     * value if the variable does not exist.
+     * @param key The key name.
+     * @param default_value The default value to return if the variable does not
+     * exist.
+     * @return The value of the environment variable, or the default value.
      */
     ATOM_NODISCARD auto getEnv(const std::string& key,
                                const std::string& default_value = "")
         -> std::string;
 
     /**
-     * @brief 获取指定路径的绝对路径。
-     * @param path 路径。
-     * @return 绝对路径。
+     * @brief Gets the absolute path of a given path.
+     * @param path The path to convert to an absolute path.
+     * @return The absolute path.
      */
     ATOM_NODISCARD auto getAbsolutePath(const std::string& path) const
         -> std::string;
 
     /**
-     * @brief 获取工作目录下指定路径的绝对路径。
-     * @param path 路径。
-     * @return 绝对路径。
+     * @brief Gets the absolute path of a given path relative to the working
+     * directory.
+     * @param path The path to convert to an absolute path relative to the
+     * working directory.
+     * @return The absolute path.
      */
     ATOM_NODISCARD auto getAbsoluteWorkPath(const std::string& path) const
         -> std::string;
 
     /**
-     * @brief 获取配置文件的路径。默认情况下，配置文件与程序在同一目录下。
-     * @return 配置文件路径。
+     * @brief Gets the path of the configuration file. By default, the
+     * configuration file is in the same directory as the program.
+     * @return The configuration file path.
      */
     ATOM_NODISCARD auto getConfigPath() -> std::string;
 
     /**
-     * @brief 设置环境变量。
-     * @param name 变量名。
-     * @param value 变量值。
-     * @param overwrite 是否覆盖已存在的变量。
+     * @brief Sets an environment variable.
+     * @param name The variable name.
+     * @param value The variable value.
+     * @param overwrite Whether to overwrite the variable if it already exists.
      */
     static void setVariable(const std::string& name, const std::string& value,
                             bool overwrite = true);
 
     /**
-     * @brief 获取环境变量。
-     * @param name 变量名。
-     * @return 变量值。
+     * @brief Gets the value of an environment variable.
+     * @param name The variable name.
+     * @return The variable value.
      */
     static auto getVariable(const std::string& name) -> std::string;
 
     /**
-     * @brief 删除环境变量。
-     * @param name 变量名。
+     * @brief Unsets (deletes) an environment variable.
+     * @param name The variable name.
      */
     static void unsetVariable(const std::string& name);
 
     /**
-     * @brief 列出所有环境变量。
-     * @return 环境变量列表。
+     * @brief Lists all environment variables.
+     * @return A vector of environment variable names.
      */
     static auto listVariables() -> std::vector<std::string>;
 
     /**
-     * @brief 打印所有环境变量。
+     * @brief Prints all environment variables.
      */
     static void printAllVariables();
 
 private:
-    std::string m_exe;      ///< 可执行文件的全路径。
-    std::string m_cwd;      ///< 工作目录。
-    std::string m_program;  ///< 程序名称。
+    std::string m_exe;      ///< Full path of the executable file.
+    std::string m_cwd;      ///< Working directory.
+    std::string m_program;  ///< Program name.
 
-    std::unordered_map<std::string, std::string> m_args;  ///< 命令行参数列表。
+    std::unordered_map<std::string, std::string>
+        m_args;  ///< List of command-line arguments.
     std::vector<std::pair<std::string, std::string>>
-        m_helps;                 ///< 帮助信息列表。
-    mutable std::mutex m_mutex;  ///< 互斥锁，用于保护成员变量。
+        m_helps;                 ///< List of help information.
+    mutable std::mutex m_mutex;  ///< Mutex to protect member variables.
 };
 
 }  // namespace atom::utils

@@ -85,19 +85,23 @@ public:
         std::wstring wcommand(command.begin(), command.end());
 
         // Start the child process.
-        if (CreateProcessW(nullptr,       // No module name (use command line)
-                           &wcommand[0],  // Command line
-                           nullptr,       // Process handle not inheritable
-                           nullptr,       // Thread handle not inheritable
-                           FALSE,         // Set handle inheritance to FALSE
-                           0,             // No creation flags
-                           nullptr,       // Use parent's environment block
-                           nullptr,       // Use parent's starting directory
-                           &si,           // Pointer to STARTUPINFO structure
-                           &pi)  // Pointer to PROCESS_INFORMATION structure
-        == 0) {
+        // TODO: Use CreateProcessW instead of CreateProcessA, but some programs
+        // occured
+        /*
+        if (CreateProcessW(wcommand.c_str(),  // Command line
+                NULL,          // 命令行参数，可以传 NULL
+                NULL,          // 进程安全属性
+                NULL,          // 线程安全属性
+                FALSE,         // 不继承句柄
+                0,             // 创建标志
+                NULL,          // 使用父进程的环境
+                NULL,          // 使用父进程的当前目录
+                &si,  // 启动信息
+                &si   // 进程信息
+            == 0)) {
             return false;
         }
+        */
 
         pid = pi.dwProcessId;
 #else

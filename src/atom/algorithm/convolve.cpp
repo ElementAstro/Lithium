@@ -297,16 +297,18 @@ auto convolve2D(const std::vector<std::vector<double>> &input,
         inputRows, std::vector<double>(inputCols, 0.0));
 
     // Function to compute a block of the convolution
-    auto computeBlock = [&](int blockStartRow, int blockEndRow) {
-        for (int i = blockStartRow; i < blockEndRow; ++i) {
+    auto computeBlock = [&](std::size_t blockStartRow,
+                            std::size_t blockEndRow) {
+        for (std::size_t i = blockStartRow; i < blockEndRow; ++i) {
             for (std::size_t j = kernelCols / 2; j < inputCols + kernelCols / 2;
                  ++j) {
                 double sum = 0.0;
-                for (int k = -kernelRows / 2; k <= kernelRows / 2; ++k) {
-                    for (int l = -kernelCols / 2; l <= kernelCols / 2; ++l) {
-                        sum += extendedInput[i + k][j + l] *
-                               extendedKernel[kernelRows / 2 + k]
-                                             [kernelCols / 2 + l];
+                for (std::size_t k = 0; k < kernelRows; ++k) {
+                    for (std::size_t colOffset = 0; colOffset < kernelCols;
+                         ++colOffset) {
+                        sum += extendedInput[i + k - kernelRows / 2]
+                                            [j + colOffset - kernelCols / 2] *
+                               extendedKernel[k][colOffset];
                     }
                 }
                 output[i - kernelRows / 2][j - kernelCols / 2] = sum;
@@ -317,12 +319,12 @@ auto convolve2D(const std::vector<std::vector<double>> &input,
     // Use multiple threads if requested
     if (numThreads > 1) {
         std::vector<std::jthread> threads;
-        int blockSize = (inputRows + numThreads - 1) / numThreads;
-        int blockStartRow = kernelRows / 2;
+        std::size_t blockSize = (inputRows + numThreads - 1) / numThreads;
+        std::size_t blockStartRow = kernelRows / 2;
 
         for (int i = 0; i < numThreads; ++i) {
-            int blockEndRow = std::min<unsigned long long>(
-                blockStartRow + blockSize, inputRows + kernelRows / 2);
+            std::size_t blockEndRow =
+                std::min(blockStartRow + blockSize, inputRows + kernelRows / 2);
             threads.emplace_back(computeBlock, blockStartRow, blockEndRow);
             blockStartRow = blockEndRow;
         }

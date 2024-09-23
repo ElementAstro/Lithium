@@ -35,6 +35,8 @@ namespace atom::async {
 class MessageBus {
 public:
     using Token = std::size_t;
+    static constexpr std::size_t kMaxHistorySize =
+        100;  // 最大保存的消息历史数量
 
     static auto createShared() -> std::shared_ptr<MessageBus> {
         return std::make_shared<MessageBus>();
@@ -52,11 +54,11 @@ public:
             // 并行发布给直接匹配的订阅者
             publishToSubscribers<MessageType>(name, message, calledSubscribers);
 
-            // 并行发布给命名空间匹配的订阅者
-            for (const auto& ns : namespaces_) {
-                if (name.find(ns + ".") ==
-                    0) {  // 命名空间匹配必须以 ns+点 开头
-                    publishToSubscribers<MessageType>(ns, message,
+// 并行发布给命名空间匹配的订阅者
+            for (const auto& namespaceName : namespaces_) {
+                if (name.find(namespaceName + ".") ==
+                    0) {  // 命名空间匹配必须以 namespaceName+点 开头
+                    publishToSubscribers<MessageType>(namespaceName, message,
                                                       calledSubscribers);
                 }
             }
@@ -66,9 +68,10 @@ public:
         };
 
         if (delay) {
-            std::jthread([delay, publishTask](std::stop_token stoken) {
+            std::jthread([delay,
+                          publishTask](const std::stop_token& stopToken) {
                 if (std::this_thread::sleep_for(*delay);
-                    !stoken.stop_requested()) {
+                    !stopToken.stop_requested()) {
                     publishTask();
                 }
             }).detach();
@@ -109,10 +112,10 @@ public:
     template <typename MessageType>
     void unsubscribe(Token token) {
         std::unique_lock lock(mutex_);
-        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
-        if (it != subscribers_.end()) {
-            for (auto& [name, subscribers_list] : it->second) {
-                removeSubscription(subscribers_list, token);
+        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (iterator != subscribers_.end()) {
+            for (auto& [name, subscribersList] : iterator->second) {
+                removeSubscription(subscribersList, token);
             }
         }
     }
@@ -120,11 +123,11 @@ public:
     template <typename MessageType>
     void unsubscribeAll(const std::string& name) {
         std::unique_lock lock(mutex_);
-        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
-        if (it != subscribers_.end()) {
-            auto nameIt = it->second.find(name);
-            if (nameIt != it->second.end()) {
-                it->second.erase(nameIt);
+        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (iterator != subscribers_.end()) {
+            auto nameIterator = iterator->second.find(name);
+            if (nameIterator != iterator->second.end()) {
+                iterator->second.erase(nameIterator);
             }
         }
     }
@@ -132,25 +135,26 @@ public:
     template <typename MessageType>
     auto getSubscriberCount(const std::string& name) -> std::size_t {
         std::shared_lock lock(mutex_);
-        if (auto it = subscribers_.find(std::type_index(typeid(MessageType)));
-            it != subscribers_.end()) {
-            auto nameIt = it->second.find(name);
-            if (nameIt != it->second.end()) {
-                return nameIt->second.size();
+        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (iterator != subscribers_.end()) {
+            auto nameIterator = iterator->second.find(name);
+            if (nameIterator != iterator->second.end()) {
+                return nameIterator->second.size();
             }
         }
         return 0;
     }
 
     template <typename MessageType>
-    auto getNamespaceSubscriberCount(const std::string& ns) -> std::size_t {
+    auto getNamespaceSubscriberCount(const std::string& namespaceName)
+        -> std::size_t {
         std::shared_lock lock(mutex_);
-        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
+        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
         std::size_t count = 0;
-        if (it != subscribers_.end()) {
-            for (const auto& [name, subscribers_list] : it->second) {
-                if (name.find(ns + ".") == 0) {
-                    count += subscribers_list.size();
+        if (iterator != subscribers_.end()) {
+            for (const auto& [name, subscribersList] : iterator->second) {
+                if (name.find(namespaceName + ".") == 0) {
+                    count += subscribersList.size();
                 }
             }
         }
@@ -160,10 +164,11 @@ public:
     template <typename MessageType>
     auto hasSubscriber(const std::string& name) -> bool {
         std::shared_lock lock(mutex_);
-        if (auto it = subscribers_.find(std::type_index(typeid(MessageType)));
-            it != subscribers_.end()) {
-            auto nameIt = it->second.find(name);
-            return nameIt != it->second.end() && !nameIt->second.empty();
+        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (iterator != subscribers_.end()) {
+            auto nameIterator = iterator->second.find(name);
+            return nameIterator != iterator->second.end() &&
+                   !nameIterator->second.empty();
         }
         return false;
     }
@@ -183,16 +188,17 @@ public:
 
     // 获取消息历史
     template <typename MessageType>
-    std::vector<MessageType> getMessageHistory(const std::string& name) const {
+    auto getMessageHistory(const std::string& name) const
+        -> std::vector<MessageType> {
         std::shared_lock lock(mutex_);
-        if (auto it =
-                messageHistory_.find(std::type_index(typeid(MessageType)));
-            it != messageHistory_.end()) {
-            auto nameIt = it->second.find(name);
-            if (nameIt != it->second.end()) {
+        auto iterator =
+            messageHistory_.find(std::type_index(typeid(MessageType)));
+        if (iterator != messageHistory_.end()) {
+            auto nameIterator = iterator->second.find(name);
+            if (nameIterator != iterator->second.end()) {
                 std::vector<MessageType> history;
-                for (const auto& msg : nameIt->second) {
-                    history.push_back(std::any_cast<MessageType>(msg));
+                for (const auto& message : nameIterator->second) {
+                    history.push_back(std::any_cast<MessageType>(message));
                 }
                 return history;
             }
@@ -214,11 +220,11 @@ private:
     void publishToSubscribers(const std::string& name,
                               const MessageType& message,
                               std::unordered_set<Token>& calledSubscribers) {
-        auto it = subscribers_.find(std::type_index(typeid(MessageType)));
-        if (it != subscribers_.end()) {
-            auto nameIt = it->second.find(name);
-            if (nameIt != it->second.end()) {
-                auto& subscribersList = nameIt->second;
+        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
+        if (iterator != subscribers_.end()) {
+            auto nameIterator = iterator->second.find(name);
+            if (nameIterator != iterator->second.end()) {
+                auto& subscribersList = nameIterator->second;
                 for (auto& subscriber : subscribersList) {
                     if (subscriber.filter(message) &&
                         calledSubscribers.insert(subscriber.token).second) {
@@ -243,13 +249,13 @@ private:
         }
     }
 
-    void removeSubscription(std::vector<Subscriber>& subscribers_list,
-                            Token token) {
-        subscribers_list.erase(
+    static void removeSubscription(std::vector<Subscriber>& subscribersList,
+                                   Token token) {
+        subscribersList.erase(
             std::remove_if(
-                subscribers_list.begin(), subscribers_list.end(),
+                subscribersList.begin(), subscribersList.end(),
                 [token](const Subscriber& sub) { return sub.token == token; }),
-            subscribers_list.end());
+            subscribersList.end());
     }
 
     template <typename MessageType>
@@ -258,7 +264,7 @@ private:
         auto& history =
             messageHistory_[std::type_index(typeid(MessageType))][name];
         history.push_back(message);
-        if (history.size() > maxHistorySize_) {
+        if (history.size() > kMaxHistorySize) {
             history.erase(history.begin());
         }
     }
@@ -272,7 +278,6 @@ private:
     std::unordered_set<std::string> namespaces_;
     mutable std::shared_mutex mutex_;
     Token nextToken_ = 0;
-    std::size_t maxHistorySize_ = 100;  // 最大保存的消息历史数量
 };
 }  // namespace atom::async
 

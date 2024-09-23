@@ -460,7 +460,7 @@ public:
      * @param value The value to match.
      * @return A pair of iterators to the range of elements.
      */
-    auto equal_range(const T& value) -> std::pair<iterator, iterator> {
+    auto equalRange(const T& value) -> std::pair<iterator, iterator> {
         return std::ranges::equal_range(m_data_, value, m_comp_);
     }
 
@@ -470,7 +470,7 @@ public:
      * @param value The value to match.
      * @return A pair of const iterators to the range of elements.
      */
-    auto equal_range(const T& value) const
+    auto equalRange(const T& value) const
         -> std::pair<const_iterator, const_iterator> {
         return std::ranges::equal_range(m_data_, value, m_comp_);
     }
@@ -482,7 +482,7 @@ public:
      * @param value The value to compare.
      * @return An iterator to the first element not less than the given value.
      */
-    auto lower_bound(const T& value) -> iterator {
+    auto lowerBound(const T& value) -> iterator {
         return std::ranges::lower_bound(m_data_, value, m_comp_);
     }
 
@@ -494,7 +494,7 @@ public:
      * @return A const iterator to the first element not less than the given
      * value.
      */
-    auto lower_bound(const T& value) const -> const_iterator {
+    auto lowerBound(const T& value) const -> const_iterator {
         return std::ranges::lower_bound(m_data_, value, m_comp_);
     }
 
@@ -505,7 +505,7 @@ public:
      * @param value The value to compare.
      * @return An iterator to the first element greater than the given value.
      */
-    auto upper_bound(const T& value) -> iterator {
+    auto upperBound(const T& value) -> iterator {
         return std::ranges::upper_bound(m_data_, value, m_comp_);
     }
 
@@ -517,7 +517,7 @@ public:
      * @return A const iterator to the first element greater than the given
      * value.
      */
-    auto upper_bound(const T& value) const -> const_iterator {
+    auto upperBound(const T& value) const -> const_iterator {
         return std::ranges::upper_bound(m_data_, value, m_comp_);
     }
 
@@ -526,14 +526,14 @@ public:
      *
      * @return The comparison function object.
      */
-    auto key_comp() const -> key_compare { return m_comp_; }
+    auto keyComp() const -> key_compare { return m_comp_; }
 
     /**
      * @brief Returns the comparison function object.
      *
      * @return The comparison function object.
      */
-    auto value_comp() const -> value_compare { return m_comp_; }
+    auto valueComp() const -> value_compare { return m_comp_; }
 
     /**
      * @brief Checks if the set contains a value.

@@ -16,10 +16,8 @@ Description: Some iterators
 #define ATOM_EXPERIMENTAL_ITERATOR_HPP
 
 #include <algorithm>
-#include <concepts>
 #include <iterator>
 #include <optional>
-#include <ranges>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -43,7 +41,7 @@ public:
     using reference = value_type&;
 
 private:
-    IteratorT it_;  ///< The underlying iterator.
+    IteratorT iter_;  ///< The underlying iterator.
 
 public:
     PointerIterator() = default;
@@ -51,16 +49,16 @@ public:
     /**
      * @brief Constructs a PointerIterator from an underlying iterator.
      *
-     * @param it The underlying iterator.
+     * @param iterator The underlying iterator.
      */
-    explicit PointerIterator(IteratorT it) : it_(std::move(it)) {}
+    explicit PointerIterator(IteratorT iterator) : iter_(std::move(iterator)) {}
 
     /**
      * @brief Dereferences the iterator to return a pointer to the element.
      *
      * @return A pointer to the element.
      */
-    auto operator*() const -> value_type { return &*it_; }
+    auto operator*() const -> value_type { return &*iter_; }
 
     /**
      * @brief Pre-increment operator.
@@ -68,7 +66,7 @@ public:
      * @return Reference to the incremented iterator.
      */
     auto operator++() -> PointerIterator& {
-        ++it_;
+        ++iter_;
         return *this;
     }
 
@@ -127,10 +125,12 @@ void processContainer(ContainerT& container) {
 
     std::vector<std::optional<typename ContainerT::value_type*>> ptrs;
     auto ptrPair = makePointerRange(beginIter, endIter);
-    for (auto it = ptrPair.first; it != ptrPair.second; ++it) {
-        ptrs.push_back(*it);
+#pragma unroll
+    for (auto iter = ptrPair.first; iter != ptrPair.second; ++iter) {
+        ptrs.push_back(*iter);
     }
 
+#pragma unroll
     for (auto& ptrOpt : ptrs) {
         if (ptrOpt) {
             auto ptr = *ptrOpt;
@@ -165,9 +165,9 @@ public:
     /**
      * @brief Constructs an EarlyIncIterator from an underlying iterator.
      *
-     * @param x The underlying iterator.
+     * @param iterator The underlying iterator.
      */
-    explicit EarlyIncIterator(I x) : current_(x) {}
+    explicit EarlyIncIterator(I iterator) : current_(iterator) {}
 
     /**
      * @brief Pre-increment operator.
@@ -193,25 +193,25 @@ public:
     /**
      * @brief Equality operator.
      *
-     * @param x The first iterator to compare.
-     * @param y The second iterator to compare.
+     * @param iter1 The first iterator to compare.
+     * @param iter2 The second iterator to compare.
      * @return True if the iterators are equal, false otherwise.
      */
-    friend auto operator==(const EarlyIncIterator& x,
-                           const EarlyIncIterator& y) -> bool {
-        return x.current_ == y.current_;
+    friend auto operator==(const EarlyIncIterator& iter1,
+                           const EarlyIncIterator& iter2) -> bool {
+        return iter1.current_ == iter2.current_;
     }
 
     /**
      * @brief Inequality operator.
      *
-     * @param x The first iterator to compare.
-     * @param y The second iterator to compare.
+     * @param iter1 The first iterator to compare.
+     * @param iter2 The second iterator to compare.
      * @return True if the iterators are not equal, false otherwise.
      */
-    friend auto operator!=(const EarlyIncIterator& x,
-                           const EarlyIncIterator& y) -> bool {
-        return !(x == y);
+    friend auto operator!=(const EarlyIncIterator& iter1,
+                           const EarlyIncIterator& iter2) -> bool {
+        return !(iter1 == iter2);
     }
 
     /**
@@ -229,12 +229,12 @@ private:
  * @brief Creates an EarlyIncIterator from an underlying iterator.
  *
  * @tparam I The type of the underlying iterator.
- * @param x The underlying iterator.
+ * @param iterator The underlying iterator.
  * @return An EarlyIncIterator.
  */
 template <std::input_or_output_iterator I>
-auto makeEarlyIncIterator(I x) -> EarlyIncIterator<I> {
-    return EarlyIncIterator<I>(x);
+auto makeEarlyIncIterator(I iterator) -> EarlyIncIterator<I> {
+    return EarlyIncIterator<I>(iterator);
 }
 
 /**
@@ -256,27 +256,28 @@ public:
     using reference = value_type;
 
 private:
-    IteratorT it_;  ///< The underlying iterator.
-    FuncT func_;    ///< The transformation function.
+    IteratorT iter_;  ///< The underlying iterator.
+    FuncT func_;      ///< The transformation function.
 
 public:
-    TransformIterator() : it_(), func_() {}
+    TransformIterator() : iter_(), func_() {}
 
     /**
      * @brief Constructs a TransformIterator from an underlying iterator and a
      * transformation function.
      *
-     * @param it The underlying iterator.
-     * @param func The transformation function.
+     * @param iterator The underlying iterator.
+     * @param function The transformation function.
      */
-    TransformIterator(IteratorT it, FuncT func) : it_(it), func_(func) {}
+    TransformIterator(IteratorT iterator, FuncT function)
+        : iter_(iterator), func_(function) {}
 
     /**
      * @brief Dereferences the iterator and applies the transformation function.
      *
      * @return The transformed value.
      */
-    auto operator*() const -> reference { return func_(*it_); }
+    auto operator*() const -> reference { return func_(*iter_); }
 
     /**
      * @brief Returns a pointer to the transformed value.
@@ -291,7 +292,7 @@ public:
      * @return Reference to the incremented iterator.
      */
     auto operator++() -> TransformIterator& {
-        ++it_;
+        ++iter_;
         return *this;
     }
 
@@ -302,7 +303,7 @@ public:
      */
     auto operator++(int) -> TransformIterator {
         TransformIterator tmp = *this;
-        ++it_;
+        ++iter_;
         return tmp;
     }
 
@@ -313,7 +314,7 @@ public:
      * @return True if the iterators are equal, false otherwise.
      */
     auto operator==(const TransformIterator& other) const -> bool {
-        return it_ == other.it_;
+        return iter_ == other.iter_;
     }
 
     /**
@@ -333,14 +334,14 @@ public:
  *
  * @tparam IteratorT The type of the underlying iterator.
  * @tparam FuncT The type of the transformation function.
- * @param it The underlying iterator.
- * @param func The transformation function.
+ * @param iterator The underlying iterator.
+ * @param function The transformation function.
  * @return A TransformIterator.
  */
 template <typename IteratorT, typename FuncT>
-auto makeTransformIterator(IteratorT it,
-                           FuncT func) -> TransformIterator<IteratorT, FuncT> {
-    return TransformIterator<IteratorT, FuncT>(it, func);
+auto makeTransformIterator(IteratorT iterator, FuncT function)
+    -> TransformIterator<IteratorT, FuncT> {
+    return TransformIterator<IteratorT, FuncT>(iterator, function);
 }
 
 /**
@@ -360,7 +361,7 @@ public:
     using reference = typename std::iterator_traits<IteratorT>::reference;
 
 private:
-    IteratorT it_;
+    IteratorT iter_;
     IteratorT end_;
     PredicateT pred_;
 
@@ -369,19 +370,20 @@ private:
      * predicate.
      */
     void satisfyPredicate() {
-        while (it_ != end_ && !pred_(*it_)) {
-            ++it_;
+#pragma unroll
+        while (iter_ != end_ && !pred_(*iter_)) {
+            ++iter_;
         }
     }
 
 public:
-    FilterIterator() : it_(), end_(), pred_() {}
-    FilterIterator(IteratorT it, IteratorT end, PredicateT pred)
-        : it_(it), end_(end), pred_(pred) {
+    FilterIterator() : iter_(), end_(), pred_() {}
+    FilterIterator(IteratorT iter, IteratorT end, PredicateT pred)
+        : iter_(iter), end_(end), pred_(pred) {
         satisfyPredicate();
     }
 
-    auto operator*() const -> reference { return *it_; }
+    auto operator*() const -> reference { return *iter_; }
     auto operator->() const -> pointer { return &(operator*()); }
 
     /**
@@ -390,7 +392,7 @@ public:
      * @return Reference to the incremented iterator.
      */
     auto operator++() -> FilterIterator& {
-        ++it_;
+        ++iter_;
         satisfyPredicate();
         return *this;
     }
@@ -413,7 +415,7 @@ public:
      * @return True if the iterators are equal, false otherwise.
      */
     auto operator==(const FilterIterator& other) const -> bool {
-        return it_ == other.it_;
+        return iter_ == other.iter_;
     }
 
     /**
@@ -432,15 +434,15 @@ public:
  *
  * @tparam IteratorT The type of the underlying iterator.
  * @tparam PredicateT The type of the predicate.
- * @param it The underlying iterator.
+ * @param iter The underlying iterator.
  * @param end The end of the range.
  * @param pred The predicate.
  * @return A FilterIterator.
  */
 template <typename IteratorT, typename PredicateT>
-auto makeFilterIterator(IteratorT it, IteratorT end, PredicateT pred)
+auto makeFilterIterator(IteratorT iter, IteratorT end, PredicateT pred)
     -> FilterIterator<IteratorT, PredicateT> {
-    return FilterIterator<IteratorT, PredicateT>(it, end, pred);
+    return FilterIterator<IteratorT, PredicateT>(iter, end, pred);
 }
 
 /**
@@ -464,7 +466,7 @@ private:
 
 public:
     ReverseIterator() : current_() {}
-    explicit ReverseIterator(IteratorT x) : current_(x) {}
+    explicit ReverseIterator(IteratorT iterator) : current_(iterator) {}
 
     auto base() const -> IteratorT { return current_; }
     auto operator*() const -> reference {
@@ -491,11 +493,11 @@ public:
         return tmp;
     }
 
-    auto operator==(const ReverseIterator& x) const -> bool {
-        return current_ == x.current_;
+    auto operator==(const ReverseIterator& iter) const -> bool {
+        return current_ == iter.current_;
     }
-    auto operator!=(const ReverseIterator& x) const -> bool {
-        return !(*this == x);
+    auto operator!=(const ReverseIterator& iter) const -> bool {
+        return !(*this == iter);
     }
 };
 
@@ -503,7 +505,7 @@ public:
  * @brief Creates a ReverseIterator from an underlying iterator.
  *
  * @tparam IteratorT The type of the underlying iterator.
- * @param x The underlying iterator.
+ * @param iterator The underlying iterator.
  * @return A ReverseIterator.
  */
 template <typename... Iterators>
@@ -519,14 +521,14 @@ public:
 private:
     std::tuple<Iterators...> iterators_;
 
-    template <std::size_t... Is>
-    auto dereference(std::index_sequence<Is...>) const -> value_type {
-        return std::make_tuple(*std::get<Is>(iterators_)...);
+    template <std::size_t... Indices>
+    auto dereference(std::index_sequence<Indices...>) const -> value_type {
+        return std::make_tuple(*std::get<Indices>(iterators_)...);
     }
 
-    template <std::size_t... Is>
-    void increment(std::index_sequence<Is...>) {
-        (++std::get<Is>(iterators_), ...);
+    template <std::size_t... Indices>
+    void increment(std::index_sequence<Indices...>) {
+        (++std::get<Indices>(iterators_), ...);
     }
 
 public:

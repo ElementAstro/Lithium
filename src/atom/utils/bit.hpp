@@ -59,9 +59,10 @@ constexpr auto countBytes(T value) ATOM_NOEXCEPT -> uint32_t {
  * @return T The value with its bits reversed.
  */
 template <std::unsigned_integral T>
-constexpr auto reverseBits(T value) ATOM_NOEXCEPT -> T {
-    return std::bit_cast<T>(
-        std::bitset<std::numeric_limits<T>::digits>(value).to_ullong());
+constexpr auto reverseBits(T value) noexcept -> T {
+    auto bitset = std::bitset<std::numeric_limits<T>::digits>(value);
+    auto reversed_value = bitset.to_ullong();
+    return static_cast<T>(reversed_value);
 }
 
 /**

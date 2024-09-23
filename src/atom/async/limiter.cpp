@@ -59,7 +59,7 @@ void RateLimiter::pause() {
 void RateLimiter::resume() {
     std::unique_lock<std::mutex> lock(mutex_);
     paused_ = false;
-    process_waiters();
+    processWaiters();
 }
 
 // Implementation of RateLimiter::printLog
@@ -77,7 +77,8 @@ void RateLimiter::printLog() {
 }
 
 // Implementation of RateLimiter::get_rejected_requests
-size_t RateLimiter::get_rejected_requests(const std::string& function_name) {
+auto RateLimiter::getRejectedRequests(const std::string& function_name)
+    -> size_t {
     std::unique_lock<std::mutex> lock(mutex_);
     return rejected_requests_[function_name];
 }
@@ -93,7 +94,7 @@ void RateLimiter::cleanup(const std::string& function_name,
 }
 
 // Implementation of RateLimiter::process_waiters
-void RateLimiter::process_waiters() {
+void RateLimiter::processWaiters() {
     for (auto& [function_name, wait_queue] : waiters_) {
         auto& settings = settings_[function_name];
         while (!wait_queue.empty() &&

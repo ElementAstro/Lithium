@@ -80,7 +80,7 @@ public:
      *
      * @return true if there are subscribers, false otherwise.
      */
-    [[nodiscard]] bool hasSubscribers() const {
+    [[nodiscard]] auto hasSubscribers() const -> bool {
         std::scoped_lock lock(mutex_);
         return !observers_.empty();
     }
@@ -90,7 +90,7 @@ public:
      *
      * @return const T& A const reference to the current value.
      */
-    [[nodiscard]] const T& get() const {
+    [[nodiscard]] auto get() const -> const T& {
         std::scoped_lock lock(mutex_);
         return value_;
     }
@@ -100,7 +100,7 @@ public:
      *
      * @return std::string The demangled type name of the value.
      */
-    [[nodiscard]] std::string getTypeName() const {
+    [[nodiscard]] auto getTypeName() const -> std::string {
         return atom::meta::DemangleHelper::demangleType<T>();
     }
 
@@ -175,7 +175,7 @@ public:
     [[nodiscard]] auto deferScoped() {
         deferNotifications(true);
         return std::shared_ptr<void>(
-            nullptr, [this](...) { this->deferNotifications(false); });
+            nullptr, [this](auto...) { this->deferNotifications(false); });
     }
 
 private:
@@ -228,13 +228,13 @@ private:
      * @brief Applies an arithmetic operation and notifies observers.
      *
      * @param rhs The right-hand side operand.
-     * @param op The operation to apply.
+     * @param operation The operation to apply.
      * @return Trackable& Reference to the trackable object.
      */
     template <typename Operation>
-    auto applyOperation(const T& rhs, Operation op) -> Trackable& {
+    auto applyOperation(const T& rhs, Operation operation) -> Trackable& {
         std::scoped_lock lock(mutex_);
-        T newValue = op(value_, rhs);
+        T newValue = operation(value_, rhs);
         if (value_ != newValue) {
             T oldValue = std::exchange(value_, std::move(newValue));
             if (!notifyDeferred_) {

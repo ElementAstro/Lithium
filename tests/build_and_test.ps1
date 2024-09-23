@@ -13,7 +13,7 @@
 
 # Function to check if a specific command exists in the system
 function CommandExists {
-<#
+    <#
     .SYNOPSIS
         Checks if a command/utility is available in the system PATH.
 
@@ -40,7 +40,7 @@ function CommandExists {
 
 # Function to install Chocolatey if it is not already installed
 function InstallChocolatey {
-<#
+    <#
     .SYNOPSIS
         Installs Chocolatey on the system if it is not already installed.
 
@@ -58,7 +58,7 @@ function InstallChocolatey {
 
 # Function to install a package using Chocolatey
 function InstallPackage {
-<#
+    <#
     .SYNOPSIS
         Installs a specified package using Chocolatey.
 
@@ -85,6 +85,7 @@ InstallChocolatey
 'cmake', 'git', 'visualstudio2019buildtools' | ForEach-Object { InstallPackage -Package $_ }
 
 # Validate Visual Studio Build Tools installation
+Start-Sleep -Seconds 10 # Add a short delay to ensure the command is available
 if (-not (CommandExists -Command 'cl')) {
     Write-Output "Visual Studio Build Tools are not installed properly."
     exit

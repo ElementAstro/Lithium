@@ -64,7 +64,7 @@ public:
     }
 
     // Copy assignment operator
-    ThreadSafeQueue& operator=(const ThreadSafeQueue& other) {
+    auto operator=(const ThreadSafeQueue& other) -> ThreadSafeQueue& {
         if (this != &other) {
             std::scoped_lock lockThis(mutex_, std::defer_lock);
             std::scoped_lock lockOther(other.mutex_, std::defer_lock);
@@ -81,7 +81,7 @@ public:
     }
 
     // Move assignment operator
-    ThreadSafeQueue& operator=(ThreadSafeQueue&& other) noexcept {
+    auto operator=(ThreadSafeQueue&& other) noexcept -> ThreadSafeQueue& {
         if (this != &other) {
             std::scoped_lock lockThis(mutex_, std::defer_lock);
             std::scoped_lock lockOther(other.mutex_, std::defer_lock);
@@ -124,8 +124,9 @@ public:
 
     [[nodiscard]] auto popBack() -> std::optional<T> {
         std::scoped_lock lock(mutex_);
-        if (data_.empty())
+        if (data_.empty()) {
             return std::nullopt;
+        }
 
         auto back = std::move(data_.back());
         data_.pop_back();
@@ -134,8 +135,9 @@ public:
 
     [[nodiscard]] auto steal() -> std::optional<T> {
         std::scoped_lock lock(mutex_);
-        if (data_.empty())
+        if (data_.empty()) {
             return std::nullopt;
+        }
 
         auto back = std::move(data_.back());
         data_.pop_back();
@@ -206,18 +208,19 @@ public:
         for (std::size_t i = 0; i < number_of_threads; ++i) {
             priority_queue_.pushBack(std::move(currentId));
             try {
-                threads_.emplace_back([&, id = currentId,
+                threads_.emplace_back([&, threadId = currentId,
                                        init](const std::stop_token& stop_tok) {
                     try {
-                        std::invoke(init, id);
+                        std::invoke(init, threadId);
                     } catch (...) {
                     }
 
                     do {
-                        tasks_[id].signal.acquire();
+                        tasks_[threadId].signal.acquire();
 
                         do {
-                            while (auto task = tasks_[id].tasks.popFront()) {
+                            while (auto task =
+                                       tasks_[threadId].tasks.popFront()) {
                                 unassigned_tasks_.fetch_sub(
                                     1, std::memory_order_release);
                                 std::invoke(std::move(task.value()));
@@ -227,7 +230,7 @@ public:
 
                             for (std::size_t j = 1; j < tasks_.size(); ++j) {
                                 const std::size_t INDEX =
-                                    (id + j) % tasks_.size();
+                                    (threadId + j) % tasks_.size();
                                 if (auto task = tasks_[INDEX].tasks.steal()) {
                                     unassigned_tasks_.fetch_sub(
                                         1, std::memory_order_release);
@@ -240,7 +243,7 @@ public:
                         } while (unassigned_tasks_.load(
                                      std::memory_order_acquire) > 0);
 
-                        priority_queue_.rotateToFront(id);
+                        priority_queue_.rotateToFront(threadId);
 
                         if (in_flight_tasks_.load(std::memory_order_acquire) ==
                             0) {
@@ -279,15 +282,19 @@ public:
     ThreadPool(const ThreadPool&) = delete;
     auto operator=(const ThreadPool&) -> ThreadPool& = delete;
 
+    // Define move constructor and move assignment operator
+    ThreadPool(ThreadPool&& other) noexcept = default;
+    auto operator=(ThreadPool&& other) noexcept -> ThreadPool& = default;
+
     template <typename Function, typename... Args,
               typename ReturnType = std::invoke_result_t<Function&&, Args&&...>>
         requires std::invocable<Function, Args...>
-    [[nodiscard]] auto enqueue(Function f,
+    [[nodiscard]] auto enqueue(Function func,
                                Args... args) -> std::future<ReturnType> {
 #ifdef __cpp_lib_move_only_function
         std::promise<ReturnType> promise;
         auto future = promise.get_future();
-        auto task = [func = std::move(f), ... largs = std::move(args),
+        auto task = [func = std::move(func), ... largs = std::move(args),
                      promise = std::move(promise)]() mutable {
             try {
                 if constexpr (std::is_same_v<ReturnType, void>) {
@@ -304,7 +311,7 @@ public:
         return future;
 #else
         auto shared_promise = std::make_shared<std::promise<ReturnType>>();
-        auto task = [func = std::move(f), ... largs = std::move(args),
+        auto task = [func = std::move(func), ... largs = std::move(args),
                      promise = shared_promise]() {
             try {
                 if constexpr (std::is_same_v<ReturnType, void>) {
@@ -327,22 +334,22 @@ public:
     template <typename Function, typename... Args>
         requires std::invocable<Function, Args...>
     void enqueueDetach(Function&& func, Args&&... args) {
-        enqueueTask([f = std::forward<Function>(func),
+        enqueueTask([func = std::forward<Function>(func),
                      ... largs = std::forward<Args>(args)]() mutable {
             try {
                 if constexpr (std::is_same_v<void,
                                              std::invoke_result_t<Function&&,
                                                                   Args&&...>>) {
-                    std::invoke(f, largs...);
+                    std::invoke(func, largs...);
                 } else {
-                    std::ignore = std::invoke(f, largs...);
+                    std::ignore = std::invoke(func, largs...);
                 }
             } catch (...) {
             }
         });
     }
 
-    [[nodiscard]] auto size() const { return threads_.size(); }
+    [[nodiscard]] auto size() const -> std::size_t { return threads_.size(); }
 
     void waitForTasks() {
         if (in_flight_tasks_.load(std::memory_order_acquire) > 0) {
@@ -352,12 +359,12 @@ public:
 
 private:
     template <typename Function>
-    void enqueueTask(Function&& f) {
+    void enqueueTask(Function&& func) {
         auto iOpt = priority_queue_.copyFrontAndRotateToBack();
         if (!iOpt.has_value()) {
             return;
         }
-        auto i = *(iOpt);
+        auto index = *(iOpt);
 
         unassigned_tasks_.fetch_add(1, std::memory_order_release);
         const auto PREV_IN_FLIGHT =
@@ -367,8 +374,8 @@ private:
             threads_complete_signal_.store(false, std::memory_order_release);
         }
 
-        tasks_[i].tasks.pushBack(std::forward<Function>(f));
-        tasks_[i].signal.release();
+        tasks_[index].tasks.pushBack(std::forward<Function>(func));
+        tasks_[index].signal.release();
     }
 
     struct TaskItem {

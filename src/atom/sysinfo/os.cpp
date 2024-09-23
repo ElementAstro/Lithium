@@ -14,6 +14,7 @@ Description: System Information Module - OS Information
 
 #include "atom/sysinfo/os.hpp"
 
+#include <fstream>
 #include <optional>
 #include <sstream>
 

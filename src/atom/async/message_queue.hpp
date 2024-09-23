@@ -162,12 +162,12 @@ void MessageQueue<T>::subscribe(CallbackType callback,
 template <typename T>
 void MessageQueue<T>::unsubscribe(CallbackType callback) {
     std::lock_guard lock(m_mutex_);
-    auto it = std::remove_if(m_subscribers_.begin(), m_subscribers_.end(),
-                             [&callback](const auto& subscriber) {
-                                 return subscriber.callback.target_type() ==
-                                        callback.target_type();
-                             });
-    m_subscribers_.erase(it, m_subscribers_.end());
+    auto iterator = std::remove_if(
+        m_subscribers_.begin(), m_subscribers_.end(),
+        [&callback](const auto& subscriber) {
+            return subscriber.callback.target_type() == callback.target_type();
+        });
+    m_subscribers_.erase(iterator, m_subscribers_.end());
 }
 
 template <typename T>
@@ -181,7 +181,7 @@ void MessageQueue<T>::publish(const T& message) {
 
 template <typename T>
 void MessageQueue<T>::startProcessingThread(size_t numThreads) {
-    for (size_t i = 0; i < numThreads; ++i) {
+    for (size_t index = 0; index < numThreads; ++index) {
         m_processingThreads_.emplace_back(&MessageQueue::processMessages, this);
     }
 }

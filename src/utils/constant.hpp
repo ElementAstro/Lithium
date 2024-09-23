@@ -30,9 +30,9 @@ class Constants {
 public:
 #ifdef _WIN32
 #if defined(__MINGW32__) || defined(__MINGW64__)
-    DEFINE_CONSTANT(PATH_SEPARATOR, "/");
+    DEFINE_CONSTANT(PATH_SEPARATOR, "/")
 #else
-    DEFINE_CONSTANT(PATH_SEPARATOR, "\\");
+    DEFINE_CONSTANT(PATH_SEPARATOR, "\\")
 #endif
     DEFINE_CONSTANT(LIB_EXTENSION, ".dll")
     DEFINE_CONSTANT(EXECUTABLE_EXTENSION, ".exe")

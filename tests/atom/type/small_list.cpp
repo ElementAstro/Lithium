@@ -1,6 +1,8 @@
 #include "atom/type/small_list.hpp"
 #include <gtest/gtest.h>
 
+using namespace atom::type;
+
 TEST(SmallListTest, PushBack) {
     SmallList<int> list;
     list.pushBack(1);

@@ -36,6 +36,13 @@ public:
     EventStack() = default;
     ~EventStack() = default;
 
+    // Rule of five: explicitly define copy constructor, copy assignment
+    // operator, move constructor, and move assignment operator.
+    EventStack(const EventStack& other);
+    EventStack& operator=(const EventStack& other);
+    EventStack(EventStack&& other) noexcept;
+    EventStack& operator=(EventStack&& other) noexcept;
+
     /**
      * @brief Pushes an event onto the stack.
      *
@@ -169,6 +176,50 @@ private:
     std::atomic<size_t> eventCount_{0}; /**< Atomic counter for event count. */
 };
 
+// Copy constructor
+template <typename T>
+EventStack<T>::EventStack(const EventStack& other) {
+    std::shared_lock lock(other.mtx_);
+    events_ = other.events_;
+    eventCount_.store(other.eventCount_.load());
+}
+
+// Copy assignment operator
+template <typename T>
+EventStack<T>& EventStack<T>::operator=(const EventStack& other) {
+    if (this != &other) {
+        std::unique_lock lock1(mtx_, std::defer_lock);
+        std::shared_lock lock2(other.mtx_, std::defer_lock);
+        std::lock(lock1, lock2);
+        events_ = other.events_;
+        eventCount_.store(other.eventCount_.load());
+    }
+    return *this;
+}
+
+// Move constructor
+template <typename T>
+EventStack<T>::EventStack(EventStack&& other) noexcept {
+    std::unique_lock lock(other.mtx_);
+    events_ = std::move(other.events_);
+    eventCount_.store(other.eventCount_.load());
+    other.eventCount_.store(0);
+}
+
+// Move assignment operator
+template <typename T>
+EventStack<T>& EventStack<T>::operator=(EventStack&& other) noexcept {
+    if (this != &other) {
+        std::unique_lock lock1(mtx_, std::defer_lock);
+        std::unique_lock lock2(other.mtx_, std::defer_lock);
+        std::lock(lock1, lock2);
+        events_ = std::move(other.events_);
+        eventCount_.store(other.eventCount_.load());
+        other.eventCount_.store(0);
+    }
+    return *this;
+}
+
 template <typename T>
 void EventStack<T>::pushEvent(T event) {
     std::unique_lock lock(mtx_);
@@ -193,7 +244,7 @@ template <typename T>
 void EventStack<T>::printEvents() const {
     std::shared_lock lock(mtx_);
     std::cout << "Events in stack:" << std::endl;
-    for (const T& event : events) {
+    for (const T& event : events_) {
         std::cout << event << std::endl;
     }
 }
@@ -230,7 +281,7 @@ template <typename T>
 auto EventStack<T>::copyStack() const -> EventStack<T> {
     std::shared_lock lock(mtx_);
     EventStack<T> newStack;
-    newStack.events = events_;
+    newStack.events_ = events_;
     newStack.eventCount_.store(eventCount_.load());
     return newStack;
 }
@@ -249,6 +300,8 @@ template <typename T>
 auto EventStack<T>::serializeStack() const -> std::string {
     std::shared_lock lock(mtx_);
     std::string serializedStack;
+    serializedStack.reserve(events_.size() *
+                            sizeof(T));  // Reserve space to improve performance
     for (const T& event : events_) {
         serializedStack += event + ";";
     }
@@ -302,9 +355,9 @@ template <typename T>
 auto EventStack<T>::findEvent(std::function<bool(const T&)> predicate) const
     -> std::optional<T> {
     std::shared_lock lock(mtx_);
-    auto it = std::find_if(events_.begin(), events_.end(), predicate);
-    if (it != events_.end()) {
-        return *it;
+    auto iterator = std::find_if(events_.begin(), events_.end(), predicate);
+    if (iterator != events_.end()) {
+        return *iterator;
     }
     return std::nullopt;
 }

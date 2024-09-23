@@ -1,7 +1,13 @@
 #include "atom/connection/tcpclient.hpp"
 #include <gtest/gtest.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <netinet/in.h>
 #include <sys/socket.h>
+#endif
 #include <future>
 #include <thread>
 

@@ -7,12 +7,9 @@
 #ifndef ATOM_UTILS_TO_STRING_HPP
 #define ATOM_UTILS_TO_STRING_HPP
 
-#include <map>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -28,14 +25,14 @@ template <typename T>
 concept StringType = String<T> || Char<T> || std::is_same_v<T, std::string>;
 
 template <typename T>
-concept Container = requires(T t) {
-    t.begin();
-    t.end();
-    t.size();
+concept Container = requires(T container) {
+    container.begin();
+    container.end();
+    container.size();
 };
 
 template <typename T>
-concept MapType = requires(T t) {
+concept MapType = requires(T map) {
     typename T::key_type;
     typename T::mapped_type;
     requires Container<T>;
@@ -74,9 +71,15 @@ auto toString(const T& value) -> std::string {
  * @return The string itself.
  */
 template <StringType T>
-    requires (!Container<T>)
+    requires(!Container<T>)
 auto toString(const T& value) -> std::string {
-    return std::string(value);
+    if constexpr (std::is_same_v<T, std::string>) {
+        return value;
+    } else if constexpr (std::is_same_v<T, const char*>) {
+        return std::string(value);
+    } else {
+        return std::string(1, value);
+    }
 }
 
 /**
@@ -141,13 +144,13 @@ template <MapType Map>
 auto toString(const Map& map) -> std::string {
     std::ostringstream oss;
     oss << "{";
-    bool first = true;
+    bool isFirst = true;
     for (const auto& [key, value] : map) {
-        if (!first) {
+        if (!isFirst) {
             oss << ", ";
         }
         oss << toString(key) << ": " << toString(value);
-        first = false;
+        isFirst = false;
     }
     oss << "}";
     return oss.str();
@@ -155,20 +158,21 @@ auto toString(const Map& map) -> std::string {
 
 /**
  * @brief Convert a container (e.g., vector) to a string representation.
- * @tparam Container The container type.
+ * @tparam ContainerType The container type.
  * @param container The container to convert.
  * @return A string representation of the container.
  */
-template <Container Container>
-    requires(!MapType<Container> && !StringType<typename Container::value_type>)
-auto toString(const Container& container) -> std::string {
+template <Container ContainerType>
+    requires(!MapType<ContainerType> &&
+             !StringType<typename ContainerType::value_type>)
+auto toString(const ContainerType& container) -> std::string {
     std::ostringstream oss;
     oss << "[";
-    auto it = container.begin();
-    while (it != container.end()) {
-        oss << toString(*it);
-        ++it;
-        if (it != container.end()) {
+    auto iterator = container.begin();
+    while (iterator != container.end()) {
+        oss << toString(*iterator);
+        ++iterator;
+        if (iterator != container.end()) {
             oss << ", ";
         }
     }
@@ -176,17 +180,17 @@ auto toString(const Container& container) -> std::string {
     return oss.str();
 }
 
-template <Container ContainerT>
-    requires(Container<ContainerT> &&
-             StringType<typename ContainerT::value_type>)
-auto toString(const ContainerT& container) -> std::string {
+template <Container ContainerType>
+    requires(Container<ContainerType> &&
+             StringType<typename ContainerType::value_type>)
+auto toString(const ContainerType& container) -> std::string {
     std::ostringstream oss;
     oss << "[";
-    auto it = container.begin();
-    while (it != container.end()) {
-        oss << toString(*it);
-        ++it;
-        if (it != container.end()) {
+    auto iterator = container.begin();
+    while (iterator != container.end()) {
+        oss << toString(*iterator);
+        ++iterator;
+        if (iterator != container.end()) {
             oss << ", ";
         }
     }
@@ -203,23 +207,23 @@ auto toString(const ContainerT& container) -> std::string {
 template <typename... Args>
 auto joinCommandLine(const Args&... args) -> std::string {
     std::ostringstream oss;
-    bool first = true;
-    ((oss << (first ? (first = false, "") : " ") << toString(args)), ...);
+    bool isFirst = true;
+    ((oss << (isFirst ? (isFirst = false, "") : " ") << toString(args)), ...);
     return oss.str();
 }
 
 /**
  * @brief Convert a vector to a space-separated string representation.
- * @tparam T The type of the elements in the vector.
+ * @tparam ContainerType The type of the elements in the vector.
  * @param array The vector to convert.
  * @return A space-separated string representation of the vector.
  */
-template <Container T>
-auto toStringArray(const T& array) -> std::string {
+template <Container ContainerType>
+auto toStringArray(const ContainerType& array) -> std::string {
     std::ostringstream oss;
-    for (size_t i = 0; i < array.size(); ++i) {
-        oss << toString(array[i]);
-        if (i < array.size() - 1) {
+    for (size_t index = 0; index < array.size(); ++index) {
+        oss << toString(array[index]);
+        if (index < array.size() - 1) {
             oss << " ";
         }
     }
@@ -256,8 +260,8 @@ auto toStringRange(Iterator begin, Iterator end) -> std::string {
  * @return A string representation of the array.
  */
 template <typename T, std::size_t N>
-auto toString(const T (&array)[N]) -> std::string {
-    return toStringRange(std::begin(array), std::end(array));
+auto toString(const std::array<T, N>& array) -> std::string {
+    return toStringRange(array.begin(), array.end());
 }
 
 }  // namespace atom::utils

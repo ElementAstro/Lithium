@@ -14,7 +14,6 @@ Description: Better Exception Library
 
 #include "exception.hpp"
 
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

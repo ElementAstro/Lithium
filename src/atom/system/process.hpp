@@ -15,18 +15,12 @@ Description: Process Manager
 #ifndef ATOM_SYSTEM_PROCESS_HPP
 #define ATOM_SYSTEM_PROCESS_HPP
 
-#include <condition_variable>
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 #include "macro.hpp"
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 namespace fs = std::filesystem;
 
@@ -37,6 +31,9 @@ struct Process {
     std::string output;
     fs::path path;
     std::string status;
+#if _WIN32
+    void *handle;
+#endif
 };
 
 struct NetworkConnection {
@@ -46,101 +43,40 @@ struct NetworkConnection {
 
 class ProcessManager {
 public:
-    /**
-     * 创建一个进程管理器。
-     * @param maxProcess 最大进程数。
-     */
     explicit ProcessManager(int maxProcess = 10);
+    ~ProcessManager();
 
-    // -------------------------------------------------------------------
-    // Common methods
-    // -------------------------------------------------------------------
-
-    /**
-     * 创建一个进程管理器。
-     * @param maxProcess 最大进程数。
-     */
     static auto createShared(int maxProcess = 10)
         -> std::shared_ptr<ProcessManager>;
 
-    // -------------------------------------------------------------------
-    // Process methods
-    // -------------------------------------------------------------------
-
-    /**
-     * 创建一个新的进程。
-     * @param command 要执行的命令。
-     * @param identifier 进程的标识符。
-     */
     auto createProcess(const std::string &command,
                        const std::string &identifier) -> bool;
 
-    /**
-     * 终止一个进程。
-     * @param pid 要终止的进程的PID。
-     * @param signal 终止信号，默认为SIGTERM。
-     */
     auto terminateProcess(int pid, int signal = 15 /*SIGTERM*/) -> bool;
-
-    /**
-     * 终止一个进程。
-     * @param name 要终止的进程的名称。
-     * @param signal 终止信号，默认为SIGTERM。
-     */
     auto terminateProcessByName(const std::string &name,
                                 int signal = 15 /*SIGTERM*/) -> bool;
 
-    /**
-     * 检查是否存在指定进程。
-     * @param identifier 进程的标识符。
-     * @return 是否存在指定进程。
-     */
     auto hasProcess(const std::string &identifier) -> bool;
-
     [[nodiscard]] auto getRunningProcesses() const -> std::vector<Process>;
-
-    /**
-     * 获取指定进程的输出信息。
-     * @param identifier 进程的标识符。
-     * @return 进程的输出信息。
-     */
     [[nodiscard]] auto getProcessOutput(const std::string &identifier)
         -> std::vector<std::string>;
 
-    /**
-     * 等待所有进程完成并清除进程列表。
-     */
     void waitForCompletion();
-
-    /**
-     * 运行一个脚本。
-     * @param script 要运行的脚本。
-     * @param identifier 进程的标识符。
-     */
     auto runScript(const std::string &script,
                    const std::string &identifier) -> bool;
 
     auto monitorProcesses() -> bool;
 
-    // -------------------------------------------------------------------
-    // Script methods
-    // -------------------------------------------------------------------
-
 #ifdef _WIN32
-    auto getProcessHandle(int pid) const -> HANDLE;
+    auto getProcessHandle(int pid) const -> void *;
 #else
-    static auto getProcFilePath(int pid, const std::string& file) -> std::string;
+    static auto getProcFilePath(int pid,
+                                const std::string &file) -> std::string;
 #endif
-private:
 
-    int m_maxProcesses;  ///< 最大进程数。 // Maximum number of processes.
-    std::condition_variable
-        cv;  ///< 条件变量，用于等待进程完成。 // Condition variable used to
-             ///< wait for process completion.
-    std::vector<Process> processes;  ///< 存储当前运行的进程列表。 // Stores the
-                                     ///< list of currently running processes.
-    mutable std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex
-                                    ///< used for manipulating the process list.
+private:
+    class ProcessManagerImpl;  // Forward declaration of implementation class
+    std::unique_ptr<ProcessManagerImpl> impl;  // Pointer to implementation
 };
 
 /**

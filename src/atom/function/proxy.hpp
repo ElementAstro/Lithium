@@ -252,7 +252,7 @@ template <typename Func>
 class ProxyFunction : public BaseProxyFunction<Func> {
     using Base = BaseProxyFunction<Func>;
     using Traits = typename Base::Traits;
-    static constexpr std::size_t arity = Base::arity;
+    static constexpr std::size_t arity = Base::ARITY;
 
 public:
     explicit ProxyFunction(Func &&func) : Base(std::move(func)) {}
@@ -297,7 +297,7 @@ template <typename Func>
 class TimerProxyFunction : public BaseProxyFunction<Func> {
     using Base = BaseProxyFunction<Func>;
     using Traits = typename Base::Traits;
-    static constexpr std::size_t arity = Base::arity;
+    static constexpr std::size_t arity = Base::ARITY;
 
 public:
     explicit TimerProxyFunction(Func &&func) : Base(std::move(func)) {}

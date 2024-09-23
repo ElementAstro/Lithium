@@ -14,80 +14,81 @@ Description: SSH Client
 
 #include "sshclient.hpp"
 
+#include <filesystem>
+
 #include "atom/error/exception.hpp"
 
+namespace fs = std::filesystem;
+
 namespace atom::connection {
-SSHClient::SSHClient(const std::string &host, int port = 22)
-    : m_host(host),
-      m_port(port),
-      m_ssh_session(nullptr),
-      m_sftp_session(nullptr) {}
+SSHClient::SSHClient(const std::string &host, int port)
+    : host_(host), port_(port), ssh_session_(nullptr), sftp_session_(nullptr) {}
 
 SSHClient::~SSHClient() {
-    if (m_sftp_session) {
-        sftp_free(m_sftp_session);
+    if (sftp_session_) {
+        sftp_free(sftp_session_);
     }
-    if (m_ssh_session) {
-        ssh_disconnect(m_ssh_session);
-        ssh_free(m_ssh_session);
+    if (ssh_session_) {
+        ssh_disconnect(ssh_session_);
+        ssh_free(ssh_session_);
     }
 }
 
-void SSHClient::Connect(const std::string &username,
-                        const std::string &password, int timeout = 10) {
-    m_ssh_session = ssh_new();
-    if (!m_ssh_session) {
+void SSHClient::connect(const std::string &username,
+                        const std::string &password, int timeout) {
+    ssh_session_ = ssh_new();
+    if (!ssh_session_) {
         THROW_RUNTIME_ERROR("Failed to create SSH session.");
     }
 
-    ssh_options_set(m_ssh_session, SSH_OPTIONS_HOST, m_host.c_str());
-    ssh_options_set(m_ssh_session, SSH_OPTIONS_PORT, &m_port);
-    ssh_options_set(m_ssh_session, SSH_OPTIONS_USER, username.c_str());
-    ssh_options_set(m_ssh_session, SSH_OPTIONS_TIMEOUT, &timeout);
+    ssh_options_set(ssh_session_, SSH_OPTIONS_HOST, host_.c_str());
+    ssh_options_set(ssh_session_, SSH_OPTIONS_PORT, &port_);
+    ssh_options_set(ssh_session_, SSH_OPTIONS_USER, username.c_str());
+    ssh_options_set(ssh_session_, SSH_OPTIONS_TIMEOUT, &timeout);
 
-    int rc = ssh_connect(m_ssh_session);
+    int rc = ssh_connect(ssh_session_);
     if (rc != SSH_OK) {
         THROW_RUNTIME_ERROR("Failed to connect to SSH server: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 
-    rc = ssh_userauth_password(m_ssh_session, nullptr, password.c_str());
+    rc = ssh_userauth_password(ssh_session_, nullptr, password.c_str());
     if (rc != SSH_AUTH_SUCCESS) {
         THROW_RUNTIME_ERROR("Failed to authenticate with SSH server: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 
-    m_sftp_session = sftp_new(m_ssh_session);
-    if (!m_sftp_session) {
+    sftp_session_ = sftp_new(ssh_session_);
+    if (!sftp_session_) {
         THROW_RUNTIME_ERROR("Failed to create SFTP session.");
     }
 
-    rc = sftp_init(m_sftp_session);
+    rc = sftp_init(sftp_session_);
     if (rc != SSH_OK) {
         THROW_RUNTIME_ERROR("Failed to initialize SFTP session: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 }
 
-bool SSHClient::IsConnected() {
-    return (m_ssh_session != nullptr && m_sftp_session != nullptr);
+bool SSHClient::isConnected() const {
+    return (ssh_session_ != nullptr && sftp_session_ != nullptr);
 }
 
-void SSHClient::Disconnect() {
-    if (m_sftp_session) {
-        sftp_free(m_sftp_session);
-        m_sftp_session = nullptr;
+void SSHClient::disconnect() {
+    if (sftp_session_) {
+        sftp_free(sftp_session_);
+        sftp_session_ = nullptr;
     }
-    if (m_ssh_session) {
-        ssh_disconnect(m_ssh_session);
-        ssh_free(m_ssh_session);
-        m_ssh_session = nullptr;
+    if (ssh_session_) {
+        ssh_disconnect(ssh_session_);
+        ssh_free(ssh_session_);
+        ssh_session_ = nullptr;
     }
 }
 
-void SSHClient::ExecuteCommand(const std::string &command,
+void SSHClient::executeCommand(const std::string &command,
                                std::vector<std::string> &output) {
-    ssh_channel channel = ssh_channel_new(m_ssh_session);
+    ssh_channel channel = ssh_channel_new(ssh_session_);
     if (!channel) {
         THROW_RUNTIME_ERROR("Failed to create SSH channel.");
     }
@@ -96,7 +97,7 @@ void SSHClient::ExecuteCommand(const std::string &command,
     if (rc != SSH_OK) {
         ssh_channel_free(channel);
         THROW_RUNTIME_ERROR("Failed to open SSH channel: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 
     rc = ssh_channel_request_exec(channel, command.c_str());
@@ -104,7 +105,7 @@ void SSHClient::ExecuteCommand(const std::string &command,
         ssh_channel_close(channel);
         ssh_channel_free(channel);
         THROW_RUNTIME_ERROR("Failed to execute command: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 
     char buffer[256];
@@ -118,7 +119,7 @@ void SSHClient::ExecuteCommand(const std::string &command,
         ssh_channel_close(channel);
         ssh_channel_free(channel);
         THROW_RUNTIME_ERROR("Failed to read command output: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 
     ssh_channel_send_eof(channel);
@@ -126,9 +127,9 @@ void SSHClient::ExecuteCommand(const std::string &command,
     ssh_channel_free(channel);
 }
 
-void SSHClient::ExecuteCommands(const std::vector<std::string> &commands,
+void SSHClient::executeCommands(const std::vector<std::string> &commands,
                                 std::vector<std::vector<std::string>> &output) {
-    ssh_channel channel = ssh_channel_new(m_ssh_session);
+    ssh_channel channel = ssh_channel_new(ssh_session_);
     if (!channel) {
         THROW_RUNTIME_ERROR("Failed to create SSH channel.");
     }
@@ -137,7 +138,7 @@ void SSHClient::ExecuteCommands(const std::vector<std::string> &commands,
     if (rc != SSH_OK) {
         ssh_channel_free(channel);
         THROW_RUNTIME_ERROR("Failed to open SSH channel: " +
-                            std::string(ssh_get_error(m_ssh_session)));
+                            std::string(ssh_get_error(ssh_session_)));
     }
 
     for (const auto &cmd : commands) {
@@ -146,7 +147,7 @@ void SSHClient::ExecuteCommands(const std::vector<std::string> &commands,
             ssh_channel_close(channel);
             ssh_channel_free(channel);
             THROW_RUNTIME_ERROR("Failed to execute command: " +
-                                std::string(ssh_get_error(m_ssh_session)));
+                                std::string(ssh_get_error(ssh_session_)));
         }
 
         std::vector<std::string> cmd_output;
@@ -161,7 +162,7 @@ void SSHClient::ExecuteCommands(const std::vector<std::string> &commands,
             ssh_channel_close(channel);
             ssh_channel_free(channel);
             THROW_RUNTIME_ERROR("Failed to read command output: " +
-                                std::string(ssh_get_error(m_ssh_session)));
+                                std::string(ssh_get_error(ssh_session_)));
         }
 
         ssh_channel_send_eof(channel);
@@ -172,8 +173,8 @@ void SSHClient::ExecuteCommands(const std::vector<std::string> &commands,
     ssh_channel_free(channel);
 }
 
-bool SSHClient::FileExists(const std::string &remote_path) {
-    sftp_attributes attrs = sftp_stat(m_sftp_session, remote_path.c_str());
+bool SSHClient::fileExists(const std::string &remote_path) const {
+    sftp_attributes attrs = sftp_stat(sftp_session_, remote_path.c_str());
     if (attrs) {
         sftp_attributes_free(attrs);
         return true;
@@ -182,37 +183,36 @@ bool SSHClient::FileExists(const std::string &remote_path) {
     }
 }
 
-void SSHClient::CreateDirectory(const std::string &remote_path,
-                                int mode = S_NORMAL) {
-    int rc = sftp_mkdir(m_sftp_session, remote_path.c_str(), mode);
+void SSHClient::createDirectory(const std::string &remote_path, int mode) {
+    int rc = sftp_mkdir(sftp_session_, remote_path.c_str(), mode);
     if (rc != SSH_OK) {
         THROW_RUNTIME_ERROR("Failed to create remote directory: " +
                             remote_path);
     }
 }
 
-void SSHClient::RemoveFile(const std::string &remote_path) {
-    int rc = sftp_unlink(m_sftp_session, remote_path.c_str());
+void SSHClient::removeFile(const std::string &remote_path) {
+    int rc = sftp_unlink(sftp_session_, remote_path.c_str());
     if (rc != SSH_OK) {
         THROW_RUNTIME_ERROR("Failed to remove remote file: " + remote_path);
     }
 }
 
-void SSHClient::RemoveDirectory(const std::string &remote_path) {
-    int rc = sftp_rmdir(m_sftp_session, remote_path.c_str());
+void SSHClient::removeDirectory(const std::string &remote_path) {
+    int rc = sftp_rmdir(sftp_session_, remote_path.c_str());
     if (rc != SSH_OK) {
         THROW_RUNTIME_ERROR("Failed to remove remote directory: " +
                             remote_path);
     }
 }
 
-std::vector<std::string> SSHClient::ListDirectory(
-    const std::string &remote_path) {
+std::vector<std::string> SSHClient::listDirectory(
+    const std::string &remote_path) const {
     std::vector<std::string> file_list;
-    sftp_dir dir = sftp_opendir(m_sftp_session, remote_path.c_str());
+    sftp_dir dir = sftp_opendir(sftp_session_, remote_path.c_str());
     if (dir) {
         sftp_attributes attributes;
-        while ((attributes = sftp_readdir(m_sftp_session, dir)) != NULL) {
+        while ((attributes = sftp_readdir(sftp_session_, dir)) != NULL) {
             file_list.push_back(attributes->name);
             sftp_attributes_free(attributes);
         }
@@ -221,28 +221,28 @@ std::vector<std::string> SSHClient::ListDirectory(
     return file_list;
 }
 
-void SSHClient::Rename(const std::string &old_path,
+void SSHClient::rename(const std::string &old_path,
                        const std::string &new_path) {
-    int rc = sftp_rename(m_sftp_session, old_path.c_str(), new_path.c_str());
+    int rc = sftp_rename(sftp_session_, old_path.c_str(), new_path.c_str());
     if (rc != SSH_OK) {
         THROW_RUNTIME_ERROR("Failed to rename remote file or directory: " +
                             old_path + " to " + new_path);
     }
 }
 
-void SSHClient::GetFileInfo(const std::string &remote_path,
+void SSHClient::getFileInfo(const std::string &remote_path,
                             sftp_attributes &attrs) {
-    attrs = sftp_stat(m_sftp_session, remote_path.c_str());
+    attrs = sftp_stat(sftp_session_, remote_path.c_str());
     if (!attrs) {
         THROW_RUNTIME_ERROR("Failed to get file info for remote path: " +
                             remote_path);
     }
 }
 
-void SSHClient::DownloadFile(const std::string &remote_path,
+void SSHClient::downloadFile(const std::string &remote_path,
                              const std::string &local_path) {
     sftp_file file =
-        sftp_open(m_sftp_session, remote_path.c_str(), OFN_READONLY, 0);
+        sftp_open(sftp_session_, remote_path.c_str(), OFN_READONLY, 0);
     if (!file) {
         THROW_RUNTIME_ERROR("Failed to open remote file for download: " +
                             remote_path);
@@ -265,10 +265,10 @@ void SSHClient::DownloadFile(const std::string &remote_path,
     sftp_close(file);
 }
 
-void SSHClient::UploadFile(const std::string &local_path,
+void SSHClient::uploadFile(const std::string &local_path,
                            const std::string &remote_path) {
     sftp_file file =
-        sftp_open(m_sftp_session, remote_path.c_str(), OF_CREATE, OF_WRITE);
+        sftp_open(sftp_session_, remote_path.c_str(), OF_CREATE, OF_WRITE);
     if (!file) {
         THROW_RUNTIME_ERROR("Failed to open remote file for upload: " +
                             remote_path);
@@ -289,5 +289,20 @@ void SSHClient::UploadFile(const std::string &local_path,
 
     fclose(fp);
     sftp_close(file);
+}
+
+void SSHClient::uploadDirectory(const std::string &local_path,
+                                const std::string &remote_path) {
+    for (const auto &entry : fs::recursive_directory_iterator(local_path)) {
+        const auto &path = entry.path();
+        auto relativePath = fs::relative(path, local_path);
+        auto remoteFilePath = remote_path + "/" + relativePath.string();
+
+        if (entry.is_directory()) {
+            createDirectory(remoteFilePath);
+        } else if (entry.is_regular_file()) {
+            uploadFile(path.string(), remoteFilePath);
+        }
+    }
 }
 }  // namespace atom::connection

@@ -16,6 +16,7 @@ Description: A Static String Implementation
 #define ATOM_EXPERIMENT_SSTRING_HPP
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <string_view>
 #include <type_traits>
@@ -35,7 +36,7 @@ public:
     /**
      * @brief Default constructor. Constructs an empty StaticString.
      */
-    consteval StaticString() noexcept : M_SIZE(0) { data_[0] = '\0'; }
+    consteval StaticString() noexcept : size_(0) { data_[0] = '\0'; }
 
     /**
      * @brief Constructor accepting a C-style string literal.
@@ -43,8 +44,9 @@ public:
      * @param str The C-style string literal to initialize the StaticString
      * with.
      */
-    consteval StaticString(const char (&str)[N + 1]) noexcept : M_SIZE(N) {
-        std::copy_n(str, N + 1, data_);
+    explicit consteval StaticString(const std::array<char, N + 1>& str) noexcept
+        : size_(N) {
+        std::copy_n(str.begin(), N + 1, data_.begin());
     }
 
     /**
@@ -53,7 +55,7 @@ public:
      * @return The size of the string.
      */
     [[nodiscard]] constexpr auto size() const noexcept -> size_type {
-        return M_SIZE;
+        return size_;
     }
 
     /**
@@ -62,7 +64,7 @@ public:
      * @return A pointer to the underlying C-style string.
      */
     [[nodiscard]] constexpr auto cStr() const noexcept -> const char* {
-        return data_;
+        return data_.data();
     }
 
     /**
@@ -71,7 +73,7 @@ public:
      * @return An iterator to the beginning of the string.
      */
     [[nodiscard]] constexpr auto begin() const noexcept -> const char* {
-        return data_;
+        return data_.data();
     }
 
     /**
@@ -80,7 +82,7 @@ public:
      * @return An iterator to the end of the string.
      */
     [[nodiscard]] constexpr auto end() const noexcept -> const char* {
-        return data_ + M_SIZE;
+        return data_.data() + size_;
     }
 
     /**
@@ -90,7 +92,7 @@ public:
      * @return True if the strings are equal, false otherwise.
      */
     constexpr auto operator==(std::string_view other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) == other;
+        return std::string_view(data_.data(), size_) == other;
     }
 
     /**
@@ -102,7 +104,7 @@ public:
      */
     template <typename T>
     constexpr auto operator==(T&& other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) ==
+        return std::string_view(data_.data(), size_) ==
                std::string_view(std::forward<T>(other));
     }
 
@@ -128,7 +130,7 @@ public:
      */
     template <typename T>
     constexpr auto operator<(T&& other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) <
+        return std::string_view(data_.data(), size_) <
                std::string_view(std::forward<T>(other));
     }
 
@@ -143,7 +145,7 @@ public:
      */
     template <typename T>
     constexpr auto operator<=(T&& other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) <=
+        return std::string_view(data_.data(), size_) <=
                std::string_view(std::forward<T>(other));
     }
 
@@ -157,7 +159,7 @@ public:
      */
     template <typename T>
     constexpr auto operator>(T&& other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) >
+        return std::string_view(data_.data(), size_) >
                std::string_view(std::forward<T>(other));
     }
 
@@ -172,20 +174,20 @@ public:
      */
     template <typename T>
     constexpr auto operator>=(T&& other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) >=
+        return std::string_view(data_.data(), size_) >=
                std::string_view(std::forward<T>(other));
     }
 
     /**
      * @brief Appends a character to the end of the StaticString.
      *
-     * @param c The character to append.
+     * @param character The character to append.
      * @return A reference to the modified StaticString.
      */
-    constexpr auto operator+=(char c) noexcept -> StaticString<N>& {
-        if (M_SIZE < N) {
-            data_[M_SIZE++] = c;
-            data_[M_SIZE] = '\0';
+    constexpr auto operator+=(char character) noexcept -> StaticString<N>& {
+        if (size_ < N) {
+            data_[size_++] = character;
+            data_[size_] = '\0';
         }
         return *this;
     }
@@ -194,19 +196,20 @@ public:
      * @brief Concatenates a character to the StaticString, producing a new
      * StaticString.
      *
-     * @param c The character to concatenate.
+     * @param character The character to concatenate.
      * @return A new StaticString with the character appended.
      */
-    constexpr auto operator+(char c) const noexcept -> StaticString<N + 1> {
+    constexpr auto operator+(char character) const noexcept
+        -> StaticString<N + 1> {
         StaticString<N + 1> result;
-        std::copy(begin(), end(), result.data_);
-        result += c;
+        std::copy(begin(), end(), result.data_.begin());
+        result += character;
         return result;
     }
 
-private:
-    size_type M_SIZE;     ///< The current size of the string.
-    char data_[N + 1]{};  ///< The underlying data storage for the string.
+    size_type size_;  ///< The current size of the string.
+    std::array<char, N + 1>
+        data_{};  ///< The underlying data storage for the string.
 };
 
 /**
@@ -224,8 +227,8 @@ constexpr auto operator+(const StaticString<N>& lhs,
                          const StaticString<M>& rhs) noexcept
     -> StaticString<N + M> {
     StaticString<N + M> result;
-    std::copy(lhs.begin(), lhs.end(), result.data_);
-    std::copy(rhs.begin(), rhs.end(), result.data_ + N);
+    std::copy(lhs.begin(), lhs.end(), result.data_.begin());
+    std::copy(rhs.begin(), rhs.end(), result.data_.begin() + N);
     result += '\0';
     return result;
 }
@@ -242,11 +245,11 @@ constexpr auto operator+(const StaticString<N>& lhs,
  */
 template <std::size_t N, std::size_t M>
 constexpr auto operator+(const StaticString<N>& lhs,
-                         const char (&rhs)[M]) noexcept
+                         const std::array<char, M>& rhs) noexcept
     -> StaticString<N + M - 1> {
     StaticString<N + M - 1> result;
-    std::copy(lhs.begin(), lhs.end(), result.data_);
-    std::copy_n(rhs, M - 1, result.data_ + N);
+    std::copy(lhs.begin(), lhs.end(), result.data_.begin());
+    std::copy_n(rhs.begin(), M - 1, result.data_.begin() + N);
     result += '\0';
     return result;
 }

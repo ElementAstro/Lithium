@@ -1,6 +1,7 @@
 #ifndef ATOM_TYPE_RYAML_HPP
 #define ATOM_TYPE_RYAML_HPP
 
+#include <regex>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -37,7 +38,7 @@ public:
     /**
      * @brief Enumeration of YAML value types.
      */
-    enum class Type { Null, String, Number, Bool, Object, Array };
+    enum class Type { Null, String, Number, Bool, Object, Array, Alias };
 
     /**
      * @brief Default constructor initializing a null value.
@@ -73,6 +74,12 @@ public:
      * @param value The YAML array (vector).
      */
     explicit YamlValue(const YamlArray& value);
+
+    /**
+     * @brief Constructs a YamlValue from an alias.
+     * @param alias The alias value.
+     */
+    explicit YamlValue(const YamlValue& alias);
 
     /**
      * @brief Gets the type of the YAML value.
@@ -142,7 +149,7 @@ public:
 private:
     Type type_;  ///< The type of the YAML value.
     std::variant<std::nullptr_t, std::string, double, bool, YamlObject,
-                 YamlArray>
+                 YamlArray, YamlValue*>
         value_;  ///< The actual value stored.
 };
 
@@ -164,66 +171,74 @@ public:
 
 private:
     /**
-     * @brief Parses a YAML value from a string starting at the given index.
-     * @param str The YAML string.
-     * @param index The current position in the string.
+     * @brief Parses a YAML value from a string.
+     * @param str The string containing the YAML value.
+     * @param index The current index in the string.
      * @return The parsed YamlValue.
      */
     static auto parse_value(const std::string& str, size_t& index) -> YamlValue;
 
     /**
-     * @brief Parses a YAML string enclosed in quotes.
-     * @param str The YAML string.
-     * @param index The current position in the string.
-     * @return The parsed string value.
+     * @brief Parses a YAML string from a string.
+     * @param str The string containing the YAML string.
+     * @param index The current index in the string.
+     * @return The parsed string.
      */
     static auto parse_string(const std::string& str,
                              size_t& index) -> std::string;
 
     /**
      * @brief Parses a YAML number from a string.
-     * @param str The YAML string.
-     * @param index The current position in the string.
-     * @return The parsed numeric value.
+     * @param str The string containing the YAML number.
+     * @param index The current index in the string.
+     * @return The parsed number.
      */
     static auto parse_number(const std::string& str, size_t& index) -> double;
 
     /**
-     * @brief Parses a YAML boolean value from a string.
-     * @param str The YAML string.
-     * @param index The current position in the string.
-     * @return The parsed boolean value.
+     * @brief Parses a YAML boolean from a string.
+     * @param str The string containing the YAML boolean.
+     * @param index The current index in the string.
+     * @return The parsed boolean.
      */
     static auto parse_bool(const std::string& str, size_t& index) -> bool;
 
     /**
      * @brief Parses a YAML null value from a string.
-     * @param str The YAML string.
-     * @param index The current position in the string.
+     * @param str The string containing the YAML null.
+     * @param index The current index in the string.
      */
     static void parse_null(const std::string& str, size_t& index);
 
     /**
-     * @brief Parses a YAML object (map) from a string.
-     * @param str The YAML string.
-     * @param index The current position in the string.
-     * @return The parsed YAML object.
+     * @brief Parses a key-value pair from a YAML string.
+     * @param str The string containing the key-value pair.
+     * @param index The current index in the string.
+     * @return The parsed YamlObject.
      */
     static auto parse_key_value(const std::string& str,
                                 size_t& index) -> YamlObject;
 
     /**
      * @brief Parses a YAML array from a string.
-     * @param str The YAML string.
-     * @param index The current position in the string.
-     * @return The parsed YAML array.
+     * @param str The string containing the YAML array.
+     * @param index The current index in the string.
+     * @return The parsed YamlArray.
      */
     static auto parse_array(const std::string& str, size_t& index) -> YamlArray;
 
     /**
-     * @brief Skips whitespace characters in the string.
-     * @param str The YAML string.
-     * @param index The current position in the string.
+     * @brief Parses a YAML alias from a string.
+     * @param str The string containing the YAML alias.
+     * @param index The current index in the string.
+     * @return The parsed YamlValue.
+     */
+    static auto parse_alias(const std::string& str, size_t& index) -> YamlValue;
+
+    /**
+     * @brief Skips whitespace characters in a string.
+     * @param str The string to process.
+     * @param index The current index in the string.
      */
     static void skip_whitespace(const std::string& str, size_t& index);
 };

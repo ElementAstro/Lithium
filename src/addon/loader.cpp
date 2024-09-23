@@ -16,13 +16,16 @@ Description: C++20 and Modules Loader
 
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 
 #include "function/ffi.hpp"
 
 #ifdef _WIN32
-#include <dbghelp.h>
+// clang-format off
 #include <windows.h>
+#include <dbghelp.h>
+// clang-format on
 #else
 #include <dlfcn.h>
 #include <link.h>

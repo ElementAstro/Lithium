@@ -161,7 +161,7 @@ TEST_F(SSHClientTest, ExecuteCommand_Success) {
     EXPECT_CALL(*g_mockSSHSession, ssh_channel_free(mockChannel));
 
     client.Connect("username", "password");
-    auto future = client.ExecuteCommandAsync("ls");
+    auto future = client.executeCommandAsync("ls");
     auto result = future.get();
     EXPECT_EQ(result.size(), 1);
     EXPECT_EQ(result[0], "A");

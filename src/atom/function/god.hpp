@@ -386,7 +386,7 @@ struct IsSame<FirstType, SecondType, RemainingTypes...> {
  */
 template <typename FirstType, typename SecondType, typename... RemainingTypes>
 constexpr auto isSame() -> bool {
-    return detail::IsSame<FirstType, SecondType, RemainingTypes...>::kValue;
+    return detail::IsSame<FirstType, SecondType, RemainingTypes...>::K_VALUE;
 }
 
 /*!

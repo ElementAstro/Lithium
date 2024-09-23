@@ -68,34 +68,38 @@ TEST(LRUCacheTest, HitRate) {
     cache.get(1);  // 命中
     cache.get(3);  // 未命中
 
-    EXPECT_FLOAT_EQ(cache.hit_rate(), 0.5);  // 命中率应该是 50%
+    EXPECT_FLOAT_EQ(cache.hitRate(), 0.5);  // 命中率应该是 50%
 }
 
 // 测试回调函数
 TEST(LRUCacheTest, Callbacks) {
     ThreadSafeLRUCache<int, std::string> cache(3);
 
-    bool insert_called = false;
-    bool erase_called = false;
-    bool clear_called = false;
+    bool insertCalled = false;
+    bool eraseCalled = false;
+    bool clearCalled = false;
 
-    cache.set_insert_callback(
-        [&insert_called](int key, const std::string& value) {
-            insert_called = true;
-        });
+    cache.setInsertCallback([&insertCalled](int key, const std::string& value) {
+        (void)key;    // 避免未使用参数警告
+        (void)value;  // 避免未使用参数警告
+        insertCalled = true;
+    });
 
-    cache.set_erase_callback([&erase_called](int key) { erase_called = true; });
+    cache.setEraseCallback([&eraseCalled](int key) {
+        (void)key;  // 避免未使用参数警告
+        eraseCalled = true;
+    });
 
-    cache.set_clear_callback([&clear_called]() { clear_called = true; });
+    cache.setClearCallback([&clearCalled]() { clearCalled = true; });
 
     cache.put(1, "one");
-    EXPECT_TRUE(insert_called);
+    EXPECT_TRUE(insertCalled);
 
     cache.erase(1);
-    EXPECT_TRUE(erase_called);
+    EXPECT_TRUE(eraseCalled);
 
     cache.clear();
-    EXPECT_TRUE(clear_called);
+    EXPECT_TRUE(clearCalled);
 }
 
 // 测试过期功能
@@ -117,11 +121,11 @@ TEST(LRUCacheTest, Persistence) {
     cache.put(2, "two");
 
     std::string filename = "cache_data.dat";
-    cache.save_to_file(filename);  // 保存到文件
+    cache.saveToFile(filename);  // 保存到文件
 
     // 加载到新的缓存实例中
     ThreadSafeLRUCache<int, std::string> cache2(3);
-    cache2.load_from_file(filename);
+    cache2.loadFromFile(filename);
 
     EXPECT_EQ(cache2.get(1).value_or("not found"), "one");
     EXPECT_EQ(cache2.get(2).value_or("not found"), "two");
@@ -131,7 +135,7 @@ TEST(LRUCacheTest, Persistence) {
 TEST(LRUCacheTest, PopLRUOnEmptyCache) {
     ThreadSafeLRUCache<int, std::string> cache(3);
 
-    auto result = cache.pop_lru();
+    auto result = cache.popLru();
     EXPECT_FALSE(result.has_value());  // 应该没有返回值
 }
 
@@ -175,27 +179,27 @@ TEST(LRUCacheTest, UpdateValue) {
 }
 
 // 测试边缘情况: 多线程并发访问
-void concurrent_put(ThreadSafeLRUCache<int, std::string>& cache, int key,
-                    const std::string& value) {
+void concurrentPut(ThreadSafeLRUCache<int, std::string>& cache, int key,
+                   const std::string& value) {
     cache.put(key, value);
 }
 
-void concurrent_get(ThreadSafeLRUCache<int, std::string>& cache, int key) {
+void concurrentGet(ThreadSafeLRUCache<int, std::string>& cache, int key) {
     cache.get(key);
 }
 
 TEST(LRUCacheTest, ConcurrentAccess) {
     ThreadSafeLRUCache<int, std::string> cache(100);
 
-    std::thread t1(concurrent_put, std::ref(cache), 1, "one");
-    std::thread t2(concurrent_put, std::ref(cache), 2, "two");
-    std::thread t3(concurrent_get, std::ref(cache), 1);
-    std::thread t4(concurrent_get, std::ref(cache), 2);
+    std::thread threadPut1(concurrentPut, std::ref(cache), 1, "one");
+    std::thread threadPut2(concurrentPut, std::ref(cache), 2, "two");
+    std::thread threadGet1(concurrentGet, std::ref(cache), 1);
+    std::thread threadGet2(concurrentGet, std::ref(cache), 2);
 
-    t1.join();
-    t2.join();
-    t3.join();
-    t4.join();
+    threadPut1.join();
+    threadPut2.join();
+    threadGet1.join();
+    threadGet2.join();
 
     EXPECT_EQ(cache.get(1).value_or("not found"), "one");
     EXPECT_EQ(cache.get(2).value_or("not found"), "two");

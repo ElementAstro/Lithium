@@ -45,6 +45,10 @@ public:
         return fromType;
     }
 
+    ATOM_NODISCARD auto getToType() const ATOM_NOEXCEPT -> const TypeInfo& {
+        return toType;
+    }
+
     ATOM_NODISCARD virtual auto bidir() const ATOM_NOEXCEPT -> bool {
         return true;
     }
@@ -429,7 +433,7 @@ public:
 
         if (conversions_.count(fromType)) {
             for (const auto& conv : conversions_.at(fromType)) {
-                if (conv->toType == toType) {
+                if (conv->getToType() == toType) {
                     try {
                         return conv->convert(from);
                     } catch (const std::bad_any_cast& e) {

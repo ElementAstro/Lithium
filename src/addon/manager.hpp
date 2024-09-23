@@ -27,14 +27,7 @@ Description: Component Manager (the core of the plugin system)
 using json = nlohmann::json;
 
 namespace lithium {
-
-class AddonManager;
-class Compiler;
-class ModuleLoader;
-class Sandbox;
-
 class ComponentManagerImpl;
-
 class ComponentManager {
 public:
     explicit ComponentManager();

@@ -1,4 +1,5 @@
 #include "standalone.hpp"
+#include <minwindef.h>
 
 #include <array>
 #include <chrono>
@@ -324,7 +325,10 @@ auto StandAloneComponent::createSemaphore() -> std::optional<sem_t*> {
 }
 
 void StandAloneComponent::closeSharedMemory(int shm_fd, int* shm_ptr) {
-#if !defined(_WIN32) && !defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
+    ATOM_UNREF_PARAM(shm_fd);
+    ATOM_UNREF_PARAM(shm_ptr);
+#else
     munmap(shm_ptr, sizeof(int));
     close(shm_fd);
     shm_unlink(SHM_NAME);
@@ -339,8 +343,13 @@ void StandAloneComponent::stopLocalDriver() {
                 close(arg.first);
                 close(arg.second);
             } else if constexpr (std::is_same_v<T, std::pair<int, int*>>) {
+#if defined(_WIN32) || defined(_WIN64)
+                close(arg.first);
+                UnmapViewOfFile(arg.second);
+#else
                 close(arg.first);
                 munmap(arg.second, sizeof(int));
+#endif
             }
         },
         impl_->driver.io);

@@ -15,7 +15,17 @@ set(SOURCE_FILES
     component.cpp
 )
 
+set(${PROJECT_NAME}_LIBS
+    loguru
+    atom-component
+    atom-sysinfo
+    ${ZLIB_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+)
+
 # Create the module library
 add_library(atom.sysinfo SHARED ${SOURCE_FILES})
+
+target_link_libraries(atom.sysinfo ${${PROJECT_NAME}_LIBS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)

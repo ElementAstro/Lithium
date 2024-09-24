@@ -65,9 +65,9 @@ ATOM_MODULE(atom_io, [](Component &component) {
     component.defType<MemoryInfo::MemorySlot>("memory_slot");
     component.def_v("memory_slot_type", &MemoryInfo::MemorySlot::type,
                     "memory_slot", "Get memory slot type");
-    component.def("memory_slot_capacity", &MemoryInfo::MemorySlot::capacity,
+    component.def_v("memory_slot_capacity", &MemoryInfo::MemorySlot::capacity,
                   "memory_slot", "Get memory slot capacity");
-    component.def("memory_slot_clock_speed",
+    component.def_v("memory_slot_clock_speed",
                   &MemoryInfo::MemorySlot::clockSpeed, "memory_slot",
                   "Get memory slot clock speed");
 

@@ -47,6 +47,7 @@
 #define pipe _pipe
 #define popen _popen
 #define pclose _pclose
+#undef XMLDocument
 // clang-format on
 #else
 #include <fcntl.h>

@@ -511,8 +511,9 @@ void Component::defBaseClass() {
 template <typename Callable>
 void Component::def(const std::string& name, Callable&& func,
                     const std::string& group, const std::string& description) {
+    using FuncType = std::function<std::result_of_t<Callable()>>;
     m_CommandDispatcher_->def(name, group, description,
-                              std::function(std::forward<Callable>(func)));
+                              FuncType(std::forward<Callable>(func)));
 }
 
 template <typename Ret>

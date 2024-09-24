@@ -59,7 +59,6 @@ auto IPv4::toBinary() const -> std::string {
     std::stringstream binaryStream;
     std::istringstream iss(addressStr);
     std::string segment;
-#pragma unroll
     while (std::getline(iss, segment, '.')) {
         int num = std::stoi(segment);
         binaryStream << std::bitset<K_I_PV4_SEGMENT_BITS>(
@@ -82,7 +81,6 @@ auto IPv4::ipToInteger(const std::string& ipAddress) const -> unsigned int {
     std::string segment;
     unsigned int result = 0;
     int shift = K_I_PV4_SHIFT_START;
-#pragma unroll
     while (std::getline(iss, segment, '.')) {
         result |= (std::stoi(segment) << shift);
         shift -= K_I_PV4_SHIFT_STEP;
@@ -112,7 +110,6 @@ auto IPv6::isInRange(const std::string& start, const std::string& end) -> bool {
     std::vector<unsigned short> startIpAddress = ipToVector(start);
     std::vector<unsigned short> endIpAddress = ipToVector(end);
 
-#pragma unroll
     for (int i = 0; i < K_I_PV6_SEGMENTS; ++i) {
         if (ipAddress[i] < startIpAddress[i] ||
             ipAddress[i] > endIpAddress[i]) {
@@ -126,7 +123,6 @@ auto IPv6::toBinary() const -> std::string {
     std::stringstream binaryStream;
     std::istringstream iss(addressStr);
     std::string segment;
-#pragma unroll
     while (std::getline(iss, segment, ':')) {
         auto num = static_cast<unsigned short>(std::stoi(segment, nullptr, 16));
         binaryStream << std::bitset<K_I_PV6_SEGMENT_BITS>(
@@ -150,7 +146,6 @@ auto IPv6::ipToVector(const std::string& ipAddress) const
     std::istringstream iss(ipAddress);
     std::string segment;
     int index = 0;
-#pragma unroll
     while (std::getline(iss, segment, ':') && index < K_I_PV6_SEGMENTS) {
         result[index++] =
             static_cast<unsigned short>(std::stoi(segment, nullptr, 16));

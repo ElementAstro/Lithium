@@ -1,6 +1,8 @@
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
 
+#include "atom/function/overload.hpp"
+
 #include "atom/io/compress.hpp"
 #include "atom/io/glob.hpp"
 #include "atom/io/io.hpp"
@@ -29,7 +31,13 @@ ATOM_MODULE(atom_io, [](Component &component) {
                   "Check if a pattern is recursive");
     component.def("iter_dir", &iterDirectory, "Iterate a directory");
     component.def("rlistdir", &rlistdir, "Recursively list a directory");
-    component.def<const std::string &>("glob", &glob, "Glob a list of files");
+    component.def("glob_s",
+                  atom::meta::overload_cast<const std::string &>(glob),
+                  "Glob a list of files");
+    component.def(
+        "glob_v",
+        atom::meta::overload_cast<const std::vector<std::string> &>(glob),
+        "Glob a list of files");
     component.def<const std::string &>("rglob", &rglob,
                                        "Recursively glob a list of files");
     component.def("glob0", &glob0, "Glob0 a list of files");

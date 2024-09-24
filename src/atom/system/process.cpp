@@ -61,7 +61,7 @@ public:
     int m_maxProcesses;
     std::condition_variable cv;
     std::vector<Process> processes;
-    mutable std::timed_mutex mtx;
+    mutable std::shared_timed_mutex mtx;
 
     ProcessManagerImpl(int maxProcess) : m_maxProcesses(maxProcess) {}
 

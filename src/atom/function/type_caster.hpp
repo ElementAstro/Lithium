@@ -90,7 +90,6 @@ public:
 
             auto path = findConversionPath(srcInfo.value(), destInfo);
             std::any result = input[i];
-#pragma unroll
             for (size_t j = 0; j < path.size() - 1; ++j) {
                 result = conversions_.at(path[j]).at(path[j + 1])(result);
             }
@@ -102,7 +101,6 @@ public:
     auto getRegisteredTypes() const -> std::vector<std::string> {
         std::vector<std::string> typeNames;
         typeNames.reserve(type_name_map_.size());
-#pragma unroll
         for (const auto& [name, info] : type_name_map_) {
             typeNames.push_back(name);
         }
@@ -143,7 +141,6 @@ public:
     auto enumToString(EnumType value,
                       const std::string& enum_name) -> std::string {
         const auto& enumMap = getEnumMap<EnumType>(enum_name);
-#pragma unroll
         for (const auto& [key, enumValue] : enumMap) {
             if (enumValue == value) {
                 return key;
@@ -208,7 +205,6 @@ private:
 
             auto findIt = conversions_.find(last);
             if (findIt != conversions_.end()) {
-#pragma unroll
                 for (const auto& [next_type, _] : findIt->second) {
                     if (visited.insert(next_type).second) {
                         auto newPath = currentPath;

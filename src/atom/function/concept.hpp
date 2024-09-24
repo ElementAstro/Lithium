@@ -303,14 +303,14 @@ concept Container = requires(T obj) {
 template <typename T>
 concept StringContainer = requires(T obj) {
     typename T::value_type;
-    String<T> || Char<T>;
+    requires String<T> || Char<T>;
     { obj.push_back(std::declval<typename T::value_type>()) };
 };
 
 template <typename T>
 concept NumberContainer = requires(T obj) {
     typename T::value_type;
-    Number<typename T::value_type>;
+    requires Number<typename T::value_type>;
     { obj.push_back(std::declval<typename T::value_type>()) };
 };
 

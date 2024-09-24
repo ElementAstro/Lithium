@@ -97,7 +97,6 @@ auto fbase64Decode(std::span<const char> input) -> std::vector<unsigned char>;
     std::string_view ciphertext, uint8_t key) -> std::string;
 
 ATOM_INLINE constexpr auto findBase64Char(char character) -> size_t {
-#pragma unroll
     for (size_t index = 0; index < detail::BASE64_CHAR_COUNT; ++index) {
         if (detail::BASE64_CHARS[index] == character) {
             return index;
@@ -128,7 +127,6 @@ constexpr auto cbase64Encode(const StaticString<N> &input) {
                             ((charArray3[2] & detail::MASK_14_BITS) >> 6);
             charArray4[3] = charArray3[2] & detail::MASK_6_BITS;
 
-#pragma unroll
             for (int j = 0; j < 4; ++j) {
                 addCharacter(detail::BASE64_CHARS[charArray4[j]]);
             }
@@ -147,7 +145,6 @@ constexpr auto cbase64Encode(const StaticString<N> &input) {
                         ((charArray3[2] & detail::MASK_14_BITS) >> 6);
         charArray4[3] = charArray3[2] & detail::MASK_6_BITS;
 
-#pragma unroll
         for (size_t j = 0; j < index % 3 + 1; ++j) {
             addCharacter(detail::BASE64_CHARS[charArray4[j]]);
         }
@@ -181,7 +178,6 @@ constexpr auto cbase64Decode(const StaticString<N> &input) {
             charArray3[2] =
                 ((charArray4[2] & detail::MASK_2_BITS) << 6) + charArray4[3];
 
-#pragma unroll
             for (index = 0; index < 3; ++index) {
                 addCharacter(static_cast<char>(charArray3[index]));
             }
@@ -199,7 +195,6 @@ constexpr auto cbase64Decode(const StaticString<N> &input) {
         charArray3[1] = ((charArray4[1] & detail::MASK_4_BITS) << 4) +
                         ((charArray4[2] & detail::MASK_18_BITS) >> 2);
 
-#pragma unroll
         for (size_t j = 0; j < index - 1; ++j) {
             addCharacter(static_cast<char>(charArray3[j]));
         }

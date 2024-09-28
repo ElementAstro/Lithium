@@ -36,7 +36,7 @@ private:
         T ssResidual = 0;
 
         residuals_.clear();
-        
+
 #ifdef USE_SIMD
         // SIMD optimized loop for performance
         __m256d sumSquaredErrorVec = _mm256_setzero_pd();

@@ -39,12 +39,30 @@
         THROW_UNLAWFUL_OPERATION("Failed to create " #type ".");             \
     }
 
+#define GET_OR_CREATE_PTR_THIS(variable, type, constant, ...)    \
+    if (auto ptr = GetPtrOrCreate<type>(constant, [this] {       \
+            return std::make_shared<type>(__VA_ARGS__);          \
+        })) {                                                    \
+        variable = ptr;                                          \
+    } else {                                                     \
+        THROW_UNLAWFUL_OPERATION("Failed to create " #type "."); \
+    }
+
 #define GET_OR_CREATE_WEAK_PTR(variable, type, constant, ...)                \
     if (auto ptr = GetPtrOrCreate<type>(                                     \
             constant, [] { return std::make_shared<type>(__VA_ARGS__); })) { \
         variable = std::weak_ptr(ptr);                                       \
     } else {                                                                 \
         THROW_UNLAWFUL_OPERATION("Failed to create " #type ".");             \
+    }
+
+#define GET_OR_CREATE_PTR_WITH_DELETER(variable, type, constant, deleter) \
+    if (auto ptr = GetPtrOrCreate<type>(constant, [deleter] {             \
+            return std::shared_ptr<type>(new type, deleter);              \
+        })) {                                                             \
+        variable = ptr;                                                   \
+    } else {                                                              \
+        THROW_UNLAWFUL_OPERATION("Failed to create " #type ".");          \
     }
 
 /**

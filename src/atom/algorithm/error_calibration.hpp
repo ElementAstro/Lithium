@@ -9,6 +9,10 @@
 #include <string>
 #include <vector>
 
+#ifdef USE_SIMD
+#include <immintrin.h>
+#endif
+
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
@@ -22,7 +26,7 @@ private:
     T mse_ = 0.0;  // Mean Squared Error
     T mae_ = 0.0;  // Mean Absolute Error
 
-    void calculate_metrics(const std::vector<T>& measured,
+    void calculateMetrics(const std::vector<T>& measured,
                            const std::vector<T>& actual) {
         T sumSquaredError = 0.0;
         T sumAbsoluteError = 0.0;
@@ -32,6 +36,46 @@ private:
         T ssResidual = 0;
 
         residuals_.clear();
+        
+#ifdef USE_SIMD
+        // SIMD optimized loop for performance
+        __m256d sumSquaredErrorVec = _mm256_setzero_pd();
+        __m256d sumAbsoluteErrorVec = _mm256_setzero_pd();
+        size_t i = 0;
+
+        for (; i + 4 <= actual.size(); i += 4) {
+            __m256d measuredVec = _mm256_loadu_pd(&measured[i]);
+            __m256d actualVec = _mm256_loadu_pd(&actual[i]);
+
+            __m256d predictedVec = _mm256_add_pd(
+                _mm256_mul_pd(_mm256_set1_pd(slope_), measuredVec),
+                _mm256_set1_pd(intercept_));
+
+            __m256d errorVec = _mm256_sub_pd(actualVec, predictedVec);
+
+            sumSquaredErrorVec = _mm256_add_pd(
+                sumSquaredErrorVec, _mm256_mul_pd(errorVec, errorVec));
+            sumAbsoluteErrorVec =
+                _mm256_add_pd(sumAbsoluteErrorVec,
+                              _mm256_andnot_pd(_mm256_set1_pd(-0.0), errorVec));
+
+            ssTotal += std::pow(actual[i] - meanActual, 2);
+            ssResidual += std::pow(predictedVec[i] - actual[i], 2);
+        }
+
+        double tempSquaredError[4];
+        _mm256_storeu_pd(tempSquaredError, sumSquaredErrorVec);
+        sumSquaredError = std::accumulate(
+            tempSquaredError, tempSquaredError + 4, sumSquaredError);
+
+        double tempAbsoluteError[4];
+        _mm256_storeu_pd(tempAbsoluteError, sumAbsoluteErrorVec);
+        sumAbsoluteError = std::accumulate(
+            tempAbsoluteError, tempAbsoluteError + 4, sumAbsoluteError);
+
+        // Handle remaining elements
+#endif
+
         for (size_t i = 0; i < actual.size(); ++i) {
             T predicted = apply(measured[i]);
             T error = actual[i] - predicted;
@@ -175,7 +219,7 @@ public:
         slope_ = (n * sumXy - sumX * sumY) / (n * sumXx - sumX * sumX);
         intercept_ = (sumY - slope_ * sumX) / n;
 
-        calculate_metrics(measured, actual);
+        calculateMetrics(measured, actual);
     }
 
     void polynomialCalibrate(const std::vector<T>& measured,
@@ -201,7 +245,7 @@ public:
         slope_ = params[1];      // 一阶系数作为斜率
         intercept_ = params[0];  // 常数项作为截距
 
-        calculate_metrics(measured, actual);
+        calculateMetrics(measured, actual);
     }
 
     [[nodiscard]] auto apply(T value) const -> T {

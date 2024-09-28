@@ -7,50 +7,55 @@
 #include <source_location>
 #include <string_view>
 #include <vector>
+#include "macro.hpp"
 
-#define COUNT_AND_TIME_CALL                                        \
-    FunctionCounter::start_timing();                               \
-    auto counter_guard = std::make_unique<int>(0);                 \
-    (void)counter_guard;                                           \
-    auto timer_end = [](void*) { FunctionCounter::end_timing(); }; \
-    std::unique_ptr<void, decltype(timer_end)> timer_guard(        \
+#define COUNT_AND_TIME_CALL                                       \
+    FunctionCounter::startTiming();                               \
+    auto counter_guard = std::make_unique<int>(0);                \
+    (void)counter_guard;                                          \
+    auto timer_end = [](void*) { FunctionCounter::endTiming(); }; \
+    std::unique_ptr<void, decltype(timer_end)> timer_guard(       \
         counter_guard.get(), timer_end);
 
 class FunctionCounter {
 public:
     struct FunctionStats {
-        size_t call_count = 0;
-        std::chrono::nanoseconds total_time{0};
-        std::chrono::nanoseconds min_time{std::chrono::nanoseconds::max()};
-        std::chrono::nanoseconds max_time{std::chrono::nanoseconds::min()};
+        size_t callCount = 0;
+        std::chrono::nanoseconds totalTime{0};
+        std::chrono::nanoseconds minTime{std::chrono::nanoseconds::max()};
+        std::chrono::nanoseconds maxTime{std::chrono::nanoseconds::min()};
         std::vector<std::string_view> callers;
-    };
+    } ATOM_ALIGNAS(64);
 
-    static void start_timing(const std::source_location location = std::source_location::current());
-    static void end_timing();
-    static void print_stats(size_t top_n = 0);
-    static void reset_stats();
-    static void save_stats(const std::string& filename);
-    static void load_stats(const std::string& filename);
-    static void set_performance_threshold(std::chrono::nanoseconds threshold);
-    static void print_call_graph();
+    static void startTiming(
+        std::source_location LOCATION = std::source_location::current());
+    static void endTiming();
+    static void printStats(size_t top_n = 0);
+    static void resetStats();
+    static void saveStats(const std::string& filename);
+    static void loadStats(const std::string& filename);
+    static void setPerformanceThreshold(std::chrono::nanoseconds threshold);
+    static void printCallGraph();
 
     template <typename Func>
-    static void conditional_count(bool condition, Func&& func);
+    static void conditionalCount(bool condition, Func&& func);
 
 private:
     static inline std::map<std::string_view, FunctionStats> counts;
-    static inline std::vector<std::pair<std::string_view, std::chrono::high_resolution_clock::time_point>> time_stack;
+    static inline std::vector<std::pair<
+        std::string_view, std::chrono::high_resolution_clock::time_point>>
+        timeStack;
     static inline std::shared_mutex mutex;
-    static inline std::chrono::nanoseconds performance_threshold;
+    static inline std::chrono::nanoseconds performanceThreshold;
 
-    static void print_stats_header();
-    static void print_function_stats(std::string_view func, const FunctionStats& stats);
-    static std::string format_duration(std::chrono::nanoseconds ns);
+    static void printStatsHeader();
+    static void printFunctionStats(std::string_view func,
+                                   const FunctionStats& stats);
+    static auto formatDuration(std::chrono::nanoseconds ns) -> std::string;
 };
 
 template <typename Func>
-void FunctionCounter::conditional_count(bool condition, Func&& func) {
+void FunctionCounter::conditionalCount(bool condition, Func&& func) {
     if (condition) {
         COUNT_AND_TIME_CALL;
         func();
@@ -59,4 +64,4 @@ void FunctionCounter::conditional_count(bool condition, Func&& func) {
     }
 }
 
-#endif // FUNCTION_COUNTER_HPP
+#endif  // FUNCTION_COUNTER_HPP

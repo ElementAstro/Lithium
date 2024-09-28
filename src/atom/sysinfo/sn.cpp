@@ -7,8 +7,8 @@
 
 class HardwareInfo::Impl {
 public:
-    std::string getWmiProperty(const std::wstring& wmiClass,
-                               const std::wstring& property) {
+    static auto getWmiProperty(const std::wstring& wmiClass,
+                               const std::wstring& property) -> std::string {
         IWbemLocator* pLoc = nullptr;
         IWbemServices* pSvc = nullptr;
         IEnumWbemClassObject* pEnumerator = nullptr;
@@ -26,7 +26,8 @@ public:
             &pEnumerator);
 
         if (FAILED(hres)) {
-            goto cleanup;
+            cleanup(pLoc, pSvc, pEnumerator);
+            return "";
         }
 
         while (pEnumerator) {
@@ -45,20 +46,13 @@ public:
             pclsObj->Release();
         }
 
-    cleanup:
-        if (pSvc)
-            pSvc->Release();
-        if (pLoc)
-            pLoc->Release();
-        if (pEnumerator)
-            pEnumerator->Release();
-        CoUninitialize();
-
+        cleanup(pLoc, pSvc, pEnumerator);
         return result;
     }
 
-    std::vector<std::string> getWmiPropertyMultiple(
-        const std::wstring& wmiClass, const std::wstring& property) {
+    static auto getWmiPropertyMultiple(const std::wstring& wmiClass,
+                                       const std::wstring& property)
+        -> std::vector<std::string> {
         IWbemLocator* pLoc = nullptr;
         IWbemServices* pSvc = nullptr;
         IEnumWbemClassObject* pEnumerator = nullptr;
@@ -76,7 +70,8 @@ public:
             &pEnumerator);
 
         if (FAILED(hres)) {
-            goto cleanup;
+            cleanup(pLoc, pSvc, pEnumerator);
+            return results;
         }
 
         while (pEnumerator) {
@@ -89,29 +84,22 @@ public:
             VARIANT vtProp;
             hr = pclsObj->Get(property.c_str(), 0, &vtProp, nullptr, nullptr);
             if (SUCCEEDED(hr)) {
-                results.push_back(
+                results.emplace_back(
                     static_cast<const char*>(_bstr_t(vtProp.bstrVal)));
             }
             VariantClear(&vtProp);
             pclsObj->Release();
         }
 
-    cleanup:
-        if (pSvc)
-            pSvc->Release();
-        if (pLoc)
-            pLoc->Release();
-        if (pEnumerator)
-            pEnumerator->Release();
-        CoUninitialize();
-
+        cleanup(pLoc, pSvc, pEnumerator);
         return results;
     }
 
-    static bool initializeWmi(IWbemLocator*& pLoc, IWbemServices*& pSvc) {
+    static auto initializeWmi(IWbemLocator*& pLoc,
+                              IWbemServices*& pSvc) -> bool {
         HRESULT hres;
 
-        hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+        hres = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
         if (FAILED(hres)) {
             return false;
         }
@@ -125,8 +113,9 @@ public:
             return false;
         }
 
-        hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER,
-                                IID_IWbemLocator, (LPVOID*)&pLoc);
+        hres = CoCreateInstance(CLSID_WbemLocator, nullptr,
+                                CLSCTX_INPROC_SERVER, IID_IWbemLocator,
+                                reinterpret_cast<LPVOID*>(&pLoc));
 
         if (FAILED(hres)) {
             CoUninitialize();
@@ -157,19 +146,33 @@ public:
         return true;
     }
 
-    std::string getBiosSerialNumber() {
+    static void cleanup(IWbemLocator* pLoc, IWbemServices* pSvc,
+                        IEnumWbemClassObject* pEnumerator) {
+        if (pSvc) {
+            pSvc->Release();
+        }
+        if (pLoc) {
+            pLoc->Release();
+        }
+        if (pEnumerator) {
+            pEnumerator->Release();
+        }
+        CoUninitialize();
+    }
+
+    auto getBiosSerialNumber() const -> std::string {
         return getWmiProperty(L"Win32_BIOS", L"SerialNumber");
     }
 
-    std::string getMotherboardSerialNumber() {
+    auto getMotherboardSerialNumber() const -> std::string {
         return getWmiProperty(L"Win32_BaseBoard", L"SerialNumber");
     }
 
-    std::string getCpuSerialNumber() {
+    auto getCpuSerialNumber() const -> std::string {
         return getWmiProperty(L"Win32_Processor", L"ProcessorId");
     }
 
-    std::vector<std::string> getDiskSerialNumbers() {
+    auto getDiskSerialNumbers() const -> std::vector<std::string> {
         return getWmiPropertyMultiple(L"Win32_DiskDrive", L"SerialNumber");
     }
 };
@@ -180,7 +183,8 @@ public:
 
 class HardwareInfo::Impl {
 public:
-    std::string readFile(const std::string& path, const std::string& key = "") {
+    auto readFile(const std::string& path,
+                  const std::string& key = "") const -> std::string {
         std::ifstream file(path);
         std::string content;
 
@@ -202,19 +206,19 @@ public:
         return content;
     }
 
-    std::string getBiosSerialNumber() {
+    auto getBiosSerialNumber() const -> std::string {
         return readFile("/sys/class/dmi/id/product_serial");
     }
 
-    std::string getMotherboardSerialNumber() {
+    auto getMotherboardSerialNumber() const -> std::string {
         return readFile("/sys/class/dmi/id/board_serial");
     }
 
-    std::string getCpuSerialNumber() {
+    auto getCpuSerialNumber() const -> std::string {
         return readFile("/proc/cpuinfo", "Serial");
     }
 
-    std::vector<std::string> getDiskSerialNumbers() {
+    auto getDiskSerialNumbers() const -> std::vector<std::string> {
         std::vector<std::string> serials;
         serials.push_back(readFile("/sys/block/sda/device/serial"));
         // 可以根据需要增加更多磁盘
@@ -228,18 +232,18 @@ public:
 HardwareInfo::HardwareInfo() : impl_(new Impl()) {}
 HardwareInfo::~HardwareInfo() { delete impl_; }
 
-std::string HardwareInfo::getBiosSerialNumber() {
+auto HardwareInfo::getBiosSerialNumber() -> std::string {
     return impl_->getBiosSerialNumber();
 }
 
-std::string HardwareInfo::getMotherboardSerialNumber() {
+auto HardwareInfo::getMotherboardSerialNumber() -> std::string {
     return impl_->getMotherboardSerialNumber();
 }
 
-std::string HardwareInfo::getCpuSerialNumber() {
+auto HardwareInfo::getCpuSerialNumber() -> std::string {
     return impl_->getCpuSerialNumber();
 }
 
-std::vector<std::string> HardwareInfo::getDiskSerialNumbers() {
+auto HardwareInfo::getDiskSerialNumbers() -> std::vector<std::string> {
     return impl_->getDiskSerialNumbers();
 }

@@ -9,6 +9,7 @@
 #ifndef ATOM_META_REFL_HPP
 #define ATOM_META_REFL_HPP
 
+#include <array>
 #include <string_view>
 #include <tuple>
 
@@ -36,24 +37,28 @@ template <typename C, C... chars>
 struct TStr {
     using Char = C;
     template <typename T>
-    static constexpr bool Is(T = {}) {
+    static constexpr auto Is(T = {}) -> bool {
         return std::is_same_v<T, TStr>;
     }
-    static constexpr const Char* Data() { return data; }
-    static constexpr std::size_t Size() { return sizeof...(chars); }
-    static constexpr std::basic_string_view<Char> View() { return data; }
+    static constexpr auto Data() -> const Char* { return data.data(); }
+    static constexpr auto Size() -> std::size_t { return sizeof...(chars); }
+    static constexpr auto View() -> std::basic_string_view<Char> {
+        return data.data();
+    }
 
 private:
-    static constexpr Char data[]{chars..., Char(0)};
+    static constexpr std::array<Char, sizeof...(chars) + 1> data{chars...,
+                                                                 Char(0)};
 };
 
 template <typename Char, typename T, std::size_t... Ns>
-constexpr auto TSTRHI(std::index_sequence<Ns...>) {
-    return TStr<Char, T::get()[Ns]...>{};
+constexpr auto TSTRHI(std::index_sequence<Ns...>)
+    -> TStr<Char, T::get()[Ns]...> {
+    return {};
 }
 
 template <typename T>
-constexpr auto TSTRH(T) {
+constexpr auto TSTRH(T) -> decltype(auto) {
     return TSTRHI<typename decltype(T::get())::value_type, T>(
         std::make_index_sequence<T::get().size()>{});
 }
@@ -73,62 +78,71 @@ template <fcstr str>
 struct TStr {
     using Char = typename decltype(str)::value_type;
     template <typename T>
-    static constexpr bool Is(T = {}) {
+    static constexpr auto Is(T = {}) -> bool {
         return std::is_same_v<T, TStr>;
     }
-    static constexpr auto Data() { return str.data; }
-    static constexpr auto Size() { return str.size; }
-    static constexpr std::basic_string_view<Char> View() { return str.data; }
+    static constexpr auto Data() -> const Char* { return str.data; }
+    static constexpr auto Size() -> std::size_t { return str.size; }
+    static constexpr auto View() -> std::basic_string_view<Char> {
+        return str.data;
+    }
 };
 #endif
 
 template <class L, class F>
-constexpr std::size_t FindIf(const L&, F&&, std::index_sequence<>) {
+constexpr auto FindIf(const L&, F&&, std::index_sequence<>) -> std::size_t {
     return -1;
 }
 
 template <class L, class F, std::size_t N0, std::size_t... Ns>
-constexpr std::size_t FindIf(const L& l, F&& f,
-                             std::index_sequence<N0, Ns...>) {
-    return f(l.template Get<N0>())
-               ? N0
-               : FindIf(l, std::forward<F>(f), std::index_sequence<Ns...>{});
+constexpr auto FindIf(const L& list, F&& func,
+                      std::index_sequence<N0, Ns...>) -> std::size_t {
+    return func(list.template Get<N0>()) ? N0
+                                         : FindIf(list, std::forward<F>(func),
+                                                  std::index_sequence<Ns...>{});
 }
 
 template <class L, class F, class R>
-constexpr auto Acc(const L&, F&&, R r, std::index_sequence<>) {
-    return r;
+constexpr auto Acc(const L&, F&&, R result, std::index_sequence<>) -> R {
+    return result;
 }
 
 template <class L, class F, class R, std::size_t N0, std::size_t... Ns>
-constexpr auto Acc(const L& l, F&& f, R r, std::index_sequence<N0, Ns...>) {
-    return Acc(l, std::forward<F>(f), f(std::move(r), l.template Get<N0>()),
+constexpr auto Acc(const L& list, F&& func, R result,
+                   std::index_sequence<N0, Ns...>) -> R {
+    return Acc(list, std::forward<F>(func),
+               func(std::move(result), list.template Get<N0>()),
                std::index_sequence<Ns...>{});
 }
 
 template <std::size_t D, class T, class R, class F>
-constexpr auto DFS_Acc(T t, F&& f, R r) {
-    return t.bases.Accumulate(std::move(r), [&](auto r, auto b) {
-        if constexpr (b.is_virtual)
-            return DFS_Acc<D + 1>(b.info, std::forward<F>(f), std::move(r));
-        else
-            return DFS_Acc<D + 1>(
-                b.info, std::forward<F>(f),
-                std::forward<F>(f)(std::move(r), b.info, D + 1));
-    });
+constexpr auto DFS_Acc(T type, F&& func, R result) -> R {
+    return type.bases.Accumulate(
+        std::move(result), [&](auto result, auto base) {
+            if constexpr (base.is_virtual) {
+                return DFS_Acc<D + 1>(base.info, std::forward<F>(func),
+                                      std::move(result));
+            } else {
+                return DFS_Acc<D + 1>(
+                    base.info, std::forward<F>(func),
+                    std::forward<F>(func)(std::move(result), base.info, D + 1));
+            }
+        });
 }
 
 template <class TI, class U, class F>
-constexpr void NV_Var(TI, U&& u, F&& f) {
-    TI::fields.ForEach([&](auto&& k) {
-        using K = std::decay_t<decltype(k)>;
-        if constexpr (!K::is_static && !K::is_func)
-            std::forward<F>(f)(k, std::forward<U>(u).*(k.value));
+constexpr void NV_Var(TI, U&& obj, F&& func) {
+    TI::fields.ForEach([&](auto&& field) {
+        using Field = std::decay_t<decltype(field)>;
+        if constexpr (!Field::is_static && !Field::is_func) {
+            std::forward<F>(func)(field, std::forward<U>(obj).*(field.value));
+        }
     });
-    TI::bases.ForEach([&](auto b) {
-        if constexpr (!b.is_virtual)
-            NV_Var(b.info, b.info.Forward(std::forward<U>(u)),
-                   std::forward<F>(f));
+    TI::bases.ForEach([&](auto base) {
+        if constexpr (!base.is_virtual) {
+            NV_Var(base.info, base.info.Forward(std::forward<U>(obj)),
+                   std::forward<F>(func));
+        }
     });
 }
 
@@ -146,13 +160,14 @@ template <class Name, class T>
 struct NamedValue : NamedValueBase<Name> {
     T value;
     static constexpr bool has_value = true;
-    constexpr NamedValue(T v) : value{v} {}
+    explicit constexpr NamedValue(T val) : value{val} {}
     template <class U>
-    constexpr bool operator==(U v) const {
-        if constexpr (std::is_same_v<T, U>)
-            return value == v;
-        else
+    constexpr auto operator==(U val) const -> bool {
+        if constexpr (std::is_same_v<T, U>) {
+            return value == val;
+        } else {
             return false;
+        }
     }
 };
 
@@ -160,7 +175,7 @@ template <class Name>
 struct NamedValue<Name, void> : NamedValueBase<Name> {
     static constexpr bool has_value = false;
     template <class U>
-    constexpr bool operator==(U) const {
+    constexpr auto operator==(U) const -> bool {
         return false;
     }
 };
@@ -169,77 +184,85 @@ template <typename... Es>
 struct ElemList {
     std::tuple<Es...> elems;
     static constexpr std::size_t size = sizeof...(Es);
-    constexpr ElemList(Es... elems) : elems{elems...} {}
+    explicit constexpr ElemList(Es... elements) : elems{elements...} {}
     template <class Init, class Func>
-    constexpr auto Accumulate(Init init, Func&& func) const {
+    constexpr auto Accumulate(Init init, Func&& func) const -> decltype(auto) {
         return detail::Acc(*this, std::forward<Func>(func), std::move(init),
                            std::make_index_sequence<size>{});
     }
-    template <class F>
-    constexpr void ForEach(F&& f) const {
+    template <class Func>
+    constexpr void ForEach(Func&& func) const {
         Accumulate(0, [&](auto, const auto& field) {
-            std::forward<F>(f)(field);
+            std::forward<Func>(func)(field);
             return 0;
         });
     }
     template <class S>
-    static constexpr bool Contains(S = {}) {
+    static constexpr auto Contains(S = {}) -> bool {
         return (Es::TName::template Is<S>() || ...);
     }
-    template <class F>
-    constexpr std::size_t FindIf(F&& f) const {
-        return detail::FindIf(*this, std::forward<F>(f),
+    template <class Func>
+    constexpr auto FindIf(Func&& func) const -> std::size_t {
+        return detail::FindIf(*this, std::forward<Func>(func),
                               std::make_index_sequence<size>{});
     }
     template <class S>
-    constexpr const auto& Find(S = {}) const {
+    constexpr auto Find(S = {}) const -> const auto& {
         constexpr std::size_t idx = []() {
-            constexpr decltype(S::View()) names[]{Es::name...};
+            constexpr std::array names{Es::name...};
             for (std::size_t i = 0; i < size; i++) {
-                if (S::View() == names[i])
+                if (S::View() == names[i]) {
                     return i;
+                }
             }
             return static_cast<std::size_t>(-1);
         }();
         return Get<idx>();
     }
     template <class T>
-    constexpr std::size_t FindValue(const T& v) const {
-        return FindIf([&v](auto e) { return e == v; });
+    constexpr auto FindValue(const T& val) const -> std::size_t {
+        return FindIf([&val](auto elem) { return elem == val; });
     }
     template <typename T, typename S>
-    constexpr const T* ValuePtrOfName(S n) const {
-        return Accumulate(nullptr, [n](auto r, const auto& e) {
-            if constexpr (std::is_same_v<decltype(e.value), T>)
-                return e.name == n ? &e.value : r;
-            else
-                return r;
+    constexpr auto ValuePtrOfName(S name) const -> const T* {
+        return Accumulate(nullptr, [name](auto result, const auto& elem) {
+            if constexpr (std::is_same_v<decltype(elem.value), T>) {
+                return elem.name == name ? &elem.value : result;
+            } else {
+                return result;
+            }
         });
     }
     template <typename T, typename S>
-    constexpr const T& ValueOfName(S n) const {
-        return *ValuePtrOfName<T>(n);
+    constexpr auto ValueOfName(S name) const -> const T& {
+        return *ValuePtrOfName<T>(name);
     }
     template <class T, class C = char>
-    constexpr auto NameOfValue(const T& v) const {
-        return Accumulate(std::basic_string_view<C>{}, [&v](auto r, auto&& e) {
-            return e == v ? e.name : r;
-        });
+    constexpr auto NameOfValue(const T& val) const
+        -> std::basic_string_view<C> {
+        return Accumulate(std::basic_string_view<C>{},
+                          [&val](auto result, auto&& elem) {
+                              return elem == val ? elem.name : result;
+                          });
     }
     template <class E>
-    constexpr auto Push(E e) const {
+    constexpr auto Push(E elem) const -> ElemList<Es..., E> {
         return std::apply(
-            [e](auto... es) { return ElemList<Es..., E>{es..., e}; }, elems);
+            [elem](auto... elements) {
+                return ElemList<Es..., E>{elements..., elem};
+            },
+            elems);
     }
     template <class E>
-    constexpr auto Insert(E e) const {
-        if constexpr ((std::is_same_v<Es, E> || ...))
+    constexpr auto Insert(E elem) const -> decltype(auto) {
+        if constexpr ((std::is_same_v<Es, E> || ...)) {
             return *this;
-        else
-            return Push(e);
+        } else {
+            return Push(elem);
+        }
     }
     template <std::size_t N>
-    constexpr const auto& Get() const {
+    [[nodiscard]] constexpr auto Get() const -> const auto& {
         return std::get<N>(elems);
     }
 #define ATOM_META_ElemList_GetByValue(list, value) \
@@ -248,17 +271,17 @@ struct ElemList {
 
 template <class Name, class T>
 struct Attr : NamedValue<Name, T> {
-    constexpr Attr(Name, T v) : NamedValue<Name, T>{v} {}
+    explicit constexpr Attr(Name, T val) : NamedValue<Name, T>{val} {}
 };
 
 template <class Name>
 struct Attr<Name, void> : NamedValue<Name, void> {
-    constexpr Attr(Name) {}
+    explicit constexpr Attr(Name) {}
 };
 
 template <typename... As>
 struct AttrList : ElemList<As...> {
-    constexpr AttrList(As... as) : ElemList<As...>{as...} {}
+    explicit constexpr AttrList(As... attrs) : ElemList<As...>{attrs...} {}
 };
 
 template <bool s, bool f>
@@ -278,13 +301,13 @@ struct FTraits<T*> : FTraitsB<true, std::is_function_v<T>> {};  // static member
 template <class Name, class T, class AList>
 struct Field : FTraits<T>, NamedValue<Name, T> {
     AList attrs;
-    constexpr Field(Name, T v, AList as = {})
-        : NamedValue<Name, T>{v}, attrs{as} {}
+    constexpr Field(Name, T val, AList attr_list = {})
+        : NamedValue<Name, T>{val}, attrs{attr_list} {}
 };
 
 template <typename... Fs>
 struct FieldList : ElemList<Fs...> {
-    constexpr FieldList(Fs... fs) : ElemList<Fs...>{fs...} {}
+    explicit constexpr FieldList(Fs... fields) : ElemList<Fs...>{fields...} {}
 };
 
 template <class T>
@@ -298,12 +321,12 @@ struct Base {
 
 template <typename... Bs>
 struct BaseList : ElemList<Bs...> {
-    constexpr BaseList(Bs... bs) : ElemList<Bs...>{bs...} {}
+    explicit constexpr BaseList(Bs... bases) : ElemList<Bs...>{bases...} {}
 };
 
 template <typename... Ts>
 struct TypeInfoList : ElemList<Ts...> {
-    constexpr TypeInfoList(Ts... ts) : ElemList<Ts...>{ts...} {}
+    explicit constexpr TypeInfoList(Ts... types) : ElemList<Ts...>{types...} {}
 };
 
 template <class T, typename... Bases>
@@ -311,39 +334,41 @@ struct TypeInfoBase {
     using Type = T;
     static constexpr BaseList bases{Bases{}...};
     template <class U>
-    static constexpr auto&& Forward(U&& derived) {
-        if constexpr (std::is_same_v<std::decay_t<U>, U>)
+    static constexpr auto Forward(U&& derived) -> decltype(auto) {
+        if constexpr (std::is_same_v<std::decay_t<U>, U>) {
             return static_cast<Type&&>(derived);  // right
-        else if constexpr (std::is_same_v<std::decay_t<U>&, U>)
+        } else if constexpr (std::is_same_v<std::decay_t<U>&, U>) {
             return static_cast<Type&>(derived);  // left
-        else
+        } else {
             return static_cast<const std::decay_t<U>&>(
                 derived);  // std::is_same_v<const std::decay_t<U>&, U>
+        }
     }
     static constexpr auto VirtualBases() {
         return bases.Accumulate(ElemList<>{}, [](auto acc, auto base) {
             auto concated = base.info.VirtualBases().Accumulate(
                 acc, [](auto acc, auto b) { return acc.Insert(b); });
-            if constexpr (!base.is_virtual)
+            if constexpr (!base.is_virtual) {
                 return concated;
-            else
+            } else {
                 return concated.Insert(base.info);
+            }
         });
     }
     template <class R, class F>
-    static constexpr auto DFS_Acc(R r, F&& f) {
+    static constexpr auto DFS_Acc(R result, F&& func) -> decltype(auto) {
         return detail::DFS_Acc<0>(
-            TypeInfo<Type>{}, std::forward<F>(f),
+            TypeInfo<Type>{}, std::forward<F>(func),
             VirtualBases().Accumulate(
-                std::forward<F>(f)(std::move(r), TypeInfo<Type>{}, 0),
+                std::forward<F>(func)(std::move(result), TypeInfo<Type>{}, 0),
                 [&](auto acc, auto vb) {
-                    return std::forward<F>(f)(std::move(acc), vb, 1);
+                    return std::forward<F>(func)(std::move(acc), vb, 1);
                 }));
     }
     template <class F>
-    static constexpr void DFS_ForEach(F&& f) {
-        DFS_Acc(0, [&](auto, auto t, auto d) {
-            std::forward<F>(f)(t, d);
+    static constexpr void DFS_ForEach(F&& func) {
+        DFS_Acc(0, [&](auto, auto type, auto depth) {
+            std::forward<F>(func)(type, depth);
             return 0;
         });
     }
@@ -351,10 +376,11 @@ struct TypeInfoBase {
     static constexpr void ForEachVarOf(U&& obj, Func&& func) {
         VirtualBases().ForEach([&](auto vb) {
             vb.fields.ForEach([&](const auto& fld) {
-                using Fld = std::decay_t<decltype(fld)>;
-                if constexpr (!Fld::is_static && !Fld::is_func)
+                using Field = std::decay_t<decltype(fld)>;
+                if constexpr (!Field::is_static && !Field::is_func) {
                     std::forward<Func>(func)(fld,
                                              std::forward<U>(obj).*(fld.value));
+                }
             });
         });
         detail::NV_Var(TypeInfo<Type>{}, std::forward<U>(obj),
@@ -370,7 +396,7 @@ Field(Name, T) -> Field<Name, T, AttrList<>>;
 
 }  // namespace atom::meta
 
-#define ATOM_META_TYPEINFO(Type, ...)                             \
+#define ATOM_META_TYPEINFO(Type, ...)                          \
     namespace atom::meta {                                     \
     template <>                                                \
     struct TypeInfo<Type> : TypeInfoBase<Type> {               \

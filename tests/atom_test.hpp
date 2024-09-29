@@ -76,7 +76,7 @@ ATOM_INLINE void registerSuite(const std::string& suite_name,
     getTestSuites().push_back({suite_name, std::move(cases)});
 }
 
-ATOM_INLINE auto operator""_test(const char* name, std::size_t) {
+ATOM_INLINE auto operator""_test(const char* name, std::size_t size) {
     return [name](std::function<void()> func, bool async = false,
                   double time_limit = 0.0, bool skip = false,
                   std::vector<std::string> const& dependencies = {}) {
@@ -208,7 +208,7 @@ ATOM_INLINE void exportResults(const std::string& filename,
 }
 
 // 执行单个测试用例
-ATOM_INLINE void runTestCase(const TestCase& test, int retry_count = 0) {
+ATOM_INLINE void runTestCase(const TestCase& test, int retryCount = 0) {
     auto& stats = getTestStats();
     Timer timer;
 
@@ -244,9 +244,9 @@ ATOM_INLINE void runTestCase(const TestCase& test, int retry_count = 0) {
         resultMessage = "PASSED";
     } catch (const std::exception& e) {
         resultMessage = e.what();
-        if (retry_count > 0) {
+        if (retryCount > 0) {
             printColored("Retrying test...\n", "1;33");
-            runTestCase(test, retry_count - 1);
+            runTestCase(test, retryCount - 1);
             return;
         }
     }
@@ -266,49 +266,49 @@ ATOM_INLINE void runTestCase(const TestCase& test, int retry_count = 0) {
 
 // 支持并行执行测试
 ATOM_INLINE void runTestsInParallel(const std::vector<TestCase>& tests,
-                                    int num_threads = 4) {
+                                    int numThreads = 4) {
     std::vector<std::thread> threads;
-    threads.reserve(num_threads);
-    for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([i, &tests, num_threads]() {
-            for (size_t j = i; j < tests.size(); j += num_threads) {
+    threads.reserve(numThreads);
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([i, &tests, numThreads]() {
+            for (size_t j = i; j < tests.size(); j += numThreads) {
                 runTestCase(tests[j]);
             }
         });
     }
 
-    for (auto& t : threads) {
-        t.join();
+    for (auto& thread : threads) {
+        thread.join();
     }
 }
 
-ATOM_INLINE void runAllTests(int retry_count = 0, bool parallel = false,
-                             int num_threads = 4);
+ATOM_INLINE void runAllTests(int retryCount = 0, bool parallel = false,
+                             int numThreads = 4);
 
 ATOM_INLINE void runTests(int argc, char* argv[]) {
-    int retry_count = 0;
+    int retryCount = 0;
     bool parallel = false;
-    int num_threads = 4;
-    std::string export_format;
-    std::string export_filename;
+    int numThreads = 4;
+    std::string exportFormat;
+    std::string exportFilename;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--retry" && i + 1 < argc) {
-            retry_count = std::stoi(argv[++i]);
+            retryCount = std::stoi(argv[++i]);
         } else if (arg == "--parallel" && i + 1 < argc) {
             parallel = true;
-            num_threads = std::stoi(argv[++i]);
+            numThreads = std::stoi(argv[++i]);
         } else if (arg == "--export" && i + 2 < argc) {
-            export_format = argv[++i];
-            export_filename = argv[++i];
+            exportFormat = argv[++i];
+            exportFilename = argv[++i];
         }
     }
 
-    runAllTests(retry_count, parallel, num_threads);
+    runAllTests(retryCount, parallel, numThreads);
 
-    if (!export_format.empty() && !export_filename.empty()) {
-        exportResults(export_filename, export_format);
+    if (!exportFormat.empty() && !exportFilename.empty()) {
+        exportResults(exportFilename, exportFormat);
     }
 }
 
@@ -359,7 +359,7 @@ ATOM_INLINE auto sortTestsByDependencies(const std::vector<TestCase>& tests)
 }
 
 // 运行所有测试
-ATOM_INLINE void runAllTests(int retry_count, bool parallel, int num_threads) {
+ATOM_INLINE void runAllTests(int retryCount, bool parallel, int numThreads) {
     auto& stats = getTestStats();
     Timer globalTimer;
 
@@ -373,10 +373,10 @@ ATOM_INLINE void runAllTests(int retry_count, bool parallel, int num_threads) {
     allTests = sortTestsByDependencies(allTests);
 
     if (parallel) {
-        runTestsInParallel(allTests, num_threads);
+        runTestsInParallel(allTests, numThreads);
     } else {
         for (const auto& test : allTests) {
-            runTestCase(test, retry_count);
+            runTestCase(test, retryCount);
         }
     }
 
@@ -390,13 +390,13 @@ ATOM_INLINE void runAllTests(int retry_count, bool parallel, int num_threads) {
 }
 
 // 测试断言
-struct expect {
+struct alignas(64) Expect {
     bool result;
     const char* file;
     int line;
     std::string message;
 
-    expect(bool result, const char* file, int line, std::string msg)
+    Expect(bool result, const char* file, int line, std::string msg)
         : result(result), file(file), line(line), message(msg) {
         auto& stats = getTestStats();
         stats.totalAsserts++;
@@ -411,8 +411,8 @@ struct expect {
 };
 
 // 其他断言类型
-ATOM_INLINE auto expect_approx(double lhs, double rhs, double epsilon,
-                               const char* file, int line) -> expect {
+ATOM_INLINE auto expectApprox(double lhs, double rhs, double epsilon,
+                              const char* file, int line) -> Expect {
     bool result = std::abs(lhs - rhs) <= epsilon;
     return {result, file, line,
             "Expected " + std::to_string(lhs) + " approx equal to " +
@@ -420,33 +420,33 @@ ATOM_INLINE auto expect_approx(double lhs, double rhs, double epsilon,
 }
 
 template <typename T, typename U>
-auto expect_eq(const T& lhs, const U& rhs, const char* file,
-               int line) -> expect {
-    return expect(lhs == rhs, file, line,
+auto expectEq(const T& lhs, const U& rhs, const char* file,
+              int line) -> Expect {
+    return Expect(lhs == rhs, file, line,
                   std::string("Expected ") + std::to_string(lhs) +
                       " == " + std::to_string(rhs));
 }
 
 template <typename T, typename U>
-auto expect_ne(const T& lhs, const U& rhs, const char* file,
-               int line) -> expect {
-    return expect(lhs != rhs, file, line,
+auto expectNe(const T& lhs, const U& rhs, const char* file,
+              int line) -> Expect {
+    return Expect(lhs != rhs, file, line,
                   std::string("Expected ") + std::to_string(lhs) +
                       " != " + std::to_string(rhs));
 }
 
 template <typename T, typename U>
-auto expect_gt(const T& lhs, const U& rhs, const char* file,
-               int line) -> expect {
-    return expect(lhs > rhs, file, line,
+auto expectGt(const T& lhs, const U& rhs, const char* file,
+              int line) -> Expect {
+    return Expect(lhs > rhs, file, line,
                   std::string("Expected ") + std::to_string(lhs) + " > " +
                       std::to_string(rhs));
 }
 
 // 字符串包含断言
-ATOM_INLINE auto expect_contains(const std::string& str,
-                                 const std::string& substr, const char* file,
-                                 int line) -> expect {
+ATOM_INLINE auto expectContains(const std::string& str,
+                                const std::string& substr, const char* file,
+                                int line) -> Expect {
     bool result = str.find(substr) != std::string::npos;
     return {result, file, line,
             "Expected \"" + str + "\" to contain \"" + substr + "\""};
@@ -454,9 +454,9 @@ ATOM_INLINE auto expect_contains(const std::string& str,
 
 // 集合相等断言
 template <typename T>
-ATOM_INLINE auto expect_set_eq(const std::vector<T>& lhs,
-                               const std::vector<T>& rhs, const char* file,
-                               int line) -> expect {
+ATOM_INLINE auto expectSetEq(const std::vector<T>& lhs,
+                             const std::vector<T>& rhs, const char* file,
+                             int line) -> Expect {
     std::set<T> lhsSet(lhs.begin(), lhs.end());
     std::set<T> rhsSet(rhs.begin(), rhs.end());
     bool result = lhsSet == rhsSet;
@@ -465,25 +465,25 @@ ATOM_INLINE auto expect_set_eq(const std::vector<T>& lhs,
 
 // 新增的断言类型
 template <typename T, typename U>
-auto expect_lt(const T& lhs, const U& rhs, const char* file,
-               int line) -> expect {
-    return expect(lhs < rhs, file, line,
+auto expectLt(const T& lhs, const U& rhs, const char* file,
+              int line) -> Expect {
+    return Expect(lhs < rhs, file, line,
                   std::string("Expected ") + std::to_string(lhs) + " < " +
                       std::to_string(rhs));
 }
 
 template <typename T, typename U>
-auto expect_ge(const T& lhs, const U& rhs, const char* file,
-               int line) -> expect {
-    return expect(lhs >= rhs, file, line,
+auto expectGe(const T& lhs, const U& rhs, const char* file,
+              int line) -> Expect {
+    return Expect(lhs >= rhs, file, line,
                   std::string("Expected ") + std::to_string(lhs) +
                       " >= " + std::to_string(rhs));
 }
 
 template <typename T, typename U>
-auto expect_le(const T& lhs, const U& rhs, const char* file,
-               int line) -> expect {
-    return expect(lhs <= rhs, file, line,
+auto expectLe(const T& lhs, const U& rhs, const char* file,
+              int line) -> Expect {
+    return Expect(lhs <= rhs, file, line,
                   std::string("Expected ") + std::to_string(lhs) +
                       " <= " + std::to_string(rhs));
 }

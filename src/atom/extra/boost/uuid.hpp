@@ -1,3 +1,6 @@
+#ifndef ATOM_EXTRA_BOOST_UUID_HPP
+#define ATOM_EXTRA_BOOST_UUID_HPP
+
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -11,6 +14,7 @@
 #include <string>
 #include <vector>
 
+namespace atom::extra::boost {
 constexpr size_t UUID_SIZE = 16;
 constexpr int BASE64_RESERVE_SIZE = 22;
 constexpr int SHIFT_40 = 40;
@@ -27,18 +31,18 @@ constexpr uint64_t UUID_EPOCH = 0x01B21DD213814000L;
 
 class UUID {
 private:
-    boost::uuids::uuid uuid_;
+    ::boost::uuids::uuid uuid_;
 
 public:
-    UUID() : uuid_(boost::uuids::random_generator()()) {}
+    UUID() : uuid_(::boost::uuids::random_generator()()) {}
 
     explicit UUID(const std::string& str)
-        : uuid_(boost::uuids::string_generator()(str)) {}
+        : uuid_(::boost::uuids::string_generator()(str)) {}
 
-    explicit UUID(const boost::uuids::uuid& uuid) : uuid_(uuid) {}
+    explicit UUID(const ::boost::uuids::uuid& uuid) : uuid_(uuid) {}
 
     [[nodiscard]] auto toString() const -> std::string {
-        return boost::uuids::to_string(uuid_);
+        return ::boost::uuids::to_string(uuid_);
     }
 
     [[nodiscard]] auto isNil() const -> bool { return uuid_.is_nil(); }
@@ -63,27 +67,33 @@ public:
         if (bytes.size() != UUID_SIZE) {
             throw std::invalid_argument("UUID must be exactly 16 bytes");
         }
-        boost::uuids::uuid uuid;
+        ::boost::uuids::uuid uuid;
         std::copy(bytes.begin(), bytes.end(), uuid.begin());
         return UUID(uuid);
     }
 
     [[nodiscard]] auto toUint64() const -> uint64_t {
-        return boost::lexical_cast<uint64_t>(uuid_);
+        return ::boost::lexical_cast<uint64_t>(uuid_);
     }
 
-    static auto namespaceDNS() -> UUID { return UUID(boost::uuids::ns::dns()); }
-    static auto namespaceURL() -> UUID { return UUID(boost::uuids::ns::url()); }
-    static auto namespaceOID() -> UUID { return UUID(boost::uuids::ns::oid()); }
+    static auto namespaceDNS() -> UUID {
+        return UUID(::boost::uuids::ns::dns());
+    }
+    static auto namespaceURL() -> UUID {
+        return UUID(::boost::uuids::ns::url());
+    }
+    static auto namespaceOID() -> UUID {
+        return UUID(::boost::uuids::ns::oid());
+    }
 
     static auto v3(const UUID& namespace_uuid,
                    const std::string& name) -> UUID {
-        return UUID(boost::uuids::name_generator(namespace_uuid.uuid_)(name));
+        return UUID(::boost::uuids::name_generator(namespace_uuid.uuid_)(name));
     }
 
     static auto v5(const UUID& namespace_uuid,
                    const std::string& name) -> UUID {
-        boost::uuids::name_generator_sha1 gen(namespace_uuid.uuid_);
+        ::boost::uuids::name_generator_sha1 gen(namespace_uuid.uuid_);
         return UUID(gen(name));
     }
 
@@ -91,7 +101,7 @@ public:
     [[nodiscard]] auto variant() const -> int { return uuid_.variant(); }
 
     [[nodiscard]] static auto v1() -> UUID {
-        static boost::uuids::basic_random_generator<std::mt19937> gen;
+        static ::boost::uuids::basic_random_generator<std::mt19937> gen;
         return UUID(gen());
     }
 
@@ -141,16 +151,19 @@ public:
         return H::combine(std::move(h), uuid.uuid_);
     }
 
-    [[nodiscard]] auto getUUID() const -> const boost::uuids::uuid& {
+    [[nodiscard]] auto getUUID() const -> const ::boost::uuids::uuid& {
         return uuid_;
     }
 };
+}  // namespace atom::extra::boost
 
 namespace std {
 template <>
-struct hash<UUID> {
-    auto operator()(const UUID& uuid) const -> size_t {
-        return boost::hash<boost::uuids::uuid>()(uuid.getUUID());
+struct hash<atom::extra::boost::UUID> {
+    auto operator()(const atom::extra::boost::UUID& uuid) const -> size_t {
+        return ::boost::hash<::boost::uuids::uuid>()(uuid.getUUID());
     }
 };
 }  // namespace std
+
+#endif

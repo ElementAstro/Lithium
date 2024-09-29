@@ -6,8 +6,6 @@
 #include <asio.hpp>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
-#include <utility>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -19,6 +17,7 @@ using StreamHandle = asio::windows::stream_handle;
 using StreamHandle = asio::posix::stream_descriptor;
 #endif
 
+namespace atom::async::io {
 constexpr std::size_t CHUNK = 16384;
 
 class BaseCompressor {
@@ -129,7 +128,7 @@ class ListFilesInZip : public ZipOperation {
 public:
     ListFilesInZip(asio::io_context& io_context, std::string_view zip_file);
     void start() override;
-    std::vector<std::string> getFileList();
+    [[nodiscard]] auto getFileList() const -> std::vector<std::string>;
 
 private:
     void listFiles();
@@ -143,7 +142,7 @@ public:
     FileExistsInZip(asio::io_context& io_context, std::string_view zip_file,
                     std::string_view file_name);
     void start() override;
-    bool found() const;
+    [[nodiscard]] auto found() const -> bool;
 
 private:
     void checkFileExists();
@@ -158,7 +157,7 @@ public:
     RemoveFileFromZip(asio::io_context& io_context, std::string_view zip_file,
                       std::string_view file_name);
     void start() override;
-    bool isSuccessful() const;
+    [[nodiscard]] auto isSuccessful() const -> bool;
 
 private:
     void removeFile();
@@ -172,7 +171,7 @@ class GetZipFileSize : public ZipOperation {
 public:
     GetZipFileSize(asio::io_context& io_context, std::string_view zip_file);
     void start() override;
-    size_t getSizeValue() const;
+    [[nodiscard]] auto getSizeValue() const -> size_t;
 
 private:
     void getSize();
@@ -180,5 +179,6 @@ private:
     std::string zip_file_;
     size_t size_ = 0;
 };
+}  // namespace atom::async::io
 
 #endif  // ASYNC_COMPRESS_HPP

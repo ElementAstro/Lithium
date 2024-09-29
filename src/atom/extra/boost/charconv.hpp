@@ -6,10 +6,12 @@
 #include <charconv>
 #include <cmath>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <system_error>
 #include <type_traits>
 
+namespace atom::extra::boost {
 // 常量定义
 constexpr int ALIGNMENT = 16;
 constexpr int DEFAULT_BASE = 10;
@@ -56,10 +58,10 @@ public:
         std::array<char, BUFFER_SIZE> buffer{};
         auto format = getFloatFormat(options.format);
         auto result = options.precision
-                          ? boost::charconv::to_chars(
+                          ? ::boost::charconv::to_chars(
                                 buffer.data(), buffer.data() + buffer.size(),
                                 value, format, *options.precision)
-                          : boost::charconv::to_chars(
+                          : ::boost::charconv::to_chars(
                                 buffer.data(), buffer.data() + buffer.size(),
                                 value, format);
         if (result.ec == std::errc()) {
@@ -78,7 +80,7 @@ public:
     static auto stringToInt(const std::string& str,
                             int base = DEFAULT_BASE) -> T {
         T value;
-        auto result = boost::charconv::from_chars(
+        auto result = ::boost::charconv::from_chars(
             str.data(), str.data() + str.size(), value, base);
         if (result.ec == std::errc() && result.ptr == str.data() + str.size()) {
             return value;
@@ -91,7 +93,7 @@ public:
     template <typename T>
     static auto stringToFloat(const std::string& str) -> T {
         T value;
-        auto result = boost::charconv::from_chars(
+        auto result = ::boost::charconv::from_chars(
             str.data(), str.data() + str.size(), value);
         if (result.ec == std::errc() && result.ptr == str.data() + str.size()) {
             return value;
@@ -109,7 +111,7 @@ public:
         } else if constexpr (std::is_floating_point_v<T>) {
             return floatToString(value, options);
         } else {
-            static_assert(always_false<T>, "Unsupported type for toString");
+            static_assert(ALWAYS_FALSE<T>, "Unsupported type for toString");
         }
     }
 
@@ -122,7 +124,7 @@ public:
         } else if constexpr (std::is_floating_point_v<T>) {
             return stringToFloat<T>(str);
         } else {
-            static_assert(always_false<T>, "Unsupported type for fromString");
+            static_assert(ALWAYS_FALSE<T>, "Unsupported type for fromString");
         }
     }
 
@@ -140,27 +142,27 @@ public:
 
 private:
     template <typename T>
-    static constexpr bool always_false = false;
+    static constexpr bool ALWAYS_FALSE = false;
 
     static auto getFloatFormat(NumberFormat format)
-        -> boost::charconv::chars_format {
+        -> ::boost::charconv::chars_format {
         switch (format) {
             case NumberFormat::SCIENTIFIC:
-                return boost::charconv::chars_format::scientific;
+                return ::boost::charconv::chars_format::scientific;
             case NumberFormat::FIXED:
-                return boost::charconv::chars_format::fixed;
+                return ::boost::charconv::chars_format::fixed;
             case NumberFormat::HEX:
-                return boost::charconv::chars_format::hex;
+                return ::boost::charconv::chars_format::hex;
             default:
-                return boost::charconv::chars_format::general;
+                return ::boost::charconv::chars_format::general;
         }
     }
 
     static auto getIntegerFormat(NumberFormat format)
-        -> boost::charconv::chars_format {
+        -> ::boost::charconv::chars_format {
         return (format == NumberFormat::HEX)
-                   ? boost::charconv::chars_format::hex
-                   : boost::charconv::chars_format::general;
+                   ? ::boost::charconv::chars_format::hex
+                   : ::boost::charconv::chars_format::general;
     }
 
     static auto addThousandsSeparator(const std::string& str,
@@ -168,14 +170,14 @@ private:
         std::string result;
         int count = 0;
         bool pastDecimalPoint = false;
-        for (auto it = str.rbegin(); it != str.rend(); ++it) {
-            if (*it == '.') {
+        for (char it : std::ranges::reverse_view(str)) {
+            if (it == '.') {
                 pastDecimalPoint = true;
             }
             if (!pastDecimalPoint && count > 0 && count % 3 == 0) {
                 result.push_back(separator);
             }
-            result.push_back(*it);
+            result.push_back(it);
             count++;
         }
         std::reverse(result.begin(), result.end());
@@ -189,5 +191,6 @@ private:
         return str;
     }
 };
+}  // namespace atom::extra::boost
 
 #endif

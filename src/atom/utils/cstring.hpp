@@ -17,6 +17,8 @@ Description: String methods in compilation time
 
 #include <algorithm>
 #include <array>
+#include <charconv>
+#include <string>
 #include <string_view>
 
 using namespace std::literals;
@@ -358,6 +360,84 @@ constexpr auto trim(std::string_view str) noexcept -> std::string_view {
     }
     const auto END = str.find_last_not_of(WHITESPACE);
     return str.substr(START, END - START + 1);
+}
+
+constexpr int BASE_10 = 10;
+constexpr int BASE_2 = 2;
+constexpr int BASE_16 = 16;
+constexpr int MIN_DIGIT = 10;
+
+// Constexpr version for compile-time string literals
+template <size_t N>
+constexpr auto charArrayToArrayConstexpr(const std::array<char, N>& input)
+    -> std::array<char, N> {
+    std::array<char, N> result{};
+#pragma unroll
+    for (size_t i = 0; i < N; ++i) {
+        result[i] = input[i];
+    }
+    return result;
+}
+
+// Non-constexpr version for runtime strings
+template <size_t N>
+auto charArrayToArray(const std::array<char, N>& input) -> std::array<char, N> {
+    std::array<char, N> result{};
+    std::copy_n(input.begin(), N, result.begin());
+    return result;
+}
+
+// Rest of the functions remain the same
+template <size_t N>
+constexpr auto isNegative(const std::array<char, N>& arr) -> bool {
+    if constexpr (N > 1) {
+        return arr[0] == '-';
+    }
+    return false;
+}
+
+template <size_t N>
+constexpr auto arrayToInt(const std::array<char, N>& arr,
+                          int base = BASE_10) -> int {
+    int result = 0;
+    const char* begin = arr.data();
+    const char* end = arr.data() + arr.size();
+    std::from_chars(begin, end, result, base);
+    return result;
+}
+
+template <size_t N>
+constexpr auto absoluteValue(const std::array<char, N>& arr) -> int {
+    int value = arrayToInt(arr);
+    return std::abs(value);
+}
+
+template <size_t N>
+auto convertBase(const std::array<char, N>& arr, int from_base,
+                 int to_base) -> std::string {
+    int value = arrayToInt(arr, from_base);
+    std::string result;
+
+    if (value == 0) {
+        return "0";
+    }
+
+    bool isNegative = value < 0;
+    value = std::abs(value);
+
+    while (value > 0) {
+        int digit = value % to_base;
+        char character =
+            digit < MIN_DIGIT ? '0' + digit : 'A' + digit - MIN_DIGIT;
+        result.append(1, character);
+        value /= to_base;
+    }
+
+    if (isNegative) {
+        result = "-" + result;
+    }
+
+    return result;
 }
 
 }  // namespace atom::utils

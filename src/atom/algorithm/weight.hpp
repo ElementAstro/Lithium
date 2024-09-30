@@ -41,6 +41,52 @@ public:
         }
     };
 
+    class BottomHeavySelectionStrategy : public SelectionStrategy {
+    private:
+        utils::Random<std::mt19937, std::uniform_real_distribution<>> random_;
+
+    public:
+        BottomHeavySelectionStrategy() : random_(0.0, 1.0) {}
+
+        auto select(std::span<const T> cumulative_weights,
+                      T total_weight) -> size_t override {
+            T randomValue = std::sqrt(random_()) * total_weight;
+            auto it = std::ranges::upper_bound(cumulative_weights, randomValue);
+            return std::distance(cumulative_weights.begin(), it);
+        }
+    };
+
+    class RandomSelectionStrategy : public SelectionStrategy {
+    private:
+        utils::Random<std::mt19937, std::uniform_int_distribution<>>
+            random_index_;
+
+    public:
+        explicit RandomSelectionStrategy(size_t max_index)
+            : random_index_(0, max_index - 1) {}
+
+        auto select(std::span<const T>  /*cumulative_weights*/,
+                      T /*total_weight*/) -> size_t override {
+            return random_index_();
+        }
+    };
+
+    class WeightedRandomSampler {
+    public:
+        auto sample(std::span<const T> weights, size_t n) -> std::vector<size_t> {
+            std::vector<size_t> indices(weights.size());
+            std::iota(indices.begin(), indices.end(), 0);
+
+            utils::Random<std::mt19937, std::discrete_distribution<>> random(
+                weights);
+            std::vector<size_t> results(n);
+            std::generate(results.begin(), results.end(),
+                          [&]() { return random(); });
+
+            return results;
+        }
+    };
+
 private:
     std::vector<T> weights_;
     std::vector<T> cumulative_weights_;
@@ -102,9 +148,11 @@ public:
 
     void normalizeWeights() {
         T sum = std::reduce(weights_.begin(), weights_.end());
-        std::ranges::transform(weights_, weights_.begin(),
-                               [sum](T w) { return w / sum; });
-        updateCumulativeWeights();
+        if (sum > T{0}) {
+            std::ranges::transform(weights_, weights_.begin(),
+                                   [sum](T w) { return w / sum; });
+            updateCumulativeWeights();
+        }
     }
 
     void applyFunctionToWeights(std::invocable<T> auto&& func) {
@@ -150,6 +198,21 @@ public:
         return std::reduce(weights_.begin(), weights_.end());
     }
 
+    void resetWeights(const std::vector<T>& new_weights) {
+        weights_ = new_weights;
+        updateCumulativeWeights();
+    }
+
+    void scaleWeights(T factor) {
+        std::ranges::transform(weights_, weights_.begin(),
+                               [factor](T w) { return w * factor; });
+        updateCumulativeWeights();
+    }
+
+    [[nodiscard]] auto getAverageWeight() const -> T {
+        return getTotalWeight() / static_cast<T>(weights_.size());
+    }
+
     void printWeights(std::ostream& oss) const {
         oss << std::format("[{:.2f}", weights_.front());
         for (auto it = weights_.begin() + 1; it != weights_.end(); ++it) {
@@ -167,13 +230,14 @@ private:
 public:
     TopHeavySelectionStrategy() : random_(0.0, 1.0) {}
 
-    size_t select(std::span<const T> cumulative_weights,
-                  T total_weight) override {
+    auto select(std::span<const T> cumulative_weights,
+                  T total_weight) -> size_t override {
         T randomValue = std::pow(random_(), 2) * total_weight;
         auto it = std::ranges::upper_bound(cumulative_weights, randomValue);
         return std::distance(cumulative_weights.begin(), it);
     }
 };
+
 }  // namespace atom::algorithm
 
 #endif

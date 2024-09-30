@@ -1,13 +1,16 @@
 #ifndef ATOM_UTILS_PRINT_HPP
 #define ATOM_UTILS_PRINT_HPP
 
+#include <array>
 #include <chrono>
 #include <format>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <list>
 #include <map>
 #include <random>
+#include <set>
 #include <sstream>
 #include <string_view>
 #include <thread>
@@ -232,6 +235,84 @@ public:
     }
 };
 
+class FormatLiteral {
+    std::string_view fmt_str_;
+
+public:
+    constexpr explicit FormatLiteral(std::string_view format)
+        : fmt_str_(format) {}
+
+    template <typename... Args>
+    auto operator()(Args&&... args) const -> std::string {
+        return std::vformat(fmt_str_, std::make_format_args(args...));
+    }
+};
+
+constexpr auto operator""_fmt(const char* str, std::size_t len) {
+    return FormatLiteral(std::string_view(str, len));
+}
+
+#if __cplusplus >= 202302L
+template <typename T>
+struct std::formatter<
+    T,
+    std::enable_if_t<std::is_same_v<T, std::vector<typename T::value_type>> ||
+                         std::is_same_v<T, std::list<typename T::value_type>> ||
+                         std::is_same_v<T, std::set<typename T::value_type>>,
+                     char>> : std::formatter<string_view> {
+    auto format(const T& container, format_context& ctx) const {
+        auto out = ctx.out();
+        *out++ = '[';
+        bool first = true;
+        for (const auto& item : container) {
+            if (!first) {
+                *out++ = ',';
+                *out++ = ' ';
+            }
+            out = std::format_to(out, "{}", item);
+            first = false;
+        }
+        *out++ = ']';
+        return out;
+    }
+};
+
+template <typename K, typename V>
+struct std::formatter<std::map<K, V>> : std::formatter<string_view> {
+    auto format(const std::map<K, V>& m, format_context& ctx) const {
+        auto out = ctx.out();
+        *out++ = '{';
+        bool first = true;
+        for (const auto& [key, value] : m) {
+            if (!first) {
+                *out++ = ',';
+                *out++ = ' ';
+            }
+            out = std::format_to(out, "{}: {}", key, value);
+            first = false;
+        }
+        *out++ = '}';
+        return out;
+    }
+};
+
+template <typename T, std::size_t N>
+struct std::formatter<std::array<T, N>> : std::formatter<string_view> {
+    auto format(const std::array<T, N>& arr, format_context& ctx) const {
+        auto out = ctx.out();
+        *out++ = '[';
+        for (std::size_t i = 0; i < N; ++i) {
+            if (i > 0) {
+                *out++ = ',';
+                *out++ = ' ';
+            }
+            out = std::format_to(out, "{}", arr[i]);
+        }
+        *out++ = ']';
+        return out;
+    }
+};
+#endif
 }  // namespace atom::utils
 
 #endif

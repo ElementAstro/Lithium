@@ -220,6 +220,22 @@ public:
      */
     void mergeConfig(const json& src);
 
+    /**
+     * @brief Asynchronously loads configuration data from a file.
+     * @param path The path to the file containing configuration data.
+     * @param callback The callback function to invoke upon completion.
+     */
+    void asyncLoadFromFile(const fs::path& path,
+                           std::function<void(bool)> callback);
+
+    /**
+     * @brief Asynchronously saves the current configuration to a file.
+     * @param file_path The path to save the configuration file.
+     * @param callback The callback function to invoke upon completion.
+     */
+    void asyncSaveToFile(const fs::path& file_path,
+                         std::function<void(bool)> callback) const;
+
 private:
     std::unique_ptr<ConfigManagerImpl>
         m_impl_;  ///< Implementation-specific pointer.

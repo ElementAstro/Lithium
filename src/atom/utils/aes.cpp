@@ -273,36 +273,36 @@ auto calculateSha256(std::string_view filename) -> std::string {
 }
 
 auto calculateHash(const std::string &data,
-                          const EVP_MD *(*hashFunction)()) -> std::string {
+                   const EVP_MD *(*hashFunction)()) -> std::string {
     EVP_MD_CTX *context = EVP_MD_CTX_new();
-    const EVP_MD *md = hashFunction();
+    const EVP_MD *messageDigest = hashFunction();
 
-    unsigned char hash[EVP_MAX_MD_SIZE];
+    std::array<unsigned char, EVP_MAX_MD_SIZE> hash;
     unsigned int lengthOfHash = 0;
 
-    EVP_DigestInit_ex(context, md, nullptr);
+    EVP_DigestInit_ex(context, messageDigest, nullptr);
     EVP_DigestUpdate(context, data.c_str(), data.size());
-    EVP_DigestFinal_ex(context, hash, &lengthOfHash);
+    EVP_DigestFinal_ex(context, hash.data(), &lengthOfHash);
 
     EVP_MD_CTX_free(context);
 
-    std::stringstream ss;
+    std::stringstream stringStream;
     for (unsigned int i = 0; i < lengthOfHash; ++i) {
-        ss << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<int>(hash[i]);
+        stringStream << std::hex << std::setw(2) << std::setfill('0')
+                     << static_cast<int>(hash[i]);
     }
-    return ss.str();
+    return stringStream.str();
 }
 
-auto sha224(const std::string &data) -> std::string {
+auto calculateSha224(const std::string &data) -> std::string {
     return calculateHash(data, EVP_sha224);
 }
 
-auto sha384(const std::string &data) -> std::string {
+auto calculateSha384(const std::string &data) -> std::string {
     return calculateHash(data, EVP_sha384);
 }
 
-auto sha512(const std::string &data) -> std::string {
+auto calculateSha512(const std::string &data) -> std::string {
     return calculateHash(data, EVP_sha512);
 }
 }  // namespace atom::utils

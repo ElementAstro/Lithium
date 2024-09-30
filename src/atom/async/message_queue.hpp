@@ -4,26 +4,20 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-1-3
-
-Description: A simple message queue (just learn something)
-
-**************************************************/
-
 #ifndef ATOM_ASYNC_MESSAGE_QUEUE_HPP
 #define ATOM_ASYNC_MESSAGE_QUEUE_HPP
 
 #include <algorithm>
+#include <asio.hpp>
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <deque>
 #include <functional>
+#include <future>
 #include <optional>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -37,165 +31,183 @@ namespace atom::async {
 template <typename T>
 class MessageQueue {
 public:
-    /**
-     * @brief The callback function type that will be called when a new message
-     * is received.
-     */
     using CallbackType = std::function<void(const T&)>;
+    using FilterType = std::function<bool(const T&)>;
 
     /**
-     * @brief Subscribe a callback function to receive messages.
+     * @brief Constructs a MessageQueue with the given io_context.
+     * @param ioContext The Asio io_context to use for asynchronous operations.
+     */
+    explicit MessageQueue(asio::io_context& ioContext)
+        : ioContext_(ioContext) {}
+
+    /**
+     * @brief Subscribe to messages with a callback and optional filter and
+     * timeout.
      *
      * @param callback The callback function to be called when a new message is
      * received.
-     * @param subscriberName The name of the subscriber to be added.
-     * @param priority The priority of the subscriber. Higher priority
-     * subscribers will receive messages before lower priority subscribers.
+     * @param subscriberName The name of the subscriber.
+     * @param priority The priority of the subscriber. Higher priority receives
+     * messages first.
+     * @param filter An optional filter to only receive messages that match the
+     * criteria.
+     * @param timeout The maximum time allowed for the subscriber to process a
+     * message.
      */
-    void subscribe(CallbackType callback, const std::string& subscriberName,
-                   int priority = 0);
+    void subscribe(
+        CallbackType callback, const std::string& subscriberName,
+        int priority = 0, FilterType filter = nullptr,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
 
     /**
-     * @brief Unsubscribe a callback function from receiving messages.
+     * @brief Unsubscribe from messages using the given callback.
      *
-     * @param callback The callback function to be removed.
+     * @param callback The callback function used during subscription.
      */
     void unsubscribe(CallbackType callback);
 
     /**
-     * @brief Publish a new message to all subscribed callback functions.
+     * @brief Publish a message to the queue, with an optional priority.
      *
-     * @param message The message to be published.
+     * @param message The message to publish.
+     * @param priority The priority of the message, higher priority messages are
+     * handled first.
      */
-    void publish(const T& message);
+    void publish(const T& message, int priority = 0);
 
     /**
-     * @brief Start the processing thread(s) to receive and handle messages.
-     *
-     * @param numThreads The number of processing threads to spawn. If not
-     * specified, the number of hardware threads will be used.
+     * @brief Start processing messages in the queue.
      */
-    void startProcessingThread(
-        size_t numThreads = std::thread::hardware_concurrency());
+    void startProcessing();
 
     /**
-     * @brief Stop the processing thread(s) from receiving and handling
-     * messages.
+     * @brief Stop processing messages in the queue.
      */
-    void stopProcessingThread();
+    void stopProcessing();
 
     /**
      * @brief Get the number of messages currently in the queue.
-     *
      * @return The number of messages in the queue.
      */
     auto getMessageCount() const -> size_t;
 
     /**
-     * @brief Get the number of subscribers currently registered.
-     *
+     * @brief Get the number of subscribers currently subscribed to the queue.
      * @return The number of subscribers.
      */
     auto getSubscriberCount() const -> size_t;
 
-private:
     /**
-     * @brief The Subscriber struct contains information about a subscribed
-     * callback function.
+     * @brief Cancel specific messages that meet a given condition.
+     *
+     * @param cancelCondition The condition to cancel certain messages.
      */
+    void cancelMessages(std::function<bool(const T&)> cancelCondition);
+
+private:
     struct Subscriber {
-        std::string name;      /**< The name of the subscriber. */
-        CallbackType callback; /**< The callback function to be called when a
-                                  new message is received. */
-        int priority;          /**< The priority of the subscriber. */
+        std::string name;
+        CallbackType callback;
+        int priority;
+        FilterType filter;
+        std::chrono::milliseconds timeout;
 
-        /**
-         * @brief Construct a new Subscriber object.
-         *
-         * @param name The name of the subscriber.
-         * @param callback The callback function to be called when a new message
-         * is received.
-         * @param priority The priority of the subscriber.
-         */
-        Subscriber(std::string name, const CallbackType& callback, int priority)
-            : name(std::move(name)), callback(callback), priority(priority) {}
+        Subscriber(std::string name, const CallbackType& callback, int priority,
+                   FilterType filter, std::chrono::milliseconds timeout)
+            : name(std::move(name)),
+              callback(callback),
+              priority(priority),
+              filter(filter),
+              timeout(timeout) {}
 
-        /**
-         * @brief Compare two Subscriber objects based on their priority
-         * *
-         * @param other The other Subscriber object to compare with.
-         * @return True if this Subscriber has a higher priority than the other
-         * Subscriber, false otherwise.
-         */
         auto operator<(const Subscriber& other) const -> bool {
             return priority > other.priority;
         }
     };
 
-    std::deque<T>
-        m_messages_; /**< The queue containing all published messages. */
-    std::vector<Subscriber> m_subscribers_; /**< The vector containing all
-                                              subscribed callback functions. */
-    mutable std::mutex m_mutex_; /**< The mutex used to protect access to the
-                                   message queue and subscriber vector. */
-    std::condition_variable
-        m_condition_; /**< The condition variable used to notify processing
-                        threads of new messages. */
-    std::atomic<bool> m_isRunning_{
-        true}; /**< The flag used to indicate whether the processing thread(s)
-                 should continue running. */
-    std::vector<std::thread> m_processingThreads_; /**< The vector containing
-                                                      all processing threads. */
+    struct Message {
+        T data;
+        int priority;
 
+        Message(T data, int priority)
+            : data(std::move(data)), priority(priority) {}
+
+        auto operator<(const Message& other) const -> bool {
+            return priority > other.priority;
+        }
+    };
+
+    std::deque<Message> m_messages_;
+    std::vector<Subscriber> m_subscribers_;
+    mutable std::mutex m_mutex_;
+    std::condition_variable m_condition_;
+    std::atomic<bool> m_isRunning_{true};
+    asio::io_context& ioContext_;
+
+    /**
+     * @brief Process messages in the queue.
+     */
     void processMessages();
+
+    /**
+     * @brief Apply the filter to a message for a given subscriber.
+     * @param subscriber The subscriber to apply the filter for.
+     * @param message The message to filter.
+     * @return True if the message passes the filter, false otherwise.
+     */
+    bool applyFilter(const Subscriber& subscriber, const T& message);
+
+    /**
+     * @brief Handle the timeout for a given subscriber and message.
+     * @param subscriber The subscriber to handle the timeout for.
+     * @param message The message to process.
+     * @return True if the message was processed within the timeout, false
+     * otherwise.
+     */
+    bool handleTimeout(const Subscriber& subscriber, const T& message);
 };
 
 template <typename T>
 void MessageQueue<T>::subscribe(CallbackType callback,
-                                const std::string& subscriberName,
-                                int priority) {
+                                const std::string& subscriberName, int priority,
+                                FilterType filter,
+                                std::chrono::milliseconds timeout) {
     std::lock_guard lock(m_mutex_);
-    m_subscribers_.emplace_back(subscriberName, callback, priority);
-    std::sort(m_subscribers_.begin(), m_subscribers_.end());
+    m_subscribers_.emplace_back(subscriberName, callback, priority, filter,
+                                timeout);
+    std::ranges::sort(m_subscribers_, std::greater{});
 }
 
 template <typename T>
 void MessageQueue<T>::unsubscribe(CallbackType callback) {
     std::lock_guard lock(m_mutex_);
-    auto iterator = std::remove_if(
-        m_subscribers_.begin(), m_subscribers_.end(),
-        [&callback](const auto& subscriber) {
+    auto iterator = std::ranges::remove_if(
+        m_subscribers_, [&callback](const auto& subscriber) {
             return subscriber.callback.target_type() == callback.target_type();
         });
-    m_subscribers_.erase(iterator, m_subscribers_.end());
+    m_subscribers_.erase(iterator.begin(), iterator.end());
 }
 
 template <typename T>
-void MessageQueue<T>::publish(const T& message) {
+void MessageQueue<T>::publish(const T& message, int priority) {
     {
         std::lock_guard lock(m_mutex_);
-        m_messages_.emplace_back(message);
+        m_messages_.emplace_back(message, priority);
     }
-    m_condition_.notify_one();
+    ioContext_.post([this]() { processMessages(); });
 }
 
 template <typename T>
-void MessageQueue<T>::startProcessingThread(size_t numThreads) {
-    for (size_t index = 0; index < numThreads; ++index) {
-        m_processingThreads_.emplace_back(&MessageQueue::processMessages, this);
-    }
+void MessageQueue<T>::startProcessing() {
+    m_isRunning_.store(true);
+    ioContext_.run();
 }
 
 template <typename T>
-void MessageQueue<T>::stopProcessingThread() {
+void MessageQueue<T>::stopProcessing() {
     m_isRunning_.store(false);
-    m_condition_.notify_all();
-    for (auto& thread : m_processingThreads_) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    m_processingThreads_.clear();
+    ioContext_.stop();
 }
 
 template <typename T>
@@ -211,39 +223,74 @@ auto MessageQueue<T>::getSubscriberCount() const -> size_t {
 }
 
 template <typename T>
+void MessageQueue<T>::cancelMessages(
+    std::function<bool(const T&)> cancelCondition) {
+    std::lock_guard lock(m_mutex_);
+    auto iterator = std::remove_if(m_messages_.begin(), m_messages_.end(),
+                                   [&cancelCondition](const auto& msg) {
+                                       return cancelCondition(msg.data);
+                                   });
+    m_messages_.erase(iterator, m_messages_.end());
+}
+
+template <typename T>
+bool MessageQueue<T>::applyFilter(const Subscriber& subscriber,
+                                  const T& message) {
+    if (!subscriber.filter) {
+        return true;
+    }
+    return subscriber.filter(message);
+}
+
+template <typename T>
+bool MessageQueue<T>::handleTimeout(const Subscriber& subscriber,
+                                    const T& message) {
+    if (subscriber.timeout == std::chrono::milliseconds::zero()) {
+        subscriber.callback(message);
+        return true;
+    }
+
+    std::packaged_task<void()> task(
+        [&subscriber, &message]() { subscriber.callback(message); });
+    auto future = task.get_future();
+    asio::post(ioContext_, std::move(task));
+
+    if (future.wait_for(subscriber.timeout) == std::future_status::timeout) {
+        return false;  // Timeout occurred.
+    }
+
+    return true;  // Process completed within timeout.
+}
+
+template <typename T>
 void MessageQueue<T>::processMessages() {
     while (m_isRunning_.load()) {
-        std::optional<T> message;
+        std::optional<Message> message;
 
         {
-            std::unique_lock lock(m_mutex_);
-            m_condition_.wait(lock, [this]() {
-                return !m_messages_.empty() || !m_isRunning_.load();
-            });
-
-            if (!m_isRunning_.load() && m_messages_.empty()) {
+            std::lock_guard lock(m_mutex_);
+            if (m_messages_.empty()) {
                 return;
             }
-
-            if (!m_messages_.empty()) {
-                message = std::move(m_messages_.front());
-                m_messages_.pop_front();
-            }
+            message = std::move(m_messages_.front());
+            m_messages_.pop_front();
         }
 
         if (message) {
-            std::vector<CallbackType> subscribersCopy;
+            std::vector<Subscriber> subscribersCopy;
 
             {
                 std::lock_guard lock(m_mutex_);
                 subscribersCopy.reserve(m_subscribers_.size());
                 for (const auto& subscriber : m_subscribers_) {
-                    subscribersCopy.emplace_back(subscriber.callback);
+                    subscribersCopy.emplace_back(subscriber);
                 }
             }
 
             for (const auto& subscriber : subscribersCopy) {
-                subscriber(*message);
+                if (applyFilter(subscriber, message->data)) {
+                    handleTimeout(subscriber, message->data);
+                }
             }
         }
     }
@@ -251,4 +298,4 @@ void MessageQueue<T>::processMessages() {
 
 }  // namespace atom::async
 
-#endif
+#endif  // ATOM_ASYNC_MESSAGE_QUEUE_HPP

@@ -26,6 +26,7 @@ Description: IO
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
+#include "error/exception.hpp"
 
 #ifdef __linux
 #include <dirent.h>
@@ -579,6 +580,42 @@ void quickMerge(const std::string &outputFilePath,
         partFiles.push_back(partFileName.str());
     }
     mergeFiles(outputFilePath, partFiles);
+}
+
+#ifdef _WIN32
+const char PATH_SEPARATORS[] = "/\\";
+#else
+const char PATH_SEPARATORS[] = "/";
+#endif
+
+auto getExecutableNameFromPath(const std::string &path) -> std::string {
+    if (path.empty()) {
+        THROW_INVALID_ARGUMENT("The provided path is empty.");
+    }
+
+    size_t lastSlashPos = path.find_last_of(PATH_SEPARATORS);
+
+    if (lastSlashPos == std::string::npos) {
+        if (path.find('.') == std::string::npos) {
+            THROW_INVALID_ARGUMENT(
+                "The provided path does not contain a valid file name.");
+        }
+        return path;
+    }
+
+    std::string fileName = path.substr(lastSlashPos + 1);
+
+    if (fileName.empty()) {
+        THROW_INVALID_ARGUMENT(
+            "The provided path ends with a slash and contains no file name.");
+    }
+
+    size_t dotPos = fileName.find_last_of('.');
+    if (dotPos == std::string::npos) {
+        THROW_INVALID_ARGUMENT("The file name does not contain an extension.");
+    }
+
+    return fileName;
 }
 
 }  // namespace atom::io

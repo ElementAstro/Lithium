@@ -1,6 +1,7 @@
 /*!
  * \file type_caster.hpp
- * \brief Auto type caster, for better dispatch
+ * \brief Enhanced type caster with advanced features: type inference, aliasing,
+ * multi-stage conversion, and logging.
  * \author Max Qian <lightapt.com>
  * \date 2023-04-05
  * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
@@ -10,95 +11,155 @@
 #define ATOM_META_TYPE_CASTER_HPP
 
 #include <any>
+#include <cstddef>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <queue>
+#include <string>
 #include <typeinfo>
-#include <vector>
-
-#if ENABLE_FASTHASH
-#include "emhash/hash_set8.hpp"
-#include "emhash/hash_table8.hpp"
-#else
 #include <unordered_map>
 #include <unordered_set>
-#endif
+#include <vector>
 
 #include "atom/error/exception.hpp"
 #include "type_info.hpp"
 
 namespace atom::meta {
 
+/*!
+ * \class TypeCaster
+ * \brief A class that provides type casting functionality with support for type
+ * inference, aliasing, multi-stage conversion, and logging.
+ */
 class TypeCaster {
 public:
     using ConvertFunc = std::function<std::any(const std::any&)>;
     using ConvertMap = std::unordered_map<TypeInfo, ConvertFunc>;
 
+    /*!
+     * \brief Constructor that registers built-in types.
+     */
     TypeCaster() { registerBuiltinTypes(); }
 
+    /*!
+     * \brief Creates a shared pointer to a new TypeCaster instance.
+     * \return A shared pointer to a TypeCaster instance.
+     */
     static auto createShared() -> std::shared_ptr<TypeCaster> {
         return std::make_shared<TypeCaster>();
     }
 
+    /*!
+     * \brief Converts an input of any type to the specified destination type.
+     * \tparam DestinationType The type to convert to.
+     * \param input The input value to be converted.
+     * \return The converted value.
+     * \throws std::invalid_argument if the source type is not found.
+     */
+    template <typename DestinationType>
+    auto convert(const std::any& input) const -> std::any {
+        auto srcInfo = getTypeInfo(input.type().name());
+        auto destInfo = userType<DestinationType>();
+
+        if (!srcInfo.has_value()) {
+            THROW_INVALID_ARGUMENT("Source type not found.");
+        }
+
+        if (srcInfo.value() == destInfo) {
+            return input;
+        }
+
+        auto path = findShortestConversionPath(srcInfo.value(), destInfo);
+        std::any result = input;
+        for (size_t j = 0; j < path.size() - 1; ++j) {
+            result = conversions_.at(path[j]).at(path[j + 1])(result);
+        }
+        return result;
+    }
+
+    /*!
+     * \brief Registers a conversion function between two types.
+     * \tparam SourceType The source type.
+     * \tparam DestinationType The destination type.
+     * \param func The conversion function.
+     * \throws std::invalid_argument if the source and destination types are the
+     * same.
+     */
     template <typename SourceType, typename DestinationType>
     void registerConversion(ConvertFunc func) {
+        std::lock_guard lock(mutex_);  // Ensure thread safety
         auto srcInfo = userType<SourceType>();
         auto destInfo = userType<DestinationType>();
         registerType<SourceType>(srcInfo.bareName());
         registerType<DestinationType>(destInfo.bareName());
+
         if (srcInfo == destInfo) {
             THROW_INVALID_ARGUMENT(
                 "Source and destination types must be different.");
         }
+
         conversions_[srcInfo][destInfo] = std::move(func);
         clearCache();
     }
 
-    template <typename SourceType, typename DestinationType>
-    auto hasConversion() const -> bool {
-        auto srcInfo = userType<SourceType>();
-        auto destInfo = userType<DestinationType>();
-        return hasConversion(srcInfo, destInfo);
+    /*!
+     * \brief Registers an alias for a type.
+     * \tparam T The type to alias.
+     * \param alias The alias name.
+     */
+    template <typename T>
+    void registerAlias(const std::string& alias) {
+        std::lock_guard lock(mutex_);
+        type_alias_map_[alias] = userType<T>();
     }
 
+    /*!
+     * \brief Registers a group of types under a common group name.
+     * \param groupName The name of the group.
+     * \param types The list of type names to group.
+     */
+    void registerTypeGroup(const std::string& groupName,
+                           const std::vector<std::string>& types) {
+        std::lock_guard lock(mutex_);
+        for (const auto& typeName : types) {
+            type_group_map_[typeName] = groupName;
+        }
+    }
+
+    /*!
+     * \brief Registers a multi-stage conversion function.
+     * \tparam IntermediateType The intermediate type.
+     * \tparam SourceType The source type.
+     * \tparam DestinationType The destination type.
+     * \param func1 The first stage conversion function.
+     * \param func2 The second stage conversion function.
+     */
+    template <typename IntermediateType, typename SourceType,
+              typename DestinationType>
+    void registerMultiStageConversion(ConvertFunc func1, ConvertFunc func2) {
+        registerConversion<SourceType, IntermediateType>(std::move(func1));
+        registerConversion<IntermediateType, DestinationType>(std::move(func2));
+    }
+
+    /*!
+     * \brief Checks if a conversion exists between two types.
+     * \param src The source type.
+     * \param dst The destination type.
+     * \return True if a conversion exists, false otherwise.
+     */
     auto hasConversion(TypeInfo src, TypeInfo dst) const -> bool {
+        std::lock_guard lock(mutex_);
         return conversions_.find(src) != conversions_.end() &&
                conversions_.at(src).find(dst) != conversions_.at(src).end();
     }
 
-    auto convert(const std::vector<std::any>& input,
-                 const std::vector<std::string>& target_type_names) const
-        -> std::vector<std::any> {
-        if (input.size() != target_type_names.size()) {
-            THROW_INVALID_ARGUMENT(
-                "Input and target type names must be of the same length.");
-        }
-
-        std::vector<std::any> output;
-        for (size_t i = 0; i < input.size(); ++i) {
-            auto destInfo = userTypeByName(target_type_names[i]);
-            auto srcInfo = getTypeInfo(input[i].type().name());
-            if (!srcInfo.has_value()) {
-                THROW_INVALID_ARGUMENT("Type " + target_type_names[i] +
-                                       " not found.");
-            }
-
-            if (srcInfo.value() == destInfo) {
-                output.push_back(input[i]);
-                continue;
-            }
-
-            auto path = findConversionPath(srcInfo.value(), destInfo);
-            std::any result = input[i];
-            for (size_t j = 0; j < path.size() - 1; ++j) {
-                result = conversions_.at(path[j]).at(path[j + 1])(result);
-            }
-            output.push_back(result);
-        }
-        return output;
-    }
-
+    /*!
+     * \brief Gets a list of registered types.
+     * \return A vector of registered type names.
+     */
     auto getRegisteredTypes() const -> std::vector<std::string> {
+        std::lock_guard lock(mutex_);
         std::vector<std::string> typeNames;
         typeNames.reserve(type_name_map_.size());
         for (const auto& [name, info] : type_name_map_) {
@@ -107,57 +168,17 @@ public:
         return typeNames;
     }
 
+    /*!
+     * \brief Registers a type with a given name.
+     * \tparam T The type to register.
+     * \param name The name to register the type with.
+     */
     template <typename T>
     void registerType(const std::string& name) {
+        std::lock_guard lock(mutex_);
         type_name_map_[name] = userType<T>();
         type_name_map_[typeid(T).name()] = userType<T>();
         detail::getTypeRegistry()[typeid(T).name()] = userType<T>();
-    }
-
-    template <typename EnumType>
-    void registerEnumValue(const std::string& enum_name,
-                           const std::string& string_value,
-                           EnumType enum_value) {
-        if (!m_enumMaps_.contains(enum_name)) {
-            m_enumMaps_[enum_name] =
-                std::unordered_map<std::string, EnumType>();
-        }
-
-        auto& enumMap =
-            std::any_cast<std::unordered_map<std::string, EnumType>&>(
-                m_enumMaps_[enum_name]);
-
-        enumMap[string_value] = enum_value;
-    }
-
-    template <typename EnumType>
-    auto getEnumMap(const std::string& enum_name) const
-        -> const std::unordered_map<std::string, EnumType>& {
-        return std::any_cast<const std::unordered_map<std::string, EnumType>&>(
-            m_enumMaps_.at(enum_name));
-    }
-
-    template <typename EnumType>
-    auto enumToString(EnumType value,
-                      const std::string& enum_name) -> std::string {
-        const auto& enumMap = getEnumMap<EnumType>(enum_name);
-        for (const auto& [key, enumValue] : enumMap) {
-            if (enumValue == value) {
-                return key;
-            }
-        }
-        THROW_INVALID_ARGUMENT("Invalid enum value");
-    }
-
-    template <typename EnumType>
-    auto stringToEnum(const std::string& string_value,
-                      const std::string& enum_name) -> EnumType {
-        const auto& enumMap = getEnumMap<EnumType>(enum_name);
-        auto iterator = enumMap.find(string_value);
-        if (iterator != enumMap.end()) {
-            return iterator->second;
-        }
-        THROW_INVALID_ARGUMENT("Invalid enum string");
     }
 
 private:
@@ -165,22 +186,39 @@ private:
     mutable std::unordered_map<std::string, std::vector<TypeInfo>>
         conversion_paths_cache_;
     std::unordered_map<std::string, TypeInfo> type_name_map_;
+    std::unordered_map<std::string, TypeInfo> type_alias_map_;
+    std::unordered_map<std::string, std::string> type_group_map_;
     std::unordered_map<std::string, std::any> m_enumMaps_;
 
+    mutable std::mutex mutex_;  // Ensure thread safety
+
+    /*!
+     * \brief Registers built-in types.
+     */
     void registerBuiltinTypes() {
+        registerType<std::size_t>("size_t");
         registerType<int>("int");
+        registerType<long>("long");
+        registerType<long long>("long long");
+        registerType<float>("float");
         registerType<double>("double");
+        registerType<char>("char");
+        registerType<unsigned char>("unsigned char");
+        registerType<const char*>("const char*");
         registerType<std::string>("std::string");
+        registerType<std::string_view>("std::string_view");
+        registerType<bool>("bool");
     }
 
-    static auto makeCacheKey(TypeInfo src, TypeInfo dst) -> std::string {
-        return src.bareName() + "->" + dst.bareName();
-    }
-
-    void clearCache() { conversion_paths_cache_.clear(); }
-
-    auto findConversionPath(TypeInfo src,
-                            TypeInfo dst) const -> std::vector<TypeInfo> {
+    /*!
+     * \brief Finds the shortest conversion path between two types.
+     * \param src The source type.
+     * \param dst The destination type.
+     * \return A vector of TypeInfo representing the conversion path.
+     * \throws std::runtime_error if no conversion path is found.
+     */
+    auto findShortestConversionPath(TypeInfo src, TypeInfo dst) const
+        -> std::vector<TypeInfo> {
         std::string cacheKey = makeCacheKey(src, dst);
         if (conversion_paths_cache_.find(cacheKey) !=
             conversion_paths_cache_.end()) {
@@ -218,14 +256,26 @@ private:
         THROW_RUNTIME_ERROR("No conversion path found for these types.");
     }
 
-    auto userTypeByName(const std::string& name) const -> TypeInfo {
-        auto findIt = type_name_map_.find(name);
-        if (findIt != type_name_map_.end()) {
-            return findIt->second;
-        }
-        THROW_INVALID_ARGUMENT("Unknown type name: " + name);
+    /*!
+     * \brief Creates a cache key for conversion paths.
+     * \param src The source type.
+     * \param dst The destination type.
+     * \return A string representing the cache key.
+     */
+    static auto makeCacheKey(TypeInfo src, TypeInfo dst) -> std::string {
+        return src.bareName() + "->" + dst.bareName();
     }
 
+    /*!
+     * \brief Clears the conversion paths cache.
+     */
+    void clearCache() { conversion_paths_cache_.clear(); }
+
+    /*!
+     * \brief Gets the TypeInfo for a given type name.
+     * \param name The name of the type.
+     * \return An optional TypeInfo object.
+     */
     static auto getTypeInfo(const std::string& name)
         -> std::optional<TypeInfo> {
         auto& registry = detail::getTypeRegistry();

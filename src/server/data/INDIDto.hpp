@@ -15,6 +15,8 @@ Description: Data Transform Object for INDI Controller
 #ifndef INDIDTO_HPP
 #define INDIDTO_HPP
 
+#include "Environment.hpp"
+#include "RequestDto.hpp"
 #include "StatusDto.hpp"
 #include "oatpp/Types.hpp"
 #include "oatpp/macro/codegen.hpp"
@@ -104,6 +106,78 @@ class StopEntityDto : public oatpp::DTO {
         info->description = "Entity (driver or device) to stop";
     }
     DTO_FIELD(String, entity);
+};
+
+class ReturnServerINDIScanDto : public StatusDto {
+    DTO_INIT(ReturnServerINDIScanDto, StatusDto)
+
+    DTO_FIELD_INFO(path) {
+        info->description = "Path of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, path);
+
+    DTO_FIELD_INFO(version) {
+        info->description = "Version of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, version);
+
+    DTO_FIELD_INFO(port) {
+        info->description = "Port of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(Int32, port);
+};
+
+class MultiInstancesDto : public oatpp::DTO {
+    DTO_INIT(MultiInstancesDto, DTO)
+
+    DTO_FIELD_INFO(pid) {
+        info->description = "Process ID of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(Int32, pid);
+
+    DTO_FIELD_INFO(path) {
+        info->description = "Path of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, path);
+
+    DTO_FIELD_INFO(version) {
+        info->description = "Version of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, version);
+
+    DTO_FIELD_INFO(name) {
+        info->description = "Name of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, name);
+
+    DTO_FIELD_INFO(port) {
+        info->description = "Port of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(Int32, port);
+
+    DTO_FIELD_INFO(canKill) {
+        info->description = "Whether the INDI server can be killed";
+        info->required = true;
+    }
+    DTO_FIELD(Boolean, canKill);
+};
+
+class ReturnServerINDIScanMultiInstancesDto : public StatusDto {
+    DTO_INIT(ReturnServerINDIScanMultiInstancesDto, StatusDto)
+
+    DTO_FIELD_INFO(instance) {
+        info->description = "A array of all instances";
+        info->required = true;
+    }
+    DTO_FIELD(List<Object<MultiInstancesDto>>, instance);
 };
 
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section

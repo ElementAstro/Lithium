@@ -28,6 +28,7 @@ Description: Process Manager
 #include <tlhelp32.h>
 #include <iprtrmib.h>
 #include <iphlpapi.h>
+#include <tchar.h>
 // clang-format on
 #elif defined(__linux__) || defined(__ANDROID__)
 #include <dirent.h>
@@ -754,6 +755,84 @@ auto getNetworkConnections([[maybe_unused]] int pid)
     }
 #endif
     return connections;
+}
+
+auto getProcessIdByName(const std::string &processName) -> std::vector<int> {
+    std::vector<int> pids;
+#ifdef _WIN32
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) {
+        LOG_F(ERROR, "Failed to create snapshot!");
+        return pids;
+    }
+
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+
+    if (Process32First(hSnapshot, &pe32) != 0) {
+        do {
+            if (_stricmp(pe32.szExeFile, processName.c_str()) == 0) {
+                pids.push_back(static_cast<int>(pe32.th32ProcessID));
+            }
+        } while (Process32Next(hSnapshot, &pe32) != 0);
+    }
+
+    CloseHandle(hSnapshot);
+#elif defined(__linux__)
+    DIR *dir = opendir("/proc");
+    if (!dir) {
+        LOG_F(ERROR, "Failed to open /proc directory.");
+        return pids;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (isdigit(entry->d_name[0])) {
+            std::string pid_dir = std::string("/proc/") + entry->d_name;
+            std::ifstream cmd_file(pid_dir + "/comm");
+            if (cmd_file) {
+                std::string cmd_name;
+                std::getline(cmd_file, cmd_name);
+                if (cmd_name == processName) {
+                    pids.push_back(
+                        static_cast<pid_t>(std::stoi(entry->d_name)));
+                }
+            }
+        }
+    }
+    closedir(dir);
+#elif defined(__APPLE__)
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+    struct kinfo_proc *processList = nullptr;
+    size_t size = 0;
+
+    if (sysctl(mib, 4, nullptr, &size, nullptr, 0) == -1) {
+        LOG_F(ERROR, "Failed to get process size.");
+        return pids;
+    }
+
+    processList = new kinfo_proc[size / sizeof(struct kinfo_proc)];
+    if (sysctl(mib, 4, processList, &size, nullptr, 0) == -1) {
+        LOG_F(ERROR, "Failed to get process list.");
+        delete[] processList;
+        return pids;
+    }
+
+    for (size_t i = 0; i < size / sizeof(struct kinfo_proc); ++i) {
+        char processPath[PROC_PIDPATHINFO_MAXSIZE];
+        proc_pidpath(processList[i].kp_proc.p_pid, processPath,
+                     sizeof(processPath));
+
+        std::string proc_name = processPath;
+        if (proc_name.find(processName) != std::string::npos) {
+            pids.push_back(processList[i].kp_proc.p_pid);
+        }
+    }
+    delete[] processList;
+#else
+#error "Unsupported operating system"
+#endif
+    return pids;
 }
 
 }  // namespace atom::system

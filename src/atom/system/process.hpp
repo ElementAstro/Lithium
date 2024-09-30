@@ -169,6 +169,7 @@ auto _CreateProcessAsUser(const std::string &command,
 
 auto getNetworkConnections(int pid) -> std::vector<NetworkConnection>;
 
+auto getProcessIdByName(const std::string &processName) -> std::vector<int>;
 }  // namespace atom::system
 
 #endif

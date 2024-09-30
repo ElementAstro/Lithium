@@ -8,7 +8,7 @@
 
 Date: 2023-11-10
 
-Description: Extra Math Library
+Description: Extra Math Library with SIMD support
 
 **************************************************/
 
@@ -17,9 +17,20 @@ Description: Extra Math Library
 #include <bit>        // For std::bit_width
 #include <cmath>      // For std::sqrt
 #include <numeric>    // For std::gcd
+#ifdef _MSC_VER
 #include <stdexcept>  // For std::runtime_error
+#endif
 
 #include "atom/error/exception.hpp"
+
+// SIMD headers
+#ifdef USE_SIMD
+#if defined(__x86_64__) || defined(_M_X64)
+#include <immintrin.h>
+#elif defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+#endif
 
 namespace atom::algorithm {
 
@@ -70,7 +81,7 @@ auto safeAdd(uint64_t a, uint64_t b) -> uint64_t {
     return result;
 }
 
-uint64_t safeMul(uint64_t a, uint64_t b) {
+auto safeMul(uint64_t a, uint64_t b) -> uint64_t {
     uint64_t result;
     if (__builtin_mul_overflow(a, b, &result)) {
         THROW_OVERFLOW("Overflow in multiplication");
@@ -113,6 +124,15 @@ auto safeDiv(uint64_t a, uint64_t b) -> uint64_t {
 }
 
 auto bitReverse64(uint64_t n) -> uint64_t {
+#ifdef USE_SIMD
+#if defined(__x86_64__) || defined(_M_X64)
+    return _byteswap_uint64(n);
+#elif defined(__ARM_NEON)
+    return vrev64_u8(vcreate_u8(n));
+#else
+    // Fallback to non-SIMD implementation
+#endif
+#endif
     n = ((n & 0xAAAAAAAAAAAAAAAA) >> 1) | ((n & 0x5555555555555555) << 1);
     n = ((n & 0xCCCCCCCCCCCCCCCC) >> 2) | ((n & 0x3333333333333333) << 2);
     n = ((n & 0xF0F0F0F0F0F0F0F0) >> 4) | ((n & 0x0F0F0F0F0F0F0F0F) << 4);
@@ -123,6 +143,19 @@ auto bitReverse64(uint64_t n) -> uint64_t {
 }
 
 auto approximateSqrt(uint64_t n) -> uint64_t {
+#ifdef USE_SIMD
+#if defined(__x86_64__) || defined(_M_X64)
+    return _mm_cvtsd_si64(
+        _mm_sqrt_sd(_mm_setzero_pd(), _mm_set_sd(static_cast<double>(n))));
+#elif defined(__ARM_NEON)
+    float32x2_t x = vdup_n_f32(static_cast<float>(n));
+    float32x2_t sqrt_reciprocal = vrsqrte_f32(x);
+    float32x2_t result = vmul_f32(x, sqrt_reciprocal);
+    return static_cast<uint64_t>(vget_lane_f32(result, 0));
+#else
+    // Fallback to non-SIMD implementation
+#endif
+#endif
     if (n == 0 || n == 1) {
         return n;
     }
@@ -143,6 +176,21 @@ auto lcm64(uint64_t a, uint64_t b) -> uint64_t { return a / gcd64(a, b) * b; }
 auto isPowerOfTwo(uint64_t n) -> bool { return n != 0 && (n & (n - 1)) == 0; }
 
 auto nextPowerOfTwo(uint64_t n) -> uint64_t {
+#ifdef USE_SIMD
+#if defined(__x86_64__) || defined(_M_X64)
+    if (n == 0)
+        return 1;
+    unsigned long index;
+    _BitScanReverse64(&index, n);
+    return 1ULL << (index + 1);
+#elif defined(__ARM_NEON)
+    if (n == 0)
+        return 1;
+    return 1ULL << (64 - __builtin_clzll(n - 1));
+#else
+    // Fallback to non-SIMD implementation
+#endif
+#endif
     if (n == 0) {
         return 1;
     }
@@ -155,5 +203,59 @@ auto nextPowerOfTwo(uint64_t n) -> uint64_t {
     n |= n >> 32;
     return n + 1;
 }
+
+// New SIMD-optimized functions
+
+#ifdef USE_SIMD
+
+template <typename T, size_t N>
+void vectorAdd(const T* a, const T* b, T* result, size_t size) {
+#if defined(__x86_64__) || defined(_M_X64)
+    for (size_t i = 0; i < size; i += N) {
+        __m256i va =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i*>(a + i));
+        __m256i vb =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i*>(b + i));
+        __m256i vr = _mm256_add_epi32(va, vb);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(result + i), vr);
+    }
+#elif defined(__ARM_NEON)
+    for (size_t i = 0; i < size; i += N) {
+        int32x4_t va = vld1q_s32(reinterpret_cast<const int32_t*>(a + i));
+        int32x4_t vb = vld1q_s32(reinterpret_cast<const int32_t*>(b + i));
+        int32x4_t vr = vaddq_s32(va, vb);
+        vst1q_s32(reinterpret_cast<int32_t*>(result + i), vr);
+    }
+#endif
+}
+
+template <typename T, size_t N>
+void vectorMul(const T* a, const T* b, T* result, size_t size) {
+#if defined(__x86_64__) || defined(_M_X64)
+    for (size_t i = 0; i < size; i += N) {
+        __m256i va =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i*>(a + i));
+        __m256i vb =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i*>(b + i));
+        __m256i vr = _mm256_mullo_epi32(va, vb);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(result + i), vr);
+    }
+#elif defined(__ARM_NEON)
+    for (size_t i = 0; i < size; i += N) {
+        int32x4_t va = vld1q_s32(reinterpret_cast<const int32_t*>(a + i));
+        int32x4_t vb = vld1q_s32(reinterpret_cast<const int32_t*>(b + i));
+        int32x4_t vr = vmulq_s32(va, vb);
+        vst1q_s32(reinterpret_cast<int32_t*>(result + i), vr);
+    }
+#endif
+}
+
+// Explicit instantiations for common types
+template void vectorAdd<int32_t, 8>(const int32_t*, const int32_t*, int32_t*,
+                                    size_t);
+template void vectorMul<int32_t, 8>(const int32_t*, const int32_t*, int32_t*,
+                                    size_t);
+
+#endif  // USE_SIMD
 
 }  // namespace atom::algorithm

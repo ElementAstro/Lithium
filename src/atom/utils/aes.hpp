@@ -71,9 +71,23 @@ namespace atom::utils {
  * @param data The string to be hashed
  * @return The SHA-224 hash of the string
  */
-[[nodiscard]] auto sha224(const std::string &data) -> std::string;
+[[nodiscard]] auto calculateSha224(const std::string &data) -> std::string;
 
-auto sha384(const std::string &data) -> std::string;
+/**
+ * @brief Calculates the SHA-384 hash of a string.
+ *
+ * @param data The string to be hashed
+ * @return The SHA-384 hash of the string
+ */
+[[nodiscard]] auto calculateSha384(const std::string &data) -> std::string;
+
+/**
+ * @brief Calculates the SHA-512 hash of a string.
+ *
+ * @param data The string to be hashed
+ * @return The SHA-512 hash of the string
+ */
+[[nodiscard]] auto calculateSha512(const std::string &data) -> std::string;
 }  // namespace atom::utils
 
 #endif

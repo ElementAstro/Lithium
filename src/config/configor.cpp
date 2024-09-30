@@ -18,8 +18,12 @@ Description: Configor
 #include <mutex>
 #include <ranges>
 #include <shared_mutex>
+
+#include <asio.hpp>
+
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+
 using json = nlohmann::json;
 
 namespace lithium {
@@ -28,16 +32,25 @@ class ConfigManagerImpl {
 public:
     mutable std::shared_mutex rwMutex;
     json config;
+    asio::io_context ioContext_;
+    std::thread ioThread_;
 };
 
 ConfigManager::ConfigManager()
     : m_impl_(std::make_unique<ConfigManagerImpl>()) {
+    asio::executor_work_guard<asio::io_context::executor_type> workGuard(
+        m_impl_->ioContext_.get_executor());
+    m_impl_->ioThread_ = std::thread([this] { m_impl_->ioContext_.run(); });
     if (loadFromFile("config.json")) {
         DLOG_F(INFO, "Config loaded successfully.");
     }
 }
 
 ConfigManager::~ConfigManager() {
+    m_impl_->ioContext_.stop();
+    if (m_impl_->ioThread_.joinable()) {
+        m_impl_->ioThread_.join();
+    }
     if (saveToFile("config.json")) {
         DLOG_F(INFO, "Config saved successfully.");
     }
@@ -272,5 +285,25 @@ void ConfigManager::mergeConfig(const json& src) {
 }
 
 void ConfigManager::clearConfig() { m_impl_->config.clear(); }
+
+void ConfigManager::asyncLoadFromFile(const fs::path& path,
+                                      std::function<void(bool)> callback) {
+    asio::post(m_impl_->ioContext_, [this, path, callback]() {
+        bool success = loadFromFile(path);
+        // Post back to caller's thread or IO context
+        asio::post(m_impl_->ioContext_,
+                   [callback, success]() { callback(success); });
+    });
+}
+
+void ConfigManager::asyncSaveToFile(const fs::path& file_path,
+                                    std::function<void(bool)> callback) const {
+    asio::post(m_impl_->ioContext_, [this, file_path, callback]() {
+        bool success = saveToFile(file_path);
+        // Post back to caller's thread or IO context
+        asio::post(m_impl_->ioContext_,
+                   [callback, success]() { callback(success); });
+    });
+}
 
 }  // namespace lithium

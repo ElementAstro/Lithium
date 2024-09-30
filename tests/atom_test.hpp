@@ -490,17 +490,17 @@ auto expectLe(const T& lhs, const U& rhs, const char* file,
 
 }  // namespace atom::test
 
-#define expect(expr) atom::test::expect(expr, __FILE__, __LINE__, #expr)
-#define expect_eq(lhs, rhs) atom::test::expect_eq(lhs, rhs, __FILE__, __LINE__)
-#define expect_ne(lhs, rhs) atom::test::expect_ne(lhs, rhs, __FILE__, __LINE__)
-#define expect_gt(lhs, rhs) atom::test::expect_gt(lhs, rhs, __FILE__, __LINE__)
-#define expect_lt(lhs, rhs) atom::test::expect_lt(lhs, rhs, __FILE__, __LINE__)
-#define expect_ge(lhs, rhs) atom::test::expect_ge(lhs, rhs, __FILE__, __LINE__)
-#define expect_le(lhs, rhs) atom::test::expect_le(lhs, rhs, __FILE__, __LINE__)
+#define expect(expr) atom::test::Expect(expr, __FILE__, __LINE__, #expr)
+#define expect_eq(lhs, rhs) atom::test::expectEq(lhs, rhs, __FILE__, __LINE__)
+#define expect_ne(lhs, rhs) atom::test::expectNe(lhs, rhs, __FILE__, __LINE__)
+#define expect_gt(lhs, rhs) atom::test::expectGt(lhs, rhs, __FILE__, __LINE__)
+#define expect_lt(lhs, rhs) atom::test::expectLt(lhs, rhs, __FILE__, __LINE__)
+#define expect_ge(lhs, rhs) atom::test::expectGe(lhs, rhs, __FILE__, __LINE__)
+#define expect_le(lhs, rhs) atom::test::expectLe(lhs, rhs, __FILE__, __LINE__)
 #define expect_approx(lhs, rhs, eps) \
-    atom::test::expect_approx(lhs, rhs, eps, __FILE__, __LINE__)
+    atom::test::expectApprox(lhs, rhs, eps, __FILE__, __LINE__)
 #define expect_contains(str, substr) \
-    atom::test::expect_contains(str, substr, __FILE__, __LINE__)
-#define expect_set_eq(lhs, rhs) ut::expect_set_eq(lhs, rhs, __FILE__, __LINE__)
+    atom::test::expectContains(str, substr, __FILE__, __LINE__)
+#define expect_set_eq(lhs, rhs) ut::expectSetEq(lhs, rhs, __FILE__, __LINE__)
 
 #endif

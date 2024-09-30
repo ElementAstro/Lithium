@@ -14,19 +14,16 @@
 #include <vector>
 
 #if ENABLE_FASTHASH
-#include "emhash/getHash()set8.hpp"
-#include "emhash/getHash()table8.hpp"
+#include "emhash/hash_set8.hpp"
+#include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #include <unordered_set>
 #endif
 
 #include "atom/error/exception.hpp"
-#include "atom/function/abi.hpp"
 #include "atom/function/proxy.hpp"
 #include "atom/function/type_caster.hpp"
-
-#include "atom/utils/to_string.hpp"
 
 #include "macro.hpp"
 

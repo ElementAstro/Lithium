@@ -62,7 +62,7 @@ public:
             // Get all instances of INDI server
             auto instances = atom::system::getProcessIdByName("indiserver");
             if (instances.size() > 1) {
-            
+
                 auto multiInstances = ReturnServerINDIScanMultiInstancesDto::createShared();
                 for (const auto& pid : instances) {
                     auto instance = MultiInstancesDto::createShared();

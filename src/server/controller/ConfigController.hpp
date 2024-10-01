@@ -19,6 +19,8 @@
 #include "data/ConfigDto.hpp"
 #include "data/StatusDto.hpp"
 
+#include "atom/log/loguru.hpp"
+
 #include OATPP_CODEGEN_BEGIN(ApiController)  //<- Begin Codegen
 
 class ConfigController : public oatpp::web::server::api::ApiController {
@@ -58,19 +60,28 @@ public:
 
             auto res = ReturnConfigDTO::createShared();
             res->status = "getConfig";
-            if (!m_configManager) {
+            try {
+                if (!m_configManager) {
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "ConfigManager is null";
+                    LOG_F(ERROR, "ConfigManager is null");
+                } else if (auto tmp = m_configManager->getValue(body->path)) {
+                    res->status = "success";
+                    res->code = 200;
+                    res->value = tmp.value().dump();
+                    res->type = "string";
+                } else {
+                    res->status = "error";
+                    res->code = 404;
+                    res->error = "ConfigManager can't find the path";
+                    LOG_F(WARNING, "ConfigManager can't find the path: {}", body->path->c_str());
+                }
+            } catch (const std::exception& e) {
                 res->status = "error";
                 res->code = 500;
-                res->error = "ConfigManager is null";
-            } else if (auto tmp = m_configManager->getValue(body->path)) {
-                res->status = "success";
-                res->code = 200;
-                res->value = tmp.value().dump();
-                res->type = "string";
-            } else {
-                res->status = "error";
-                res->code = 404;
-                res->error = "ConfigManager can't find the path";
+                res->error = e.what();
+                LOG_F(ERROR, "Exception: {}", e.what());
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
@@ -99,17 +110,26 @@ public:
 
             auto res = StatusDto::createShared();
             res->command = "setConfig";
-            if (!m_configManager) {
+            try {
+                if (!m_configManager) {
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "ConfigManager is null";
+                    LOG_F(ERROR, "ConfigManager is null");
+                } else if (m_configManager->setValue(body->path, body->value)) {
+                    res->status = "success";
+                    res->code = 200;
+                } else {
+                    res->status = "error";
+                    res->code = 404;
+                    res->error = "Failed to set the value";
+                    LOG_F(WARNING, "Failed to set the value for path: {}", body->path->c_str());
+                }
+            } catch (const std::exception& e) {
                 res->status = "error";
                 res->code = 500;
-                res->error = "ConfigManager is null";
-            } else if (m_configManager->setValue(body->path, body->value)) {
-                res->status = "success";
-                res->code = 200;
-            } else {
-                res->status = "error";
-                res->code = 404;
-                res->error = "Failed to set the value";
+                res->error = e.what();
+                LOG_F(ERROR, "Exception: {}", e.what());
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
@@ -139,17 +159,26 @@ public:
 
             auto res = StatusDto::createShared();
             res->command = "deleteConfig";
-            if (!m_configManager) {
+            try {
+                if (!m_configManager) {
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "ConfigManager is null";
+                    LOG_F(ERROR, "ConfigManager is null");
+                } else if (m_configManager->deleteValue(body->path)) {
+                    res->status = "success";
+                    res->code = 200;
+                } else {
+                    res->status = "error";
+                    res->code = 404;
+                    res->error = "ConfigManager can't find the path";
+                    LOG_F(WARNING, "ConfigManager can't find the path: {}", body->path->c_str());
+                }
+            } catch (const std::exception& e) {
                 res->status = "error";
                 res->code = 500;
-                res->error = "ConfigManager is null";
-            } else if (m_configManager->deleteValue(body->path)) {
-                res->status = "success";
-                res->code = 200;
-            } else {
-                res->status = "error";
-                res->code = 404;
-                res->error = "ConfigManager can't find the path";
+                res->error = e.what();
+                LOG_F(ERROR, "Exception: {}", e.what());
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
@@ -179,18 +208,27 @@ public:
 
             auto res = StatusDto::createShared();
             res->command = "loadConfig";
-            if (!m_configManager) {
+            try {
+                if (!m_configManager) {
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "ConfigManager is null";
+                    LOG_F(ERROR, "ConfigManager is null");
+                } else if (m_configManager->loadFromFile(
+                           body->path.getValue("config/config.json"))) {
+                    res->status = "success";
+                    res->code = 200;
+                } else {
+                    res->status = "error";
+                    res->code = 404;
+                    res->error = "ConfigManager can't find the path";
+                    LOG_F(WARNING, "ConfigManager can't find the path: {}", body->path->c_str());
+                }
+            } catch (const std::exception& e) {
                 res->status = "error";
                 res->code = 500;
-                res->error = "ConfigManager is null";
-            } else if (m_configManager->loadFromFile(
-                           body->path.getValue("config/config.json"))) {
-                res->status = "success";
-                res->code = 200;
-            } else {
-                res->status = "error";
-                res->code = 404;
-                res->error = "ConfigManager can't find the path";
+                res->error = e.what();
+                LOG_F(ERROR, "Exception: {}", e.what());
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
@@ -220,18 +258,27 @@ public:
 
             auto res = StatusDto::createShared();
             res->command = "saveConfig";
-            if (!m_configManager) {
+            try {
+                if (!m_configManager) {
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "ConfigManager is null";
+                    LOG_F(ERROR, "ConfigManager is null");
+                } else if (m_configManager->saveToFile(
+                           body->path.getValue("config/config.json"))) {
+                    res->status = "success";
+                    res->code = 200;
+                } else {
+                    res->status = "error";
+                    res->code = 404;
+                    res->error = "Failed to save the config";
+                    LOG_F(WARNING, "Failed to save the config to path: {}", body->path->c_str());
+                }
+            } catch (const std::exception& e) {
                 res->status = "error";
                 res->code = 500;
-                res->error = "ConfigManager is null";
-            } else if (m_configManager->saveToFile(
-                           body->path.getValue("config/config.json"))) {
-                res->status = "success";
-                res->code = 200;
-            } else {
-                res->status = "error";
-                res->code = 404;
-                res->error = "Failed to save the config";
+                res->error = e.what();
+                LOG_F(ERROR, "Exception: {}", e.what());
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));

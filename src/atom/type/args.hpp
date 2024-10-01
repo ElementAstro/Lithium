@@ -21,6 +21,7 @@ Description: Argument Container Library for C++
 #include <span>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 // 设置参数的便捷宏
 #define SET_ARGUMENT(container, name, value) container.set(#name, value)

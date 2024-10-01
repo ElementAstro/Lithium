@@ -67,7 +67,8 @@ TEST(CompressionTest, CompressDifferentData) {
 TEST(CompressionTest, DecompressInvalidData) {
     // Attempt to decompress invalid compressed data
     std::string invalidData = "This is not compressed data.";
-    EXPECT_THROW(decompress(invalidData), atom::error::RuntimeError);
+    EXPECT_THROW(ATOM_UNUSED_RESULT(decompress(invalidData)),
+                 atom::error::RuntimeError);
 }
 
 TEST(CompressionTest, CompressAndDecompressSpecialCharacters) {

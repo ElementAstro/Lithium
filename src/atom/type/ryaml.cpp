@@ -1,5 +1,7 @@
 #include "ryaml.hpp"
-
+#include <cctype>
+#include <sstream>
+#include <stdexcept>
 #include "atom/error/exception.hpp"
 
 namespace atom::type {
@@ -19,11 +21,15 @@ YamlValue::YamlValue(const YamlObject& value)
 YamlValue::YamlValue(const YamlArray& value)
     : type_(Type::Array), value_(value) {}
 
+YamlValue::YamlValue(const YamlValue& alias)
+    : type_(Type::Alias), value_(const_cast<YamlValue*>(&alias)) {}
+
 auto YamlValue::type() const -> Type { return type_; }
 
 auto YamlValue::as_string() const -> const std::string& {
-    if (type_ != Type::String)
+    if (type_ != Type::String) {
         THROW_INVALID_ARGUMENT("Not a string");
+    }
     return std::get<std::string>(value_);
 }
 
@@ -35,7 +41,7 @@ auto YamlValue::as_number() const -> double {
 
 auto YamlValue::as_bool() const -> bool {
     if (type_ != Type::Bool)
-        THROW_INVALID_ARGUMENT("Not a bool");
+        THROW_INVALID_ARGUMENT("Not a boolean");
     return std::get<bool>(value_);
 }
 
@@ -70,15 +76,15 @@ std::string YamlValue::to_string() const {
             return result;
         }
         case Type::Array: {
-            std::string result = "- ";
+            std::string result;
             const auto& arr = as_array();
             for (const auto& item : arr) {
-                result += item.to_string() + "\n- ";
+                result += "- " + item.to_string() + "\n";
             }
-            result.pop_back();  // Remove last '-'
-            result.pop_back();  // Remove last space
             return result;
         }
+        case Type::Alias:
+            return "*" + std::get<YamlValue*>(value_)->to_string();
     }
     THROW_INVALID_ARGUMENT("Unknown type");
 }
@@ -106,18 +112,22 @@ auto YamlParser::parse_value(const std::string& str,
 
     if (str[index] == '"')
         return YamlValue(parse_string(str, index));
-    if (str[index] == '-' && (index == 0 || std::isspace(str[index - 1])))
+    if (str[index] == '-')
         return YamlValue(parse_array(str, index));
-    if (std::isalpha(str[index]) || str[index] == '_')
+    if (str[index] == '&')  // Parsing anchors
         return YamlValue(parse_key_value(str, index));
+    if (str[index] == '*')  // Parsing aliases
+        return YamlValue(parse_alias(str, index));
+    if (std::isalpha(str[index]))
+        return YamlValue(parse_key_value(str, index));
+    if (std::isdigit(str[index]) || str[index] == '-')
+        return YamlValue(parse_number(str, index));
     if (str[index] == 't' || str[index] == 'f')
         return YamlValue(parse_bool(str, index));
     if (str[index] == 'n') {
         parse_null(str, index);
         return YamlValue();
     }
-    if (std::isdigit(str[index]) || str[index] == '-')
-        return YamlValue(parse_number(str, index));
 
     THROW_INVALID_ARGUMENT("Invalid YAML value");
 }
@@ -198,6 +208,22 @@ auto YamlParser::parse_array(const std::string& str,
             ++index;
     }
     return arr;
+}
+
+auto YamlParser::parse_alias(const std::string& str,
+                             size_t& index) -> YamlValue {
+    ++index;
+    std::string aliasName;
+    while (index < str.size() && !std::isspace(str[index])) {
+        aliasName += str[index++];
+    }
+    // Assuming we store the aliases in some global map.
+    // auto alias = aliases.find(aliasName);
+    // if (alias == aliases.end()) {
+    //     THROW_INVALID_ARGUMENT("Alias not found: " + aliasName);
+    // }
+    // return YamlValue(*alias->second);
+    THROW_INVALID_ARGUMENT("Alias parsing is not yet implemented");
 }
 
 void YamlParser::skip_whitespace(const std::string& str, size_t& index) {

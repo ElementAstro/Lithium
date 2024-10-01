@@ -20,6 +20,7 @@ Description: System Information Module - Disk
 #include <ranges>
 #include <span>
 #include <sstream>
+#include <thread>
 #include <unordered_set>
 
 #ifdef _WIN32
@@ -253,6 +254,34 @@ std::unordered_set<std::string> whiteList = {"SD1234", "SD5678"};
 bool checkForMaliciousFiles(const std::string& path) {
     LOG_F(INFO, "Checking for malicious files on: {}", path);
     bool maliciousFound = false;
+
+#ifdef _WIN32
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile((path + "\\*").c_str(), &findFileData);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        LOG_F(ERROR, "Failed to open directory: {}", path);
+        return false;
+    }
+
+    do {
+        const std::string filename = findFileData.cFileName;
+        const std::string filePath = path + "\\" + filename;
+
+        if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            // Check file extension and report any suspicious files
+            if (filename.find(".exe") != std::string::npos ||
+                filename.find(".sh") != std::string::npos) {
+                LOG_F(WARNING, "Suspicious file found: {} ({} bytes)", filename,
+                      findFileData.nFileSizeLow);
+                maliciousFound = true;
+            }
+        }
+    } while (FindNextFile(hFind, &findFileData) != 0);
+
+    FindClose(hFind);
+
+#else
     DIR* dir;
     struct dirent* ent;
     if ((dir = opendir(path.c_str())) != nullptr) {
@@ -273,7 +302,12 @@ bool checkForMaliciousFiles(const std::string& path) {
             }
         }
         closedir(dir);
+    } else {
+        LOG_F(ERROR, "Failed to open directory: {}", path);
+        return false;
     }
+#endif
+
     return maliciousFound;
 }
 
@@ -379,8 +413,8 @@ auto getFileSystemType(const std::string& path) -> std::string {
 
 #ifdef _WIN32
 
-bool setReadOnlyWindows(const std::string& driveLetter) {
-    std::string volumePath = "\\\\.\\";
+auto setReadOnlyWindows(const std::string& driveLetter) -> bool {
+    std::string volumePath = R"(\\.\)";
     volumePath += driveLetter;
     volumePath += ":";
 
@@ -389,22 +423,19 @@ bool setReadOnlyWindows(const std::string& driveLetter) {
                                 OPEN_EXISTING, 0, NULL);
 
     if (hDevice == INVALID_HANDLE_VALUE) {
-        std::cerr << "Failed to access volume: " << GetLastError() << std::endl;
-        logEvent("Failed to access volume: " + driveLetter);
+        LOG_F(ERROR, "Failed to access volume: {}", GetLastError());
         return false;
     }
 
     DWORD bytesReturned;
     bool result = DeviceIoControl(hDevice, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0,
-                                  &bytesReturned, NULL);
+                                  &bytesReturned, NULL) != 0;
 
     if (result) {
-        std::cout << "Volume locked as read-only." << std::endl;
-        logEvent("Successfully locked volume " + driveLetter +
-                 " as read-only.");
+        LOG_F(INFO, "Volume locked as read-only.");
+        LOG_F(INFO, "Successfully locked volume {} as read-only.", driveLetter);
     } else {
-        std::cerr << "Failed to lock volume: " << GetLastError() << std::endl;
-        logEvent("Failed to lock volume: " + driveLetter);
+        LOG_F(ERROR, "Failed to lock volume: {}", GetLastError());
     }
 
     CloseHandle(hDevice);
@@ -423,9 +454,9 @@ void disableAutoRun() {
         RegSetValueEx(hKey, "NoDriveTypeAutoRun", 0, REG_DWORD, (BYTE*)&value,
                       sizeof(DWORD));
         RegCloseKey(hKey);
-        logEvent("Successfully disabled AutoRun.");
+        LOG_F(INFO, "Successfully disabled AutoRun.");
     } else {
-        logEvent("Failed to disable AutoRun.");
+        LOG_F(ERROR, "Failed to disable AutoRun.");
     }
 }
 
@@ -439,9 +470,9 @@ void monitorDeviceInsertionWindows() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         std::string deviceID = "SD1234";  // Simulate device ID
         if (isDeviceInWhiteList(deviceID)) {
-            std::cout << "Detected device insertion, executing read-only lock "
-                         "and security scan..."
-                      << std::endl;
+            LOG_F(INFO,
+                  "Detected device insertion, executing read-only lock and "
+                  "security scan...");
             disableAutoRun();
             setReadOnlyWindows("E");  // Assume the SD card is on drive E
             checkForMaliciousFiles("E:/");

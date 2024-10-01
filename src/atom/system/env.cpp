@@ -27,6 +27,8 @@ Description: Environment variable management
 namespace fs = std::filesystem;
 
 namespace atom::utils {
+Env::Env() : Env(0, nullptr) {}
+
 Env::Env(int argc, char **argv) {
     fs::path exePath;
 

@@ -152,7 +152,9 @@ void CountingHashTable<Key, Value>::insert(const Key& key, const Value& value) {
     if (it == table_.end()) {
         table_.emplace(key, std::move(newEntry));
     } else {
-        it->second = std::move(newEntry);
+        it->second.value = std::move(newEntry.value);
+        it->second.count.store(newEntry.count.load(std::memory_order_relaxed),
+                               std::memory_order_relaxed);
     }
 }
 

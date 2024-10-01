@@ -2,22 +2,18 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
-#include <numeric>
 #include <queue>
-#include <set>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace atom::search {
-Document::Document(std::string id, std::string content,
-                   std::initializer_list<std::string> tags)
-    : id(std::move(id)),
-      content(std::move(content)),
-      tags(tags),
+Document::Document(std::string docId, std::string docContent,
+                   std::initializer_list<std::string> docTags)
+    : id(std::move(docId)),
+      content(std::move(docContent)),
+      tags(docTags),
       clickCount(0) {}
 
 void SearchEngine::addDocument(const Document& doc) {
@@ -37,7 +33,8 @@ void SearchEngine::addContentToIndex(const Document& doc) {
     }
 }
 
-std::vector<Document> SearchEngine::searchByTag(const std::string& tag) {
+auto SearchEngine::searchByTag(const std::string& tag)
+    -> std::vector<Document> {
     return tagIndex_.contains(tag) ? tagIndex_[tag] : std::vector<Document>{};
 }
 
@@ -85,8 +82,6 @@ auto SearchEngine::searchByContent(const std::string& query)
 
 auto SearchEngine::booleanSearch(const std::string& query)
     -> std::vector<Document> {
-    // This is a simplified implementation. A full implementation would need
-    // a proper parser.
     std::istringstream iss(query);
     std::string word;
     std::unordered_map<std::string, double> scores;
@@ -123,39 +118,43 @@ auto SearchEngine::autoComplete(const std::string& prefix)
     return suggestions;
 }
 
-auto SearchEngine::levenshteinDistance(const std::string& s1,
-                                       const std::string& s2) -> int {
-    std::vector<std::vector<int>> dp(s1.size() + 1,
-                                     std::vector<int>(s2.size() + 1));
-    for (size_t i = 0; i <= s1.size(); i++)
-        dp[i][0] = i;
-    for (size_t j = 0; j <= s2.size(); j++)
-        dp[0][j] = j;
+auto SearchEngine::levenshteinDistance(const std::string& str1,
+                                       const std::string& str2) -> int {
+    std::vector<std::vector<int>> distanceMatrix(
+        str1.size() + 1, std::vector<int>(str2.size() + 1));
+    for (size_t i = 0; i <= str1.size(); i++) {
+        distanceMatrix[i][0] = static_cast<int>(i);
+    }
+    for (size_t j = 0; j <= str2.size(); j++) {
+        distanceMatrix[0][j] = static_cast<int>(j);
+    }
 
-    for (size_t i = 1; i <= s1.size(); i++) {
-        for (size_t j = 1; j <= s2.size(); j++) {
-            int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
-            dp[i][j] = std::min(
-                {dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost});
+    for (size_t i = 1; i <= str1.size(); i++) {
+        for (size_t j = 1; j <= str2.size(); j++) {
+            int cost = (str1[i - 1] == str2[j - 1]) ? 0 : 1;
+            distanceMatrix[i][j] = std::min(
+                {distanceMatrix[i - 1][j] + 1, distanceMatrix[i][j - 1] + 1,
+                 distanceMatrix[i - 1][j - 1] + cost});
         }
     }
-    return dp[s1.size()][s2.size()];
+    return distanceMatrix[str1.size()][str2.size()];
 }
 
 auto SearchEngine::tfIdf(const Document& doc,
                          const std::string& term) -> double {
-    int termCount = std::count(doc.content.begin(), doc.content.end(),
-                               term[0]);  // Simplified term frequency count
-    double tf = static_cast<double>(termCount) / doc.content.size();
-    double idf =
+    int termCount = static_cast<int>(
+        std::count(doc.content.begin(), doc.content.end(), term[0]));
+    double termFrequency = static_cast<double>(termCount) /
+                           static_cast<double>(doc.content.size());
+    double inverseDocumentFrequency =
         log(static_cast<double>(totalDocs_) / (1 + docFrequency_[term]));
-    return tf * idf;
+    return termFrequency * inverseDocumentFrequency;
 }
 
-Document SearchEngine::findDocumentById(const std::string& id) {
+auto SearchEngine::findDocumentById(const std::string& docId) -> Document {
     for (const auto& [_, docs] : tagIndex_) {
         for (const auto& doc : docs) {
-            if (doc.id == id) {
+            if (doc.id == docId) {
                 return doc;
             }
         }
@@ -163,20 +162,21 @@ Document SearchEngine::findDocumentById(const std::string& id) {
     throw std::runtime_error("Document not found");
 }
 
-std::vector<Document> SearchEngine::getRankedResults(
-    const std::unordered_map<std::string, double>& scores) {
+auto SearchEngine::getRankedResults(
+    const std::unordered_map<std::string, double>& scores)
+    -> std::vector<Document> {
     std::priority_queue<std::pair<double, Document>,
                         std::vector<std::pair<double, Document>>, Compare>
-        pq;
-    for (const auto& [id, score] : scores) {
-        Document doc = findDocumentById(id);
-        pq.push({score + doc.clickCount, doc});
+        priorityQueue;
+    for (const auto& [docId, score] : scores) {
+        Document doc = findDocumentById(docId);
+        priorityQueue.emplace(score + doc.clickCount, doc);
     }
 
     std::vector<Document> results;
-    while (!pq.empty()) {
-        results.push_back(pq.top().second);
-        pq.pop();
+    while (!priorityQueue.empty()) {
+        results.push_back(priorityQueue.top().second);
+        priorityQueue.pop();
     }
 
     return results;

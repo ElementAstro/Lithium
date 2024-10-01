@@ -21,6 +21,8 @@
 #include <unistd.h>
 #endif
 
+#include "atom/log/loguru.hpp"
+
 namespace lithium {
 
 class SandboxImpl {
@@ -50,45 +52,69 @@ public:
 #endif
 };
 
-Sandbox::Sandbox() : pimpl(std::make_unique<SandboxImpl>()) {}
+Sandbox::Sandbox() : pimpl(std::make_unique<SandboxImpl>()) {
+    LOG_F(INFO, "Sandbox created");
+}
 
-Sandbox::~Sandbox() = default;
+Sandbox::~Sandbox() { LOG_F(INFO, "Sandbox destroyed"); }
 
 auto Sandbox::setTimeLimit(int timeLimitMs) -> bool {
+    LOG_F(INFO, "Setting time limit to {} ms", timeLimitMs);
     return pimpl->setTimeLimit(timeLimitMs);
 }
 
 auto Sandbox::setMemoryLimit(long memoryLimitKb) -> bool {
+    LOG_F(INFO, "Setting memory limit to {} KB", memoryLimitKb);
     return pimpl->setMemoryLimit(memoryLimitKb);
 }
 
 auto Sandbox::setRootDirectory(const std::string& rootDirectory) -> bool {
+    LOG_F(INFO, "Setting root directory to {}", rootDirectory);
     return pimpl->setRootDirectory(rootDirectory);
 }
 
-auto Sandbox::setUserId(int userId) -> bool { return pimpl->setUserId(userId); }
+auto Sandbox::setUserId(int userId) -> bool {
+    LOG_F(INFO, "Setting user ID to {}", userId);
+    return pimpl->setUserId(userId);
+}
 
 auto Sandbox::setProgramPath(const std::string& programPath) -> bool {
+    LOG_F(INFO, "Setting program path to {}", programPath);
     return pimpl->setProgramPath(programPath);
 }
 
 auto Sandbox::setProgramArgs(const std::vector<std::string>& programArgs)
     -> bool {
+    LOG_F(INFO, "Setting program arguments");
+    for (const auto& arg : programArgs) {
+        LOG_F(INFO, "Arg: {}", arg);
+    }
     return pimpl->setProgramArgs(programArgs);
 }
 
-auto Sandbox::run() -> bool { return pimpl->run(); }
+auto Sandbox::run() -> bool {
+    LOG_F(INFO, "Running sandbox");
+    return pimpl->run();
+}
 
-auto Sandbox::getTimeUsed() const -> int { return pimpl->mTimeUsed; }
+auto Sandbox::getTimeUsed() const -> int {
+    LOG_F(INFO, "Getting time used: {} ms", pimpl->mTimeUsed);
+    return pimpl->mTimeUsed;
+}
 
-auto Sandbox::getMemoryUsed() const -> long { return pimpl->mMemoryUsed; }
+auto Sandbox::getMemoryUsed() const -> long {
+    LOG_F(INFO, "Getting memory used: {} KB", pimpl->mMemoryUsed);
+    return pimpl->mMemoryUsed;
+}
 
 auto SandboxImpl::setTimeLimit(int timeLimitMs) -> bool {
     mTimeLimit = timeLimitMs;
 #ifndef _WIN32
     rlimit limit{.rlim_cur = static_cast<rlim_t>(timeLimitMs) / 1000,
                  .rlim_max = static_cast<rlim_t>(timeLimitMs) / 1000};
-    return setrlimit(RLIMIT_CPU, &limit) == 0;
+    bool result = setrlimit(RLIMIT_CPU, &limit) == 0;
+    LOG_F(INFO, "Set time limit result: {}", result);
+    return result;
 #endif
     return true;
 }
@@ -98,7 +124,9 @@ auto SandboxImpl::setMemoryLimit(long memoryLimitKb) -> bool {
 #ifndef _WIN32
     rlimit limit{.rlim_cur = static_cast<rlim_t>(memoryLimitKb) * 1024,
                  .rlim_max = static_cast<rlim_t>(memoryLimitKb) * 1024};
-    return setrlimit(RLIMIT_AS, &limit) == 0;
+    bool result = setrlimit(RLIMIT_AS, &limit) == 0;
+    LOG_F(INFO, "Set memory limit result: {}", result);
+    return result;
 #endif
     return true;
 }
@@ -106,8 +134,10 @@ auto SandboxImpl::setMemoryLimit(long memoryLimitKb) -> bool {
 auto SandboxImpl::setRootDirectory(const std::string& rootDirectory) -> bool {
     mRootDirectory = rootDirectory;
 #ifndef _WIN32
-    return (chdir(rootDirectory.c_str()) == 0) &&
-           (chroot(rootDirectory.c_str()) == 0);
+    bool result = (chdir(rootDirectory.c_str()) == 0) &&
+                  (chroot(rootDirectory.c_str()) == 0);
+    LOG_F(INFO, "Set root directory result: {}", result);
+    return result;
 #endif
     return true;
 }
@@ -115,19 +145,23 @@ auto SandboxImpl::setRootDirectory(const std::string& rootDirectory) -> bool {
 auto SandboxImpl::setUserId(int userId) -> bool {
     mUserId = userId;
 #ifndef _WIN32
-    return (setuid(userId) == 0) && (setgid(userId) == 0);
+    bool result = (setuid(userId) == 0) && (setgid(userId) == 0);
+    LOG_F(INFO, "Set user ID result: {}", result);
+    return result;
 #endif
     return true;
 }
 
 auto SandboxImpl::setProgramPath(const std::string& programPath) -> bool {
     mProgramPath = programPath;
+    LOG_F(INFO, "Program path set to {}", programPath);
     return true;
 }
 
 auto SandboxImpl::setProgramArgs(const std::vector<std::string>& programArgs)
     -> bool {
     mProgramArgs = programArgs;
+    LOG_F(INFO, "Program arguments set");
     return true;
 }
 
@@ -147,6 +181,7 @@ auto SandboxImpl::setWindowsLimits(PROCESS_INFORMATION& processInfo) const
                                  static_cast<SIZE_T>(mMemoryLimit));
     }
 
+    LOG_F(INFO, "Windows limits set");
     return true;
 }
 #else
@@ -155,6 +190,7 @@ auto SandboxImpl::setUnixLimits() -> bool {
         rlimit limit{.rlim_cur = static_cast<rlim_t>(mTimeLimit) / 1000,
                      .rlim_max = static_cast<rlim_t>(mTimeLimit) / 1000};
         if (setrlimit(RLIMIT_CPU, &limit) != 0) {
+            LOG_F(ERROR, "Failed to set CPU time limit");
             return false;
         }
     }
@@ -163,16 +199,19 @@ auto SandboxImpl::setUnixLimits() -> bool {
         rlimit limit{.rlim_cur = static_cast<rlim_t>(mMemoryLimit) * 1024,
                      .rlim_max = static_cast<rlim_t>(mMemoryLimit) * 1024};
         if (setrlimit(RLIMIT_AS, &limit) != 0) {
+            LOG_F(ERROR, "Failed to set memory limit");
             return false;
         }
     }
 
+    LOG_F(INFO, "Unix limits set");
     return true;
 }
 
 auto SandboxImpl::applySeccomp() -> bool {
     scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);  // Default action: kill
     if (ctx == nullptr) {
+        LOG_F(ERROR, "Failed to initialize seccomp");
         return false;
     }
 
@@ -192,10 +231,12 @@ auto SandboxImpl::applySeccomp() -> bool {
     // Load the filter
     if (seccomp_load(ctx) != 0) {
         seccomp_release(ctx);
+        LOG_F(ERROR, "Failed to load seccomp filter");
         return false;
     }
 
     seccomp_release(ctx);
+    LOG_F(INFO, "Seccomp filter applied");
     return true;
 }
 #endif
@@ -214,11 +255,13 @@ auto SandboxImpl::run() -> bool {
     if (!CreateProcess(nullptr, commandLine.data(), nullptr, nullptr, FALSE,
                        CREATE_SUSPENDED, nullptr, nullptr, &startupInfo,
                        &processInfo)) {
+        LOG_F(ERROR, "Failed to create process");
         return false;
     }
 
     if (!setWindowsLimits(processInfo)) {
-        return;
+        LOG_F(ERROR, "Failed to set Windows limits");
+        return false;
     }
 
     ResumeThread(processInfo.hThread);
@@ -237,10 +280,12 @@ auto SandboxImpl::run() -> bool {
     CloseHandle(processInfo.hProcess);
     CloseHandle(processInfo.hThread);
 
+    LOG_F(INFO, "Process finished with exit code {}", exitCode);
     return exitCode == 0;
 #else
     const pid_t PID = fork();
     if (PID < 0) {
+        LOG_F(ERROR, "Failed to fork process");
         return false;
     }
     if (PID == 0) {
@@ -255,14 +300,17 @@ auto SandboxImpl::run() -> bool {
         args.emplace_back(nullptr);
 
         if (!setUnixLimits()) {
+            LOG_F(ERROR, "Failed to set Unix limits");
             exit(1);
         }
 
         if (!applySeccomp()) {
+            LOG_F(ERROR, "Failed to apply seccomp");
             exit(1);
         }
 
         execvp(mProgramPath.c_str(), args.data());
+        LOG_F(ERROR, "Failed to exec program");
         exit(0);
     } else {
         int status = 0;
@@ -273,6 +321,7 @@ auto SandboxImpl::run() -> bool {
         mTimeUsed = static_cast<int>(usage.ru_utime.tv_sec * 1000 +
                                      usage.ru_utime.tv_usec / 1000);
         mMemoryUsed = static_cast<long>(usage.ru_maxrss);
+        LOG_F(INFO, "Process finished with status {}", status);
         return WIFEXITED(status) && WEXITSTATUS(status) == 0;
     }
 #endif

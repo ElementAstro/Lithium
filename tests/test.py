@@ -14,8 +14,9 @@ import subprocess
 import concurrent.futures
 import json
 import argparse
-import pytest
 from datetime import datetime
+import pytest
+
 
 def is_test_binary(file_path):
     """
@@ -28,10 +29,20 @@ def is_test_binary(file_path):
         bool: True if the file is a Google Test binary, otherwise False.
     """
     try:
-        result = subprocess.run([file_path, '--gtest_list_tests'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+        result = subprocess.run(
+            [file_path, '--gtest_list_tests'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=10,
+            check=True
+        )
         return result.returncode == 0
-    except Exception:
+    except subprocess.CalledProcessError:
         return False
+    except subprocess.TimeoutExpired:
+        return False
+
 
 def get_test_binaries(directory):
     """
@@ -51,6 +62,7 @@ def get_test_binaries(directory):
                 test_binaries.append(file_path)
     return test_binaries
 
+
 def run_test_binary(test_binary, timeout):
     """
     Runs a Google Test binary and collects the test results.
@@ -65,7 +77,14 @@ def run_test_binary(test_binary, timeout):
     """
     start_time = datetime.now()
     try:
-        result = subprocess.run([test_binary, '--gtest_output=json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        result = subprocess.run(
+            [test_binary, '--gtest_output=json'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout,
+            check=True
+        )
         end_time = datetime.now()
         output = result.stdout
         try:
@@ -89,9 +108,10 @@ def run_test_binary(test_binary, timeout):
     except subprocess.TimeoutExpired:
         end_time = datetime.now()
         return (test_binary, 0, 0, ["Timeout expired"], [], start_time, end_time)
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         end_time = datetime.now()
         return (test_binary, 0, 0, [str(e)], [], start_time, end_time)
+
 
 def write_summary(log, results):
     """
@@ -125,14 +145,25 @@ def write_summary(log, results):
             log.write(f"    Status: {status}\n")
             log.write(f"    Time: {detail['time']}\n")
             if detail["failure_message"]:
-                log.write(f"    Failure message: {detail['failure_message']}\n")
+                log.write(f"    Failure message: {
+                          detail['failure_message']}\n")
         log.write("\n")
 
     log.write("Summary:\n")
     log.write(f"  Total tests run: {total_tests}\n")
     log.write(f"  Total failures: {total_failures}\n")
 
+
 def pytest_write_summary(results):
+    """
+    Writes a summary of the test results for pytest.
+
+    Args:
+        results (list): A list of test results.
+
+    Returns:
+        dict: A summary of the test results.
+    """
     total_tests = sum(result[1] for result in results)
     total_failures = sum(result[2] for result in results)
     summary = {
@@ -156,8 +187,18 @@ def pytest_write_summary(results):
 
     return summary
 
+
 @pytest.fixture(scope="session")
 def google_test_results(request):
+    """
+    Pytest fixture to get Google Test results.
+
+    Args:
+        request (FixtureRequest): The fixture request object.
+
+    Returns:
+        dict: A summary of the test results.
+    """
     directory = request.config.getoption("--gtest_dir")
     timeout = request.config.getoption("--gtest_timeout")
     max_workers = request.config.getoption("--gtest_max_workers")
@@ -165,40 +206,80 @@ def google_test_results(request):
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_binary = {executor.submit(run_test_binary, binary, timeout): binary for binary in test_binaries}
+        future_to_binary = {executor.submit(
+            run_test_binary, binary, timeout): binary for binary in test_binaries}
         for future in concurrent.futures.as_completed(future_to_binary):
             binary = future_to_binary[future]
             try:
                 results.append(future.result())
             except Exception as exc:
-                results.append((binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
+                results.append(
+                    (binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
 
     return pytest_write_summary(results)
 
+
 def pytest_addoption(parser):
-    parser.addoption("--gtest_dir", action="store", default=".", help="Directory to search for Google Test binaries")
-    parser.addoption("--gtest_timeout", action="store", default=300, type=int, help="Timeout for each test binary in seconds")
-    parser.addoption("--gtest_max_workers", action="store", default=4, type=int, help="Maximum number of parallel workers")
+    """
+    Adds custom command-line options to pytest.
+
+    Args:
+        parser (argparse.ArgumentParser): The argument parser object.
+    """
+    parser.addoption("--gtest_dir", action="store", default=".",
+                     help="Directory to search for Google Test binaries")
+    parser.addoption("--gtest_timeout", action="store", default=300,
+                     type=int, help="Timeout for each test binary in seconds")
+    parser.addoption("--gtest_max_workers", action="store", default=4,
+                     type=int, help="Maximum number of parallel workers")
+
 
 def pytest_configure(config):
+    """
+    Configures pytest with custom settings.
+
+    Args:
+        config (Config): The pytest config object.
+    """
     config._google_test_results = None
 
-def pytest_sessionstart(session):
-    config = session.config
-    config._google_test_results = session.config.pluginmanager.get_plugin("google_test_results")
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
+def pytest_sessionstart(session):
+    """
+    Called after the pytest session has started.
+
+    Args:
+        session (Session): The pytest session object.
+    """
+    config = session.config
+    config._google_test_results = session.config.pluginmanager.get_plugin(
+        "google_test_results")
+
+
+def pytest_terminal_summary(terminalreporter, config):
+    """
+    Writes a summary of the test results to the terminal.
+
+    Args:
+        terminalreporter (TerminalReporter): The terminal reporter object.
+        config (Config): The pytest config object.
+    """
     if config._google_test_results:
         results = config._google_test_results
         terminalreporter.write_sep("=", "Google Test Summary")
-        terminalreporter.write_line(f"Total tests run: {results['total_tests']}")
-        terminalreporter.write_line(f"Total failures: {results['total_failures']}")
+        terminalreporter.write_line(
+            f"Total tests run: {results['total_tests']}")
+        terminalreporter.write_line(
+            f"Total failures: {results['total_failures']}")
         for detail in results["details"]:
             terminalreporter.write_line(f"Binary: {detail['binary']}")
-            terminalreporter.write_line(f"  Total tests: {detail['total_tests']}")
-            terminalreporter.write_line(f"  Total failures: {detail['total_failures']}")
+            terminalreporter.write_line(
+                f"  Total tests: {detail['total_tests']}")
+            terminalreporter.write_line(
+                f"  Total failures: {detail['total_failures']}")
             for reason in detail["failure_reasons"]:
                 terminalreporter.write_line(f"    - {reason}")
+
 
 def main(directory, log_file, max_workers, only_failed, timeout, retries):
     """
@@ -216,13 +297,15 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_binary = {executor.submit(run_test_binary, binary, timeout): binary for binary in test_binaries}
+        future_to_binary = {executor.submit(
+            run_test_binary, binary, timeout): binary for binary in test_binaries}
         for future in concurrent.futures.as_completed(future_to_binary):
             binary = future_to_binary[future]
             try:
                 results.append(future.result())
             except Exception as exc:
-                results.append((binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
+                results.append(
+                    (binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
 
     with open(log_file, 'w', encoding="utf-8") as log:
         write_summary(log, results)
@@ -233,16 +316,19 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
             print("\nRe-running failed tests...")
             for _ in range(retries):
                 with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_binary = {executor.submit(run_test_binary, result[0], timeout): result[0] for result in failed_tests}
+                    future_to_binary = {executor.submit(
+                        run_test_binary, result[0], timeout): result[0] for result in failed_tests}
                     new_results = []
                     for future in concurrent.futures.as_completed(future_to_binary):
                         binary = future_to_binary[future]
                         try:
                             new_results.append(future.result())
                         except Exception as exc:
-                            new_results.append((binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
+                            new_results.append(
+                                (binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
 
-                failed_tests = [result for result in new_results if result[2] > 0]
+                failed_tests = [
+                    result for result in new_results if result[2] > 0]
                 results.extend(new_results)
                 if not failed_tests:
                     break
@@ -253,15 +339,42 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
 
     print(f"\nResults have been written to {log_file}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run all Google Test binaries in a directory and summarize results.")
-    parser.add_argument("directory", help="Directory to search for test binaries")
-    parser.add_argument("--log_file", default=f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log", help="Log file to save test results")
-    parser.add_argument("--max_workers", type=int, default=4, help="Maximum number of parallel workers")
-    parser.add_argument("--only_failed", action='store_true', help="Only rerun failed tests")
-    parser.add_argument("--timeout", type=int, default=300, help="Timeout for each test binary in seconds")
-    parser.add_argument("--retries", type=int, default=1, help="Number of retries for failed tests")
+    parser = argparse.ArgumentParser(
+        description="Run all Google Test binaries in a directory and summarize results.")
+    parser.add_argument(
+        "directory", help="Directory to search for test binaries")
+    parser.add_argument(
+        "--log_file",
+        default=f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+        help="Log file to save test results"
+    )
+    parser.add_argument(
+        "--max_workers",
+        type=int,
+        default=4,
+        help="Maximum number of parallel workers"
+    )
+    parser.add_argument(
+        "--only_failed",
+        action='store_true',
+        help="Only rerun failed tests"
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        help="Timeout for each test binary in seconds"
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=1,
+        help="Number of retries for failed tests"
+    )
 
     args = parser.parse_args()
 
-    main(args.directory, args.log_file, args.max_workers, args.only_failed, args.timeout, args.retries)
+    main(args.directory, args.log_file, args.max_workers,
+         args.only_failed, args.timeout, args.retries)

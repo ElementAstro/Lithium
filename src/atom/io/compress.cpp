@@ -22,6 +22,7 @@ Description: Compressor using ZLib
 #include <minizip-ng/mz_strm_zlib.h>
 #include <minizip-ng/mz_zip.h>
 #include <zlib.h>
+#include <array>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -48,18 +49,20 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 constexpr int CHUNK = 16384;
+constexpr int BUFFER_SIZE = 8192;
+constexpr int FILENAME_SIZE = 256;
 
 namespace atom::io {
-auto compressFile(std::string_view file_name,
+auto compressFile(std::string_view input_file_name,
                   std::string_view output_folder) -> bool {
-    fs::path input_path(file_name);
-    if (!fs::exists(input_path)) {
-        LOG_F(ERROR, "Input file {} does not exist.", file_name);
+    fs::path inputPath(input_file_name);
+    if (!fs::exists(inputPath)) {
+        LOG_F(ERROR, "Input file {} does not exist.", input_file_name);
         return false;
     }
 
     fs::path outputPath =
-        fs::path(output_folder) / input_path.filename().concat(".gz");
+        fs::path(output_folder) / inputPath.filename().concat(".gz");
     gzFile out = gzopen(outputPath.string().data(), "wb");
     if (out == nullptr) {
         LOG_F(ERROR, "Failed to create compressed file {}",
@@ -67,62 +70,67 @@ auto compressFile(std::string_view file_name,
         return false;
     }
 
-    std::ifstream input(file_name.data(), std::ios::binary);
+    std::ifstream input(input_file_name.data(), std::ios::binary);
     if (!input) {
-        LOG_F(ERROR, "Failed to open input file {}", file_name);
+        LOG_F(ERROR, "Failed to open input file {}", input_file_name);
         gzclose(out);
         return false;
     }
 
-    char buf[CHUNK];
-    while (input.read(buf, sizeof(buf))) {
-        if (gzwrite(out, buf, static_cast<unsigned>(input.gcount())) == 0) {
-            LOG_F(ERROR, "Failed to compress file {}", file_name);
+    std::array<char, CHUNK> buf;
+    while (input.read(buf.data(), buf.size())) {
+        if (gzwrite(out, buf.data(), static_cast<unsigned>(input.gcount())) ==
+            0) {
+            LOG_F(ERROR, "Failed to compress file {}", input_file_name);
             gzclose(out);
             return false;
         }
     }
 
     if (input.eof()) {
-        if (gzwrite(out, buf, static_cast<unsigned>(input.gcount())) == 0) {
-            LOG_F(ERROR, "Failed to compress file {}", file_name);
+        if (gzwrite(out, buf.data(), static_cast<unsigned>(input.gcount())) ==
+            0) {
+            LOG_F(ERROR, "Failed to compress file {}", input_file_name);
             gzclose(out);
             return false;
         }
     } else if (input.bad()) {
-        LOG_F(ERROR, "Failed to read input file {}", file_name);
+        LOG_F(ERROR, "Failed to read input file {}", input_file_name);
         gzclose(out);
         return false;
     }
 
     gzclose(out);
-    DLOG_F(INFO, "Compressed file {} -> {}", file_name, outputPath.string());
+    DLOG_F(INFO, "Compressed file {} -> {}", input_file_name,
+           outputPath.string());
     return true;
 }
 
 auto compressFile(const fs::path &file, gzFile out) -> bool {
-    std::ifstream in(file, std::ios::binary);
-    if (!in) {
+    std::ifstream input_file(file, std::ios::binary);
+    if (!input_file) {
         LOG_F(ERROR, "Failed to open file {}", file.string());
         return false;
     }
 
-    char buf[CHUNK];
-    while (in.read(buf, sizeof(buf))) {
-        if (gzwrite(out, buf, static_cast<unsigned>(in.gcount())) !=
-            static_cast<int>(in.gcount())) {
+    std::array<char, CHUNK> buf;
+    while (input_file.read(buf.data(), buf.size())) {
+        if (gzwrite(out, buf.data(),
+                    static_cast<unsigned>(input_file.gcount())) !=
+            static_cast<int>(input_file.gcount())) {
             LOG_F(ERROR, "Failed to compress file {}", file.string());
             return false;
         }
     }
 
-    if (in.eof()) {
-        if (gzwrite(out, buf, static_cast<unsigned>(in.gcount())) !=
-            static_cast<int>(in.gcount())) {
+    if (input_file.eof()) {
+        if (gzwrite(out, buf.data(),
+                    static_cast<unsigned>(input_file.gcount())) !=
+            static_cast<int>(input_file.gcount())) {
             LOG_F(ERROR, "Failed to compress file {}", file.string());
             return false;
         }
-    } else if (in.bad()) {
+    } else if (input_file.bad()) {
         LOG_F(ERROR, "Failed to read file {}", file.string());
         return false;
     }
@@ -130,35 +138,40 @@ auto compressFile(const fs::path &file, gzFile out) -> bool {
     return true;
 }
 
-auto decompressFile(std::string_view file_name,
+auto decompressFile(std::string_view input_file_name,
                     std::string_view output_folder) -> bool {
-    fs::path inputPath(file_name);
+    fs::path inputPath(input_file_name);
     if (!fs::exists(inputPath)) {
-        LOG_F(ERROR, "Input file {} does not exist.", file_name);
+        LOG_F(ERROR, "Input file {} does not exist.", input_file_name);
         return false;
     }
 
     fs::path outputPath =
         fs::path(output_folder) / inputPath.filename().stem().concat(".out");
     FILE *out = fopen(outputPath.string().data(), "wb");
-    if (!out) {
+    if (out == nullptr) {
         LOG_F(ERROR, "Failed to create decompressed file {}",
               outputPath.string());
         return false;
     }
 
-    gzFile in = gzopen(file_name.data(), "rb");
+    gzFile in = gzopen(input_file_name.data(), "rb");
     if (in == nullptr) {
-        LOG_F(ERROR, "Failed to open compressed file {}", file_name);
-        fclose(out);
+        LOG_F(ERROR, "Failed to open compressed file {}", input_file_name);
+        if (fclose(out) != 0) {
+            LOG_F(ERROR, "Failed to close file {}", outputPath.string());
+            gzclose(in);
+            return false;
+        }
         return false;
     }
 
-    char buf[CHUNK];
+    std::array<char, CHUNK> buf;
     int bytesRead;
-    while ((bytesRead = gzread(in, buf, sizeof(buf))) > 0) {
-        if (fwrite(buf, 1, bytesRead, out) != static_cast<size_t>(bytesRead)) {
-            LOG_F(ERROR, "Failed to decompress file {}", file_name);
+    while ((bytesRead = gzread(in, buf.data(), buf.size())) > 0) {
+        if (fwrite(buf.data(), 1, bytesRead, out) !=
+            static_cast<size_t>(bytesRead)) {
+            LOG_F(ERROR, "Failed to decompress file {}", input_file_name);
             fclose(out);
             gzclose(in);
             return false;
@@ -166,7 +179,7 @@ auto decompressFile(std::string_view file_name,
     }
 
     if (bytesRead < 0) {
-        LOG_F(ERROR, "Failed to read compressed file {}", file_name);
+        LOG_F(ERROR, "Failed to read compressed file {}", input_file_name);
         fclose(out);
         gzclose(in);
         return false;
@@ -174,7 +187,8 @@ auto decompressFile(std::string_view file_name,
 
     fclose(out);
     gzclose(in);
-    DLOG_F(INFO, "Decompressed file {} -> {}", file_name, outputPath.string());
+    DLOG_F(INFO, "Decompressed file {} -> {}", input_file_name,
+           outputPath.string());
     return true;
 }
 
@@ -230,46 +244,46 @@ auto extractZip(std::string_view zip_file,
     }
 
     do {
-        char filename[256];
+        std::array<char, FILENAME_SIZE> filename;
         unz_file_info fileInfo;
-        if (unzGetCurrentFileInfo(zipReader, &fileInfo, filename,
-                                  sizeof(filename), nullptr, 0, nullptr,
+        if (unzGetCurrentFileInfo(zipReader, &fileInfo, filename.data(),
+                                  filename.size(), nullptr, 0, nullptr,
                                   0) != UNZ_OK) {
             LOG_F(ERROR, "Failed to get file info in ZIP: {}", zip_file);
             unzClose(zipReader);
             return false;
         }
 
-        std::string filePath =
-            "./" + fs::path(destination_folder).string() + "/" + filename;
-        if (filename[strlen(filename) - 1] == '/') {
+        std::string filePath = "./" + fs::path(destination_folder).string() +
+                               "/" + filename.data();
+        if (filename[filename.size() - 1] == '/') {
             fs::create_directories(filePath);
             continue;
         }
 
         if (unzOpenCurrentFile(zipReader) != UNZ_OK) {
-            LOG_F(ERROR, "Failed to open file in ZIP: {}", filename);
+            LOG_F(ERROR, "Failed to open file in ZIP: {}", filename.data());
             unzClose(zipReader);
             return false;
         }
 
-        std::ofstream out_file(filePath, std::ios::binary);
-        if (!out_file) {
+        std::ofstream outFile(filePath, std::ios::binary);
+        if (!outFile) {
             LOG_F(ERROR, "Failed to create file: {}", filePath);
             unzCloseCurrentFile(zipReader);
             unzClose(zipReader);
             return false;
         }
 
-        char buffer[8192];
+        std::array<char, BUFFER_SIZE> buffer;
         int readSize = 0;
-        while ((readSize = unzReadCurrentFile(zipReader, buffer,
-                                              sizeof(buffer))) > 0) {
-            out_file.write(buffer, readSize);
+        while ((readSize = unzReadCurrentFile(zipReader, buffer.data(),
+                                              buffer.size())) > 0) {
+            outFile.write(buffer.data(), readSize);
         }
 
         unzCloseCurrentFile(zipReader);
-        out_file.close();
+        outFile.close();
         DLOG_F(INFO, "Extracted file {}", filePath);
     } while (unzGoToNextFile(zipReader) != UNZ_END_OF_LIST_OF_FILE);
 
@@ -294,9 +308,9 @@ auto createZip(std::string_view source_folder, std::string_view zip_file,
                 std::string relativePath =
                     fs::relative(filePath, source_folder).string();
 
-                zip_fileinfo file_info = {};
+                zip_fileinfo fileInfo = {};
                 if (zipOpenNewFileInZip(zipWriter, relativePath.data(),
-                                        &file_info, nullptr, 0, nullptr, 0,
+                                        &fileInfo, nullptr, 0, nullptr, 0,
                                         nullptr, Z_DEFLATED,
                                         compression_level) != ZIP_OK) {
                     LOG_F(ERROR, "Failed to add file to ZIP: {}", relativePath);
@@ -313,12 +327,14 @@ auto createZip(std::string_view source_folder, std::string_view zip_file,
                     return false;
                 }
 
-                char buffer[8192];
-                while (inFile.read(buffer, sizeof(buffer))) {
-                    zipWriteInFileInZip(zipWriter, buffer, inFile.gcount());
+                std::array<char, BUFFER_SIZE> buffer;
+                while (inFile.read(buffer.data(), buffer.size())) {
+                    zipWriteInFileInZip(zipWriter, buffer.data(),
+                                        inFile.gcount());
                 }
                 if (inFile.gcount() > 0) {
-                    zipWriteInFileInZip(zipWriter, buffer, inFile.gcount());
+                    zipWriteInFileInZip(zipWriter, buffer.data(),
+                                        inFile.gcount());
                 }
 
                 inFile.close();
@@ -351,16 +367,16 @@ auto listFilesInZip(std::string_view zip_file) -> std::vector<std::string> {
     }
 
     do {
-        char filename[256];
+        std::array<char, FILENAME_SIZE> filename;
         unz_file_info fileInfo;
-        if (unzGetCurrentFileInfo(zipReader, &fileInfo, filename,
-                                  sizeof(filename), nullptr, 0, nullptr,
+        if (unzGetCurrentFileInfo(zipReader, &fileInfo, filename.data(),
+                                  filename.size(), nullptr, 0, nullptr,
                                   0) != UNZ_OK) {
             LOG_F(ERROR, "Failed to get file info in ZIP: {}", zip_file);
             unzClose(zipReader);
             return fileList;
         }
-        fileList.emplace_back(filename);
+        fileList.emplace_back(filename.data());
     } while (unzGoToNextFile(zipReader) != UNZ_END_OF_LIST_OF_FILE);
 
     unzClose(zipReader);
@@ -417,10 +433,10 @@ auto removeFileFromZip(std::string_view zip_file,
     }
 
     do {
-        char filename[256];
+        std::array<char, FILENAME_SIZE> filename;
         unz_file_info fileInfo;
-        if (unzGetCurrentFileInfo(zipReader, &fileInfo, filename,
-                                  sizeof(filename), nullptr, 0, nullptr,
+        if (unzGetCurrentFileInfo(zipReader, &fileInfo, filename.data(),
+                                  filename.size(), nullptr, 0, nullptr,
                                   0) != UNZ_OK) {
             LOG_F(ERROR, "Failed to get file info in ZIP: {}", zip_file);
             unzClose(zipReader);
@@ -428,33 +444,34 @@ auto removeFileFromZip(std::string_view zip_file,
             return false;
         }
 
-        if (file_name == filename) {
+        if (file_name == filename.data()) {
             continue;
         }
 
         if (unzOpenCurrentFile(zipReader) != UNZ_OK) {
-            LOG_F(ERROR, "Failed to open file in ZIP: {}", filename);
+            LOG_F(ERROR, "Failed to open file in ZIP: {}", filename.data());
             unzClose(zipReader);
             zipClose(zipWriter, nullptr);
             return false;
         }
 
         zip_fileinfo fileInfoOut = {};
-        if (zipOpenNewFileInZip(zipWriter, filename, &fileInfoOut, nullptr, 0,
-                                nullptr, 0, nullptr, Z_DEFLATED,
+        if (zipOpenNewFileInZip(zipWriter, filename.data(), &fileInfoOut,
+                                nullptr, 0, nullptr, 0, nullptr, Z_DEFLATED,
                                 Z_DEFAULT_COMPRESSION) != ZIP_OK) {
-            LOG_F(ERROR, "Failed to add file to temporary ZIP: {}", filename);
+            LOG_F(ERROR, "Failed to add file to temporary ZIP: {}",
+                  filename.data());
             unzCloseCurrentFile(zipReader);
             unzClose(zipReader);
             zipClose(zipWriter, nullptr);
             return false;
         }
 
-        char buffer[8192];
+        std::array<char, BUFFER_SIZE> buffer;
         int readSize = 0;
-        while ((readSize = unzReadCurrentFile(zipReader, buffer,
-                                              sizeof(buffer))) > 0) {
-            zipWriteInFileInZip(zipWriter, buffer, readSize);
+        while ((readSize = unzReadCurrentFile(zipReader, buffer.data(),
+                                              buffer.size())) > 0) {
+            zipWriteInFileInZip(zipWriter, buffer.data(), readSize);
         }
 
         unzCloseCurrentFile(zipReader);
@@ -472,8 +489,8 @@ auto removeFileFromZip(std::string_view zip_file,
 }
 
 auto getZipFileSize(std::string_view zip_file) -> size_t {
-    std::ifstream in(zip_file.data(),
-                     std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
+    std::ifstream inputFile(zip_file.data(),
+                             std::ifstream::ate | std::ifstream::binary);
+    return inputFile.tellg();
 }
 }  // namespace atom::io

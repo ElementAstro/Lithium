@@ -60,6 +60,25 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(cmake_modules/compiler_options.cmake)
 
+# ------------------ CPM Begin ------------------
+
+set(CPM_DOWNLOAD_VERSION 0.35.6)
+set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake_modules/CPM.cmake")
+
+if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
+    message(STATUS "Downloading CPM.cmake")
+    file(DOWNLOAD
+        "https://github.com/cpm-cmake/CPM.cmake/releases/download/v${CPM_DOWNLOAD_VERSION}/CPM.cmake"
+        ${CPM_DOWNLOAD_LOCATION}
+    )
+endif()
+
+include(${CPM_DOWNLOAD_LOCATION})
+
+# ------------------ CPM End ------------------
+
+# ------------------ Conan Begin ------------------
+
 if (USE_CONAN)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake OPTIONAL) # Optional inclusion
 
@@ -104,6 +123,8 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
     conan_basic_setup()
 endif()
 endif()
+
+# ------------------ Conan End ------------------
 
 # Include directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

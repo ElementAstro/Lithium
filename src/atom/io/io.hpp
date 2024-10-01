@@ -547,6 +547,20 @@ void quickSplit(const std::string &filePath, int numChunks,
  */
 void quickMerge(const std::string &outputFilePath,
                 const std::string &partPattern, int numChunks);
+
+/**
+ * @brief Get the executable name from the path.
+ *
+ * @param path The path of the executable.
+ * @return The executable name.
+ *
+ * 从路径中获取可执行文件名称。
+ *
+ * @param path 可执行文件的路径。
+ * @return 可执行文件名称。
+ */
+[[nodiscard]]
+auto getExecutableNameFromPath(const std::string &path) -> std::string;
 }  // namespace atom::io
 
 #endif

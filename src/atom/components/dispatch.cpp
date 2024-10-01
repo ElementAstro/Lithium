@@ -1,6 +1,7 @@
 #include "dispatch.hpp"
 
 #include "atom/log/loguru.hpp"
+#include "atom/utils/to_string.hpp"
 
 Arg::Arg(std::string name) : name_(std::move(name)) {}
 
@@ -17,7 +18,7 @@ void CommandDispatcher::checkPrecondition(const Command& cmd,
                                           const std::string& name) {
     LOG_SCOPE_FUNCTION(INFO);
     if (cmd.precondition && !cmd.precondition.value()()) {
-        LOG_F(ERROR, "Precondition failed for command: %s", name.c_str());
+        LOG_F(ERROR, "Precondition failed for command: {}", name);
         THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
     }
 }
@@ -28,10 +29,10 @@ auto CommandDispatcher::executeCommand(
     LOG_SCOPE_FUNCTION(INFO);
     if (auto timeoutIt = timeoutMap_.find(name);
         timeoutIt != timeoutMap_.end()) {
-        LOG_F(INFO, "Executing command with timeout: %s", name.c_str());
+        LOG_F(INFO, "Executing command with timeout: {}", name);
         return executeWithTimeout(cmd, name, args, timeoutIt->second);
     }
-    LOG_F(INFO, "Executing command without timeout: %s", name.c_str());
+    LOG_F(INFO, "Executing command without timeout: {}", name);
     return executeWithoutTimeout(cmd, name, args);
 }
 
@@ -44,7 +45,7 @@ auto CommandDispatcher::executeWithTimeout(
                              [&]() { return executeFunctions(cmd, args); });
 
     if (future.wait_for(timeout) == std::future_status::timeout) {
-        LOG_F(ERROR, "Command timed out: %s", name.c_str());
+        LOG_F(ERROR, "Command timed out: {}", name);
         THROW_DISPATCH_TIMEOUT("Command timed out: " + name);
     }
 
@@ -58,14 +59,13 @@ auto CommandDispatcher::executeWithoutTimeout(
     if (!args.empty()) {
         if (args.size() == 1 &&
             args[0].type() == typeid(std::vector<std::any>)) {
-            LOG_F(INFO, "Executing command with nested arguments: %s",
-                  name.c_str());
+            LOG_F(INFO, "Executing command with nested arguments: {}", name);
             return executeFunctions(
                 cmd, std::any_cast<std::vector<std::any>>(args[0]));
         }
     }
 
-    LOG_F(INFO, "Executing command with arguments: %s", name.c_str());
+    LOG_F(INFO, "Executing command with arguments: {}", name);
     return executeFunctions(cmd, args);
 }
 
@@ -81,12 +81,10 @@ auto CommandDispatcher::executeFunctions(
     for (size_t i = 0; i < cmd.funcs.size(); ++i) {
         if (cmd.hash[i] == funcHash) {
             try {
-                LOG_F(INFO, "Executing function with hash: %s",
-                      funcHash.c_str());
+                LOG_F(INFO, "Executing function with hash: {}", funcHash);
                 return cmd.funcs[i](args);
             } catch (const std::bad_any_cast&) {
-                LOG_F(ERROR, "Failed to call function with hash: %s",
-                      funcHash.c_str());
+                LOG_F(ERROR, "Failed to call function with hash: {}", funcHash);
                 THROW_DISPATCH_EXCEPTION("Failed to call function with hash " +
                                          funcHash);
             }

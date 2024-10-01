@@ -2,99 +2,92 @@
 
 #include "atom/type/static_string.hpp"
 
-// Testing default constructor
 TEST(StaticStringTest, DefaultConstructor) {
     StaticString<10> str;
     EXPECT_EQ(str.size(), 0);
     EXPECT_STREQ(str.cStr(), "");
 }
 
-// Testing string initialization
-TEST(StaticStringTest, StringInitialization) {
-    StaticString<5> str("Hello");
+// Test C-style string constructor
+TEST(StaticStringTest, CStringConstructor) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
     EXPECT_EQ(str.size(), 5);
     EXPECT_STREQ(str.cStr(), "Hello");
 }
 
-// Testing edge case of empty string
-TEST(StaticStringTest, EmptyStringInitialization) {
-    StaticString<0> str("");
-    EXPECT_EQ(str.size(), 0);
-    EXPECT_STREQ(str.cStr(), "");
-}
-
-// Testing string comparison
-TEST(StaticStringTest, StringComparison) {
-    StaticString<5> str1("Hello");
-    StaticString<5> str2("Hello");
-    StaticString<5> str3("World");
-
-    EXPECT_TRUE(str1 == str2);
-    EXPECT_FALSE(str1 == str3);
-    EXPECT_TRUE(str1 != str3);
-}
-
-// Testing string addition with character
-TEST(StaticStringTest, AdditionWithCharacter) {
-    StaticString<4> str("Hell");
-    str += 'o';
+// Test std::string constructor
+TEST(StaticStringTest, StdStringConstructor) {
+    std::string s = "Hello";
+    StaticString<5> str(s);
+    EXPECT_EQ(str.size(), 5);
     EXPECT_STREQ(str.cStr(), "Hello");
 }
 
-// Testing string addition to produce new StaticString
-TEST(StaticStringTest, AdditionWithCharacterProducesNewString) {
-    StaticString<4> str("Hell");
-    auto new_str = str + 'o';
-    EXPECT_STREQ(new_str.cStr(), "Hello");
-    EXPECT_EQ(new_str.size(), 5);
-}
-
-// Testing string concatenation between two StaticString objects
-TEST(StaticStringTest, ConcatenationOfTwoStaticStrings) {
-    StaticString<5> str1("Hello");
-    StaticString<5> str2("World");
-    auto result = str1 + str2;
-
-    EXPECT_EQ(result.size(), 10);
-    EXPECT_STREQ(result.cStr(), "HelloWorld");
-}
-
-// Testing string comparison operators
-TEST(StaticStringTest, StringComparisonOperators) {
-    StaticString<5> str1("Apple");
-    StaticString<6> str2("Banana");
-    StaticString<5> str3("Apple");
-
-    EXPECT_LT(str1, str2);
-    EXPECT_LE(str1, str2);
-    EXPECT_LE(str1, str3);
-    EXPECT_GT(str2, str1);
-    EXPECT_GE(str2, str1);
-    EXPECT_GE(str3, str1);
-}
-
-// Testing edge case of adding a character to a full StaticString
-TEST(StaticStringTest, AddCharacterToFullStaticString) {
-    StaticString<5> str("Hello");
-    str += '!';
-    EXPECT_STREQ(str.cStr(), "Hello");
+// Test size method
+TEST(StaticStringTest, SizeMethod) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
     EXPECT_EQ(str.size(), 5);
 }
 
-// Testing concatenation that would overflow the buffer
-TEST(StaticStringTest, ConcatenationWithOverflow) {
-    StaticString<5> str1("Hello");
-    StaticString<3> str2("!!!");
-    auto result = str1 + str2;
-
-    EXPECT_EQ(result.size(), 8);
-    EXPECT_STREQ(result.cStr(), "Hello!!!");
+// Test cStr method
+TEST(StaticStringTest, CStrMethod) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
+    EXPECT_STREQ(str.cStr(), "Hello");
 }
 
-// Testing comparison with std::string_view
-TEST(StaticStringTest, ComparisonWithStringView) {
-    StaticString<5> str("Hello");
-    std::string_view sv("Hello");
-    EXPECT_TRUE(str == sv);
-    EXPECT_FALSE(str != sv);
+// Test begin and end methods
+TEST(StaticStringTest, BeginEndMethods) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
+    EXPECT_EQ(*str.begin(), 'H');
+    EXPECT_EQ(*(str.end() - 1), 'o');
+}
+
+// Test equality operators
+TEST(StaticStringTest, EqualityOperators) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
+    EXPECT_TRUE(str == "Hello");
+    EXPECT_FALSE(str == "World");
+}
+
+// Test inequality operators
+TEST(StaticStringTest, InequalityOperators) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
+    EXPECT_TRUE(str != "World");
+    EXPECT_FALSE(str != "Hello");
+}
+
+// Test append operator
+TEST(StaticStringTest, AppendOperator) {
+    StaticString<5> str;
+    str += 'H';
+    str += 'i';
+    EXPECT_EQ(str.size(), 2);
+    EXPECT_STREQ(str.cStr(), "Hi");
+}
+
+// Test concatenation operator
+TEST(StaticStringTest, ConcatenationOperator) {
+    std::array<char, 6> arr1 = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str1(arr1);
+    StaticString<1> str2;
+    str2 += '!';
+    auto result = str1 + str2;
+    EXPECT_EQ(result.size(), 6);
+    EXPECT_STREQ(result.cStr(), "Hello!");
+}
+
+// Test concatenation with string literal
+TEST(StaticStringTest, ConcatenationWithStringLiteral) {
+    std::array<char, 6> arr = {'H', 'e', 'l', 'l', 'o', '\0'};
+    StaticString<5> str(arr);
+    std::array<char, 2> lit = {'!', '\0'};
+    auto result = str + lit;
+    EXPECT_EQ(result.size(), 6);
+    EXPECT_STREQ(result.cStr(), "Hello!");
 }

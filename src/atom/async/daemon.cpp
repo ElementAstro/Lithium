@@ -28,65 +28,64 @@ still some problems on Windows, especially the console.
 #include "atom/log/loguru.hpp"
 #include "atom/utils/time.hpp"
 
-// 定义 g_daemonRestartInterval 变量
-int gDaemonRestartInterval = 10;
+constexpr int kDaemonRestartInterval = 10;
+const std::string kPidFilePath = "lithium-daemon";
 
-// 定义 g_pidFilePath 变量
-std::string gPidFilePath = "lithium-daemon";
-
-// 定义 g_isDaemon 变量
 bool gIsDaemon = false;
 
 namespace atom::async {
 auto DaemonGuard::toString() const -> std::string {
-    std::stringstream ss;
-    ss << "[DaemonGuard parentId=" << m_parentId << " mainId=" << m_mainId
-       << " parentStartTime=" << utils::timeStampToString(m_parentStartTime)
-       << " mainStartTime=" << utils::timeStampToString(m_mainStartTime)
-       << " restartCount=" << m_restartCount.load() << "]";
-    return ss.str();
+    std::stringstream stringStream;
+    stringStream << "[DaemonGuard parentId=" << m_parentId
+                 << " mainId=" << m_mainId << " parentStartTime="
+                 << utils::timeStampToString(m_parentStartTime)
+                 << " mainStartTime="
+                 << utils::timeStampToString(m_mainStartTime)
+                 << " restartCount=" << m_restartCount.load() << "]";
+    return stringStream.str();
 }
 
-auto DaemonGuard::realStart(
-    int argc, char **argv,
-    const std::function<int(int argc, char **argv)> &mainCb) -> int {
+auto DaemonGuard::realStart(int /*argc*/, char **argv,
+                            const std::function<int(int, char **)> &mainCb)
+    -> int {
 #ifdef _WIN32
-    m_mainId = reinterpret_cast<HANDLE>(getpid());
+    m_mainId = reinterpret_cast<HANDLE>(static_cast<intptr_t>(getpid()));
 #else
     m_mainId = getpid();
 #endif
-    m_mainStartTime = time(0);
-    return mainCb(argc, argv);
+    m_mainStartTime = time(nullptr);
+    return mainCb(0, argv);
 }
 
-auto DaemonGuard::realDaemon(
-    int argc, char **argv,
-    const std::function<int(int argc, char **argv)> &mainCb) -> int {
+auto DaemonGuard::realDaemon(int /*argc*/, char **argv,
+                             const std::function<int(int, char **)> &mainCb)
+    -> int {
 #ifdef _WIN32
     // 在 Windows 平台下模拟守护进程
     FreeConsole();
-    m_parentId = reinterpret_cast<HANDLE>(GetCurrentProcessId());
-    m_parentStartTime = time(0);
+    m_parentId =
+        reinterpret_cast<HANDLE>(static_cast<intptr_t>(GetCurrentProcessId()));
+    m_parentStartTime = time(nullptr);
     while (true) {
-        PROCESS_INFORMATION DaemonGuard;
+        PROCESS_INFORMATION processInfo;
         STARTUPINFO startupInfo;
-        memset(&DaemonGuard, 0, sizeof(DaemonGuard));
+        memset(&processInfo, 0, sizeof(processInfo));
         memset(&startupInfo, 0, sizeof(startupInfo));
         startupInfo.cb = sizeof(startupInfo);
         if (!CreateProcess(nullptr, argv[0], nullptr, nullptr, FALSE,
                            CREATE_NEW_CONSOLE, nullptr, nullptr, &startupInfo,
-                           &DaemonGuard)) {
+                           &processInfo)) {
             LOG_F(ERROR, "Create process failed with error code {}",
                   GetLastError());
             return -1;
         }
-        WaitForSingleObject(DaemonGuard.hProcess, INFINITE);
-        CloseHandle(DaemonGuard.hProcess);
-        CloseHandle(DaemonGuard.hThread);
+        WaitForSingleObject(processInfo.hProcess, INFINITE);
+        CloseHandle(processInfo.hProcess);
+        CloseHandle(processInfo.hThread);
 
         // 等待一段时间后重新启动子进程
         m_restartCount++;
-        Sleep(gDaemonRestartInterval * 1000);
+        Sleep(kDaemonRestartInterval * 1000);
     }
 #else
     if (daemon(1, 0) == -1) {
@@ -95,15 +94,15 @@ auto DaemonGuard::realDaemon(
     }
 
     m_parentId = getpid();
-    m_parentStartTime = time(0);
+    m_parentStartTime = time(nullptr);
     while (true) {
         pid_t pid = fork();  // 创建子进程
         if (pid == 0) {      // 子进程
             m_mainId = getpid();
-            m_mainStartTime = time(0);
+            m_mainStartTime = time(nullptr);
             LOG_F(INFO, "daemon process start pid={}",
                   reinterpret_cast<int>(getpid()));
-            return realStart(argc, argv, mainCb);
+            return realStart(0, argv, mainCb);
         }
         if (pid < 0) {  // 创建子进程失败
             LOG_F(ERROR, "fork fail return={} errno={} errstr={}", pid, errno,
@@ -128,32 +127,37 @@ auto DaemonGuard::realDaemon(
 
         // 等待一段时间后重新启动子进程
         m_restartCount++;
-        sleep(gDaemonRestartInterval);
+        sleep(kDaemonRestartInterval);
     }
 #endif
     return 0;
 }
 
 // 启动进程，如果需要创建守护进程，则先创建守护进程
-auto DaemonGuard::startDaemon(
-    int argc, char **argv,
-    const std::function<int(int argc, char **argv)> &mainCb,
-    bool isDaemon) -> int {
+auto DaemonGuard::startDaemon(int argc, char **argv,
+                              const std::function<int(int, char **)> &mainCb,
+                              bool isDaemon) -> int {
 #ifdef _WIN32
     if (isDaemon) {
         AllocConsole();
-        freopen("CONOUT$", "w", stdout);
-        freopen("CONOUT$", "w", stderr);
+        if (!freopen("CONOUT$", "w", stdout)) {
+            LOG_F(ERROR, "Failed to redirect stdout");
+            return -1;
+        }
+        if (!freopen("CONOUT$", "w", stderr)) {
+            LOG_F(ERROR, "Failed to redirect stderr");
+            return -1;
+        }
     }
 #endif
 
     if (!isDaemon) {  // 不需要创建守护进程
 #ifdef _WIN32
-        m_parentId = reinterpret_cast<HANDLE>(getpid());
+        m_parentId = reinterpret_cast<HANDLE>(static_cast<intptr_t>(getpid()));
 #else
         m_parentId = getpid();
 #endif
-        m_parentStartTime = time(0);
+        m_parentStartTime = time(nullptr);
         return realStart(argc, argv, mainCb);
     }
     // 创建守护进程
@@ -163,21 +167,23 @@ auto DaemonGuard::startDaemon(
 void signalHandler(int signum) {
 #ifdef _WIN32
     if (signum == SIGTERM || signum == SIGINT) {
-        remove(gPidFilePath.c_str());
+        if (remove(kPidFilePath.c_str()) != 0) {
+            LOG_F(ERROR, "Failed to remove PID file");
+        }
         exit(0);
     }
 #else
     if (signum == SIGTERM || signum == SIGINT) {
-        ATOM_UNREF_PARAM(remove(gPidFilePath.c_str()));
+        ATOM_UNREF_PARAM(remove(kPidFilePath.c_str()));
         exit(0);
     }
 #endif
 }
 
 void writePidFile() {
-    std::ofstream ofs(gPidFilePath);
+    std::ofstream ofs(kPidFilePath);
     if (!ofs) {
-        LOG_F(ERROR, "open pid file {} failed", gPidFilePath);
+        LOG_F(ERROR, "open pid file {} failed", kPidFilePath);
         exit(-1);
     }
     ofs << getpid();
@@ -191,10 +197,10 @@ auto checkPidFile() -> bool {
     return false;
 #else
     struct stat st {};
-    if (stat(gPidFilePath.c_str(), &st) != 0) {
+    if (stat(kPidFilePath.c_str(), &st) != 0) {
         return false;
     }
-    std::ifstream ifs(gPidFilePath);
+    std::ifstream ifs(kPidFilePath);
     if (!ifs) {
         return false;
     }

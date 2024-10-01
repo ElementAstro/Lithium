@@ -405,9 +405,10 @@ public:
      */
 
     template <typename... Args>
-    static auto format(const std::string &format_str,
+    static auto format(std::string_view format_str,
                        Args &&...args) -> std::string {
-        return std::format(format_str, std::forward<Args>(args)...);
+        return std::vformat(format_str,
+                            std::make_format_args(std::forward<Args>(args)...));
     }
 
     static constexpr size_t NPOS = std::string::npos;

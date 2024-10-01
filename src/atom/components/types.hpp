@@ -15,73 +15,7 @@ Description: Basic Component Types Definition and Some Utilities
 #ifndef ATOM_COMPONENT_TYPES_HPP
 #define ATOM_COMPONENT_TYPES_HPP
 
-#include <algorithm>
-#include <array>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <vector>
-
-// Helper to get the number of enum entries using constexpr reflection
-template <typename Enum>
-constexpr auto enumSize() {
-    if constexpr (requires { Enum::LAST_ENUM_VALUE; }) {
-        return static_cast<std::size_t>(Enum::LAST_ENUM_VALUE);
-    } else {
-        return 0;  // Handle the error or throw a static_assert
-    }
-}
-
-template <typename Enum, size_t N>
-struct EnumReflection {
-    std::array<std::pair<Enum, std::string_view>, N> data{};
-
-    constexpr explicit EnumReflection(
-        const std::pair<Enum, std::string_view> (&arr)[N]) {
-        std::copy(std::begin(arr), std::end(arr), std::begin(data));
-    }
-
-    [[nodiscard]] constexpr auto toString(Enum e) const -> std::string_view {
-        auto it = std::find_if(data.begin(), data.end(), [e](const auto& pair) {
-            return pair.first == e;
-        });
-        if (it != data.end()) {
-            return it->second;
-        }
-        return "Undefined";
-    }
-
-    [[nodiscard]] constexpr auto fromString(std::string_view str) const
-        -> std::optional<Enum> {
-        auto it = std::find_if(
-            data.begin(), data.end(),
-            [str](const auto& pair) { return pair.second == str; });
-        if (it != data.end()) {
-            return it->first;
-        }
-        return std::nullopt;
-    }
-
-    [[nodiscard]] auto getAllEnums() const -> std::vector<Enum> {
-        std::vector<Enum> enums;
-        enums.reserve(data.size());
-        for (const auto& [key, _] : data) {
-            enums.push_back(key);
-        }
-        return enums;
-    }
-
-    [[nodiscard]] auto getAllEnumStrings() const
-        -> std::vector<std::string_view> {
-        std::vector<std::string_view> strings;
-        strings.reserve(data.size());
-        for (const auto& [_, value] : data) {
-            strings.push_back(value);
-        }
-        return strings;
-    }
-};
+#include "atom/function/enum.hpp"
 
 enum class ComponentType {
     NONE,
@@ -93,13 +27,20 @@ enum class ComponentType {
     LAST_ENUM_VALUE
 };
 
-constexpr auto COMPONENT_TYPE_REFLECTION =
-    EnumReflection<ComponentType, enumSize<ComponentType>()>(
-        {{ComponentType::NONE, "none"},
-         {ComponentType::SHARED, "shared"},
-         {ComponentType::SHARED_INJECTED, "injected"},
-         {ComponentType::SCRIPT, "script"},
-         {ComponentType::EXECUTABLE, "executable"},
-         {ComponentType::TASK, "task"}});
+template <>
+struct EnumTraits<ComponentType> {
+    static constexpr std::array<ComponentType, 7> VALUES = {
+        ComponentType::NONE,
+        ComponentType::SHARED,
+        ComponentType::SHARED_INJECTED,
+        ComponentType::SCRIPT,
+        ComponentType::EXECUTABLE,
+        ComponentType::TASK,
+        ComponentType::LAST_ENUM_VALUE};
+
+    static constexpr std::array<std::string_view, 7> NAMES = {
+        "NONE",       "SHARED", "SHARED_INJECTED", "SCRIPT",
+        "EXECUTABLE", "TASK",   "LAST_ENUM_VALUE"};
+};
 
 #endif  // ATOM_COMPONENT_TYPES_HPP

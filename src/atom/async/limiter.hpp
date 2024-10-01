@@ -110,7 +110,7 @@ public:
      * @param function_name Name of the function.
      * @return Number of rejected requests.
      */
-    auto get_rejected_requests(const std::string& function_name) -> size_t;
+    auto getRejectedRequests(const std::string& function_name) -> size_t;
 
 #if !defined(TEST_F) && !defined(TEST)
 private:
@@ -126,7 +126,7 @@ private:
     /**
      * @brief Processes waiting coroutines.
      */
-    void process_waiters();
+    void processWaiters();
 
     std::unordered_map<std::string, Settings> settings_;
     std::unordered_map<std::string,

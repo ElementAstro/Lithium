@@ -1,3 +1,6 @@
+#ifndef ATOM_ALGORITHM_ERROR_CALIBRATION_HPP
+#define ATOM_ALGORITHM_ERROR_CALIBRATION_HPP
+
 #include <algorithm>
 #include <cmath>
 #include <concepts>
@@ -9,9 +12,18 @@
 #include <string>
 #include <vector>
 
+#ifdef USE_SIMD
+#ifdef __AVX__
+#include <immintrin.h>
+#elif defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+#endif
+
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
+namespace atom::algorithm {
 template <std::floating_point T>
 class AdvancedErrorCalibration {
 private:
@@ -22,8 +34,13 @@ private:
     T mse_ = 0.0;  // Mean Squared Error
     T mae_ = 0.0;  // Mean Absolute Error
 
-    void calculate_metrics(const std::vector<T>& measured,
-                           const std::vector<T>& actual) {
+    /**
+     * Calculate calibration metrics
+     * @param measured Vector of measured values
+     * @param actual Vector of actual values
+     */
+    void calculateMetrics(const std::vector<T>& measured,
+                          const std::vector<T>& actual) {
         T sumSquaredError = 0.0;
         T sumAbsoluteError = 0.0;
         T meanActual =
@@ -32,7 +49,82 @@ private:
         T ssResidual = 0;
 
         residuals_.clear();
-        for (size_t i = 0; i < actual.size(); ++i) {
+
+#ifdef USE_SIMD
+#ifdef __AVX__
+        // SIMD optimized loop for x86 using AVX
+        __m256d sumSquaredErrorVec = _mm256_setzero_pd();
+        __m256d sumAbsoluteErrorVec = _mm256_setzero_pd();
+        size_t i = 0;
+
+        for (; i + 4 <= actual.size(); i += 4) {
+            __m256d measuredVec = _mm256_loadu_pd(&measured[i]);
+            __m256d actualVec = _mm256_loadu_pd(&actual[i]);
+
+            __m256d predictedVec = _mm256_add_pd(
+                _mm256_mul_pd(_mm256_set1_pd(slope_), measuredVec),
+                _mm256_set1_pd(intercept_));
+
+            __m256d errorVec = _mm256_sub_pd(actualVec, predictedVec);
+
+            sumSquaredErrorVec = _mm256_add_pd(
+                sumSquaredErrorVec, _mm256_mul_pd(errorVec, errorVec));
+            sumAbsoluteErrorVec =
+                _mm256_add_pd(sumAbsoluteErrorVec,
+                              _mm256_andnot_pd(_mm256_set1_pd(-0.0), errorVec));
+
+            ssTotal += std::pow(actual[i] - meanActual, 2);
+            ssResidual += std::pow(predictedVec[i] - actual[i], 2);
+        }
+
+        double tempSquaredError[4];
+        _mm256_storeu_pd(tempSquaredError, sumSquaredErrorVec);
+        sumSquaredError = std::accumulate(
+            tempSquaredError, tempSquaredError + 4, sumSquaredError);
+
+        double tempAbsoluteError[4];
+        _mm256_storeu_pd(tempAbsoluteError, sumAbsoluteErrorVec);
+        sumAbsoluteError = std::accumulate(
+            tempAbsoluteError, tempAbsoluteError + 4, sumAbsoluteError);
+
+#elif defined(__ARM_NEON)
+        // SIMD optimized loop for ARM using NEON
+        float64x2_t sumSquaredErrorVec = vdupq_n_f64(0.0);
+        float64x2_t sumAbsoluteErrorVec = vdupq_n_f64(0.0);
+        size_t i = 0;
+
+        for (; i + 2 <= actual.size(); i += 2) {
+            float64x2_t measuredVec = vld1q_f64(&measured[i]);
+            float64x2_t actualVec = vld1q_f64(&actual[i]);
+
+            float64x2_t predictedVec =
+                vmlaq_n_f64(vdupq_n_f64(intercept_), measuredVec, slope_);
+
+            float64x2_t errorVec = vsubq_f64(actualVec, predictedVec);
+
+            sumSquaredErrorVec =
+                vmlaq_f64(sumSquaredErrorVec, errorVec, errorVec);
+            sumAbsoluteErrorVec =
+                vaddq_f64(sumAbsoluteErrorVec, vabsq_f64(errorVec));
+
+            ssTotal += std::pow(actual[i] - meanActual, 2);
+            ssResidual += std::pow(predictedVec[i] - actual[i], 2);
+        }
+
+        double tempSquaredError[2];
+        vst1q_f64(tempSquaredError, sumSquaredErrorVec);
+        sumSquaredError = std::accumulate(
+            tempSquaredError, tempSquaredError + 2, sumSquaredError);
+
+        double tempAbsoluteError[2];
+        vst1q_f64(tempAbsoluteError, sumAbsoluteErrorVec);
+        sumAbsoluteError = std::accumulate(
+            tempAbsoluteError, tempAbsoluteError + 2, sumAbsoluteError);
+
+#endif
+#endif
+
+        for (auto i = 0; i < actual.size(); ++i) {
             T predicted = apply(measured[i]);
             T error = actual[i] - predicted;
             residuals_.push_back(error);
@@ -48,10 +140,19 @@ private:
         r_squared_ = 1 - (ssResidual / ssTotal);
     }
 
-    // 非线性校准函数类型
     using NonlinearFunction = std::function<T(T, const std::vector<T>&)>;
 
-    // Levenberg-Marquardt算法用于非线性拟合
+    /**
+     * Solve a system of linear equations using the Levenberg-Marquardt method
+     * @param x Vector of x values
+     * @param y Vector of y values
+     * @param func Nonlinear function to fit
+     * @param initial_params Initial guess for the parameters
+     * @param max_iterations Maximum number of iterations
+     * @param lambda Regularization parameter
+     * @param epsilon Convergence criterion
+     * @return Vector of optimized parameters
+     */
     auto levenbergMarquardt(const std::vector<T>& x, const std::vector<T>& y,
                             NonlinearFunction func,
                             std::vector<T> initial_params,
@@ -76,7 +177,6 @@ private:
                 }
             }
 
-            // 计算 J^T * J 和 J^T * r
             std::vector<std::vector<T>> JTJ(m, std::vector<T>(m));
             std::vector<T> jTr(m);
             for (int i = 0; i < m; ++i) {
@@ -94,16 +194,13 @@ private:
                 }
             }
 
-            // 解线性方程组
             std::vector<T> delta = solveLinearSystem(JTJ, jTr);
 
-            // 更新参数
             prevParams = params;
             for (int i = 0; i < m; ++i) {
                 params[i] += delta[i];
             }
 
-            // 检查收敛
             T diff = 0;
             for (int i = 0; i < m; ++i) {
                 diff += std::abs(params[i] - prevParams[i]);
@@ -115,6 +212,13 @@ private:
 
         return params;
     }
+
+    /**
+     * Solve a system of linear equations using Gaussian elimination
+     * @param A Coefficient matrix
+     * @param b Right-hand side vector
+     * @return Solution vector
+     */
     auto solveLinearSystem(const std::vector<std::vector<T>>& A,
                            const std::vector<T>& b) -> std::vector<T> {
         int n = A.size();
@@ -157,6 +261,11 @@ private:
     }
 
 public:
+    /**
+     * Linear calibration using the least squares method
+     * @param measured Vector of measured values
+     * @param actual Vector of actual values
+     */
     void linearCalibrate(const std::vector<T>& measured,
                          const std::vector<T>& actual) {
         if (measured.size() != actual.size() || measured.empty()) {
@@ -175,9 +284,15 @@ public:
         slope_ = (n * sumXy - sumX * sumY) / (n * sumXx - sumX * sumX);
         intercept_ = (sumY - slope_ * sumX) / n;
 
-        calculate_metrics(measured, actual);
+        calculateMetrics(measured, actual);
     }
 
+    /**
+     * Polynomial calibration using the least squares method
+     * @param measured Vector of measured values
+     * @param actual Vector of actual values
+     * @param degree Degree of the polynomial
+     */
     void polynomialCalibrate(const std::vector<T>& measured,
                              const std::vector<T>& actual, int degree) {
         if (measured.size() != actual.size() || measured.empty()) {
@@ -197,13 +312,17 @@ public:
         auto params =
             levenbergMarquardt(measured, actual, polyFunc, initialParams);
 
-        // 更新校准参数
-        slope_ = params[1];      // 一阶系数作为斜率
-        intercept_ = params[0];  // 常数项作为截距
+        slope_ = params[1];      // First-order coefficient as slope
+        intercept_ = params[0];  // Constant term as intercept
 
-        calculate_metrics(measured, actual);
+        calculateMetrics(measured, actual);
     }
 
+    /**
+     * Exponential calibration using the least squares method
+     * @param measured Vector of measured values
+     * @param actual Vector of actual values
+     */
     [[nodiscard]] auto apply(T value) const -> T {
         return slope_ * value + intercept_;
     }
@@ -233,6 +352,14 @@ public:
         }
     }
 
+    /**
+     * Bootstrap confidence interval for the slope
+     * @param measured Vector of measured values
+     * @param actual Vector of actual values
+     * @param n_iterations Number of bootstrap iterations
+     * @param confidence_level Confidence level for the interval
+     * @return Pair of lower and upper bounds of the confidence interval
+     */
     auto bootstrapConfidenceInterval(
         const std::vector<T>& measured, const std::vector<T>& actual,
         int n_iterations = 1000,
@@ -265,8 +392,16 @@ public:
         return {bootstrapSlopes[lowerIdx], bootstrapSlopes[upperIdx]};
     }
 
-    void outlierDetection(const std::vector<T>& measured,
-                          const std::vector<T>& actual, T threshold = 2.0) {
+    /**
+     * Detect outliers using the residuals of the calibration
+     * @param measured Vector of measured values
+     * @param actual Vector of actual values
+     * @param threshold Threshold for outlier detection
+     * @return Tuple of mean residual, standard deviation, and threshold
+     */
+    auto outlierDetection(const std::vector<T>& measured,
+                          const std::vector<T>& actual,
+                          T threshold = 2.0) -> std::tuple<T, T, T> {
         if (residuals_.empty()) {
             THROW_RUNTIME_ERROR("Please call calculate_metrics() first");
         }
@@ -281,23 +416,24 @@ public:
                             }) /
             residuals_.size());
 
-        /*
-        std::cout << "检测到的异常值:" << std::endl;
+#if ENABLE_DEBUG
+        std::cout << "Detected outliers:" << std::endl;
         for (size_t i = 0; i < residuals_.size(); ++i) {
             if (std::abs(residuals_[i] - meanResidual) > threshold * std_dev) {
-                std::cout << "索引: " << i << ", 测量值: " << measured[i]
-                          << ", 实际值: " << actual[i]
-                          << ", 残差: " << residuals_[i] << std::endl;
+                std::cout << "Index: " << i << ", Measured: " << measured[i]
+                          << ", Actual: " << actual[i]
+                          << ", Residual: " << residuals_[i] << std::endl;
             }
         }
-        */
+#endif
+        return {meanResidual, std_dev, threshold};
     }
 
     void crossValidation(const std::vector<T>& measured,
                          const std::vector<T>& actual, int k = 5) {
         if (measured.size() != actual.size() || measured.size() < k) {
             THROW_INVALID_ARGUMENT(
-                "Input vectors must be non-empty and of size");
+                "Input vectors must be non-empty and of size greater than k");
         }
 
         std::vector<T> mseValues;
@@ -351,12 +487,13 @@ public:
                                         rSquaredValues.end(), T(0)) /
                         k;
 
-        /*
-        std::cout << "K-fold 交叉验证结果 (k = " << k << "):" << std::endl;
-            std::cout << "平均 MSE: " << avgMse << std::endl;
-            std::cout << "平均 MAE: " << avgMae << std::endl;
-            std::cout << "平均 R-squared: " << avgRSquared << std::endl;
-        */
+#if ENABLE_DEBUG
+        std::cout << "K-fold cross-validation results (k = " << k
+                  << "):" << std::endl;
+        std::cout << "Average MSE: " << avgMse << std::endl;
+        std::cout << "Average MAE: " << avgMae << std::endl;
+        std::cout << "Average R-squared: " << avgRSquared << std::endl;
+#endif
     }
 
     [[nodiscard]] auto getSlope() const -> T { return slope_; }
@@ -367,3 +504,6 @@ public:
     [[nodiscard]] auto getMse() const -> T { return mse_; }
     [[nodiscard]] auto getMae() const -> T { return mae_; }
 };
+}  // namespace atom::algorithm
+
+#endif  // ATOM_ALGORITHM_ERROR_CALIBRATION_HPP

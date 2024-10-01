@@ -14,12 +14,21 @@ Description: Process Manager
 
 #include "process.hpp"
 
+#include <algorithm>
+#include <condition_variable>
+#include <fstream>
+#include <mutex>
+#include <optional>
+#include <shared_mutex>
+#include <sstream>
+
 #if defined(_WIN32)
 // clang-format off
 #include <windows.h>
 #include <tlhelp32.h>
 #include <iprtrmib.h>
 #include <iphlpapi.h>
+#include <tchar.h>
 // clang-format on
 #elif defined(__linux__) || defined(__ANDROID__)
 #include <dirent.h>
@@ -41,14 +50,6 @@ Description: Process Manager
 #error "Unknown platform"
 #endif
 
-#include <algorithm>
-#include <chrono>
-#include <fstream>
-#include <mutex>
-#include <optional>
-#include <sstream>
-#include <thread>
-
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
@@ -56,7 +57,115 @@ Description: Process Manager
 #include "atom/utils/string.hpp"
 
 namespace atom::system {
-ProcessManager::ProcessManager(int maxProcess) : m_maxProcesses(maxProcess) {}
+class ProcessManager::ProcessManagerImpl {
+public:
+    int m_maxProcesses;
+    std::condition_variable cv;
+    std::vector<Process> processes;
+    mutable std::shared_timed_mutex mtx;
+
+    ProcessManagerImpl(int maxProcess) : m_maxProcesses(maxProcess) {}
+
+    ~ProcessManagerImpl() {
+        // Ensure all processes are cleaned up
+        waitForCompletion();
+    }
+
+    auto createProcess(const std::string &command,
+                       const std::string &identifier) -> bool {
+        pid_t pid;
+
+#ifdef _WIN32
+        STARTUPINFO si;
+        PROCESS_INFORMATION pi;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+
+        // Convert command to wide string
+        std::wstring wcommand(command.begin(), command.end());
+
+        // Start the child process.
+        // TODO: Use CreateProcessW instead of CreateProcessA, but some programs
+        // occured
+        /*
+        if (CreateProcessW(wcommand.c_str(),  // Command line
+                NULL,          // 命令行参数，可以传 NULL
+                NULL,          // 进程安全属性
+                NULL,          // 线程安全属性
+                FALSE,         // 不继承句柄
+                0,             // 创建标志
+                NULL,          // 使用父进程的环境
+                NULL,          // 使用父进程的当前目录
+                &si,  // 启动信息
+                &si   // 进程信息
+            == 0)) {
+            return false;
+        }
+        */
+
+        pid = pi.dwProcessId;
+#else
+        pid = fork();
+        if (pid == 0) {
+            // Child process code
+            execlp(command.c_str(), command.c_str(), nullptr);
+            exit(0);
+        } else if (pid < 0) {
+            return false;
+        }
+#endif
+        std::unique_lock lock(mtx);
+        Process process;
+        process.pid = pid;
+        process.name = identifier;
+#ifdef _WIN32
+        process.handle = pi.hProcess;
+#endif
+        processes.push_back(process);
+        return true;
+    }
+
+    auto terminateProcess(int pid, int signal) -> bool {
+        std::unique_lock lock(mtx);
+        auto it =
+            std::find_if(processes.begin(), processes.end(),
+                         [pid](const Process &p) { return p.pid == pid; });
+
+        if (it != processes.end()) {
+#ifdef _WIN32
+            // Windows-specific logic to terminate the process
+            if (!TerminateProcess(it->handle, signal)) {
+                return false;
+            }
+            CloseHandle(it->handle);
+#else
+            kill(pid, signal);
+#endif
+            processes.erase(it);
+            return true;
+        }
+        return false;
+    }
+
+    void waitForCompletion() {
+        for (const auto &process : processes) {
+#ifdef _WIN32
+            // Windows-specific process waiting logic
+            WaitForSingleObject(process.handle, INFINITE);
+            CloseHandle(process.handle);
+#else
+            waitpid(process.pid, nullptr, 0);
+#endif
+        }
+        processes.clear();
+    }
+};
+
+ProcessManager::ProcessManager(int maxProcess)
+    : impl(std::make_unique<ProcessManagerImpl>(maxProcess)) {}
+
+ProcessManager::~ProcessManager() = default;
 
 auto ProcessManager::createShared(int maxProcess)
     -> std::shared_ptr<ProcessManager> {
@@ -65,56 +174,16 @@ auto ProcessManager::createShared(int maxProcess)
 
 auto ProcessManager::createProcess(const std::string &command,
                                    const std::string &identifier) -> bool {
-    pid_t pid;
+    return impl->createProcess(command, identifier);
+}
 
-#ifdef _WIN32
-    STARTUPINFOW si{};
-    PROCESS_INFORMATION pi{};
-    std::wstring wideCommand = L"powershell.exe -Command \"" +
-                               std::wstring(command.begin(), command.end()) +
-                               L"\"";
-    si.cb = sizeof(si);
-    if (CreateProcessW(nullptr, wideCommand.data(), nullptr, nullptr, FALSE, 0,
-                       nullptr, nullptr, &si, &pi) == 0) {
-        LOG_F(ERROR, "Failed to create PowerShell process");
-        return false;
-    }
-    pid = pi.dwProcessId;
-#else
-    pid = fork();
-
-    if (pid == 0) {
-        // Child process code
-        DLOG_F(INFO, "Running command: {}", command);
-        int pipefd[2];
-        int result = pipe(pipefd);
-        if (result != 0) {
-        }
-        dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[0]);
-        close(pipefd[1]);
-
-        execlp(command.c_str(), command.c_str(), nullptr);
-        exit(0);
-    } else if (pid < 0) {
-        // Error handling
-        LOG_F(ERROR, "Failed to create process");
-        return false;
-    }
-#endif
-
-    std::unique_lock lock(mtx);
-    Process process;
-    process.pid = pid;
-    process.name = identifier;
-    processes.push_back(process);
-    DLOG_F(INFO, "Process created: {} (PID: {})", identifier, pid);
-    return true;
+auto ProcessManager::terminateProcess(int pid, int signal) -> bool {
+    return impl->terminateProcess(pid, signal);
 }
 
 auto ProcessManager::hasProcess(const std::string &identifier) -> bool {
-    std::shared_lock lock(mtx);
-    for (auto &process : processes) {
+    std::shared_lock lock(impl->mtx);
+    for (const auto &process : impl->processes) {
         if (process.name == identifier) {
             return true;
         }
@@ -122,101 +191,20 @@ auto ProcessManager::hasProcess(const std::string &identifier) -> bool {
     return false;
 }
 
-auto ProcessManager::runScript(const std::string &script,
-                               const std::string &identifier) -> bool {
-    pid_t pid;
-
-    try {
-#ifdef _WIN32
-        std::string cmd = "powershell.exe -Command \"" + script + "\"";
-        auto [output, status] = executeCommandWithStatus(cmd);
-        if (status != 0) {
-            LOG_F(ERROR, "Failed to create process");
-            return false;
-        }
-        // On Windows, we don't get the PID of the process directly
-        // Assuming the command was successful, we set pid as 0 for now
-        pid = 0;
-#else
-        pid = fork();
-
-        if (pid == 0) {
-            // Child process code
-            DLOG_F(INFO, "Running script: {}", script);
-
-#ifdef __APPLE__
-            execl("/bin/sh", "sh", "-c", script.c_str(), nullptr);
-#else
-            execl("/bin/bash", "bash", "-c", script.c_str(), nullptr);
-#endif
-        } else if (pid < 0) {
-            // Error handling
-            LOG_F(ERROR, "Failed to create process");
-            return false;
-        }
-#endif
-
-        std::unique_lock lock(mtx);
-        Process process;
-        process.pid = pid;
-        process.name = identifier;
-        processes.push_back(process);
-        DLOG_F(INFO, "Process created: {} (PID: {})", identifier, pid);
-        return true;
-    } catch (const std::runtime_error &e) {
-        LOG_F(ERROR, "Exception occurred: {}", e.what());
-        return false;
-    }
-}
-
-auto ProcessManager::terminateProcess(int pid, int signal) -> bool {
-    std::unique_lock lock(mtx);
-    pid = static_cast<pid_t>(pid);
-    auto it = std::find_if(processes.begin(), processes.end(),
-                           [pid](const Process &p) { return p.pid == pid; });
-
-    if (it != processes.end()) {
-        try {
-            killProcessByPID(pid, signal);
-        } catch (const atom::error::SystemCollapse &e) {
-            LOG_F(ERROR, "System collapse occurred: {}", e.what());
-            return false;
-        }
-        DLOG_F(INFO, "Process terminated: {} (PID: {})", it->name, pid);
-        processes.erase(it);
-        cv.notify_one();
-    } else {
-        LOG_F(ERROR, "Process not found");
-        return false;
-    }
-    return true;
-}
-
-auto ProcessManager::terminateProcessByName(const std::string &name,
-                                            int signal) -> bool {
-    auto it =
-        std::find_if(processes.begin(), processes.end(),
-                     [&name](const Process &p) { return p.name == name; });
-
-    if (it != processes.end()) {
-        return terminateProcess(it->pid, signal);
-    }
-    LOG_F(ERROR, "Process not found by name: {}", name);
-    return false;
-}
+void ProcessManager::waitForCompletion() { impl->waitForCompletion(); }
 
 auto ProcessManager::getRunningProcesses() const -> std::vector<Process> {
-    std::shared_lock lock(mtx);
-    return processes;
+    std::shared_lock lock(impl->mtx);
+    return impl->processes;
 }
 
 auto ProcessManager::getProcessOutput(const std::string &identifier)
     -> std::vector<std::string> {
     auto it = std::find_if(
-        processes.begin(), processes.end(),
+        impl->processes.begin(), impl->processes.end(),
         [&identifier](const Process &p) { return p.name == identifier; });
 
-    if (it != processes.end()) {
+    if (it != impl->processes.end()) {
         std::vector<std::string> outputLines;
         std::stringstream sss(it->output);
         std::string line;
@@ -227,33 +215,7 @@ auto ProcessManager::getProcessOutput(const std::string &identifier)
 
         return outputLines;
     }
-    LOG_F(ERROR, "Process not found");
     return {};
-}
-
-void ProcessManager::waitForCompletion() {
-    for (const auto &process : processes) {
-#ifdef _WIN32
-        HANDLE hProcess = OpenProcess(SYNCHRONIZE, FALSE, process.pid);
-        if (hProcess != nullptr) {
-            WaitForSingleObject(hProcess, INFINITE);
-            CloseHandle(hProcess);
-            DLOG_F(INFO, "Process completed: {} (PID: {})", process.name,
-                   process.pid);
-        } else {
-            LOG_F(ERROR, "Failed to wait for process completion");
-        }
-#else
-        int status;
-        waitpid(process.pid, &status, 0);
-
-        DLOG_F(INFO, "Process completed: {} (PID: {})", process.name.c_str(),
-               process.pid);
-#endif
-    }
-
-    processes.clear();
-    DLOG_F(INFO, "All processes completed.");
 }
 
 #ifdef _WIN32
@@ -793,6 +755,84 @@ auto getNetworkConnections([[maybe_unused]] int pid)
     }
 #endif
     return connections;
+}
+
+auto getProcessIdByName(const std::string &processName) -> std::vector<int> {
+    std::vector<int> pids;
+#ifdef _WIN32
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) {
+        LOG_F(ERROR, "Failed to create snapshot!");
+        return pids;
+    }
+
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+
+    if (Process32First(hSnapshot, &pe32) != 0) {
+        do {
+            if (_stricmp(pe32.szExeFile, processName.c_str()) == 0) {
+                pids.push_back(static_cast<int>(pe32.th32ProcessID));
+            }
+        } while (Process32Next(hSnapshot, &pe32) != 0);
+    }
+
+    CloseHandle(hSnapshot);
+#elif defined(__linux__)
+    DIR *dir = opendir("/proc");
+    if (!dir) {
+        LOG_F(ERROR, "Failed to open /proc directory.");
+        return pids;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (isdigit(entry->d_name[0])) {
+            std::string pid_dir = std::string("/proc/") + entry->d_name;
+            std::ifstream cmd_file(pid_dir + "/comm");
+            if (cmd_file) {
+                std::string cmd_name;
+                std::getline(cmd_file, cmd_name);
+                if (cmd_name == processName) {
+                    pids.push_back(
+                        static_cast<pid_t>(std::stoi(entry->d_name)));
+                }
+            }
+        }
+    }
+    closedir(dir);
+#elif defined(__APPLE__)
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+    struct kinfo_proc *processList = nullptr;
+    size_t size = 0;
+
+    if (sysctl(mib, 4, nullptr, &size, nullptr, 0) == -1) {
+        LOG_F(ERROR, "Failed to get process size.");
+        return pids;
+    }
+
+    processList = new kinfo_proc[size / sizeof(struct kinfo_proc)];
+    if (sysctl(mib, 4, processList, &size, nullptr, 0) == -1) {
+        LOG_F(ERROR, "Failed to get process list.");
+        delete[] processList;
+        return pids;
+    }
+
+    for (size_t i = 0; i < size / sizeof(struct kinfo_proc); ++i) {
+        char processPath[PROC_PIDPATHINFO_MAXSIZE];
+        proc_pidpath(processList[i].kp_proc.p_pid, processPath,
+                     sizeof(processPath));
+
+        std::string proc_name = processPath;
+        if (proc_name.find(processName) != std::string::npos) {
+            pids.push_back(processList[i].kp_proc.p_pid);
+        }
+    }
+    delete[] processList;
+#else
+#error "Unsupported operating system"
+#endif
+    return pids;
 }
 
 }  // namespace atom::system

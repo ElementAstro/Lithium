@@ -56,11 +56,17 @@ public:
         m_methods_[name].push_back(std::move(method));
     }
 
+    // Remove method by name
+    void removeMethod(const std::string& name) { m_methods_.erase(name); }
+
     // Add property (getter and setter) to type metadata
     void addProperty(const std::string& name, GetterFunction getter,
                      SetterFunction setter) {
         m_properties_[name] = {std::move(getter), std::move(setter)};
     }
+
+    // Remove property by name
+    void removeProperty(const std::string& name) { m_properties_.erase(name); }
 
     // Add constructor to type metadata with an associated type name
     void addConstructor(const std::string& type_name,
@@ -71,6 +77,11 @@ public:
     // Add event to type metadata
     void addEvent(const std::string& event_name) {
         m_events_[event_name];  // Creates an empty event
+    }
+
+    // Remove event by name
+    void removeEvent(const std::string& event_name) {
+        m_events_.erase(event_name);
     }
 
     // Add event listener to a specific event
@@ -84,7 +95,6 @@ public:
                    const std::vector<BoxedValue>& args) const {
         if (auto eventIter = m_events_.find(event_name);
             eventIter != m_events_.end()) {
-#pragma unroll
             for (const auto& listener : eventIter->second.listeners) {
                 listener(obj, args);
             }
@@ -174,7 +184,6 @@ inline auto callMethod(BoxedValue& obj, const std::string& method_name,
             TypeRegistry::instance().getMetadata(obj.getTypeInfo().name());
         metadata) {
         if (auto methods = metadata->getMethods(method_name); methods) {
-#pragma unroll
             for (const auto& method : **methods) {
                 // TODO: FIX ME - 参数类型匹配逻辑:
                 // 确保传入的参数与方法期望的参数类型一致

@@ -9,14 +9,26 @@ public:
     HardwareInfo();
     ~HardwareInfo();
 
-    auto GetBiosSerialNumber() -> std::string;
-    auto GetMotherboardSerialNumber() -> std::string;
-    auto GetCpuSerialNumber() -> std::string;
-    auto GetDiskSerialNumbers() -> std::vector<std::string>;
+    // Copy constructor
+    HardwareInfo(const HardwareInfo& other);
+
+    // Copy assignment operator
+    HardwareInfo& operator=(const HardwareInfo& other);
+
+    // Move constructor
+    HardwareInfo(HardwareInfo&& other) noexcept;
+
+    // Move assignment operator
+    HardwareInfo& operator=(HardwareInfo&& other) noexcept;
+
+    auto getBiosSerialNumber() -> std::string;
+    auto getMotherboardSerialNumber() -> std::string;
+    auto getCpuSerialNumber() -> std::string;
+    auto getDiskSerialNumbers() -> std::vector<std::string>;
 
 private:
     class Impl;   // Pimpl (Private Implementation) class
-    Impl* pImpl;  // Pointer to the implementation
+    Impl* impl_;  // Pointer to the implementation
 };
 
 #endif  // ATOM_SYSINFO_SN_HPP

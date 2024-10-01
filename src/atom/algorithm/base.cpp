@@ -25,6 +25,16 @@ Description: A collection of algorithms for C++
 #include <arpa/inet.h>
 #endif
 
+#ifdef USE_SIMD
+#if defined(__x86_64__) || defined(_M_X64)
+#include <immintrin.h>
+#define SIMD_AVAILABLE
+#elif defined(__ARM_NEON)
+#include <arm_neon.h>
+#define SIMD_AVAILABLE
+#endif
+#endif
+
 #if USE_OPENCL
 #include <CL/cl.h>
 constexpr bool HAS_OPEN_CL = true;
@@ -181,7 +191,66 @@ void base64Encode(InputIt begin, InputIt end, OutputIt dest) {
     std::array<unsigned char, 4> charArray4{};
 
     size_t i = 0;
-    for (auto it = begin; it != end; ++it, ++i) {
+    auto it = begin;
+
+#ifdef SIMD_AVAILABLE
+    // SIMD优化部分
+    constexpr size_t simdSize = 16;  // 处理16字节的输入
+    std::array<unsigned char, simdSize> inputBuffer{};
+    std::array<unsigned char, (simdSize / 3) * 4> outputBuffer{};
+
+    while (std::distance(it, end) >= simdSize) {
+        std::copy_n(it, simdSize, inputBuffer.begin());
+
+#if defined(__x86_64__) || defined(_M_X64)
+        // x86 SIMD实现
+        __m128i input = _mm_loadu_si128(
+            reinterpret_cast<const __m128i*>(inputBuffer.data()));
+        __m128i mask = _mm_set1_epi32(0x3F);
+
+        __m128i result1 = _mm_srli_epi32(input, 2);
+        __m128i result2 = _mm_and_si128(_mm_slli_epi32(input, 4), mask);
+        __m128i result3 = _mm_and_si128(_mm_slli_epi32(input, 2), mask);
+        __m128i result4 = _mm_and_si128(input, mask);
+
+        // 查表并存储结果
+        for (int j = 0; j < 16; j += 4) {
+            outputBuffer[j] = BASE64_CHARS[_mm_extract_epi8(result1, j)];
+            outputBuffer[j + 1] =
+                BASE64_CHARS[_mm_extract_epi8(result2, j + 1)];
+            outputBuffer[j + 2] =
+                BASE64_CHARS[_mm_extract_epi8(result3, j + 2)];
+            outputBuffer[j + 3] =
+                BASE64_CHARS[_mm_extract_epi8(result4, j + 3)];
+        }
+#elif defined(__ARM_NEON)
+        // ARM NEON实现
+        uint8x16_t input = vld1q_u8(inputBuffer.data());
+        uint8x16_t mask = vdupq_n_u8(0x3F);
+
+        uint8x16_t result1 = vshrq_n_u8(input, 2);
+        uint8x16_t result2 = vandq_u8(vshlq_n_u8(input, 4), mask);
+        uint8x16_t result3 = vandq_u8(vshlq_n_u8(input, 2), mask);
+        uint8x16_t result4 = vandq_u8(input, mask);
+
+        // 查表并存储结果
+        for (int j = 0; j < 16; j += 4) {
+            outputBuffer[j] = BASE64_CHARS[vgetq_lane_u8(result1, j)];
+            outputBuffer[j + 1] = BASE64_CHARS[vgetq_lane_u8(result2, j + 1)];
+            outputBuffer[j + 2] = BASE64_CHARS[vgetq_lane_u8(result3, j + 2)];
+            outputBuffer[j + 3] = BASE64_CHARS[vgetq_lane_u8(result4, j + 3)];
+        }
+#endif
+
+        std::copy_n(outputBuffer.begin(), (simdSize / 3) * 4, dest);
+        std::advance(dest, (simdSize / 3) * 4);
+        std::advance(it, simdSize);
+        i += simdSize;
+    }
+#endif
+
+    // 处理剩余的字节（原始实现）
+    for (; it != end; ++it, ++i) {
         charArray3[i % 3] = static_cast<unsigned char>(*it);
         if (i % 3 == 2) {
             charArray4[0] = (charArray3[0] & 0xfc) >> 2;
@@ -219,14 +288,103 @@ void base64Encode(InputIt begin, InputIt end, OutputIt dest) {
     }
 }
 
+std::array<unsigned char, 256> createReverseLookupTable() {
+    std::array<unsigned char, 256> table{};
+    for (int i = 0; i < 64; ++i) {
+        table[static_cast<unsigned char>(BASE64_CHARS[i])] = i;
+    }
+    return table;
+}
+
+const auto REVERSE_LOOKUP = createReverseLookupTable();
+
 template <typename InputIt, typename OutputIt>
 void base64Decode(InputIt begin, InputIt end, OutputIt dest) {
     std::array<unsigned char, 4> charArray4{};
     std::array<unsigned char, 3> charArray3{};
 
     size_t i = 0;
-    for (auto it = begin; it != end && *it != '='; ++it) {
-        charArray4[i++] = static_cast<unsigned char>(BASE64_CHARS.find(*it));
+    auto it = begin;
+
+#ifdef SIMD_AVAILABLE
+    // SIMD优化部分
+    constexpr size_t simdSize = 16;  // 处理16字节的输入
+    std::array<unsigned char, simdSize> inputBuffer{};
+    std::array<unsigned char, (simdSize / 4) * 3> outputBuffer{};
+
+    while (std::distance(it, end) >= simdSize &&
+           *std::next(it, simdSize - 1) != '=') {
+        std::copy_n(it, simdSize, inputBuffer.begin());
+
+#if defined(__x86_64__) || defined(_M_X64)
+        // x86 SIMD实现
+        __m128i input = _mm_loadu_si128(
+            reinterpret_cast<const __m128i*>(inputBuffer.data()));
+        __m128i lookup = _mm_setr_epi8(
+            REVERSE_LOOKUP[inputBuffer[0]], REVERSE_LOOKUP[inputBuffer[1]],
+            REVERSE_LOOKUP[inputBuffer[2]], REVERSE_LOOKUP[inputBuffer[3]],
+            REVERSE_LOOKUP[inputBuffer[4]], REVERSE_LOOKUP[inputBuffer[5]],
+            REVERSE_LOOKUP[inputBuffer[6]], REVERSE_LOOKUP[inputBuffer[7]],
+            REVERSE_LOOKUP[inputBuffer[8]], REVERSE_LOOKUP[inputBuffer[9]],
+            REVERSE_LOOKUP[inputBuffer[10]], REVERSE_LOOKUP[inputBuffer[11]],
+            REVERSE_LOOKUP[inputBuffer[12]], REVERSE_LOOKUP[inputBuffer[13]],
+            REVERSE_LOOKUP[inputBuffer[14]], REVERSE_LOOKUP[inputBuffer[15]]);
+
+        __m128i merged = _mm_or_si128(
+            _mm_or_si128(_mm_slli_epi32(lookup, 18),
+                         _mm_slli_epi32(_mm_and_si128(_mm_srli_epi32(lookup, 8),
+                                                      _mm_set1_epi32(0x3F)),
+                                        12)),
+            _mm_or_si128(
+                _mm_slli_epi32(_mm_and_si128(_mm_srli_epi32(lookup, 16),
+                                             _mm_set1_epi32(0x3F)),
+                               6),
+                _mm_and_si128(_mm_srli_epi32(lookup, 24),
+                              _mm_set1_epi32(0x3F))));
+
+        __m128i result =
+            _mm_shuffle_epi8(merged, _mm_setr_epi8(2, 1, 0, 6, 5, 4, 10, 9, 8,
+                                                   14, 13, 12, -1, -1, -1, -1));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(outputBuffer.data()),
+                         result);
+
+#elif defined(__ARM_NEON)
+        // ARM NEON实现
+        uint8x16_t input = vld1q_u8(inputBuffer.data());
+        uint8x16_t lookup = vcreate_u8(0);
+        for (int j = 0; j < 16; ++j) {
+            lookup = vsetq_lane_u8(REVERSE_LOOKUP[inputBuffer[j]], lookup, j);
+        }
+
+        uint32x4_t merged = vorrq_u32(
+            vorrq_u32(
+                vshlq_n_u32(vreinterpretq_u32_u8(lookup), 18),
+                vshlq_n_u32(
+                    vandq_u32(vshrq_n_u32(vreinterpretq_u32_u8(lookup), 8),
+                              vdupq_n_u32(0x3F)),
+                    12)),
+            vorrq_u32(
+                vshlq_n_u32(
+                    vandq_u32(vshrq_n_u32(vreinterpretq_u32_u8(lookup), 16),
+                              vdupq_n_u32(0x3F)),
+                    6),
+                vandq_u32(vshrq_n_u32(vreinterpretq_u32_u8(lookup), 24),
+                          vdupq_n_u32(0x3F))));
+
+        uint8x16_t result = vqtbl1q_u8(vreinterpretq_u8_u32(merged),
+                                       vld1q_u8({2, 1, 0, 6, 5, 4, 10, 9, 8, 14,
+                                                 13, 12, 255, 255, 255, 255}));
+        vst1q_u8(outputBuffer.data(), result);
+#endif
+
+        std::copy_n(outputBuffer.begin(), (simdSize / 4) * 3, dest);
+        std::advance(dest, (simdSize / 4) * 3);
+        std::advance(it, simdSize);
+    }
+#endif
+
+    for (; it != end && *it != '='; ++it) {
+        charArray4[i++] = REVERSE_LOOKUP[static_cast<unsigned char>(*it)];
         if (i == 4) {
             charArray3[0] =
                 (charArray4[0] << 2) + ((charArray4[1] & 0x30) >> 4);

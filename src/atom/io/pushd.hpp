@@ -1,7 +1,9 @@
 #ifndef DIRECTORYSTACK_H
 #define DIRECTORYSTACK_H
 
+#include <asio.hpp>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -11,14 +13,15 @@ class DirectoryStackImpl;
 /**
  * @class DirectoryStack
  * @brief A class for managing a stack of directory paths, allowing push, pop,
- * and various operations on the stack.
+ * and various operations on the stack, with asynchronous support using Asio.
  */
 class DirectoryStack {
 public:
     /**
      * @brief Constructor
+     * @param io_context The Asio io_context to use for asynchronous operations
      */
-    DirectoryStack();
+    explicit DirectoryStack(asio::io_context& io_context);
 
     /**
      * @brief Destructor
@@ -26,14 +29,14 @@ public:
     ~DirectoryStack();
 
     /**
-     * @brief Copy constructor
+     * @brief Copy constructor (deleted)
      */
-    DirectoryStack(const DirectoryStack& other);
+    DirectoryStack(const DirectoryStack& other) = delete;
 
     /**
-     * @brief Copy assignment operator
+     * @brief Copy assignment operator (deleted)
      */
-    auto operator=(const DirectoryStack& other) -> DirectoryStack&;
+    auto operator=(const DirectoryStack& other) -> DirectoryStack& = delete;
 
     /**
      * @brief Move constructor
@@ -47,25 +50,33 @@ public:
 
     /**
      * @brief Push the current directory onto the stack and change to the
-     * specified directory.
+     * specified directory asynchronously.
      * @param new_dir The directory to change to.
+     * @param handler The completion handler to be called when the operation
+     * completes.
      */
-    void pushd(const std::filesystem::path& new_dir);
+    void asyncPushd(const std::filesystem::path& new_dir,
+                    const std::function<void(const std::error_code&)>& handler);
 
     /**
-     * @brief Pop the directory from the stack and change back to it.
+     * @brief Pop the directory from the stack and change back to it
+     * asynchronously.
+     * @param handler The completion handler to be called when the operation
+     * completes.
      */
-    void popd();
+    void asyncPopd(const std::function<void(const std::error_code&)>& handler);
 
     /**
      * @brief View the top directory in the stack without changing to it.
+     * @return The top directory in the stack.
      */
-    void peek() const;
+    [[nodiscard]] auto peek() const -> std::filesystem::path;
 
     /**
      * @brief Display the current stack of directories.
+     * @return A vector of directory paths in the stack.
      */
-    void dirs() const;
+    [[nodiscard]] auto dirs() const -> std::vector<std::filesystem::path>;
 
     /**
      * @brief Clear the directory stack.
@@ -86,22 +97,35 @@ public:
     void remove(size_t index);
 
     /**
-     * @brief Change to the directory at the specified index in the stack.
+     * @brief Change to the directory at the specified index in the stack
+     * asynchronously.
      * @param index The index of the directory to change to.
+     * @param handler The completion handler to be called when the operation
+     * completes.
      */
-    void gotoIndex(size_t index);
+    void asyncGotoIndex(
+        size_t index,
+        const std::function<void(const std::error_code&)>& handler);
 
     /**
-     * @brief Save the directory stack to a file.
+     * @brief Save the directory stack to a file asynchronously.
      * @param filename The name of the file to save the stack to.
+     * @param handler The completion handler to be called when the operation
+     * completes.
      */
-    void saveStackToFile(const std::string& filename) const;
+    void asyncSaveStackToFile(
+        const std::string& filename,
+        const std::function<void(const std::error_code&)>& handler);
 
     /**
-     * @brief Load the directory stack from a file.
+     * @brief Load the directory stack from a file asynchronously.
      * @param filename The name of the file to load the stack from.
+     * @param handler The completion handler to be called when the operation
+     * completes.
      */
-    void loadStackFromFile(const std::string& filename);
+    void asyncLoadStackFromFile(
+        const std::string& filename,
+        const std::function<void(const std::error_code&)>& handler);
 
     /**
      * @brief Get the size of the directory stack.
@@ -116,9 +140,12 @@ public:
     [[nodiscard]] auto isEmpty() const -> bool;
 
     /**
-     * @brief Show the current directory path.
+     * @brief Get the current directory path asynchronously.
+     * @param handler The completion handler to be called with the current
+     * directory path.
      */
-    void showCurrentDirectory() const;
+    void asyncGetCurrentDirectory(
+        const std::function<void(const std::filesystem::path&)>& handler) const;
 
 private:
     std::unique_ptr<DirectoryStackImpl>

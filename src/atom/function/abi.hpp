@@ -10,6 +10,7 @@
 #define ATOM_META_ABI_HPP
 
 #include <array>
+#include <memory>
 #include <optional>
 #include <source_location>
 #include <string>

@@ -14,13 +14,15 @@ Description: Better Exception Library
 
 #include "exception.hpp"
 
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 #if ENABLE_CPPTRACE
 #include <cpptrace/cpptrace.hpp>
+#endif
+#ifdef ENABLE_BOOST_STACKTRACE
+#include <boost/stacktrace.hpp>
 #endif
 
 namespace atom::error {
@@ -34,6 +36,9 @@ auto Exception::what() const noexcept -> const char* {
 #if ENABLE_CPPTRACE
         oss << "\n\tStack trace:\n"
             << cpptrace::generate()
+#elif defined(ENABLE_BOOST_STACKTRACE)
+        full_message_ += std::format(
+            "\n\tStack trace:\n{}", boost::stacktrace::to_string(stack_trace_));
 #else
         oss << "\n\tStack trace:\n" << stack_trace_.toString();
 #endif

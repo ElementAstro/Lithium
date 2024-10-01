@@ -1,6 +1,5 @@
 #include "compiler.hpp"
 #include "command.hpp"
-#include "io/io.hpp"
 #include "toolchain.hpp"
 
 #include "utils/constant.hpp"
@@ -73,7 +72,10 @@ CompilerImpl::CompilerImpl()
     LOG_F(INFO, "Initializing CompilerImpl...");
     toolchainManager_.scanForToolchains();
     LOG_F(INFO, "Toolchains scanned.");
-    compileCommandGenerator_->setCompiler(Constants::COMPILER);
+    auto availableCompilers = toolchainManager_.getAvailableCompilers();
+    if (!availableCompilers.empty()) {
+        compileCommandGenerator_->setCompiler(availableCompilers[0]);
+    }
     compileCommandGenerator_->setIncludeFlag("-I./include");
     compileCommandGenerator_->setOutputFlag("-o output");
     compileCommandGenerator_->addExtension(".cpp");
@@ -129,7 +131,7 @@ auto CompilerImpl::compileToSharedLibrary(
         LOG_F(WARNING,
               "Failed to open compile options file {}, using default options.",
               optionsFile);
-        optionsJson = {{"compiler", Constants::COMPILER},
+        optionsJson = {{"compiler", availableCompilers[0]},
                        {"optimization_level", "-O2"},
                        {"cplus_version", "-std=c++20"},
                        {"warnings", "-Wall"}};
@@ -145,13 +147,13 @@ auto CompilerImpl::compileToSharedLibrary(
         }
     }
 
-    std::string compiler = optionsJson.value("compiler", Constants::COMPILER);
+    std::string compiler = optionsJson.value("compiler", availableCompilers[0]);
     if (std::find(availableCompilers.begin(), availableCompilers.end(),
                   compiler) == availableCompilers.end()) {
         LOG_F(WARNING,
               "Compiler {} is not available, using default compiler {}.",
-              compiler, Constants::COMPILER);
-        compiler = Constants::COMPILER;
+              compiler, availableCompilers[0]);
+        compiler = availableCompilers[0];
     }
 
     // Use CompileCommandGenerator to generate compile command
@@ -174,8 +176,8 @@ auto CompilerImpl::compileToSharedLibrary(
 
     compileCommandGenerator_->setSourceDir(
         tempSourceFile.parent_path().string());
-    compileCommandGenerator_->setOutputPath(OUTPUT_DIR /
-                                            "compile_commands.json");
+    compileCommandGenerator_->setOutputPath(
+        (OUTPUT_DIR / "compile_commands.json").string());
     compileCommandGenerator_->generate();
 
     // Read generated compile_commands.json
@@ -247,8 +249,8 @@ auto CompilerImpl::syntaxCheck(std::string_view code,
 
     compileCommandGenerator_->setSourceDir(
         tempSourceFile.parent_path().string());
-    compileCommandGenerator_->setOutputPath(fs::temp_directory_path() /
-                                            "syntax_check_commands.json");
+    compileCommandGenerator_->setOutputPath(
+        (fs::temp_directory_path() / "syntax_check_commands.json").string());
     compileCommandGenerator_->generate();
 
     json syntaxCheckCommands;
@@ -304,8 +306,8 @@ auto CompilerImpl::compileCode(std::string_view code,
 
     compileCommandGenerator_->setSourceDir(
         tempSourceFile.parent_path().string());
-    compileCommandGenerator_->setOutputPath(fs::temp_directory_path() /
-                                            "compile_code_commands.json");
+    compileCommandGenerator_->setOutputPath(
+        (fs::temp_directory_path() / "compile_code_commands.json").string());
     compileCommandGenerator_->generate();
 
     json compileCodeCommands;

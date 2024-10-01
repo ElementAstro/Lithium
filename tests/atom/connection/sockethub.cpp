@@ -1,12 +1,15 @@
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <mutex>
 #include <thread>
-#include <chrono>
 
 #include "atom/connection/sockethub.hpp"
 
-#ifdef __linux
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #endif
@@ -23,7 +26,8 @@ protected:
             messages_.push_back(message);
         });
         socketHub_->start(port_);
-        std::this_thread::sleep_for(std::chrono::seconds(1)); // Give some time for server to start
+        std::this_thread::sleep_for(
+            std::chrono::seconds(1));  // Give some time for server to start
     }
 
     void TearDown() override {
@@ -52,7 +56,8 @@ TEST_F(SocketHubTest, AcceptConnection) {
     serverAddress.sin_port = htons(port_);
     inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr);
 
-    int result = ::connect(clientSocket, (sockaddr *)&serverAddress, sizeof(serverAddress));
+    int result = ::connect(clientSocket, (sockaddr *)&serverAddress,
+                           sizeof(serverAddress));
     ASSERT_EQ(result, 0);
 
     ::close(clientSocket);
@@ -67,14 +72,16 @@ TEST_F(SocketHubTest, SendAndReceiveMessage) {
     serverAddress.sin_port = htons(port_);
     inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr);
 
-    int result = ::connect(clientSocket, (sockaddr *)&serverAddress, sizeof(serverAddress));
+    int result = ::connect(clientSocket, (sockaddr *)&serverAddress,
+                           sizeof(serverAddress));
     ASSERT_EQ(result, 0);
 
     std::string message = "Hello, server!";
     result = ::send(clientSocket, message.c_str(), message.size(), 0);
     ASSERT_NE(result, -1);
 
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // Give some time for message to be handled
+    std::this_thread::sleep_for(
+        std::chrono::seconds(1));  // Give some time for message to be handled
 
     {
         std::scoped_lock lock(mutex_);
@@ -98,17 +105,20 @@ TEST_F(SocketHubTest, HandleMultipleClients) {
         serverAddress.sin_port = htons(port_);
         inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr);
 
-        int result = ::connect(clientSockets[i], (sockaddr *)&serverAddress, sizeof(serverAddress));
+        int result = ::connect(clientSockets[i], (sockaddr *)&serverAddress,
+                               sizeof(serverAddress));
         ASSERT_EQ(result, 0);
     }
 
     std::string message = "Hello, server!";
     for (int i = 0; i < clientCount; ++i) {
-        int result = ::send(clientSockets[i], message.c_str(), message.size(), 0);
+        int result =
+            ::send(clientSockets[i], message.c_str(), message.size(), 0);
         ASSERT_NE(result, -1);
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // Give some time for messages to be handled
+    std::this_thread::sleep_for(
+        std::chrono::seconds(1));  // Give some time for messages to be handled
 
     {
         std::scoped_lock lock(mutex_);

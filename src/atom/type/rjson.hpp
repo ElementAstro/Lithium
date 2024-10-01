@@ -1,6 +1,7 @@
 #ifndef ATOM_TYPE_RJSON_HPP
 #define ATOM_TYPE_RJSON_HPP
 
+#include <cctype>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -25,50 +26,46 @@ using JsonArray = std::vector<JsonValue>;
 
 /**
  * @brief Represents a value in a JSON document.
- *
- * This class can represent various JSON value types including null, string,
- * number, boolean, object (map), and array. It provides methods to access the
- * value in its appropriate type and convert it to a string representation.
  */
 class JsonValue {
 public:
     /**
-     * @brief Enumeration of JSON value types.
+     * @brief Enum representing the type of the JSON value.
      */
     enum class Type { Null, String, Number, Bool, Object, Array };
 
     /**
-     * @brief Default constructor initializing a null value.
+     * @brief Constructs a JsonValue of type Null.
      */
     JsonValue();
 
     /**
-     * @brief Constructs a JsonValue from a string.
-     * @param value The string value.
+     * @brief Constructs a JsonValue of type String.
+     * @param value The string value to initialize.
      */
     explicit JsonValue(const std::string& value);
 
     /**
-     * @brief Constructs a JsonValue from a number.
-     * @param value The numeric value.
+     * @brief Constructs a JsonValue of type Number.
+     * @param value The numeric value to initialize.
      */
     explicit JsonValue(double value);
 
     /**
-     * @brief Constructs a JsonValue from a boolean.
-     * @param value The boolean value.
+     * @brief Constructs a JsonValue of type Bool.
+     * @param value The boolean value to initialize.
      */
     explicit JsonValue(bool value);
 
     /**
-     * @brief Constructs a JsonValue from a JSON object.
-     * @param value The JSON object (map).
+     * @brief Constructs a JsonValue of type Object.
+     * @param value The JsonObject to initialize.
      */
     explicit JsonValue(const JsonObject& value);
 
     /**
-     * @brief Constructs a JsonValue from a JSON array.
-     * @param value The JSON array (vector).
+     * @brief Constructs a JsonValue of type Array.
+     * @param value The JsonArray to initialize.
      */
     explicit JsonValue(const JsonArray& value);
 
@@ -79,61 +76,59 @@ public:
     [[nodiscard]] auto type() const -> Type;
 
     /**
-     * @brief Gets the value as a string.
+     * @brief Gets the string value.
      * @return The string value.
-     * @throws std::invalid_argument if the value is not a string.
+     * @throws std::bad_variant_access if the value is not a string.
      */
-    [[nodiscard]] auto as_string() const -> const std::string&;
+    [[nodiscard]] auto asString() const -> const std::string&;
 
     /**
-     * @brief Gets the value as a number.
+     * @brief Gets the numeric value.
      * @return The numeric value.
-     * @throws std::invalid_argument if the value is not a number.
+     * @throws std::bad_variant_access if the value is not a number.
      */
-    [[nodiscard]] auto as_number() const -> double;
+    [[nodiscard]] auto asNumber() const -> double;
 
     /**
-     * @brief Gets the value as a boolean.
+     * @brief Gets the boolean value.
      * @return The boolean value.
-     * @throws std::invalid_argument if the value is not a boolean.
+     * @throws std::bad_variant_access if the value is not a boolean.
      */
-    [[nodiscard]] auto as_bool() const -> bool;
+    [[nodiscard]] auto asBool() const -> bool;
 
     /**
-     * @brief Gets the value as a JSON object.
-     * @return The JSON object (map).
-     * @throws std::invalid_argument if the value is not an object.
+     * @brief Gets the object value.
+     * @return The object value.
+     * @throws std::bad_variant_access if the value is not an object.
      */
-    [[nodiscard]] auto as_object() const -> const JsonObject&;
+    [[nodiscard]] auto asObject() const -> const JsonObject&;
 
     /**
-     * @brief Gets the value as a JSON array.
-     * @return The JSON array (vector).
-     * @throws std::invalid_argument if the value is not an array.
+     * @brief Gets the array value.
+     * @return The array value.
+     * @throws std::bad_variant_access if the value is not an array.
      */
-    [[nodiscard]] auto as_array() const -> const JsonArray&;
+    [[nodiscard]] auto asArray() const -> const JsonArray&;
 
     /**
-     * @brief Converts the JSON value to its string representation.
+     * @brief Converts the JSON value to a string representation.
      * @return The string representation of the JSON value.
      */
-    [[nodiscard]] auto to_string() const -> std::string;
+    [[nodiscard]] auto toString() const -> std::string;
 
     /**
-     * @brief Accesses a value in a JSON object by key.
-     * @param key The key in the JSON object.
-     * @return The value associated with the key.
-     * @throws std::invalid_argument if the value is not an object or the key is
-     * not present.
+     * @brief Accesses the value associated with the given key in a JSON object.
+     * @param key The key to access.
+     * @return The JSON value associated with the key.
+     * @throws std::bad_variant_access if the value is not an object.
      */
     auto operator[](const std::string& key) const -> const JsonValue&;
 
     /**
-     * @brief Accesses a value in a JSON array by index.
-     * @param index The index in the JSON array.
-     * @return The value at the specified index.
-     * @throws std::invalid_argument if the value is not an array or the index
-     * is out of range.
+     * @brief Accesses the value at the given index in a JSON array.
+     * @param index The index to access.
+     * @return The JSON value at the index.
+     * @throws std::bad_variant_access if the value is not an array.
      */
     auto operator[](size_t index) const -> const JsonValue&;
 
@@ -141,89 +136,93 @@ private:
     Type type_;  ///< The type of the JSON value.
     std::variant<std::nullptr_t, std::string, double, bool, JsonObject,
                  JsonArray>
-        value_;  ///< The actual value stored.
+        value_;  ///< The value of the JSON.
 };
 
 /**
  * @brief Parses a JSON document from a string.
- *
- * This class provides methods to parse a JSON document represented as a string
- * and convert it into a `JsonValue` object that reflects the structure and
- * values of the JSON document.
  */
 class JsonParser {
 public:
     /**
-     * @brief Parses a JSON string into a JsonValue.
-     * @param str The JSON string.
-     * @return The parsed JsonValue object.
+     * @brief Parses a JSON document from a string.
+     * @param str The string containing the JSON document.
+     * @return The parsed JsonValue.
      */
     static auto parse(const std::string& str) -> JsonValue;
 
 private:
     /**
-     * @brief Parses a JSON value from a string starting at the given index.
-     * @param str The JSON string.
-     * @param index The current position in the string.
+     * @brief Parses a JSON value from a string.
+     * @param str The string containing the JSON value.
+     * @param index The current index in the string.
      * @return The parsed JsonValue.
      */
-    static auto parse_value(const std::string& str, size_t& index) -> JsonValue;
+    static auto parseValue(const std::string& str, size_t& index) -> JsonValue;
 
     /**
-     * @brief Parses a JSON string enclosed in quotes.
-     * @param str The JSON string.
-     * @param index The current position in the string.
-     * @return The parsed string value.
+     * @brief Parses a JSON string from a string.
+     * @param str The string containing the JSON string.
+     * @param index The current index in the string.
+     * @return The parsed string.
      */
-    static auto parse_string(const std::string& str,
-                             size_t& index) -> std::string;
+    static auto parseString(const std::string& str,
+                            size_t& index) -> std::string;
 
     /**
      * @brief Parses a JSON number from a string.
-     * @param str The JSON string.
-     * @param index The current position in the string.
-     * @return The parsed numeric value.
+     * @param str The string containing the JSON number.
+     * @param index The current index in the string.
+     * @return The parsed number.
      */
-    static auto parse_number(const std::string& str, size_t& index) -> double;
+    static auto parseNumber(const std::string& str, size_t& index) -> double;
 
     /**
-     * @brief Parses a JSON boolean value from a string.
-     * @param str The JSON string.
-     * @param index The current position in the string.
-     * @return The parsed boolean value.
+     * @brief Parses a JSON boolean from a string.
+     * @param str The string containing the JSON boolean.
+     * @param index The current index in the string.
+     * @return The parsed boolean.
      */
-    static auto parse_bool(const std::string& str, size_t& index) -> bool;
+    static auto parseBool(const std::string& str, size_t& index) -> bool;
 
     /**
      * @brief Parses a JSON null value from a string.
-     * @param str The JSON string.
-     * @param index The current position in the string.
+     * @param str The string containing the JSON null.
+     * @param index The current index in the string.
      */
-    static void parse_null(const std::string& str, size_t& index);
+    static void parseNull(const std::string& str, size_t& index);
 
     /**
-     * @brief Parses a JSON object (map) from a string.
-     * @param str The JSON string.
-     * @param index The current position in the string.
-     * @return The parsed JSON object.
+     * @brief Parses a JSON object from a string.
+     * @param str The string containing the JSON object.
+     * @param index The current index in the string.
+     * @return The parsed JsonObject.
      */
-    static auto parse_object(const std::string& str,
-                             size_t& index) -> JsonObject;
+    static auto parseObject(const std::string& str,
+                            size_t& index) -> JsonObject;
 
     /**
      * @brief Parses a JSON array from a string.
-     * @param str The JSON string.
-     * @param index The current position in the string.
-     * @return The parsed JSON array.
+     * @param str The string containing the JSON array.
+     * @param index The current index in the string.
+     * @return The parsed JsonArray.
      */
-    static auto parse_array(const std::string& str, size_t& index) -> JsonArray;
+    static auto parseArray(const std::string& str, size_t& index) -> JsonArray;
 
     /**
-     * @brief Skips whitespace characters in the string.
-     * @param str The JSON string.
-     * @param index The current position in the string.
+     * @brief Skips whitespace characters in a string.
+     * @param str The string to process.
+     * @param index The current index in the string.
      */
-    static void skip_whitespace(const std::string& str, size_t& index);
+    static void skipWhitespace(const std::string& str, size_t& index);
+
+    /**
+     * @brief Parses an escaped character from a string.
+     * @param str The string containing the escaped character.
+     * @param index The current index in the string.
+     * @return The parsed character.
+     */
+    static auto parseEscapedChar(const std::string& str, size_t& index) -> char;
 };
 
 }  // namespace atom::type

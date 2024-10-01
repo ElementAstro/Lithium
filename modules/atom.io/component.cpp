@@ -1,6 +1,8 @@
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
 
+#include "atom/function/overload.hpp"
+
 #include "atom/io/compress.hpp"
 #include "atom/io/glob.hpp"
 #include "atom/io/io.hpp"
@@ -18,26 +20,29 @@ ATOM_MODULE(atom_io, [](Component &component) {
     component.def("extract_zip", &extractZip, "Extract a zip file");
     component.def("compress_folder", &compressFolder, "Compress a folder");
 
-    component.def("translate", &glob::translate, "Translate a pattern");
-    component.def("compile_pattern", &glob::compilePattern,
-                  "Compile a pattern");
-    component.def("fnmatch", &glob::fnmatch,
-                  "Check if a name matches a pattern");
-    component.def("filter", &glob::filter, "Filter a list of names");
-    component.def("expand_tilde", &glob::expandTilde, "Expand a tilde");
-    component.def("has_magic", &glob::hasMagic, "Check if a pattern has magic");
-    component.def("is_hidden", &glob::isHidden, "Check if a path is hidden");
-    component.def("is_recursive", &glob::isRecursive,
+    component.def("translate", &translate, "Translate a pattern");
+    component.def("compile_pattern", &compilePattern, "Compile a pattern");
+    component.def("fnmatch", &fnmatch, "Check if a name matches a pattern");
+    component.def("filter", &filter, "Filter a list of names");
+    component.def("expand_tilde", &expandTilde, "Expand a tilde");
+    component.def("has_magic", &hasMagic, "Check if a pattern has magic");
+    component.def("is_hidden", &isHidden, "Check if a path is hidden");
+    component.def("is_recursive", &isRecursive,
                   "Check if a pattern is recursive");
-    component.def("iter_dir", &glob::iterDirectory, "Iterate a directory");
-    component.def("rlistdir", &glob::rlistdir, "Recursively list a directory");
-    component.def<const std::string &>("glob", &glob::glob,
-                                       "Glob a list of files");
-    component.def<const std::string &>("rglob", &glob::rglob,
+    component.def("iter_dir", &iterDirectory, "Iterate a directory");
+    component.def("rlistdir", &rlistdir, "Recursively list a directory");
+    component.def("glob_s",
+                  atom::meta::overload_cast<const std::string &>(glob),
+                  "Glob a list of files");
+    component.def(
+        "glob_v",
+        atom::meta::overload_cast<const std::vector<std::string> &>(glob),
+        "Glob a list of files");
+    component.def<const std::string &>("rglob", &rglob,
                                        "Recursively glob a list of files");
-    component.def("glob0", &glob::glob0, "Glob0 a list of files");
-    component.def("glob1", &glob::glob1, "Glob1 a list of files");
-    component.def("glob2", &glob::glob2, "Glob2 a list of files");
+    component.def("glob0", &glob0, "Glob0 a list of files");
+    component.def("glob1", &glob1, "Glob1 a list of files");
+    component.def("glob2", &glob2, "Glob2 a list of files");
 
     component.def(
         "mkdir",

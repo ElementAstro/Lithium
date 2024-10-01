@@ -22,11 +22,8 @@
 #endif
 
 #include "atom/error/exception.hpp"
-#include "atom/function/abi.hpp"
 #include "atom/function/proxy.hpp"
 #include "atom/function/type_caster.hpp"
-
-#include "atom/utils/to_string.hpp"
 
 #include "macro.hpp"
 
@@ -383,9 +380,9 @@ void CommandDispatcher::def(const std::string& name, const std::string& group,
     auto it = commands_.find(name);
     if (it == commands_.end()) {
         Command cmd{{std::move(_func)},
-                    {info.returnType},
-                    {info.argumentTypes},
-                    {info.hash},
+                    {info.getReturnType()},
+                    {info.getArgumentTypes()},
+                    {info.getHash()},
                     description,
                     {},
                     std::move(precondition),
@@ -395,9 +392,9 @@ void CommandDispatcher::def(const std::string& name, const std::string& group,
         groupMap_[name] = group;
     } else {
         it->second.funcs.emplace_back(std::move(_func));
-        it->second.returnType.emplace_back(info.returnType);
-        it->second.argTypes.emplace_back(info.argumentTypes);
-        it->second.hash.emplace_back(info.hash);
+        it->second.returnType.emplace_back(info.getReturnType());
+        it->second.argTypes.emplace_back(info.getArgumentTypes());
+        it->second.hash.emplace_back(info.getHash());
         it->second.argInfo = std::move(arg_info);
     }
 }
@@ -420,9 +417,9 @@ void CommandDispatcher::defT(const std::string& name, const std::string& group,
     auto it = commands_.find(name);
     if (it == commands_.end()) {
         Command cmd{{std::move(wrappedFunc)},
-                    {info.returnType},
-                    {info.argumentTypes},
-                    {info.hash},
+                    {info.getRetureType()},
+                    {info.getArgumentTypes()},
+                    {info.getHash()},
                     description,
                     {},
                     std::move(precondition),
@@ -432,9 +429,9 @@ void CommandDispatcher::defT(const std::string& name, const std::string& group,
         groupMap_[name] = group;
     } else {
         it->second.funcs.emplace_back(std::move(wrappedFunc));
-        it->second.returnType.emplace_back(info.returnType);
-        it->second.argTypes.emplace_back(info.argumentTypes);
-        it->second.hash.emplace_back(info.hash);
+        it->second.returnType.emplace_back(info.getReturnType());
+        it->second.argTypes.emplace_back(info.getArgumentTypes());
+        it->second.hash.emplace_back(info.getHash());
         it->second.argInfo = std::move(arg_info);
     }
 }

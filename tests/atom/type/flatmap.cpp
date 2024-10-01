@@ -1,6 +1,8 @@
 #include "atom/type/flatmap.hpp"
 #include <gtest/gtest.h>
 
+using namespace atom::type;
+
 TEST(QuickFlatMapTest, FindExistingKey) {
     QuickFlatMap<int, std::string> map;
     map[1] = "one";

@@ -16,6 +16,7 @@ Description: Basic Component Definition
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -23,6 +24,7 @@ Description: Basic Component Definition
 #include "module_macro.hpp"
 #include "var.hpp"
 
+#include "atom/function/concept.hpp"
 #include "atom/function/constructor.hpp"
 #include "atom/function/conversion.hpp"
 #include "atom/function/type_caster.hpp"
@@ -212,6 +214,10 @@ public:
 
     void doc(const std::string& description);
 
+    // -------------------------------------------------------------------
+    // No Class
+    // -------------------------------------------------------------------
+
     template <typename Callable>
     void def(const std::string& name, Callable&& func,
              const std::string& group = "",
@@ -227,78 +233,78 @@ public:
              const std::string& group = "",
              const std::string& description = "");
 
-    template <typename Class, typename Ret, typename... Args>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-             const std::string& group = "",
-             const std::string& description = "");
+    // -------------------------------------------------------------------
+    // Without instance
+    // -------------------------------------------------------------------
 
-    template <typename Class, typename Ret, typename... Args>
-    void def(const std::string& name, Ret (Class::*func)(Args...) const,
-             const std::string& group = "",
-             const std::string& description = "");
+#define DEF_MEMBER_FUNC(cv_qualifier)                                      \
+    template <typename Class, typename Ret, typename... Args>              \
+    void def(                                                              \
+        const std::string& name, Ret (Class::*func)(Args...) cv_qualifier, \
+        const std::string& group = "", const std::string& description = "");
+
+    DEF_MEMBER_FUNC()                // Non-const, non-volatile
+    DEF_MEMBER_FUNC(const)           // Const
+    DEF_MEMBER_FUNC(volatile)        // Volatile
+    DEF_MEMBER_FUNC(const volatile)  // Const volatile
+    DEF_MEMBER_FUNC(noexcept)
+    DEF_MEMBER_FUNC(const noexcept)
+    DEF_MEMBER_FUNC(const volatile noexcept)
 
     template <typename Class, typename VarType>
-    void def_v(const std::string& name, VarType Class::*var,
-               const std::string& group = "",
-               const std::string& description = "");
+    void def(const std::string& name, VarType Class::*var,
+             const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class>
+    // -------------------------------------------------------------------
+    // With instance
+    // -------------------------------------------------------------------
+
+    template <typename Ret, typename Class, typename InstanceType>
+        requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+                 std::is_same_v<InstanceType, PointerSentinel<Class>>
     void def(const std::string& name, Ret (Class::*func)(),
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
+             const InstanceType& instance, const std::string& group = "",
              const std::string& description = "");
 
-    template <typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(),
-             std::shared_ptr<Class> instance, const std::string& group = "",
+#define DEF_MEMBER_FUNC_WITH_INSTANCE(cv_qualifier)                       \
+    template <typename... Args, typename Ret, typename Class,             \
+              typename InstanceType>                                      \
+        requires Pointer<InstanceType> || SmartPointer<InstanceType> ||   \
+                 std::is_same_v<InstanceType, PointerSentinel<Class>>     \
+    void def(const std::string& name,                                     \
+             Ret (Class::*func)(Args...) cv_qualifier,                    \
+             const InstanceType& instance, const std::string& group = "", \
              const std::string& description = "");
 
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-             std::shared_ptr<Class> instance, const std::string& group = "",
-             const std::string& description = "");
+    DEF_MEMBER_FUNC_WITH_INSTANCE()
+    DEF_MEMBER_FUNC_WITH_INSTANCE(const)
+    DEF_MEMBER_FUNC_WITH_INSTANCE(volatile)
+    DEF_MEMBER_FUNC_WITH_INSTANCE(const volatile)
+    DEF_MEMBER_FUNC_WITH_INSTANCE(noexcept)
+    DEF_MEMBER_FUNC_WITH_INSTANCE(const noexcept)
+    DEF_MEMBER_FUNC_WITH_INSTANCE(const volatile noexcept)
 
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...) const,
-             std::shared_ptr<Class> instance, const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...) const,
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...) noexcept,
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    // Register a member variable using a raw pointer sentinel
-    template <typename MemberType, typename Class>
+    template <typename MemberType, typename Class, typename InstanceType>
+        requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+                 std::is_same_v<InstanceType, PointerSentinel<Class>>
     void def(const std::string& name, MemberType Class::*var,
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
+             const InstanceType& instance, const std::string& group = "",
              const std::string& description = "");
 
-    // Register a member variable using a shared pointer
-    template <typename MemberType, typename Class>
-    void def(const std::string& name, MemberType Class::*var,
-             std::shared_ptr<Class> instance, const std::string& group = "",
+    template <typename MemberType, typename Class, typename InstanceType>
+        requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+                 std::is_same_v<InstanceType, PointerSentinel<Class>>
+    void def(const std::string& name, const MemberType Class::*var,
+             const InstanceType& instance, const std::string& group = "",
              const std::string& description = "");
 
-    template <typename Ret, typename Class>
+    template <typename Ret, typename Class, typename InstanceType>
+        requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+                 std::is_same_v<InstanceType, PointerSentinel<Class>>
     void def(const std::string& name, Ret (Class::*getter)() const,
-             void (Class::*setter)(Ret), std::shared_ptr<Class> instance,
-             const std::string& group = "",
-             const std::string& description = "");
+             void (Class::*setter)(Ret), const InstanceType& instance,
+             const std::string& group, const std::string& description);
 
     // Register a static member variable
     template <typename MemberType, typename Class>
@@ -311,30 +317,6 @@ public:
     void def(const std::string& name, const MemberType* var,
              const std::string& group = "",
              const std::string& description = "");
-
-    // Register a const member variable
-    template <typename MemberType, typename Class>
-    void def(const std::string& name, const MemberType Class::*var,
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename MemberType, typename Class>
-    void def(const std::string& name, const MemberType Class::*var,
-             std::shared_ptr<Class> instance, const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename MemberType, typename ClassType>
-    void defM(const std::string& name, MemberType ClassType::*member_var,
-              std::shared_ptr<ClassType> instance,
-              const std::string& group = "",
-              const std::string& description = "");
-
-    template <typename MemberType, typename ClassType>
-    void defM(const std::string& name, MemberType ClassType::*member_var,
-              PointerSentinel<ClassType> instance,
-              const std::string& group = "",
-              const std::string& description = "");
 
     template <typename Class>
     void def(const std::string& name, const std::string& group = "",
@@ -445,12 +427,6 @@ public:
     CleanupFunc cleanupFunc; /**< The cleanup function for the component. */
 
 private:
-    template <typename MemberType, typename ClassType, typename InstanceType>
-    void defineAccessors(const std::string& name,
-                         MemberType ClassType::*member_var,
-                         InstanceType instance, const std::string& group = "",
-                         const std::string& description = "");
-
     std::string m_name_;
     std::string m_doc_;
     std::string m_configPath_;
@@ -511,8 +487,9 @@ void Component::defBaseClass() {
 template <typename Callable>
 void Component::def(const std::string& name, Callable&& func,
                     const std::string& group, const std::string& description) {
+    using FuncType = std::function<std::result_of_t<Callable()>>;
     m_CommandDispatcher_->def(name, group, description,
-                              std::function(std::forward<Callable>(func)));
+                              FuncType(std::forward<Callable>(func)));
 }
 
 template <typename Ret>
@@ -531,40 +508,6 @@ void Component::def(const std::string& name, Ret (*func)(Args...),
                               }));
 }
 
-template <typename Ret, typename Class>
-void Component::def(const std::string& name, Ret (Class::*func)(),
-                    std::shared_ptr<Class> instance, const std::string& group,
-                    const std::string& description) {
-    m_CommandDispatcher_->def(name, group, description,
-                              std::function<Ret()>([instance, func]() {
-                                  return std::invoke(func, instance.get());
-                              }));
-}
-
-template <typename... Args, typename Ret, typename Class>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...),
-                    std::shared_ptr<Class> instance, const std::string& group,
-                    const std::string& description) {
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Args...)>([instance, func](Args... args) {
-            return std::invoke(func, instance.get(),
-                               std::forward<Args>(args)...);
-        }));
-}
-
-template <typename... Args, typename Ret, typename Class>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
-                    std::shared_ptr<Class> instance, const std::string& group,
-                    const std::string& description) {
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Args...)>([instance, func](Args... args) {
-            return std::invoke(func, instance.get(),
-                               std::forward<Args>(args)...);
-        }));
-}
-
 template <typename Class, typename Ret, typename... Args>
 void Component::def(const std::string& name, Ret (Class::*func)(Args...),
                     const std::string& group, const std::string& description) {
@@ -575,6 +518,76 @@ void Component::def(const std::string& name, Ret (Class::*func)(Args...),
             [boundFunc](Class& instance, Args... args) {
                 return boundFunc(instance, std::forward<Args>(args)...);
             }));
+}
+
+template <typename Ret, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name, Ret (Class::*func)(),
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function<Ret()>([instance, func]() {
+                                  return std::invoke(func, instance.get());
+                              }));
+}
+
+template <typename... Args, typename Ret, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...),
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename... Args, typename Ret, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename... Args, typename Ret, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name,
+                    Ret (Class::*func)(Args...) noexcept,
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename... Args, typename Ret, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name,
+                    Ret (Class::*func)(Args...) const noexcept,
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
 }
 
 template <typename Class, typename Ret, typename... Args>
@@ -589,68 +602,12 @@ void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
             }));
 }
 
-template <typename Class, typename VarType>
-void Component::def_v(const std::string& name, VarType Class::*var,
-                      const std::string& group,
-                      const std::string& description) {
-    auto boundVar = atom::meta::bindMemberVariable(var);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<VarType(Class&)>(
-            [boundVar](Class& instance) { return boundVar(instance); }));
-}
-
-template <typename Ret, typename Class>
-void Component::def(const std::string& name, Ret (Class::*func)(),
-                    const PointerSentinel<Class>& instance,
-                    const std::string& group, const std::string& description) {
-    m_CommandDispatcher_->def(name, group, description,
-                              std::function<Ret()>([instance, func]() {
-                                  return std::invoke(func, instance.get());
-                              }));
-}
-
-template <typename... Args, typename Ret, typename Class>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...),
-                    const PointerSentinel<Class>& instance,
-                    const std::string& group, const std::string& description) {
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Args...)>([instance, func](Args... args) {
-            return std::invoke(func, instance.get(),
-                               std::forward<Args>(args)...);
-        }));
-}
-
-template <typename... Args, typename Ret, typename Class>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
-                    const PointerSentinel<Class>& instance,
-                    const std::string& group, const std::string& description) {
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Args...)>([instance, func](Args... args) {
-            return std::invoke(func, instance.get(),
-                               std::forward<Args>(args)...);
-        }));
-}
-
-template <typename... Args, typename Ret, typename Class>
-void Component::def(const std::string& name,
-                    Ret (Class::*func)(Args...) noexcept,
-                    const PointerSentinel<Class>& instance,
-                    const std::string& group, const std::string& description) {
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Args...)>([instance, func](Args... args) {
-            return std::invoke(func, instance.get(),
-                               std::forward<Args>(args)...);
-        }));
-}
-
-template <typename MemberType, typename ClassType>
-void Component::def(const std::string& name, MemberType ClassType::*member_var,
-                    std::shared_ptr<ClassType> instance,
-                    const std::string& group, const std::string& description) {
+template <typename MemberType, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name, MemberType Class::*member_var,
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
     m_CommandDispatcher_->def(
         "get_" + name, group, "Get " + description,
         std::function<MemberType()>([instance, member_var]() {
@@ -664,9 +621,25 @@ void Component::def(const std::string& name, MemberType ClassType::*member_var,
             }));
 }
 
-template <typename Ret, typename Class>
+template <typename MemberType, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
+void Component::def(const std::string& name,
+                    const MemberType Class::*member_var,
+                    const InstanceType& instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        "get_" + name, group, "Get " + description,
+        std::function<MemberType()>([instance, member_var]() {
+            return atom::meta::bindMemberVariable(member_var)(*instance);
+        }));
+}
+
+template <typename Ret, typename Class, typename InstanceType>
+    requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
+             std::is_same_v<InstanceType, PointerSentinel<Class>>
 void Component::def(const std::string& name, Ret (Class::*getter)() const,
-                    void (Class::*setter)(Ret), std::shared_ptr<Class> instance,
+                    void (Class::*setter)(Ret), const InstanceType& instance,
                     const std::string& group, const std::string& description) {
     m_CommandDispatcher_->def("get_" + name, group, "Get " + description,
                               std::function<Ret()>([instance, getter]() {
@@ -677,41 +650,6 @@ void Component::def(const std::string& name, Ret (Class::*getter)() const,
         std::function<void(Ret)>([instance, setter](Ret value) {
             std::invoke(setter, instance.get(), value);
         }));
-}
-
-template <typename MemberType, typename ClassType>
-void Component::def(const std::string& name, MemberType ClassType::*member_var,
-                    const PointerSentinel<ClassType>& instance,
-                    const std::string& group, const std::string& description) {
-    auto callable = bind_member_variable(member_var);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<MemberType&(ClassType&)>(
-            [instance, callable]() { return callable(*instance.get()); }));
-}
-
-template <typename MemberType, typename ClassType>
-void Component::def(const std::string& name,
-                    const MemberType ClassType::*member_var,
-                    std::shared_ptr<ClassType> instance,
-                    const std::string& group, const std::string& description) {
-    auto callable = bind_member_variable(member_var);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<const MemberType&(ClassType&)>(
-            [instance, callable]() { return callable(*instance); }));
-}
-
-template <typename MemberType, typename ClassType>
-void Component::def(const std::string& name,
-                    const MemberType ClassType::*member_var,
-                    const PointerSentinel<ClassType>& instance,
-                    const std::string& group, const std::string& description) {
-    auto callable = bind_member_variable(member_var);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<const MemberType&(ClassType&)>(
-            [instance, callable]() { return callable(*instance.get()); }));
 }
 
 template <typename MemberType, typename ClassType>
@@ -775,20 +713,6 @@ void Component::defDefaultConstructor(const std::string& name,
         }));
 }
 
-template <typename MemberType, typename ClassType>
-void Component::defM(const std::string& name, MemberType ClassType::*member_var,
-                     std::shared_ptr<ClassType> instance,
-                     const std::string& group, const std::string& description) {
-    define_accessors(name, member_var, instance, group, description);
-}
-
-template <typename MemberType, typename ClassType>
-void Component::defM(const std::string& name, MemberType ClassType::*member_var,
-                     PointerSentinel<ClassType> instance,
-                     const std::string& group, const std::string& description) {
-    define_accessors(name, member_var, instance, group, description);
-}
-
 template <typename Class>
 void Component::def(const std::string& name, const std::string& group,
                     const std::string& description) {
@@ -801,25 +725,6 @@ void Component::def(const std::string& name, const std::string& group,
                     const std::string& description) {
     auto constructor_ = atom::meta::constructor<Class, Args...>();
     def(name, constructor_, group, description);
-}
-
-template <typename MemberType, typename ClassType, typename InstanceType>
-void Component::defineAccessors(const std::string& name,
-                                MemberType ClassType::*member_var,
-                                InstanceType instance, const std::string& group,
-                                const std::string& description) {
-    auto getter = [instance, member_var]() -> MemberType& {
-        return instance->*member_var;
-    };
-
-    auto setter = [instance, member_var](const MemberType& value) {
-        instance->*member_var = value;
-    };
-
-    m_CommandDispatcher_->def("get_" + name, group, description,
-                              std::function<MemberType&()>(getter));
-    m_CommandDispatcher_->def("set_" + name, group, description,
-                              std::function<void(const MemberType&)>(setter));
 }
 
 #endif

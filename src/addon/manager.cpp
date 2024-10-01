@@ -17,24 +17,27 @@
 #include "addons.hpp"
 #include "compiler.hpp"
 #include "component.hpp"
-#include "components/registry.hpp"
+#include "config/configor.hpp"
 #include "loader.hpp"
-#include "macro.hpp"
 #include "sandbox.hpp"
+
 #include "template/standalone.hpp"
 
+#include "atom/components/registry.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/system/command.hpp"
 #include "atom/system/env.hpp"
 #include "atom/system/process.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
 
-#include "system/command.hpp"
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"
+
+#include "macro.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
 // clang-format off
@@ -44,6 +47,7 @@
 #define pipe _pipe
 #define popen _popen
 #define pclose _pclose
+#undef XMLDocument
 // clang-format on
 #else
 #include <fcntl.h>
@@ -65,6 +69,7 @@ public:
     std::unordered_map<std::string, std::shared_ptr<ComponentEntry>>
         componentEntries;
     std::weak_ptr<atom::system::ProcessManager> processManager;
+    std::weak_ptr<ConfigManager> configManager;
     std::unordered_map<std::string, json> componentInfos;
     std::unordered_map<std::string, std::weak_ptr<Component>> components;
     std::string modulePath;
@@ -74,15 +79,16 @@ public:
 
 ComponentManager::ComponentManager()
     : impl_(std::make_unique<ComponentManagerImpl>()) {
-    impl_->moduleLoader =
-        GetWeakPtr<ModuleLoader>(Constants::LITHIUM_MODULE_LOADER);
-    impl_->env = GetWeakPtr<atom::utils::Env>(Constants::LITHIUM_UTILS_ENV);
-    impl_->addonManager =
-        GetWeakPtr<AddonManager>(Constants::LITHIUM_ADDON_MANAGER);
-    impl_->processManager = GetWeakPtr<atom::system::ProcessManager>(
-        Constants::LITHIUM_PROCESS_MANAGER);
+    impl_->moduleLoader = GetWeakPtr<ModuleLoader>(Constants::MODULE_LOADER);
+    impl_->env = GetWeakPtr<atom::utils::Env>(Constants::ENVIRONMENT);
+    impl_->addonManager = GetWeakPtr<AddonManager>(Constants::ADDON_MANAGER);
+    impl_->processManager =
+        GetWeakPtr<atom::system::ProcessManager>(Constants::PROCESS_MANAGER);
     impl_->sandbox = std::make_unique<Sandbox>();
     impl_->compiler = std::make_unique<Compiler>();
+
+    GET_OR_CREATE_WEAK_PTR(impl_->configManager, ConfigManager,
+                           Constants::CONFIG_MANAGER);
 
     if (!initialize()) {
         LOG_F(ERROR, "Failed to initialize component manager");
@@ -114,8 +120,17 @@ auto ComponentManager::initialize() -> bool {
         return false;
     }
 
-    impl_->modulePath = envLock->getEnv(Constants::ENV_VAR_MODULE_PATH,
-                                        Constants::MODULE_FOLDER);
+    impl_->modulePath =
+        envLock->getEnv(Constants::ENV_VAR_MODULE_PATH, "./modules");
+    if (auto value = impl_->configManager.lock()->getValue("/app/modules/path");
+        value.has_value()) {
+        try {
+            impl_->modulePath = value.value();
+        } catch (const json::exception& e) {
+            LOG_F(ERROR, "Failed to get module path from config: {}", e.what());
+            impl_->modulePath = "./modules";
+        }
+    }
 
     for (const auto& dir : getQualifiedSubDirs(impl_->modulePath)) {
         LOG_F(INFO, "Found module: {}", dir);
@@ -763,7 +778,8 @@ auto ComponentManager::loadStandaloneComponent(
                              component_name + Constants::EXECUTABLE_EXTENSION;
     auto standaloneComponent =
         std::make_shared<StandAloneComponent>(component_name);
-    standaloneComponent->startLocalDriver(componentFullPath);
+    standaloneComponent->startLocalDriver(componentFullPath,
+                                          InteractionMethod::Pipe);
     if (!standaloneComponent->initialize()) {
         LOG_F(ERROR, "Failed to initialize component {}", component_name);
         return false;

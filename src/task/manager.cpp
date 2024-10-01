@@ -46,6 +46,8 @@
 #include "atom/function/abi.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/system/env.hpp"
+
 #include "task/loader.hpp"
 
 #include "utils/constant.hpp"
@@ -60,10 +62,12 @@
 
 using namespace std::literals;
 
-auto operator<<(std::ostream& os, const std::error_code& ec) -> std::ostream& {
-    os << "Error Code: " << ec.value() << ", Category: " << ec.category().name()
-       << ", Message: " << ec.message();
-    return os;
+auto operator<<(std::ostream& outputStream,
+                const std::error_code& errorCode) -> std::ostream& {
+    outputStream << "Error Code: " << errorCode.value()
+                 << ", Category: " << errorCode.category().name()
+                 << ", Message: " << errorCode.message();
+    return outputStream;
 }
 
 namespace lithium {
@@ -964,8 +968,12 @@ void TaskInterpreter::executeImport(const json& step) {
             std::condition_variable cv;
             bool callbackCalled = false;
 
-            std::string fullPath = Constants::TASK_FOLDER + scriptName +
-                                   Constants::PATH_SEPARATOR + ".json";
+            std::weak_ptr<atom::utils::Env> weakEnv;
+            GET_OR_CREATE_WEAK_PTR(weakEnv, atom::utils::Env,
+                                   Constants::ENVIRONMENT)
+            auto taskFolder = weakEnv.lock()->getEnv("TASK_FOLDER", "./tasks/");
+            std::string fullPath =
+                taskFolder + scriptName + Constants::PATH_SEPARATOR + ".json";
             LOG_F(INFO, "Importing script from file: {}", fullPath);
 
             // Asynchronously read the script file

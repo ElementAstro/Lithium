@@ -125,7 +125,7 @@ public:
             THROW_FFI_EXCEPTION("Library not loaded");
         }
 
-#ifdef _WIN32
+#ifdef _MSC_VER
         FARPROC proc =
             GetProcAddress(static_cast<HMODULE>(handle_), functionName.data());
 #else
@@ -207,8 +207,8 @@ private:
     std::mutex mutex_;
 
     void loadLibrary(const std::string& dllName) {
-#ifdef _WIN32
-        handle_ = LoadLibraryA(dllName.c_str());
+#ifdef _MSC_VER
+        handle_ = static_cast<void*>(LoadLibraryA(dllName.c_str()));
 #else
         handle_ = dlopen(dllName.c_str(), RTLD_LAZY);
 #endif
@@ -219,7 +219,7 @@ private:
 
     void unloadLibrary() {
         if (handle_ != nullptr) {
-#ifdef _WIN32
+#ifdef _MSC_VER
             FreeLibrary(static_cast<HMODULE>(handle_));
 #else
             dlclose(handle_);

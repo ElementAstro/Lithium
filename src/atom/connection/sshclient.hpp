@@ -27,6 +27,11 @@ Description: SSH Client
 #include <libssh/sftp.h>
 
 namespace atom::connection {
+
+constexpr int DEFAULT_SSH_PORT = 22;
+constexpr int DEFAULT_TIMEOUT = 10;
+constexpr int DEFAULT_MODE = S_NORMAL;
+
 /**
  * @class SSHClient
  * @brief A class for SSH client connection and file operations.
@@ -38,12 +43,24 @@ public:
      * @param host The hostname or IP address of the SSH server.
      * @param port The port number of the SSH server. Default is 22.
      */
-    explicit SSHClient(const std::string &host, int port = 22);
+    explicit SSHClient(const std::string &host, int port = DEFAULT_SSH_PORT);
 
     /**
      * @brief Destructor.
      */
     ~SSHClient();
+
+    // Copy constructor
+    SSHClient(const SSHClient &other) = default;
+
+    // Copy assignment operator
+    auto operator=(const SSHClient &other) -> SSHClient & = default;
+
+    // Move constructor
+    SSHClient(SSHClient &&other) noexcept = default;
+
+    // Move assignment operator
+    auto operator=(SSHClient &&other) noexcept -> SSHClient & = default;
 
     /**
      * @brief Connects to the SSH server.
@@ -52,19 +69,19 @@ public:
      * @param timeout The connection timeout in seconds. Default is 10 seconds.
      * @throws std::runtime_error if connection or authentication fails.
      */
-    void Connect(const std::string &username, const std::string &password,
-                 int timeout = 10);
+    void connect(const std::string &username, const std::string &password,
+                 int timeout = DEFAULT_TIMEOUT);
 
     /**
      * @brief Checks if the SSH client is connected to the server.
      * @return true if connected, false otherwise.
      */
-    bool IsConnected();
+    [[nodiscard]] auto isConnected() const -> bool;
 
     /**
      * @brief Disconnects from the SSH server.
      */
-    void Disconnect();
+    void disconnect();
 
     /**
      * @brief Executes a single command on the SSH server.
@@ -72,7 +89,7 @@ public:
      * @param output Output vector to store the command output.
      * @throws std::runtime_error if command execution fails.
      */
-    void ExecuteCommand(const std::string &command,
+    void executeCommand(const std::string &command,
                         std::vector<std::string> &output);
 
     /**
@@ -81,7 +98,7 @@ public:
      * @param output Vector of vectors to store the command outputs.
      * @throws std::runtime_error if any command execution fails.
      */
-    void ExecuteCommands(const std::vector<std::string> &commands,
+    void executeCommands(const std::vector<std::string> &commands,
                          std::vector<std::vector<std::string>> &output);
 
     /**
@@ -89,7 +106,7 @@ public:
      * @param remote_path The path of the remote file.
      * @return true if the file exists, false otherwise.
      */
-    bool FileExists(const std::string &remote_path);
+    [[nodiscard]] auto fileExists(const std::string &remote_path) const -> bool;
 
     /**
      * @brief Creates a directory on the remote server.
@@ -97,21 +114,22 @@ public:
      * @param mode The permissions of the directory. Default is S_NORMAL.
      * @throws std::runtime_error if directory creation fails.
      */
-    void CreateDirectory(const std::string &remote_path, int mode = S_NORMAL);
+    void createDirectory(const std::string &remote_path,
+                         int mode = DEFAULT_MODE);
 
     /**
      * @brief Removes a file from the remote server.
      * @param remote_path The path of the remote file.
      * @throws std::runtime_error if file removal fails.
      */
-    void RemoveFile(const std::string &remote_path);
+    void removeFile(const std::string &remote_path);
 
     /**
      * @brief Removes a directory from the remote server.
      * @param remote_path The path of the remote directory.
      * @throws std::runtime_error if directory removal fails.
      */
-    void RemoveDirectory(const std::string &remote_path);
+    void removeDirectory(const std::string &remote_path);
 
     /**
      * @brief Lists the contents of a directory on the remote server.
@@ -119,7 +137,8 @@ public:
      * @return Vector of strings containing the names of the directory contents.
      * @throws std::runtime_error if listing directory fails.
      */
-    std::vector<std::string> ListDirectory(const std::string &remote_path);
+    auto listDirectory(const std::string &remote_path) const
+        -> std::vector<std::string>;
 
     /**
      * @brief Renames a file or directory on the remote server.
@@ -127,7 +146,7 @@ public:
      * @param new_path The new path of the remote file or directory.
      * @throws std::runtime_error if renaming fails.
      */
-    void Rename(const std::string &old_path, const std::string &new_path);
+    void rename(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Retrieves file information for a remote file.
@@ -135,7 +154,7 @@ public:
      * @param attrs Attribute struct to store the file information.
      * @throws std::runtime_error if getting file information fails.
      */
-    void GetFileInfo(const std::string &remote_path, sftp_attributes &attrs);
+    void getFileInfo(const std::string &remote_path, sftp_attributes &attrs);
 
     /**
      * @brief Downloads a file from the remote server.
@@ -143,7 +162,7 @@ public:
      * @param local_path The path of the local destination file.
      * @throws std::runtime_error if file download fails.
      */
-    void DownloadFile(const std::string &remote_path,
+    void downloadFile(const std::string &remote_path,
                       const std::string &local_path);
 
     /**
@@ -152,14 +171,23 @@ public:
      * @param remote_path The path of the remote destination file.
      * @throws std::runtime_error if file upload fails.
      */
-    void UploadFile(const std::string &local_path,
+    void uploadFile(const std::string &local_path,
                     const std::string &remote_path);
 
+    /**
+     * @brief Uploads a directory to the remote server.
+     * @param local_path The path of the local source directory.
+     * @param remote_path The path of the remote destination directory.
+     * @throws std::runtime_error if directory upload fails.
+     */
+    void uploadDirectory(const std::string &local_path,
+                         const std::string &remote_path);
+
 private:
-    std::string m_host;
-    int m_port;
-    ssh_session m_ssh_session;
-    sftp_session m_sftp_session;
+    std::string host_;
+    int port_;
+    ssh_session ssh_session_;
+    sftp_session sftp_session_;
 };
 }  // namespace atom::connection
 #endif

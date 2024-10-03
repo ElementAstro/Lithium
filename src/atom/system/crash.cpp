@@ -24,6 +24,13 @@ Description: Crash Report
 #include <unistd.h>
 #endif
 
+#ifdef _WIN32
+// clang-format off
+#include <windows.h>
+#include <dbghelp.h>
+// clang-format on
+#endif
+
 #include "atom/error/stacktrace.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/sysinfo/cpu.hpp"
@@ -106,9 +113,10 @@ void saveCrashLog(std::string_view error_msg) {
         << " ============\n";
 
     std::stringstream ssss;
-    std::time_t now = std::time(nullptr);
+    auto now = std::chrono::system_clock::now();
+    std::time_t nowC = std::chrono::system_clock::to_time_t(now);
     std::tm localTime;
-    if (localtime_s(&localTime, &now) != 0) {
+    if (localtime_s(&localTime, &nowC) != 0) {
         // Handle error
         THROW_RUNTIME_ERROR("Failed to get local time.");
     }
@@ -123,6 +131,29 @@ void saveCrashLog(std::string_view error_msg) {
         ofs << sss.str();
         ofs.close();
     }
+
+    // Create a dump file
+#ifdef _WIN32
+    std::stringstream wss;
+    wss << "crash_report/crash_" << std::put_time(&localTime, "%Y%m%d_%H%M%S")
+        << ".dmp";
+    std::string dumpFile = wss.str();
+    HANDLE hFile =
+        CreateFile(dumpFile.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr,
+                   CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    MINIDUMP_EXCEPTION_INFORMATION mdei;
+    mdei.ThreadId = GetCurrentThreadId();
+    EXCEPTION_POINTERS *pep = nullptr;
+    mdei.ExceptionPointers = pep;
+    mdei.ClientPointers = FALSE;
+    MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile,
+                      MiniDumpNormal, (pep != nullptr) ? &mdei : nullptr,
+                      nullptr, nullptr);
+    CloseHandle(hFile);
+#endif
 }
 
 }  // namespace atom::system

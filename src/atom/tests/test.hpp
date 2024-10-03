@@ -342,11 +342,11 @@ ATOM_INLINE auto sortTestsByDependencies(const std::vector<TestCase>& tests)
     resolveDependencies = [&](const TestCase& test) {
         if (!processed.contains(std::string(test.name))) {
             for (const auto& dep : test.dependencies) {
-                if (testMap.find(dep) != testMap.end()) {
+                if (testMap.contains(dep)) {
                     resolveDependencies(testMap[dep]);
                 }
             }
-            processed.insert(std::string(test.name));
+            processed.emplace(std::string(test.name));
             sortedTests.push_back(test);
         }
     };
@@ -447,7 +447,7 @@ auto expectGt(const T& lhs, const U& rhs, const char* file,
 ATOM_INLINE auto expectContains(const std::string& str,
                                 const std::string& substr, const char* file,
                                 int line) -> Expect {
-    bool result = str.find(substr) != std::string::npos;
+    bool result = str.contains(substr);
     return {result, file, line,
             "Expected \"" + str + "\" to contain \"" + substr + "\""};
 }

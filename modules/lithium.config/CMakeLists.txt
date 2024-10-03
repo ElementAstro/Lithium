@@ -12,14 +12,9 @@ add_library(${PROJECT_NAME} SHARED)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    _main.cpp
-    _component.cpp
+    component.cpp
 )
 
-# Headers
-set(${PROJECT_NAME}_HEADERS
-    _component.hpp
-)
 
 set(${PROJECT_NAME}_LIBS
     atom-component

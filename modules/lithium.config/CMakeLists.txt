@@ -15,7 +15,6 @@ set(${PROJECT_NAME}_SOURCES
     component.cpp
 )
 
-
 set(${PROJECT_NAME}_LIBS
     atom-component
     atom-error
@@ -23,6 +22,10 @@ set(${PROJECT_NAME}_LIBS
     loguru
     ${CMAKE_THREAD_LIBS_INIT}
 )
+
+if (WIN32)
+    list(APPEND ${PROJECT_NAME}_LIBS ws2_32)
+endif()
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)

@@ -181,6 +181,52 @@ public:
         detail::getTypeRegistry()[typeid(T).name()] = userType<T>();
     }
 
+    template <typename EnumType>
+    void registerEnumValue(const std::string& enum_name,
+                           const std::string& string_value,
+                           EnumType enum_value) {
+        if (!m_enumMaps_.contains(enum_name)) {
+            m_enumMaps_[enum_name] =
+                std::unordered_map<std::string, EnumType>();
+        }
+
+        auto& enumMap =
+            std::any_cast<std::unordered_map<std::string, EnumType>&>(
+                m_enumMaps_[enum_name]);
+
+        enumMap[string_value] = enum_value;
+    }
+
+    template <typename EnumType>
+    auto getEnumMap(const std::string& enum_name) const
+        -> const std::unordered_map<std::string, EnumType>& {
+        return std::any_cast<const std::unordered_map<std::string, EnumType>&>(
+            m_enumMaps_.at(enum_name));
+    }
+
+    template <typename EnumType>
+    auto enumToString(EnumType value,
+                      const std::string& enum_name) -> std::string {
+        const auto& enumMap = getEnumMap<EnumType>(enum_name);
+        for (const auto& [key, enumValue] : enumMap) {
+            if (enumValue == value) {
+                return key;
+            }
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum value");
+    }
+
+    template <typename EnumType>
+    auto stringToEnum(const std::string& string_value,
+                      const std::string& enum_name) -> EnumType {
+        const auto& enumMap = getEnumMap<EnumType>(enum_name);
+        auto iterator = enumMap.find(string_value);
+        if (iterator != enumMap.end()) {
+            return iterator->second;
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum string");
+    }
+
 private:
     std::unordered_map<TypeInfo, ConvertMap> conversions_;
     mutable std::unordered_map<std::string, std::vector<TypeInfo>>

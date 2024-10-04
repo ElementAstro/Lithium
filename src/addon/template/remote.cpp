@@ -3,11 +3,11 @@
 #include <asio.hpp>
 #include <atomic>
 #include <chrono>
-#include <random>
 #include <string>
 #include <string_view>
 #include <thread>
 
+#include "atom/async/promise.hpp"
 #include "atom/log/loguru.hpp"
 
 using asio::ip::tcp;
@@ -119,7 +119,8 @@ void RemoteStandAloneComponent::connectToRemoteDriver(
                     *resolver.resolve(udp::v4(), address, std::to_string(port))
                          .begin();
                 impl_->socket.emplace<std::optional<udp::socket>>(
-                    impl_->ioContext, udp::endpoint(udp::v4(), 0));
+                    std::in_place, impl_->ioContext,
+                    udp::endpoint(udp::v4(), 0));
                 auto& udpSocket =
                     std::get<std::optional<udp::socket>>(impl_->socket).value();
                 udpSocket.connect(endpoint);
@@ -156,13 +157,14 @@ void RemoteStandAloneComponent::disconnectRemoteDriver() {
         impl_->socket);
 
     LOG_F(INFO, "Disconnected from remote driver");
-    if (impl_->onDisconnected)
+    if (impl_->onDisconnected) {
         impl_->onDisconnected();
+    }
 
     impl_->shouldExit = true;
 }
 
-template <Stringlike T>
+template <String T>
 void RemoteStandAloneComponent::sendMessageToDriver(T&& message) {
     std::visit(
         [&](auto&& socket) {
@@ -175,12 +177,12 @@ void RemoteStandAloneComponent::sendMessageToDriver(T&& message) {
         impl_->socket);
 }
 
-template <Stringlike T>
-std::future<std::pair<std::error_code, std::size_t>>
-RemoteStandAloneComponent::sendMessageAsync(T&& message) {
-    auto promise = std::make_shared<
-        std::promise<std::pair<std::error_code, std::size_t>>>();
-    auto future = promise->get_future();
+template <typename T>
+auto RemoteStandAloneComponent::sendMessageAsync(T&& message)
+    -> atom::async::EnhancedFuture<std::pair<std::error_code, std::size_t>> {
+    auto promise = std::make_shared<atom::async::EnhancedPromise<
+        std::pair<std::error_code, std::size_t>>>();
+    auto future = promise->getEnhancedFuture();
 
     std::visit(
         [&](auto&& socket) {
@@ -189,10 +191,10 @@ RemoteStandAloneComponent::sendMessageAsync(T&& message) {
                     *socket, asio::buffer(std::forward<T>(message)),
                     [promise](const asio::error_code& ec,
                               std::size_t bytes_transferred) {
-                        promise->set_value({ec, bytes_transferred});
+                        promise->setValue({ec, bytes_transferred});
                     });
             } else {
-                promise->set_value({asio::error::not_connected, 0});
+                promise->setValue({asio::error::not_connected, 0});
             }
         },
         impl_->socket);
@@ -248,15 +250,16 @@ void RemoteStandAloneComponent::toggleDriverListening() {
           impl_->isListening ? "ON" : "OFF");
 }
 
-template <Stringlike T>
-std::future<std::string> RemoteStandAloneComponent::executeCommand(
-    T&& command) {
-    auto promise = std::make_shared<std::promise<std::string>>();
-    auto future = promise->get_future();
+template <String T>
+atom::async::EnhancedFuture<std::string>
+RemoteStandAloneComponent::executeCommand(T&& command) {
+    auto promise =
+        std::make_shared<atom::async::EnhancedPromise<std::string>>();
+    auto future = promise->getEnhancedFuture();
 
     sendMessageAsync(std::forward<T>(command))
         .then([this, promise](auto&& result) {
-            auto [ec, _] = result.get();
+            auto [ec, _] = result;
             if (!ec) {
                 std::array<char, 1024> buffer;
                 std::size_t len = 0;
@@ -270,7 +273,7 @@ std::future<std::string> RemoteStandAloneComponent::executeCommand(
                             len =
                                 socket->read_some(asio::buffer(buffer), error);
                             if (error) {
-                                promise->set_exception(std::make_exception_ptr(
+                                promise->setException(std::make_exception_ptr(
                                     std::runtime_error(error.message())));
                                 return;
                             }
@@ -283,7 +286,7 @@ std::future<std::string> RemoteStandAloneComponent::executeCommand(
                                 socket->receive_from(asio::buffer(buffer),
                                                      sender_endpoint, 0, error);
                             if (error) {
-                                promise->set_exception(std::make_exception_ptr(
+                                promise->setException(std::make_exception_ptr(
                                     std::runtime_error(error.message())));
                                 return;
                             }
@@ -291,9 +294,9 @@ std::future<std::string> RemoteStandAloneComponent::executeCommand(
                     },
                     impl_->socket);
 
-                promise->set_value(std::string(buffer.data(), len));
+                promise->setValue(std::string(buffer.data(), len));
             } else {
-                promise->set_exception(
+                promise->setException(
                     std::make_exception_ptr(std::runtime_error(ec.message())));
             }
         });
@@ -384,7 +387,7 @@ void RemoteStandAloneComponent::startHeartbeat() {
     impl_->heartbeatTimer.async_wait([this](const asio::error_code& error) {
         if (!error && impl_->heartbeatEnabled) {
             sendMessageAsync(impl_->heartbeatMessage).then([this](auto future) {
-                auto [ec, _] = future.get();
+                auto [ec, _] = future;
                 if (ec) {
                     LOG_F(ERROR, "Failed to send heartbeat: {}", ec.message());
                     attemptReconnection();
@@ -438,12 +441,12 @@ template void RemoteStandAloneComponent::sendMessageToDriver<std::string>(
     std::string&&);
 template void RemoteStandAloneComponent::sendMessageToDriver<std::string_view>(
     std::string_view&&);
-template std::future<std::pair<std::error_code, std::size_t>>
+template atom::async::EnhancedFuture<std::pair<std::error_code, std::size_t>>
 RemoteStandAloneComponent::sendMessageAsync<std::string>(std::string&&);
-template std::future<std::pair<std::error_code, std::size_t>>
+template atom::async::EnhancedFuture<std::pair<std::error_code, std::size_t>>
 RemoteStandAloneComponent::sendMessageAsync<std::string_view>(
     std::string_view&&);
-template std::future<std::string>
+template atom::async::EnhancedFuture<std::string>
 RemoteStandAloneComponent::executeCommand<std::string>(std::string&&);
-template std::future<std::string>
+template atom::async::EnhancedFuture<std::string>
 RemoteStandAloneComponent::executeCommand<std::string_view>(std::string_view&&);

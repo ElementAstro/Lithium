@@ -1,97 +1,184 @@
-# Base Encoding & Decoding Functions
+# Atom Algorithm Library: Base64 and XOR Encryption
 
-## encodeBase16
+This document provides a detailed explanation of the Base64 encoding/decoding and XOR encryption/decryption functions implemented in the Atom Algorithm Library.
 
-**Brief:** Encodes a vector of unsigned characters into a Base16 string.
+## Table of Contents
 
-This function takes a vector of unsigned characters and encodes it into a Base16 string representation. Base16 encoding, also known as hexadecimal encoding, represents each byte in the input data as a pair of hexadecimal digits (0-9, A-F).
+1. [Overview](#overview)
+2. [Base64 Encoding and Decoding](#base64-encoding-and-decoding)
+   - [Runtime Functions](#runtime-functions)
+   - [Compile-time Functions](#compile-time-functions)
+3. [XOR Encryption and Decryption](#xor-encryption-and-decryption)
+4. [Usage Examples](#usage-examples)
 
-- **Parameters:**
+## Overview
 
-  - `data`: The vector of unsigned characters to be encoded.
+The Atom Algorithm Library provides implementations for Base64 encoding/decoding and XOR encryption/decryption. It includes both runtime and compile-time versions of Base64 functions.
 
-- **Return:**
-  - The Base16 encoded string.
+## Base64 Encoding and Decoding
 
-## decodeBase16
+### Runtime Functions
 
-**Brief:** Decodes a Base16 string into a vector of unsigned characters.
+#### Base64 Encode
 
-This function takes a Base16 encoded string and decodes it into a vector of unsigned characters. Base16 encoding, also known as hexadecimal encoding, represents each byte in the input data as a pair of hexadecimal digits (0-9, A-F).
+```cpp
+[[nodiscard]] auto base64Encode(std::string_view bytes_to_encode) -> std::string;
+```
 
-- **Parameters:**
-
-  - `data`: The Base16 encoded string to be decoded.
-
-- **Return:**
-  - The decoded vector of unsigned characters.
-
-## encodeBase32
-
-**Brief:** Encodes a string to Base32.
+This function encodes the input data using the Base64 algorithm.
 
 - **Parameters:**
+  - `bytes_to_encode`: A string view of the data to be encoded.
+- **Returns:** A string containing the Base64 encoded data.
 
-  - `input`: The string to encode.
+#### Base64 Decode
 
-- **Return:**
-  - The encoded string.
+```cpp
+[[nodiscard]] auto base64Decode(std::string_view encoded_string) -> std::string;
+```
 
-## decodeBase32
-
-**Brief:** Decodes a Base32 string.
-
-- **Parameters:**
-
-  - `input`: The string to decode.
-
-- **Return:**
-  - The decoded string.
-
-## base64Encode
-
-**Brief:** Base64 encoding function.
+This function decodes Base64 encoded data.
 
 - **Parameters:**
+  - `encoded_string`: A string view of the Base64 encoded data.
+- **Returns:** A string containing the decoded data.
 
-  - `bytes_to_encode`: Data to be encoded.
+#### Fast Base64 Encode
 
-- **Return:**
-  - Encoded string.
+```cpp
+auto fbase64Encode(std::span<const unsigned char> input) -> std::string;
+```
 
-## base64Decode
-
-**Brief:** Base64 decoding function.
-
-- **Parameters:**
-
-  - `encoded_string`: String to decode.
-
-- **Return:**
-  - Decoded data as a vector of unsigned characters.
-
-## encodeBase85
-
-**Brief:** Encodes a vector of unsigned characters into a Base85 string.
-
-This function takes a vector of unsigned characters and encodes it into a Base85 string representation. Base85 encoding is a binary-to-text encoding scheme that encodes 4 bytes into 5 ASCII characters.
+An optimized version of Base64 encoding.
 
 - **Parameters:**
+  - `input`: A span of unsigned chars to be encoded.
+- **Returns:** A string containing the Base64 encoded data.
 
-  - `data`: The vector of unsigned characters to be encoded.
+#### Fast Base64 Decode
 
-- **Return:**
-  - The Base85 encoded string.
+```cpp
+auto fbase64Decode(std::span<const char> input) -> std::vector<unsigned char>;
+```
 
-## decodeBase85
-
-**Brief:** Decodes a Base85 string into a vector of unsigned characters.
-
-This function takes a Base85 encoded string and decodes it into a vector of unsigned characters. Base85 encoding is a binary-to-text encoding scheme that encodes 4 bytes into 5 ASCII characters.
+An optimized version of Base64 decoding.
 
 - **Parameters:**
+  - `input`: A span of chars containing Base64 encoded data.
+- **Returns:** A vector of unsigned chars containing the decoded data.
 
-  - `data`: The Base85 encoded string to be decoded.
+### Compile-time Functions
 
-- **Return:**
-  - The decoded vector of unsigned characters.
+#### Compile-time Base64 Encode
+
+```cpp
+template <size_t N>
+constexpr auto cbase64Encode(const StaticString<N>& input);
+```
+
+This function performs Base64 encoding at compile-time.
+
+- **Template Parameters:**
+  - `N`: The size of the input string.
+- **Parameters:**
+  - `input`: A `StaticString` containing the data to be encoded.
+- **Returns:** A `StaticString` containing the Base64 encoded data.
+
+#### Compile-time Base64 Decode
+
+```cpp
+template <size_t N>
+constexpr auto cbase64Decode(const StaticString<N>& input);
+```
+
+This function performs Base64 decoding at compile-time.
+
+- **Template Parameters:**
+  - `N`: The size of the input string.
+- **Parameters:**
+  - `input`: A `StaticString` containing the Base64 encoded data.
+- **Returns:** A `StaticString` containing the decoded data.
+
+## XOR Encryption and Decryption
+
+### XOR Encrypt
+
+```cpp
+[[nodiscard]] auto xorEncrypt(std::string_view plaintext, uint8_t key) -> std::string;
+```
+
+This function encrypts the input data using the XOR algorithm.
+
+- **Parameters:**
+  - `plaintext`: A string view of the data to be encrypted.
+  - `key`: An 8-bit unsigned integer used as the encryption key.
+- **Returns:** A string containing the encrypted data.
+
+### XOR Decrypt
+
+```cpp
+[[nodiscard]] auto xorDecrypt(std::string_view ciphertext, uint8_t key) -> std::string;
+```
+
+This function decrypts XOR encrypted data.
+
+- **Parameters:**
+  - `ciphertext`: A string view of the encrypted data.
+  - `key`: An 8-bit unsigned integer used as the decryption key (must be the same as the encryption key).
+- **Returns:** A string containing the decrypted data.
+
+## Usage Examples
+
+### Base64 Encoding and Decoding
+
+```cpp
+#include "atom/algorithm/base.hpp"
+#include <iostream>
+
+int main() {
+    std::string original = "Hello, World!";
+
+    // Runtime Base64 encoding
+    std::string encoded = atom::algorithm::base64Encode(original);
+    std::cout << "Encoded: " << encoded << std::endl;
+
+    // Runtime Base64 decoding
+    std::string decoded = atom::algorithm::base64Decode(encoded);
+    std::cout << "Decoded: " << decoded << std::endl;
+
+    // Compile-time Base64 encoding
+    constexpr auto staticOriginal = atom::StaticString("Hello, World!");
+    constexpr auto staticEncoded = atom::algorithm::cbase64Encode(staticOriginal);
+    std::cout << "Static Encoded: " << staticEncoded.data() << std::endl;
+
+    // Compile-time Base64 decoding
+    constexpr auto staticDecoded = atom::algorithm::cbase64Decode(staticEncoded);
+    std::cout << "Static Decoded: " << staticDecoded.data() << std::endl;
+
+    return 0;
+}
+```
+
+### XOR Encryption and Decryption
+
+```cpp
+#include "atom/algorithm/base.hpp"
+#include <iostream>
+
+int main() {
+    std::string original = "Secret message";
+    uint8_t key = 42;
+
+    // XOR encryption
+    std::string encrypted = atom::algorithm::xorEncrypt(original, key);
+    std::cout << "Encrypted: " << encrypted << std::endl;
+
+    // XOR decryption
+    std::string decrypted = atom::algorithm::xorDecrypt(encrypted, key);
+    std::cout << "Decrypted: " << decrypted << std::endl;
+
+    return 0;
+}
+```
+
+These examples demonstrate how to use the Base64 encoding/decoding and XOR encryption/decryption functions provided by the Atom Algorithm Library. The library offers both runtime and compile-time options for Base64 operations, allowing for flexibility in different use cases.

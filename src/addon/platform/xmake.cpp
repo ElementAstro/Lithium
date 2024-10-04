@@ -55,16 +55,16 @@ auto XMakeBuilder::configureProject(
 
     std::string buildTypeStr;
     switch (buildType) {
-        case BuildType::Debug:
+        case BuildType::DEBUG:
             buildTypeStr = "debug";
             break;
-        case BuildType::Release:
+        case BuildType::RELEASE:
             buildTypeStr = "release";
             break;
-        case BuildType::RelWithDebInfo:
+        case BuildType::REL_WITH_DEB_INFO:
             buildTypeStr = "reldebug";
             break;
-        case BuildType::MinSizeRel:
+        case BuildType::MIN_SIZE_REL:
             buildTypeStr = "minsizerel";
             break;
     }
@@ -157,9 +157,9 @@ auto XMakeBuilder::runTests(const fs::path& buildDir,
 auto XMakeBuilder::generateDocs(const fs::path& buildDir,
                                 const fs::path& outputDir) -> BuildResult {
     BuildResult result;
-    std::string command =
-        "xmake doc -C " + buildDir.string() + " -o " + outputDir.string();
-    if (atom::system::executeCommandSimple(command)) {
+    if (std::string command =
+            "xmake doc -C " + buildDir.string() + " -o " + outputDir.string();
+        atom::system::executeCommandSimple(command)) {
         result.success = true;
         result.output = "Documentation generated successfully.";
     } else {
@@ -195,9 +195,8 @@ auto XMakeBuilder::loadConfig(const fs::path& configPath) -> bool {
 }
 
 auto XMakeBuilder::setLogCallback(
-    std::function<void(const std::string&)> callback) -> void {
-    // loguru::add_callback("XMakeBuilder", callback, nullptr,
-    // loguru::Verbosity_INFO);
+    [[maybe_unused]] std::function<void(const std::string&)> callback) -> void {
+    // TODO: Set the log callback function
 }
 
 auto XMakeBuilder::getAvailableTargets(const fs::path& buildDir)

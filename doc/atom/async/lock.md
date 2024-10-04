@@ -1,142 +1,236 @@
-# Extra Locks
+# Documentation for lock.hpp
 
-## Spinlock
+This document provides a detailed overview of the `lock.hpp` header file, which contains various spinlock implementations and associated scoped lock classes for use in multi-threaded C++ applications.
 
-A simple spinlock implementation using atomic_flag.
+## Table of Contents
 
-### Class Definition
+1. [CPU Relax Macro](#cpu-relax-macro)
+2. [Spinlock Class](#spinlock-class)
+3. [TicketSpinlock Class](#ticketspinlock-class)
+4. [UnfairSpinlock Class](#unfairspinlock-class)
+5. [ScopedLock Class Template](#scopedlock-class-template)
+6. [ScopedTicketLock Class Template](#scopedticketlock-class-template)
+7. [ScopedUnfairLock Class Template](#scopedunfairlock-class-template)
+8. [Usage Examples](#usage-examples)
+
+## CPU Relax Macro
+
+The header defines a `cpu_relax()` macro for different architectures to prevent excess processor bus usage:
 
 ```cpp
-class Spinlock {
-    // ...
-public:
-    Spinlock() = default;
-    Spinlock(const Spinlock &) = delete;
-    Spinlock &operator=(const Spinlock &) = delete;
+#if defined(_MSC_VER)
+#define cpu_relax() std::this_thread::yield()
+#elif defined(__i386__) || defined(__x86_64__)
+#define cpu_relax() asm volatile("pause\n" : : : "memory")
+#elif defined(__aarch64__)
+#define cpu_relax() asm volatile("yield\n" : : : "memory")
+#elif defined(__arm__)
+#define cpu_relax() asm volatile("nop\n" : : : "memory")
+#else
+#error "Unknown architecture, CPU relax code required"
+#endif
+```
 
-    void lock();
-    void unlock();
+## Spinlock Class
+
+A simple spinlock implementation using `std::atomic_flag`.
+
+### Methods
+
+```cpp
+void lock();
+void unlock();
+bool tryLock();
+```
+
+- `lock()`: Acquires the lock.
+- `unlock()`: Releases the lock.
+- `tryLock()`: Tries to acquire the lock, returns true if successful.
+
+## TicketSpinlock Class
+
+A ticket-based spinlock implementation using atomic operations.
+
+### Methods
+
+```cpp
+uint64_t lock();
+void unlock(uint64_t ticket);
+```
+
+- `lock()`: Acquires the lock and returns the ticket number.
+- `unlock(uint64_t ticket)`: Releases the lock for the given ticket number.
+
+### Nested LockGuard Class
+
+```cpp
+class LockGuard {
+public:
+    explicit LockGuard(TicketSpinlock& spinlock);
+    ~LockGuard();
 };
 ```
 
-### Usage Example
+A RAII-style lock guard for `TicketSpinlock`.
+
+## UnfairSpinlock Class
+
+An unfair spinlock implementation using `std::atomic_flag`.
+
+### Methods
 
 ```cpp
-Spinlock spinlock;
-
-// Lock the spinlock
-spinlock.lock();
-
-// Critical section
-
-// Unlock the spinlock
-spinlock.unlock();
+void lock();
+void unlock();
 ```
 
-## TicketSpinlock
+- `lock()`: Acquires the lock.
+- `unlock()`: Releases the lock.
 
-A ticket spinlock implementation using atomic operations.
+## ScopedLock Class Template
 
-### Class Definition
+A generic scoped lock for any type of spinlock.
 
-```cpp
-class TicketSpinlock {
-    // ...
-public:
-    TicketSpinlock() = default;
-    TicketSpinlock(const TicketSpinlock &) = delete;
-    TicketSpinlock &operator=(const TicketSpinlock &) = delete;
-
-    class LockGuard {
-        // ...
-    };
-
-    using scoped_lock = LockGuard;
-
-    uint64_t lock();
-    void unlock(const uint64_t ticket);
-};
-```
-
-### Usage Example
-
-```cpp
-TicketSpinlock ticketSpinlock;
-
-// Create a lock guard and acquire the lock
-{
-    TicketSpinlock::LockGuard lockGuard(ticketSpinlock);
-
-    // Critical section
-}
-
-// Lock and unlock using ticket numbers
-uint64_t ticket = ticketSpinlock.lock();
-
-// Critical section
-
-ticketSpinlock.unlock(ticket);
-```
-
-## UnfairSpinlock
-
-An unfair spinlock implementation using atomic_flag.
-
-### Class Definition
-
-```cpp
-class UnfairSpinlock {
-    // ...
-public:
-    UnfairSpinlock() = default;
-    UnfairSpinlock(const UnfairSpinlock &) = delete;
-    UnfairSpinlock &operator=(const UnfairSpinlock &) = delete;
-
-    void lock();
-    void unlock();
-};
-```
-
-### Usage Example
-
-```cpp
-UnfairSpinlock unfairSpinlock;
-
-// Lock the spinlock
-unfairSpinlock.lock();
-
-// Critical section
-
-// Unlock the spinlock
-unfairSpinlock.unlock();
-```
-
-## ScopedLock
-
-Scoped lock for any type of spinlock.
-
-### Class Definition
+### Methods
 
 ```cpp
 template <typename Mutex>
 class ScopedLock {
-    // ...
 public:
-    explicit ScopedLock(Mutex &mutex);
+    explicit ScopedLock(Mutex& mutex);
     ~ScopedLock();
 };
 ```
 
-### Usage Example
+- Constructor: Acquires the lock on the provided mutex.
+- Destructor: Releases the lock.
+
+## ScopedTicketLock Class Template
+
+A scoped lock specifically for `TicketSpinlock`.
+
+### Methods
 
 ```cpp
-Spinlock spinlock;
-
-// Acquire the lock using scoped lock
-{
-    ScopedLock<Spinlock> scopedLock(spinlock);
-
-    // Critical section
-}
-// Lock will be automatically released when 'scopedLock' goes out of scope
+template <typename Mutex>
+class ScopedTicketLock : public NonCopyable {
+public:
+    explicit ScopedTicketLock(Mutex& mutex);
+    ~ScopedTicketLock();
+};
 ```
+
+- Constructor: Acquires the lock on the provided `TicketSpinlock`.
+- Destructor: Releases the lock using the stored ticket.
+
+## ScopedUnfairLock Class Template
+
+A scoped lock specifically for `UnfairSpinlock`.
+
+### Methods
+
+```cpp
+template <typename Mutex>
+class ScopedUnfairLock : public NonCopyable {
+public:
+    explicit ScopedUnfairLock(Mutex& mutex);
+    ~ScopedUnfairLock();
+};
+```
+
+- Constructor: Acquires the lock on the provided `UnfairSpinlock`.
+- Destructor: Releases the lock.
+
+## Usage Examples
+
+Here are some examples demonstrating how to use the various lock types:
+
+### Using Spinlock
+
+```cpp
+#include "lock.hpp"
+#include <iostream>
+#include <thread>
+
+atom::async::Spinlock spinlock;
+int shared_resource = 0;
+
+void increment() {
+    for (int i = 0; i < 1000000; ++i) {
+        spinlock.lock();
+        ++shared_resource;
+        spinlock.unlock();
+    }
+}
+
+int main() {
+    std::thread t1(increment);
+    std::thread t2(increment);
+
+    t1.join();
+    t2.join();
+
+    std::cout << "Final value: " << shared_resource << std::endl;
+    return 0;
+}
+```
+
+### Using TicketSpinlock
+
+```cpp
+#include "lock.hpp"
+#include <iostream>
+#include <thread>
+
+atom::async::TicketSpinlock ticketlock;
+int shared_resource = 0;
+
+void increment() {
+    for (int i = 0; i < 1000000; ++i) {
+        atom::async::TicketSpinlock::LockGuard guard(ticketlock);
+        ++shared_resource;
+    }
+}
+
+int main() {
+    std::thread t1(increment);
+    std::thread t2(increment);
+
+    t1.join();
+    t2.join();
+
+    std::cout << "Final value: " << shared_resource << std::endl;
+    return 0;
+}
+```
+
+### Using UnfairSpinlock with ScopedUnfairLock
+
+```cpp
+#include "lock.hpp"
+#include <iostream>
+#include <thread>
+
+atom::async::UnfairSpinlock unfairlock;
+int shared_resource = 0;
+
+void increment() {
+    for (int i = 0; i < 1000000; ++i) {
+        atom::async::ScopedUnfairLock<atom::async::UnfairSpinlock> guard(unfairlock);
+        ++shared_resource;
+    }
+}
+
+int main() {
+    std::thread t1(increment);
+    std::thread t2(increment);
+
+    t1.join();
+    t2.join();
+
+    std::cout << "Final value: " << shared_resource << std::endl;
+    return 0;
+}
+```
+
+These examples demonstrate the basic usage of the different spinlock types and their associated scoped locks. Remember to include proper error handling and consider the performance implications of spinlocks in your actual implementations.

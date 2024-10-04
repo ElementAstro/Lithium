@@ -19,7 +19,6 @@ Description: Config Component for Atom Addon
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
-#include "atom"
 
 static auto mConfigManager = lithium::ConfigManager::createShared();
 

@@ -13,6 +13,13 @@
 #include <ranges>
 #include <vector>
 
+#ifdef USE_SIMD
+#ifdef __x86_64__
+#include <immintrin.h>
+#elif __aarch64__
+#include <arm_neon.h>
+#endif
+#endif
 
 // Define a concept for a problem that Simulated Annealing can solve
 template <typename ProblemType, typename SolutionType>
@@ -87,7 +94,7 @@ public:
     [[nodiscard]] static auto neighbor(const std::vector<int>& solution)
         -> std::vector<int>;
 
-    [[nodiscard]] auto random_solution() const -> std::vector<int>;
+    [[nodiscard]] auto randomSolution() const -> std::vector<int>;
 };
 
 // SimulatedAnnealing class implementation
@@ -117,7 +124,8 @@ void SimulatedAnnealing<ProblemType, SolutionType>::setCoolingSchedule(
             break;
         case AnnealingStrategy::EXPONENTIAL:
             cooling_schedule_ = [this](int iteration) {
-                return initial_temperature_ * std::pow(K_COOLING_RATE, iteration);
+                return initial_temperature_ *
+                       std::pow(K_COOLING_RATE, iteration);
             };
             break;
         case AnnealingStrategy::LOGARITHMIC:
@@ -217,17 +225,60 @@ inline TSP::TSP(const std::vector<std::pair<double, double>>& cities)
 
 inline auto TSP::energy(const std::vector<int>& solution) const -> double {
     double totalDistance = 0.0;
-    for (size_t index = 0; index < solution.size(); ++index) {
+    size_t numCities = solution.size();
+
+#ifdef USE_SIMD
+    __m256d totalDistanceVec = _mm256_setzero_pd();
+    size_t i = 0;
+    for (; i + 3 < numCities; i += 4) {
+        __m256d x1 = _mm256_set_pd(
+            cities_[solution[i]].first, cities_[solution[i + 1]].first,
+            cities_[solution[i + 2]].first, cities_[solution[i + 3]].first);
+        __m256d y1 = _mm256_set_pd(
+            cities_[solution[i]].second, cities_[solution[i + 1]].second,
+            cities_[solution[i + 2]].second, cities_[solution[i + 3]].second);
+
+        __m256d x2 =
+            _mm256_set_pd(cities_[solution[(i + 1) % numCities]].first,
+                          cities_[solution[(i + 2) % numCities]].first,
+                          cities_[solution[(i + 3) % numCities]].first,
+                          cities_[solution[(i + 4) % numCities]].first);
+        __m256d y2 =
+            _mm256_set_pd(cities_[solution[(i + 1) % numCities]].second,
+                          cities_[solution[(i + 2) % numCities]].second,
+                          cities_[solution[(i + 3) % numCities]].second,
+                          cities_[solution[(i + 4) % numCities]].second);
+
+        __m256d deltaX = _mm256_sub_pd(x1, x2);
+        __m256d deltaY = _mm256_sub_pd(y1, y2);
+
+        __m256d distance = _mm256_sqrt_pd(_mm256_add_pd(
+            _mm256_mul_pd(deltaX, deltaX), _mm256_mul_pd(deltaY, deltaY)));
+        totalDistanceVec = _mm256_add_pd(totalDistanceVec, distance);
+    }
+
+    // Horizontal addition to sum up the total distance in vector
+    double distances[4];
+    _mm256_storeu_pd(distances, totalDistanceVec);
+    for (double d : distances) {
+        totalDistance += d;
+    }
+#endif
+
+    // Handle leftover cities that couldn't be processed in sets of 4
+    for (size_t index = numCities - numCities % 4; index < numCities; ++index) {
         auto [x1, y1] = cities_[solution[index]];
-        auto [x2, y2] = cities_[solution[(index + 1) % solution.size()]];
+        auto [x2, y2] = cities_[solution[(index + 1) % numCities]];
         double deltaX = x1 - x2;
         double deltaY = y1 - y2;
         totalDistance += std::sqrt(deltaX * deltaX + deltaY * deltaY);
     }
+
     return totalDistance;
 }
 
-inline auto TSP::neighbor(const std::vector<int>& solution) -> std::vector<int> {
+inline auto TSP::neighbor(const std::vector<int>& solution)
+    -> std::vector<int> {
     std::vector<int> newSolution = solution;
     std::random_device randomDevice;
     std::mt19937 generator(randomDevice());
@@ -239,7 +290,7 @@ inline auto TSP::neighbor(const std::vector<int>& solution) -> std::vector<int> 
     return newSolution;
 }
 
-inline auto TSP::random_solution() const -> std::vector<int> {
+inline auto TSP::randomSolution() const -> std::vector<int> {
     std::vector<int> solution(cities_.size());
     std::iota(solution.begin(), solution.end(), 0);
     std::random_device randomDevice;

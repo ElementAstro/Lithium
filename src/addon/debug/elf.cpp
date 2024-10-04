@@ -1,9 +1,10 @@
+#ifdef __linux__
+
 #include "elf.hpp"
 
 #include <elf.h>
 #include <algorithm>
 #include <fstream>
-#include <stdexcept>
 
 #include "atom/error/exception.hpp"
 
@@ -30,29 +31,37 @@ public:
                parseSectionHeaders() && parseSymbolTable();
     }
 
-    [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader> { return elfHeader_; }
+    [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader> {
+        return elfHeader_;
+    }
 
-    [[nodiscard]] auto getProgramHeaders() const -> std::span<const ProgramHeader> {
+    [[nodiscard]] auto getProgramHeaders() const
+        -> std::span<const ProgramHeader> {
         return programHeaders_;
     }
 
-    [[nodiscard]] auto getSectionHeaders() const -> std::span<const SectionHeader> {
+    [[nodiscard]] auto getSectionHeaders() const
+        -> std::span<const SectionHeader> {
         return sectionHeaders_;
     }
 
-    [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol> { return symbolTable_; }
+    [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol> {
+        return symbolTable_;
+    }
 
-    [[nodiscard]] auto findSymbolByName(std::string_view name) const -> std::optional<Symbol> {
-        auto it = std::ranges::find_if(symbolTable_, [name](const auto& symbol) {
-            return symbol.name == name;
-        });
+    [[nodiscard]] auto findSymbolByName(std::string_view name) const
+        -> std::optional<Symbol> {
+        auto it = std::ranges::find_if(
+            symbolTable_,
+            [name](const auto& symbol) { return symbol.name == name; });
         if (it != symbolTable_.end()) {
             return *it;
         }
         return std::nullopt;
     }
 
-    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const -> std::optional<Symbol> {
+    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
+        -> std::optional<Symbol> {
         auto it = std::ranges::find_if(
             symbolTable_,
             [address](const auto& symbol) { return symbol.value == address; });
@@ -62,7 +71,8 @@ public:
         return std::nullopt;
     }
 
-    [[nodiscard]] auto findSection(std::string_view name) const -> std::optional<SectionHeader> {
+    [[nodiscard]] auto findSection(std::string_view name) const
+        -> std::optional<SectionHeader> {
         auto it = std::ranges::find_if(
             sectionHeaders_,
             [name](const auto& section) { return section.name == name; });
@@ -72,7 +82,8 @@ public:
         return std::nullopt;
     }
 
-    [[nodiscard]] auto getSectionData(const SectionHeader& section) const -> std::vector<uint8_t> {
+    [[nodiscard]] auto getSectionData(const SectionHeader& section) const
+        -> std::vector<uint8_t> {
         if (section.offset + section.size > fileSize_) {
             THROW_OUT_OF_RANGE("Section data out of bounds");
         }
@@ -98,18 +109,18 @@ private:
         const auto* ehdr =
             reinterpret_cast<const Elf64_Ehdr*>(fileContent_.data());
         elfHeader_ = ElfHeader{.type = ehdr->e_type,
-                              .machine = ehdr->e_machine,
-                              .version = ehdr->e_version,
-                              .entry = ehdr->e_entry,
-                              .phoff = ehdr->e_phoff,
-                              .shoff = ehdr->e_shoff,
-                              .flags = ehdr->e_flags,
-                              .ehsize = ehdr->e_ehsize,
-                              .phentsize = ehdr->e_phentsize,
-                              .phnum = ehdr->e_phnum,
-                              .shentsize = ehdr->e_shentsize,
-                              .shnum = ehdr->e_shnum,
-                              .shstrndx = ehdr->e_shstrndx};
+                               .machine = ehdr->e_machine,
+                               .version = ehdr->e_version,
+                               .entry = ehdr->e_entry,
+                               .phoff = ehdr->e_phoff,
+                               .shoff = ehdr->e_shoff,
+                               .flags = ehdr->e_flags,
+                               .ehsize = ehdr->e_ehsize,
+                               .phentsize = ehdr->e_phentsize,
+                               .phnum = ehdr->e_phnum,
+                               .shentsize = ehdr->e_shentsize,
+                               .shnum = ehdr->e_shnum,
+                               .shstrndx = ehdr->e_shstrndx};
 
         return true;
     }
@@ -123,13 +134,13 @@ private:
             fileContent_.data() + elfHeader_->phoff);
         for (uint16_t i = 0; i < elfHeader_->phnum; ++i) {
             programHeaders_.push_back(ProgramHeader{.type = phdr[i].p_type,
-                                                   .offset = phdr[i].p_offset,
-                                                   .vaddr = phdr[i].p_vaddr,
-                                                   .paddr = phdr[i].p_paddr,
-                                                   .filesz = phdr[i].p_filesz,
-                                                   .memsz = phdr[i].p_memsz,
-                                                   .flags = phdr[i].p_flags,
-                                                   .align = phdr[i].p_align});
+                                                    .offset = phdr[i].p_offset,
+                                                    .vaddr = phdr[i].p_vaddr,
+                                                    .paddr = phdr[i].p_paddr,
+                                                    .filesz = phdr[i].p_filesz,
+                                                    .memsz = phdr[i].p_memsz,
+                                                    .flags = phdr[i].p_flags,
+                                                    .align = phdr[i].p_align});
         }
 
         return true;
@@ -194,43 +205,47 @@ private:
 
 // ElfParser method implementations
 ElfParser::ElfParser(std::string_view file)
-    : pImpl(std::make_unique<Impl>(file)) {}
+    : pImpl_(std::make_unique<Impl>(file)) {}
 
 ElfParser::~ElfParser() = default;
 
-auto ElfParser::parse() -> bool { return pImpl->parse(); }
+auto ElfParser::parse() -> bool { return pImpl_->parse(); }
 
 auto ElfParser::getElfHeader() const -> std::optional<ElfHeader> {
-    return pImpl->getElfHeader();
+    return pImpl_->getElfHeader();
 }
 
 auto ElfParser::getProgramHeaders() const -> std::span<const ProgramHeader> {
-    return pImpl->getProgramHeaders();
+    return pImpl_->getProgramHeaders();
 }
 
 auto ElfParser::getSectionHeaders() const -> std::span<const SectionHeader> {
-    return pImpl->getSectionHeaders();
+    return pImpl_->getSectionHeaders();
 }
 
 auto ElfParser::getSymbolTable() const -> std::span<const Symbol> {
-    return pImpl->getSymbolTable();
+    return pImpl_->getSymbolTable();
 }
 
-auto ElfParser::findSymbolByName(std::string_view name) const -> std::optional<Symbol> {
-    return pImpl->findSymbolByName(name);
+auto ElfParser::findSymbolByName(std::string_view name) const
+    -> std::optional<Symbol> {
+    return pImpl_->findSymbolByName(name);
 }
 
-auto ElfParser::findSymbolByAddress(uint64_t address) const -> std::optional<Symbol> {
-    return pImpl->findSymbolByAddress(address);
+auto ElfParser::findSymbolByAddress(uint64_t address) const
+    -> std::optional<Symbol> {
+    return pImpl_->findSymbolByAddress(address);
 }
 
-auto ElfParser::findSection(
-    std::string_view name) const -> std::optional<SectionHeader> {
-    return pImpl->findSection(name);
+auto ElfParser::findSection(std::string_view name) const
+    -> std::optional<SectionHeader> {
+    return pImpl_->findSection(name);
 }
 
-auto ElfParser::getSectionData(
-    const SectionHeader& section) const -> std::vector<uint8_t> {
-    return pImpl->getSectionData(section);
+auto ElfParser::getSectionData(const SectionHeader& section) const
+    -> std::vector<uint8_t> {
+    return pImpl_->getSectionData(section);
 }
 }  // namespace lithium
+
+#endif  // __linux__

@@ -45,92 +45,231 @@ namespace atom::search {
 template <typename T>
 concept Cacheable = std::copy_constructible<T> && std::is_copy_assignable_v<T>;
 
+/**
+ * @brief A thread-safe cache for storing and managing resources with expiration
+ * times.
+ *
+ * @tparam T The type of the resources to be cached. Must satisfy the Cacheable
+ * concept.
+ */
 template <Cacheable T>
 class ResourceCache {
 public:
-    explicit ResourceCache(int maxSize) : maxSize_(maxSize) {
-        cleanupThread_ =
-            std::jthread(&ResourceCache::cleanupExpiredEntries, this);
-    }
+    /**
+     * @brief Constructs a ResourceCache with a specified maximum size.
+     *
+     * @param maxSize The maximum number of items the cache can hold.
+     */
+    explicit ResourceCache(int maxSize);
 
-    ~ResourceCache() {
-        stopCleanupThread_.store(true);
-        if (cleanupThread_.joinable()) {
-            cleanupThread_.join();
-        }
-    }
+    /**
+     * @brief Destructs the ResourceCache and stops the cleanup thread.
+     */
+    ~ResourceCache();
 
+    /**
+     * @brief Inserts a resource into the cache with an expiration time.
+     *
+     * @param key The key associated with the resource.
+     * @param value The resource to be cached.
+     * @param expirationTime The time after which the resource expires.
+     */
     void insert(const std::string &key, const T &value,
                 std::chrono::seconds expirationTime);
 
+    /**
+     * @brief Checks if the cache contains a resource with the specified key.
+     *
+     * @param key The key to check.
+     * @return True if the cache contains the resource, false otherwise.
+     */
     auto contains(const std::string &key) const -> bool;
 
+    /**
+     * @brief Retrieves a resource from the cache.
+     *
+     * @param key The key associated with the resource.
+     * @return An optional containing the resource if found, otherwise
+     * std::nullopt.
+     */
     auto get(const std::string &key) -> std::optional<T>;
 
+    /**
+     * @brief Removes a resource from the cache.
+     *
+     * @param key The key associated with the resource to be removed.
+     */
     void remove(const std::string &key);
 
+    /**
+     * @brief Asynchronously retrieves a resource from the cache.
+     *
+     * @param key The key associated with the resource.
+     * @return A future containing an optional with the resource if found,
+     * otherwise std::nullopt.
+     */
     auto asyncGet(const std::string &key) -> std::future<std::optional<T>>;
 
+    /**
+     * @brief Asynchronously inserts a resource into the cache with an
+     * expiration time.
+     *
+     * @param key The key associated with the resource.
+     * @param value The resource to be cached.
+     * @param expirationTime The time after which the resource expires.
+     * @return A future that completes when the insertion is done.
+     */
     auto asyncInsert(const std::string &key, const T &value,
                      std::chrono::seconds expirationTime) -> std::future<void>;
 
+    /**
+     * @brief Clears all resources from the cache.
+     */
     void clear();
 
+    /**
+     * @brief Gets the number of resources in the cache.
+     *
+     * @return The number of resources in the cache.
+     */
     auto size() const -> size_t;
 
+    /**
+     * @brief Checks if the cache is empty.
+     *
+     * @return True if the cache is empty, false otherwise.
+     */
     auto empty() const -> bool;
 
+    /**
+     * @brief Evicts the oldest resource from the cache.
+     */
     void evictOldest();
 
+    /**
+     * @brief Checks if a resource with the specified key is expired.
+     *
+     * @param key The key associated with the resource.
+     * @return True if the resource is expired, false otherwise.
+     */
     auto isExpired(const std::string &key) const -> bool;
 
+    /**
+     * @brief Asynchronously loads a resource into the cache using a provided
+     * function.
+     *
+     * @param key The key associated with the resource.
+     * @param loadDataFunction The function to load the resource.
+     * @return A future that completes when the resource is loaded.
+     */
     auto asyncLoad(const std::string &key,
                    std::function<T()> loadDataFunction) -> std::future<void>;
 
+    /**
+     * @brief Sets the maximum size of the cache.
+     *
+     * @param maxSize The new maximum size of the cache.
+     */
     void setMaxSize(int maxSize);
 
+    /**
+     * @brief Sets the expiration time for a resource in the cache.
+     *
+     * @param key The key associated with the resource.
+     * @param expirationTime The new expiration time for the resource.
+     */
     void setExpirationTime(const std::string &key,
                            std::chrono::seconds expirationTime);
 
+    /**
+     * @brief Reads resources from a file and inserts them into the cache.
+     *
+     * @param filePath The path to the file.
+     * @param deserializer The function to deserialize the resources.
+     */
     void readFromFile(
         const std::string &filePath,
         const std::function<T(const std::string &)> &deserializer);
 
+    /**
+     * @brief Writes the resources in the cache to a file.
+     *
+     * @param filePath The path to the file.
+     * @param serializer The function to serialize the resources.
+     */
     void writeToFile(const std::string &filePath,
                      const std::function<std::string(const T &)> &serializer);
 
+    /**
+     * @brief Removes expired resources from the cache.
+     */
     void removeExpired();
 
+    /**
+     * @brief Reads resources from a JSON file and inserts them into the cache.
+     *
+     * @param filePath The path to the JSON file.
+     * @param fromJson The function to deserialize the resources from JSON.
+     */
     void readFromJsonFile(const std::string &filePath,
                           const std::function<T(const json &)> &fromJson);
 
+    /**
+     * @brief Writes the resources in the cache to a JSON file.
+     *
+     * @param filePath The path to the JSON file.
+     * @param toJson The function to serialize the resources to JSON.
+     */
     void writeToJsonFile(const std::string &filePath,
                          const std::function<json(const T &)> &toJson);
 
-    // New methods for bulk operations
+    /**
+     * @brief Inserts multiple resources into the cache with an expiration time.
+     *
+     * @param items The vector of key-value pairs to insert.
+     * @param expirationTime The time after which the resources expire.
+     */
     void insertBatch(const std::vector<std::pair<std::string, T>> &items,
                      std::chrono::seconds expirationTime);
 
+    /**
+     * @brief Removes multiple resources from the cache.
+     *
+     * @param keys The vector of keys associated with the resources to remove.
+     */
     void removeBatch(const std::vector<std::string> &keys);
 
 private:
+    /**
+     * @brief Evicts resources from the cache if it exceeds the maximum size.
+     */
     void evict();
+
+    /**
+     * @brief Cleans up expired resources from the cache.
+     */
+    void cleanupExpiredEntries();
 
     std::unordered_map<std::string,
                        std::pair<T, std::chrono::steady_clock::time_point>>
-        cache_;
-    int maxSize_;
-    std::unordered_map<std::string, std::chrono::seconds> expirationTimes_;
+        cache_;    ///< The cache storing the resources and their expiration
+                   ///< times.
+    int maxSize_;  ///< The maximum number of resources the cache can hold.
+    std::unordered_map<std::string, std::chrono::seconds>
+        expirationTimes_;  ///< The expiration times for the resources.
     std::unordered_map<std::string, std::chrono::steady_clock::time_point>
-        lastAccessTimes_;
-    std::list<std::string> lruList_;
-    mutable std::shared_mutex cacheMutex_;
-    std::jthread cleanupThread_;
-    std::atomic<bool> stopCleanupThread_{false};
-    void cleanupExpiredEntries();
+        lastAccessTimes_;  ///< The last access times for the resources.
+    std::list<std::string>
+        lruList_;  ///< The list of keys in least recently used order.
+    mutable std::shared_mutex
+        cacheMutex_;  ///< Mutex for thread-safe access to the cache.
+    std::jthread cleanupThread_;  ///< Thread for cleaning up expired resources.
+    std::atomic<bool> stopCleanupThread_{
+        false};  ///< Flag to stop the cleanup thread.
 
     // Adaptive cleanup interval based on expired entry density
-    std::chrono::seconds cleanupInterval_{1};
+    std::chrono::seconds cleanupInterval_{
+        1};  ///< The interval for cleaning up expired resources.
 };
 
 template <Cacheable T>

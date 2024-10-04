@@ -1,363 +1,276 @@
 # ResourceCache Class Documentation
 
-The ResourceCache class provides a cache for storing and managing resources of type T. It supports functionalities to insert, retrieve, remove, and manage resources with expiration times. This document provides an overview of the class and usage examples for each member function.
+## Overview
 
-## Class Template
+The `ResourceCache` class is a template-based caching system designed for efficient storage and retrieval of resources. It's part of the `atom::search` namespace and provides various features such as expiration, least recently used (LRU) eviction, asynchronous operations, and persistent storage.
+
+## Table of Contents
+
+1. [Class Declaration](#class-declaration)
+2. [Constructor and Destructor](#constructor-and-destructor)
+3. [Basic Operations](#basic-operations)
+4. [Asynchronous Operations](#asynchronous-operations)
+5. [Cache Management](#cache-management)
+6. [Expiration and Cleanup](#expiration-and-cleanup)
+7. [Persistence](#persistence)
+8. [Bulk Operations](#bulk-operations)
+9. [Usage Examples](#usage-examples)
+
+## Class Declaration
 
 ```cpp
 template <typename T>
+concept Cacheable = std::copy_constructible<T> && std::is_copy_assignable_v<T>;
+
+template <Cacheable T>
 class ResourceCache {
-    // ... (class definition as provided)
+    // ... (class members and methods)
 };
 ```
 
-## Constructor
+The `ResourceCache` class is templated with a type `T` that must satisfy the `Cacheable` concept, ensuring it's copy-constructible and copy-assignable.
 
-### ResourceCache(int maxSize)
-
-Constructs a ResourceCache with a maximum size.
-
-#### Usage Example
+## Constructor and Destructor
 
 ```cpp
-// Create a cache with a maximum size of 100
-ResourceCache<int> cache(100);
+explicit ResourceCache(int maxSize);
+~ResourceCache();
 ```
 
----
+- The constructor takes a `maxSize` parameter to set the maximum number of items in the cache.
+- The destructor ensures proper cleanup of resources, including stopping the cleanup thread.
 
-## Member Functions
+## Basic Operations
 
-### insert
-
-Inserts a resource into the cache with an expiration time.
+### Insert
 
 ```cpp
 void insert(const std::string &key, const T &value, std::chrono::seconds expirationTime);
 ```
 
-#### Usage Example
+Inserts a new item into the cache with the specified key, value, and expiration time.
+
+### Get
 
 ```cpp
-// Insert a resource with key "data1", value 42, and expiration time of 60 seconds
-cache.insert("data1", 42, std::chrono::seconds(60));
+auto get(const std::string &key) -> std::optional<T>;
 ```
 
-### contains
+Retrieves an item from the cache. Returns `std::nullopt` if the item doesn't exist or has expired.
 
-Checks if the cache contains a resource with the given key.
-
-```cpp
-bool contains(const std::string &key) const;
-```
-
-#### Usage Example
-
-```cpp
-// Check if the cache contains the resource with key "data1"
-if (cache.contains("data1")) {
-    std::cout << "Resource found in the cache." << std::endl;
-} else {
-    std::cout << "Resource not found in the cache." << std::endl;
-}
-```
-
-### get
-
-Retrieves a resource from the cache by key.
-
-```cpp
-const T &get(const std::string &key);
-```
-
-#### Usage Example
-
-```cpp
-// Retrieve the resource with key "data1" from the cache
-int data = cache.get("data1");
-std::cout << "Retrieved data: " << data << std::endl;
-```
-
-### remove
-
-Removes a resource from the cache by key.
+### Remove
 
 ```cpp
 void remove(const std::string &key);
 ```
 
-#### Usage Example
+Removes an item from the cache.
+
+### Contains
 
 ```cpp
-// Remove the resource with key "data1" from the cache
-cache.remove("data1");
+auto contains(const std::string &key) const -> bool;
 ```
 
-### asyncGet
+Checks if an item exists in the cache.
 
-Retrieves a resource from the cache by key asynchronously.
+## Asynchronous Operations
+
+### Async Get
 
 ```cpp
-std::future<T> asyncGet(const std::string &key);
+auto asyncGet(const std::string &key) -> std::future<std::optional<T>>;
 ```
 
-#### Usage Example
+Asynchronously retrieves an item from the cache.
+
+### Async Insert
 
 ```cpp
-// Retrieve the resource with key "data1" from the cache asynchronously
-std::future<int> futureData = cache.asyncGet("data1");
-// Wait for the future and get the retrieved data
-int data = futureData.get();
-std::cout << "Retrieved data: " << data << std::endl;
+auto asyncInsert(const std::string &key, const T &value, std::chrono::seconds expirationTime) -> std::future<void>;
 ```
 
-### asyncInsert
+Asynchronously inserts an item into the cache.
 
-Inserts a resource into the cache with an expiration time asynchronously.
+### Async Load
 
 ```cpp
-std::future<void> asyncInsert(const std::string &key, const T &value, const std::chrono::seconds &expirationTime);
+auto asyncLoad(const std::string &key, std::function<T()> loadDataFunction) -> std::future<void>;
 ```
 
-#### Usage Example
+Asynchronously loads data into the cache using a provided function.
 
-```cpp
-// Insert a resource with key "data1", value 42, and expiration time of 60 seconds asynchronously
-auto futureInsert = cache.asyncInsert("data1", 42, std::chrono::seconds(60));
-// Wait for the insertion to complete
-futureInsert.wait();
-```
+## Cache Management
 
-### clear
-
-Clears the cache.
+### Clear
 
 ```cpp
 void clear();
 ```
 
-#### Usage Example
+Removes all items from the cache.
+
+### Size
 
 ```cpp
-// Clear the cache
-cache.clear();
+auto size() const -> size_t;
 ```
 
-### size
+Returns the number of items in the cache.
 
-Returns the number of elements in the cache.
+### Empty
 
 ```cpp
-size_t size() const;
+auto empty() const -> bool;
 ```
-
-#### Usage Example
-
-```cpp
-// Get the number of elements in the cache
-size_t numElements = cache.size();
-std::cout << "Number of elements in the cache: " << numElements << std::endl;
-```
-
-### empty
 
 Checks if the cache is empty.
 
-```cpp
-bool empty() const;
-```
-
-#### Usage Example
-
-```cpp
-// Check if the cache is empty
-if (cache.empty()) {
-    std::cout << "The cache is empty." << std::endl;
-} else {
-    std::cout << "The cache is not empty." << std::endl;
-}
-```
-
-### evictOldest
-
-Evicts the oldest resource from the cache.
-
-```cpp
-void evictOldest();
-```
-
-#### Usage Example
-
-```cpp
-// Evict the oldest resource from the cache
-cache.evictOldest();
-```
-
-### isExpired
-
-Checks if a resource with the given key has expired.
-
-```cpp
-bool isExpired(const std::string &key) const;
-```
-
-#### Usage Example
-
-```cpp
-// Check if the resource with key "data1" has expired
-if (cache.isExpired("data1")) {
-    std::cout << "The resource has expired." << std::endl;
-} else {
-    std::cout << "The resource has not expired." << std::endl;
-}
-```
-
-### asyncLoad
-
-Loads a resource asynchronously.
-
-```cpp
-std::future<void> asyncLoad(const std::string &key, std::function<T()> loadDataFunction);
-```
-
-#### Usage Example
-
-```cpp
-// Load the resource with key "data1" asynchronously using a custom load function
-std::future<void> futureLoad = cache.asyncLoad("data1", []() {
-    // Custom load function implementation
-    return 42;
-});
-// Wait for the loading to complete
-futureLoad.wait();
-```
-
-### setMaxSize
-
-Sets the maximum size of the cache.
+### Set Max Size
 
 ```cpp
 void setMaxSize(int maxSize);
 ```
 
-#### Usage Example
+Sets the maximum number of items the cache can hold.
+
+## Expiration and Cleanup
+
+### Is Expired
 
 ```cpp
-// Set the maximum size of the cache to 200
-cache.setMaxSize(200);
+auto isExpired(const std::string &key) const -> bool;
 ```
 
-### setExpirationTime
+Checks if an item has expired.
 
-Sets the expiration time of a resource.
+### Set Expiration Time
 
 ```cpp
 void setExpirationTime(const std::string &key, std::chrono::seconds expirationTime);
 ```
 
-#### Usage Example
+Sets or updates the expiration time for a specific item.
 
-```cpp
-// Set the expiration time of the resource with key "data1" to 120 seconds
-cache.setExpirationTime("data1", std::chrono::seconds(120));
-```
-
-### readFromFile
-
-Reads a resource from a file asynchronously.
-
-```cpp
-void readFromFile(const std::string &filePath, const std::function<T(const std::string &)> &deserializer);
-```
-
-#### Usage Example
-
-```cpp
-// Read a resource from a file asynchronously and deserialize using a custom deserializer function
-cache.readFromFile("data.txt", [](const std::string &data) {
-    // Custom deserialization logic
-    return stoi(data);
-});
-```
-
-### writeToFile
-
-Writes a resource to a file asynchronously.
-
-```cpp
-void writeToFile(const std::string &filePath, const std::function<std::string(const T &)> &serializer);
-```
-
-#### Usage Example
-
-```cpp
-// Write a resource to a file asynchronously using a custom serializer function
-cache.writeToFile("data.txt", [](const int &data) {
-    // Custom serialization logic
-    return std::to_string(data);
-});
-```
-
-### removeExpired
-
-Removes expired resources from the cache.
+### Remove Expired
 
 ```cpp
 void removeExpired();
 ```
 
-#### Usage Example
+Removes all expired items from the cache.
+
+## Persistence
+
+### Read From File
 
 ```cpp
-// Remove expired resources from the cache
-cache.removeExpired();
+void readFromFile(const std::string &filePath, const std::function<T(const std::string &)> &deserializer);
 ```
 
-### readFromJsonFile
+Loads cache contents from a file using a custom deserializer.
 
-Reads a resource from a JSON file asynchronously.
+### Write To File
+
+```cpp
+void writeToFile(const std::string &filePath, const std::function<std::string(const T &)> &serializer);
+```
+
+Saves cache contents to a file using a custom serializer.
+
+### Read From JSON File
 
 ```cpp
 void readFromJsonFile(const std::string &filePath, const std::function<T(const json &)> &fromJson);
 ```
 
-#### Usage Example
+Loads cache contents from a JSON file using a custom JSON deserializer.
 
-```cpp
-// Read a resource from a JSON file asynchronously and deserialize using a custom function
-cache.readFromJsonFile("data.json", [](const json &jsonData) {
-    // Custom deserialization from JSON logic
-    return jsonData.get<T>();
-});
-```
-
-### writeToJsonFile
-
-Writes a resource to a JSON file asynchronously.
+### Write To JSON File
 
 ```cpp
 void writeToJsonFile(const std::string &filePath, const std::function<json(const T &)> &toJson);
 ```
 
-#### Usage Example
+Saves cache contents to a JSON file using a custom JSON serializer.
+
+## Bulk Operations
+
+### Insert Batch
 
 ```cpp
-// Write a resource to a JSON file asynchronously using a custom function
-cache.writeToJsonFile("data.json", [](const T &data) {
-    // Custom serialization to JSON logic
-    json jsonData = data; // Assuming T is convertible to json
-    return jsonData;
+void insertBatch(const std::vector<std::pair<std::string, T>> &items, std::chrono::seconds expirationTime);
+```
+
+Inserts multiple items into the cache at once.
+
+### Remove Batch
+
+```cpp
+void removeBatch(const std::vector<std::string> &keys);
+```
+
+Removes multiple items from the cache at once.
+
+## Usage Examples
+
+### Basic Usage
+
+```cpp
+ResourceCache<std::string> cache(100); // Create a cache with max size 100
+
+// Insert an item
+cache.insert("key1", "value1", std::chrono::seconds(60));
+
+// Retrieve an item
+auto value = cache.get("key1");
+if (value) {
+    std::cout << "Value: " << *value << std::endl;
+} else {
+    std::cout << "Key not found or expired" << std::endl;
+}
+
+// Remove an item
+cache.remove("key1");
+```
+
+### Asynchronous Operations
+
+```cpp
+auto future = cache.asyncInsert("key2", "value2", std::chrono::seconds(120));
+future.wait(); // Wait for the insertion to complete
+
+auto valueFuture = cache.asyncGet("key2");
+auto value = valueFuture.get();
+if (value) {
+    std::cout << "Async retrieved value: " << *value << std::endl;
+}
+```
+
+### JSON Persistence
+
+```cpp
+// Save to JSON file
+cache.writeToJsonFile("cache_data.json", [](const std::string& value) {
+    return json{{"data", value}};
+});
+
+// Load from JSON file
+cache.readFromJsonFile("cache_data.json", [](const json& j) {
+    return j["data"].get<std::string>();
 });
 ```
 
-## Private Member Function
-
-### evict
-
-Evicts the oldest resource from the cache.
-
-Note: This function is not intended for external use.
+### Bulk Operations
 
 ```cpp
-void evict();
+std::vector<std::pair<std::string, std::string>> items = {
+    {"key3", "value3"},
+    {"key4", "value4"},
+    {"key5", "value5"}
+};
+cache.insertBatch(items, std::chrono::seconds(300));
+
+std::vector<std::string> keysToRemove = {"key3", "key4"};
+cache.removeBatch(keysToRemove);
 ```

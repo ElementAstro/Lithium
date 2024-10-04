@@ -12,7 +12,7 @@
 
 /**
  * @brief Macro to count and time a function call.
- * 
+ *
  * This macro should be placed at the beginning of the function you want to profile.
  * It will automatically start timing when the function is entered and stop timing when the function exits.
  */
@@ -26,7 +26,7 @@
 
 /**
  * @brief Class to count and time function calls.
- * 
+ *
  * This class provides static methods to start and stop timing, print statistics, reset statistics,
  * save and load statistics, set performance thresholds, and print call graphs.
  */
@@ -45,7 +45,7 @@ public:
 
     /**
      * @brief Start timing a function call.
-     * 
+     *
      * @param LOCATION The source location of the function call. Defaults to the current source location.
      */
     static void startTiming(
@@ -58,7 +58,7 @@ public:
 
     /**
      * @brief Print the statistics of the top N functions.
-     * 
+     *
      * @param top_n The number of top functions to print. If 0, print all functions.
      */
     static void printStats(size_t top_n = 0);
@@ -70,21 +70,21 @@ public:
 
     /**
      * @brief Save the function statistics to a file.
-     * 
+     *
      * @param filename The name of the file to save the statistics to.
      */
     static void saveStats(const std::string& filename);
 
     /**
      * @brief Load the function statistics from a file.
-     * 
+     *
      * @param filename The name of the file to load the statistics from.
      */
     static void loadStats(const std::string& filename);
 
     /**
      * @brief Set the performance threshold for function calls.
-     * 
+     *
      * @param threshold The performance threshold in nanoseconds.
      */
     static void setPerformanceThreshold(std::chrono::nanoseconds threshold);
@@ -96,7 +96,7 @@ public:
 
     /**
      * @brief Conditionally count and time a function call.
-     * 
+     *
      * @tparam Func The type of the function to call.
      * @param condition The condition to check.
      * @param func The function to call.

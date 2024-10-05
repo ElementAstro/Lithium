@@ -279,8 +279,8 @@ void DownloadManager::Impl::downloadTask(DownloadTask& task,
             LOG_F(ERROR, "Max retries reached for task {}", task.url);
         }
     } else {
-        double totalSize;
-        curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD, &totalSize);
+        curl_off_t totalSize;
+        curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &totalSize);
         task.downloadedBytes += static_cast<size_t>(totalSize);
         task.completed = true;
 

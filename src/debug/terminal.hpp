@@ -1,11 +1,3 @@
-/**
- * @file terminal.hpp
- * @author Max Qian <lightapt.com>
- * @copyright Copyright (C) 2023-2024 Max Qian
- * @date 2024-5-15
- * @brief Command Terminal
- */
-
 #ifndef LITHIUM_DEBUG_TERMINAL_HPP
 #define LITHIUM_DEBUG_TERMINAL_HPP
 
@@ -13,63 +5,83 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "macro.hpp"
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <termios.h>
-#include <unistd.h>
-#endif
-
-#include "atom/components/component.hpp"
 
 namespace lithium::debug {
-class SuggestionEngine;  // Forwards declaration
-class CommandChecker;
-class CommandHistory;
 
+/**
+ * @brief Class representing a console terminal for debugging purposes.
+ */
 class ConsoleTerminal {
 public:
+    /**
+     * @brief Construct a new ConsoleTerminal object.
+     */
     ConsoleTerminal();
+
+    /**
+     * @brief Destroy the ConsoleTerminal object.
+     */
     ~ConsoleTerminal();
 
-    ATOM_NODISCARD auto getRegisteredCommands() const
+    /**
+     * @brief Copy constructor (deleted).
+     */
+    ConsoleTerminal(const ConsoleTerminal&) = delete;
+
+    /**
+     * @brief Copy assignment operator (deleted).
+     */
+    auto operator=(const ConsoleTerminal&) -> ConsoleTerminal& = delete;
+
+    /**
+     * @brief Move constructor.
+     */
+    ConsoleTerminal(ConsoleTerminal&&) noexcept;
+
+    /**
+     * @brief Move assignment operator.
+     */
+    auto operator=(ConsoleTerminal&&) noexcept -> ConsoleTerminal&;
+
+    /**
+     * @brief Get the list of registered commands.
+     *
+     * @return std::vector<std::string> A vector of registered command names.
+     */
+    [[nodiscard]] auto getRegisteredCommands() const
         -> std::vector<std::string>;
+
+    /**
+     * @brief Call a registered command by name with the given arguments.
+     *
+     * @param name The name of the command to call.
+     * @param args A vector of arguments to pass to the command.
+     */
     void callCommand(std::string_view name, const std::vector<std::any>& args);
+
+    /**
+     * @brief Run the console terminal, processing input and executing commands.
+     */
     void run();
 
-protected:
-    void helpCommand() const;
-    void printHistory() const;
-
 private:
-    void printHeader();
+    /**
+     * @brief Implementation class for ConsoleTerminal.
+     *
+     * This class is used to hide the implementation details of ConsoleTerminal.
+     */
+    class ConsoleTerminalImpl;
 
-    auto processToken(const std::string& token) -> std::any;
-
-    auto parseArguments(const std::string& input) -> std::vector<std::any>;
-
-    static auto commandCompletion(const char* text, int start, int end) -> char**;
-    static auto commandGenerator(const char* text, int state) -> char*;
-
-    static constexpr int MAX_HISTORY_SIZE = 100;
-
-    std::shared_ptr<SuggestionEngine> suggestionEngine_;
-
-    std::shared_ptr<CommandChecker> commandChecker_;
-
-    std::shared_ptr<CommandHistory> commandHistory_;
-
-    std::shared_ptr<Component> component_;
-
-#ifdef _WIN32
-    HANDLE hConsole_;
-#else
-    struct termios orig_termios_;
-#endif
+    std::unique_ptr<ConsoleTerminalImpl>
+        impl_;  ///< Pointer to the implementation of ConsoleTerminal.
 };
 
+/**
+ * @brief Global pointer to the console terminal instance.
+ *
+ * This pointer can be used to access the console terminal from anywhere in the
+ * program.
+ */
 extern ConsoleTerminal* globalConsoleTerminal;
 
 }  // namespace lithium::debug

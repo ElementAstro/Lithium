@@ -53,3 +53,7 @@ ATOM_MODULE(lithium_config, [](Component &component) {
 
     LOG_F(INFO, "Loaded module {}", component.getName());
 });
+
+ATOM_MODULE_TEST(lithium_config, [](const std::shared_ptr<Component>& component) {
+
+});

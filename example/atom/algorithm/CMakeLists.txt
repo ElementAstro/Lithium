@@ -24,7 +24,7 @@ include_directories(${SOURCE_DIR}/include)
 foreach(cpp_file ${cpp_files})
     # 获取文件名（不带路径和后缀）
     get_filename_component(target_name ${cpp_file} NAME_WE)
-    
+
     # 为每个 .cpp 文件生成一个可执行文件目标
     add_executable(${target_name} ${cpp_file})
 

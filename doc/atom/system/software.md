@@ -1,144 +1,166 @@
-# Atom System Software Module
+# Software-related Functions Documentation
 
 ## Overview
 
-The `atom::system` namespace provides a set of functions for querying and managing software installations on a system. This module is part of the Atom library and is defined in the `ATOM_SYSTEM_SOFTWARE_HPP` header file.
+This documentation covers a set of functions designed to interact with software installations and applications on a system. These functions are part of the `atom::system` namespace and provide capabilities such as checking software installation status, retrieving application versions, paths, and permissions.
 
-## Functions
+## Function Definitions
 
-### `checkSoftwareInstalled`
+### Check Software Installation
 
 ```cpp
 auto checkSoftwareInstalled(const std::string& software_name) -> bool;
 ```
 
-#### Description
+Checks whether the specified software is installed on the system.
 
-This function checks whether the specified software is installed on the system.
+- **Parameters:**
+  - `software_name`: The name of the software to check.
+- **Returns:** `true` if the software is installed, `false` if it's not installed or an error occurred.
 
-#### Parameters
-
-- `software_name`: A string representing the name of the software to check.
-
-#### Returns
-
-- `true` if the software is installed.
-- `false` if the software is not installed or an error occurred during the check.
-
-#### Usage Example
-
-```cpp
-if (atom::system::checkSoftwareInstalled("Firefox")) {
-    std::cout << "Firefox is installed on this system." << std::endl;
-} else {
-    std::cout << "Firefox is not installed or could not be detected." << std::endl;
-}
-```
-
-### `getAppVersion`
+### Get Application Version
 
 ```cpp
 auto getAppVersion(const fs::path& app_path) -> std::string;
 ```
 
-#### Description
+Retrieves the version of the specified application.
 
-This function retrieves the version of the specified application.
+- **Parameters:**
+  - `app_path`: The path to the application.
+- **Returns:** A string representing the version of the application.
 
-#### Parameters
-
-- `app_path`: A filesystem path object representing the path to the application.
-
-#### Returns
-
-A string containing the version of the application.
-
-#### Usage Example
-
-```cpp
-fs::path firefoxPath = "/usr/bin/firefox";
-std::string version = atom::system::getAppVersion(firefoxPath);
-std::cout << "Firefox version: " << version << std::endl;
-```
-
-### `getAppPath`
+### Get Application Path
 
 ```cpp
 auto getAppPath(const std::string& software_name) -> fs::path;
 ```
 
-#### Description
+Retrieves the path to the specified application.
 
-This function retrieves the path to the specified application.
+- **Parameters:**
+  - `software_name`: The name of the software.
+- **Returns:** A `std::filesystem::path` object representing the path to the application.
 
-#### Parameters
-
-- `software_name`: A string representing the name of the software.
-
-#### Returns
-
-A filesystem path object representing the path to the application.
-
-#### Usage Example
-
-```cpp
-fs::path chromePath = atom::system::getAppPath("Google Chrome");
-std::cout << "Chrome is installed at: " << chromePath << std::endl;
-```
-
-### `getAppPermissions`
+### Get Application Permissions
 
 ```cpp
 auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string>;
 ```
 
-#### Description
+Retrieves the permissions of the specified application.
 
-This function retrieves the permissions of the specified application.
+- **Parameters:**
+  - `app_path`: The path to the application.
+- **Returns:** A vector of strings representing the permissions of the application.
 
-#### Parameters
+## Usage Examples
 
-- `app_path`: A filesystem path object representing the path to the application.
-
-#### Returns
-
-A vector of strings, where each string represents a permission of the application.
-
-#### Usage Example
+### Example 1: Checking Software Installation and Getting Version
 
 ```cpp
-fs::path safariPath = "/Applications/Safari.app";
-std::vector<std::string> permissions = atom::system::getAppPermissions(safariPath);
-std::cout << "Safari permissions:" << std::endl;
-for (const auto& perm : permissions) {
-    std::cout << "- " << perm << std::endl;
+#include "software.hpp"
+#include <iostream>
+
+int main() {
+    const std::string software_name = "ExampleSoftware";
+
+    if (atom::system::checkSoftwareInstalled(software_name)) {
+        std::cout << software_name << " is installed." << std::endl;
+
+        fs::path app_path = atom::system::getAppPath(software_name);
+        std::string version = atom::system::getAppVersion(app_path);
+
+        std::cout << "Version: " << version << std::endl;
+        std::cout << "Path: " << app_path << std::endl;
+    } else {
+        std::cout << software_name << " is not installed." << std::endl;
+    }
+
+    return 0;
 }
 ```
 
-## Notes
+### Example 2: Getting Application Permissions
 
-- This module uses the C++17 filesystem library, aliased as `fs`.
-- All functions are part of the `atom::system` namespace.
-- Error handling is not explicitly shown in the function signatures, so proper error checking should be implemented when using these functions in production code.
-- The actual implementation of these functions is not provided in the header file, so they must be defined elsewhere in the project.
+```cpp
+#include "software.hpp"
+#include <iostream>
 
-## Dependencies
+int main() {
+    const std::string software_name = "ExampleSoftware";
+    fs::path app_path = atom::system::getAppPath(software_name);
 
-- C++17 or later
-- `<filesystem>` header
-- `<string>` header
-- `<vector>` header
+    if (!app_path.empty()) {
+        std::vector<std::string> permissions = atom::system::getAppPermissions(app_path);
 
-## Compilation
+        std::cout << "Permissions for " << software_name << ":" << std::endl;
+        for (const auto& perm : permissions) {
+            std::cout << "- " << perm << std::endl;
+        }
+    } else {
+        std::cout << "Could not find path for " << software_name << std::endl;
+    }
 
-When compiling a program that uses this module, ensure that C++17 features are enabled. For example, with GCC or Clang, you might use:
-
+    return 0;
+}
 ```
-g++ -std=c++17 your_program.cpp -o your_program
+
+### Example 3: Checking Multiple Software Installations
+
+```cpp
+#include "software.hpp"
+#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<std::string> software_list = {
+        "ExampleSoftware1",
+        "ExampleSoftware2",
+        "ExampleSoftware3"
+    };
+
+    for (const auto& software : software_list) {
+        if (atom::system::checkSoftwareInstalled(software)) {
+            std::cout << software << " is installed." << std::endl;
+            fs::path app_path = atom::system::getAppPath(software);
+            std::cout << "Path: " << app_path << std::endl;
+        } else {
+            std::cout << software << " is not installed." << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    return 0;
+}
 ```
 
-or
+## Important Considerations
 
-```
-clang++ -std=c++17 your_program.cpp -o your_program
-```
+1. **Cross-platform Compatibility**: These functions may behave differently on different operating systems. Ensure you handle platform-specific cases appropriately.
+
+2. **Error Handling**: The functions may return empty strings, paths, or vectors in case of errors. Implement proper error checking in your code.
+
+3. **Performance**: Functions like `checkSoftwareInstalled` and `getAppPath` might involve system-wide searches, which could be time-consuming for large systems.
+
+4. **Permissions**: Depending on the system configuration, some of these functions might require elevated privileges to access certain software information.
+
+5. **Software Names**: The `software_name` parameter in functions like `checkSoftwareInstalled` and `getAppPath` might need to match the exact name used in system registries or package managers.
+
+## Best Practices
+
+1. **Cache Results**: If you need to check for the same software multiple times, consider caching the results to improve performance.
+
+2. **Handle Empty Returns**: Always check if returned paths or strings are empty before using them.
+
+3. **Use with System Administration Tools**: These functions can be particularly useful in system administration scripts or tools.
+
+4. **Version Comparisons**: When using `getAppVersion`, remember that version strings might not always be directly comparable. You might need to implement a version comparison function.
+
+5. **Permission Handling**: When using `getAppPermissions`, be prepared to handle a variety of permission formats that might differ across operating systems.
+
+## Conclusion
+
+These software-related functions provide a convenient interface for querying information about installed software and applications on a system. They can be particularly useful for system administration tasks, software inventory management, or as part of larger application deployment and management systems.
+
+When using these functions, be mindful of potential performance implications and system-specific behaviors. Always implement proper error checking and handling in your code to ensure robustness across different system configurations.

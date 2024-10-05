@@ -27,12 +27,38 @@ using json = nlohmann::json;
 
 class HttpClient {
 public:
+    /**
+     * @brief Constructs an HttpClient with the given I/O context.
+     * @param ioc The I/O context to use for asynchronous operations.
+     */
     explicit HttpClient(net::io_context& ioc);
 
+    /**
+     * @brief Sets a default header for all requests.
+     * @param key The header key.
+     * @param value The header value.
+     */
     void setDefaultHeader(const std::string& key, const std::string& value);
+
+    /**
+     * @brief Sets the timeout duration for the HTTP operations.
+     * @param timeout The timeout duration in seconds.
+     */
     void setTimeout(std::chrono::seconds timeout);
 
-    // Synchronous request
+    /**
+     * @brief Sends a synchronous HTTP request.
+     * @tparam Body The type of the request body.
+     * @param method The HTTP method (verb).
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param version The HTTP version (default is 11).
+     * @param content_type The content type of the request body.
+     * @param body The request body.
+     * @param headers Additional headers to include in the request.
+     * @return The HTTP response.
+     */
     template <class Body = http::string_body>
     auto request(http::verb method, const std::string& host,
                  const std::string& port, const std::string& target,
@@ -41,7 +67,21 @@ public:
                  const std::unordered_map<std::string, std::string>& headers =
                      {}) -> http::response<Body>;
 
-    // Asynchronous request
+    /**
+     * @brief Sends an asynchronous HTTP request.
+     * @tparam Body The type of the request body.
+     * @tparam ResponseHandler The type of the handler to call when the
+     * operation completes.
+     * @param method The HTTP method (verb).
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param handler The handler to call when the operation completes.
+     * @param version The HTTP version (default is 11).
+     * @param content_type The content type of the request body.
+     * @param body The request body.
+     * @param headers Additional headers to include in the request.
+     */
     template <class Body = http::string_body, class ResponseHandler>
     void asyncRequest(
         http::verb method, const std::string& host, const std::string& port,
@@ -49,12 +89,36 @@ public:
         const std::string& content_type = "", const std::string& body = "",
         const std::unordered_map<std::string, std::string>& headers = {});
 
+    /**
+     * @brief Sends a synchronous HTTP request with a JSON body and returns a
+     * JSON response.
+     * @param method The HTTP method (verb).
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param json_body The JSON body of the request.
+     * @param headers Additional headers to include in the request.
+     * @return The JSON response.
+     */
     auto jsonRequest(http::verb method, const std::string& host,
                      const std::string& port, const std::string& target,
                      const json& json_body = {},
                      const std::unordered_map<std::string, std::string>&
                          headers = {}) -> json;
 
+    /**
+     * @brief Sends an asynchronous HTTP request with a JSON body and returns a
+     * JSON response.
+     * @tparam ResponseHandler The type of the handler to call when the
+     * operation completes.
+     * @param method The HTTP method (verb).
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param handler The handler to call when the operation completes.
+     * @param json_body The JSON body of the request.
+     * @param headers Additional headers to include in the request.
+     */
     template <class ResponseHandler>
     void asyncJsonRequest(
         http::verb method, const std::string& host, const std::string& port,
@@ -62,14 +126,44 @@ public:
         const json& json_body = {},
         const std::unordered_map<std::string, std::string>& headers = {});
 
+    /**
+     * @brief Uploads a file to the server.
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param filepath The path to the file to upload.
+     * @param field_name The field name for the file (default is "file").
+     * @return The HTTP response.
+     */
     auto uploadFile(const std::string& host, const std::string& port,
                     const std::string& target, const std::string& filepath,
                     const std::string& field_name = "file")
         -> http::response<http::string_body>;
 
+    /**
+     * @brief Downloads a file from the server.
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param filepath The path to save the downloaded file.
+     */
     void downloadFile(const std::string& host, const std::string& port,
                       const std::string& target, const std::string& filepath);
 
+    /**
+     * @brief Sends a synchronous HTTP request with retry logic.
+     * @tparam Body The type of the request body.
+     * @param method The HTTP method (verb).
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param retry_count The number of retry attempts (default is 3).
+     * @param version The HTTP version (default is 11).
+     * @param content_type The content type of the request body.
+     * @param body The request body.
+     * @param headers Additional headers to include in the request.
+     * @return The HTTP response.
+     */
     template <class Body = http::string_body>
     auto requestWithRetry(
         http::verb method, const std::string& host, const std::string& port,
@@ -78,12 +172,29 @@ public:
         const std::unordered_map<std::string, std::string>& headers = {})
         -> http::response<Body>;
 
+    /**
+     * @brief Sends multiple synchronous HTTP requests in a batch.
+     * @tparam Body The type of the request body.
+     * @param requests A vector of tuples containing the HTTP method, host,
+     * port, and target for each request.
+     * @param headers Additional headers to include in each request.
+     * @return A vector of HTTP responses.
+     */
     template <class Body = http::string_body>
     std::vector<http::response<Body>> batchRequest(
         const std::vector<std::tuple<http::verb, std::string, std::string,
                                      std::string>>& requests,
         const std::unordered_map<std::string, std::string>& headers = {});
 
+    /**
+     * @brief Sends multiple asynchronous HTTP requests in a batch.
+     * @tparam ResponseHandler The type of the handler to call when the
+     * operation completes.
+     * @param requests A vector of tuples containing the HTTP method, host,
+     * port, and target for each request.
+     * @param handler The handler to call when the operation completes.
+     * @param headers Additional headers to include in each request.
+     */
     template <class ResponseHandler>
     void asyncBatchRequest(
         const std::vector<std::tuple<http::verb, std::string, std::string,
@@ -91,8 +202,22 @@ public:
         ResponseHandler&& handler,
         const std::unordered_map<std::string, std::string>& headers = {});
 
+    /**
+     * @brief Runs the I/O context with a thread pool.
+     * @param num_threads The number of threads in the pool.
+     */
     void runWithThreadPool(size_t num_threads);
 
+    /**
+     * @brief Asynchronously downloads a file from the server.
+     * @tparam ResponseHandler The type of the handler to call when the
+     * operation completes.
+     * @param host The server host.
+     * @param port The server port.
+     * @param target The target URI.
+     * @param filepath The path to save the downloaded file.
+     * @param handler The handler to call when the operation completes.
+     */
     template <class ResponseHandler>
     void asyncDownloadFile(const std::string& host, const std::string& port,
                            const std::string& target,
@@ -100,10 +225,12 @@ public:
                            ResponseHandler&& handler);
 
 private:
-    tcp::resolver resolver_;
-    beast::tcp_stream stream_;
-    std::unordered_map<std::string, std::string> default_headers_;
-    std::chrono::seconds timeout_{30};
+    tcp::resolver resolver_;    ///< The resolver for DNS lookups.
+    beast::tcp_stream stream_;  ///< The TCP stream for HTTP communication.
+    std::unordered_map<std::string, std::string>
+        default_headers_;  ///< Default headers for all requests.
+    std::chrono::seconds timeout_{
+        30};  ///< The timeout duration for HTTP operations.
 };
 
 template <class Body>

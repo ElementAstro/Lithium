@@ -1,170 +1,261 @@
-# ArgumentContainer Class
+# Args Class Documentation
 
 ## Introduction
 
-The `ArgumentContainer` class is a container for storing and retrieving arguments. It provides methods to set, get, remove, and check the existence of parameters.
+`Args` is a universal container class for storing key-value pairs of any type. It's a simplified version of `ArgumentContainer`, offering better performance with fewer features.
+
+## Header File
+
+```cpp
+#include "args.hpp"
+```
 
 ## Class Definition
 
-### Methods
+```cpp
+class Args {
+    // ... (member function definitions)
+};
+```
 
-#### set
+## Key Features
 
-Set the value of a parameter.
+1. Set key-value pairs
+2. Retrieve key-value pairs
+3. Check if a key exists
+4. Remove key-value pairs
+5. Clear the container
+6. Get container size and check if it's empty
+
+## Member Functions
+
+### Setting Key-Value Pairs
+
+#### `set`
 
 ```cpp
 template <typename T>
-void set(const std::string &name, const T &value);
+void set(std::string_view key, T &&value);
 ```
 
-Usage:
-
-```cpp
-ArgumentContainer container;
-container.set("age", 30);
-```
-
-Expected Output: N/A
-
-#### get
-
-Get the value of a parameter.
+Set a single key-value pair.
 
 ```cpp
 template <typename T>
-std::optional<T> get(const std::string &name) const;
+void set(std::span<const std::pair<std::string_view, T>> pairs);
 ```
 
-Usage:
+Set multiple key-value pairs in batch.
+
+### Retrieving Key-Value Pairs
+
+#### `get`
 
 ```cpp
-auto age = container.get<int>("age");
-if (age.has_value()) {
-    std::cout << "Age: " << age.value() << std::endl;
+template <typename T>
+auto get(std::string_view key) const -> T;
+```
+
+Get the value for a specified key. Throws an exception if the key doesn't exist.
+
+#### `getOr`
+
+```cpp
+template <typename T>
+auto getOr(std::string_view key, T &&default_value) const -> T;
+```
+
+Get the value for a specified key, returning a default value if the key doesn't exist.
+
+#### `getOptional`
+
+```cpp
+template <typename T>
+auto getOptional(std::string_view key) const -> std::optional<T>;
+```
+
+Get the value for a specified key, returning `std::nullopt` if the key doesn't exist.
+
+#### Batch Retrieval
+
+```cpp
+template <typename T>
+auto get(std::span<const std::string_view> keys) const -> std::vector<std::optional<T>>;
+```
+
+Retrieve values for multiple keys in batch.
+
+### Other Operations
+
+#### `contains`
+
+```cpp
+auto contains(std::string_view key) const noexcept -> bool;
+```
+
+Check if a specified key exists.
+
+#### `remove`
+
+```cpp
+void remove(std::string_view key);
+```
+
+Remove a specified key-value pair.
+
+#### `clear`
+
+```cpp
+void clear() noexcept;
+```
+
+Clear the entire container.
+
+#### `size`
+
+```cpp
+auto size() const noexcept -> size_t;
+```
+
+Return the number of key-value pairs in the container.
+
+#### `empty`
+
+```cpp
+auto empty() const noexcept -> bool;
+```
+
+Check if the container is empty.
+
+### Operator Overloads
+
+```cpp
+template <typename T>
+auto operator[](std::string_view key) -> T &;
+
+template <typename T>
+auto operator[](std::string_view key) const -> const T &;
+
+auto operator[](std::string_view key) -> std::any &;
+
+auto operator[](std::string_view key) const -> const std::any &;
+```
+
+Access key-value pairs using the `[]` operator.
+
+## Macro Definitions
+
+For convenience, the `Args` class provides the following macro definitions:
+
+```cpp
+#define SET_ARGUMENT(container, name, value) container.set(#name, value)
+#define GET_ARGUMENT(container, name, type) container.get<type>(#name).value_or(type{})
+#define HAS_ARGUMENT(container, name) container.contains(#name)
+#define REMOVE_ARGUMENT(container, name) container.remove(#name)
+```
+
+## Usage Examples
+
+### Basic Usage
+
+```cpp
+#include "args.hpp"
+#include <iostream>
+
+int main() {
+    Args args;
+
+    // Set key-value pairs
+    args.set("name", "Alice");
+    args.set("age", 30);
+
+    // Get values
+    std::string name = args.get<std::string>("name");
+    int age = args.get<int>("age");
+
+    std::cout << "Name: " << name << ", Age: " << age << std::endl;
+
+    // Use default value
+    int height = args.getOr("height", 170);
+    std::cout << "Height: " << height << std::endl;
+
+    // Check if key exists
+    if (args.contains("name")) {
+        std::cout << "Name exists in the container." << std::endl;
+    }
+
+    // Remove key-value pair
+    args.remove("age");
+
+    // Use macros
+    SET_ARGUMENT(args, score, 95.5);
+    double score = GET_ARGUMENT(args, score, double);
+    std::cout << "Score: " << score << std::endl;
+
+    return 0;
 }
 ```
 
-Expected Output: Age: 30
-
-#### remove
-
-Remove a specified parameter.
+### Batch Operations
 
 ```cpp
-bool remove(const std::string &name);
-```
+#include "args.hpp"
+#include <iostream>
+#include <vector>
 
-Usage:
+int main() {
+    Args args;
 
-```cpp
-bool removed = container.remove("age");
-```
+    // Set key-value pairs in batch
+    std::vector<std::pair<std::string_view, int>> pairs = {
+        {"a", 1}, {"b", 2}, {"c", 3}
+    };
+    args.set(pairs);
 
-Expected Output: N/A
+    // Get values in batch
+    std::vector<std::string_view> keys = {"a", "b", "c", "d"};
+    auto values = args.get<int>(keys);
 
-#### contains
+    for (size_t i = 0; i < keys.size(); ++i) {
+        if (values[i].has_value()) {
+            std::cout << keys[i] << ": " << values[i].value() << std::endl;
+        } else {
+            std::cout << keys[i] << ": Not found" << std::endl;
+        }
+    }
 
-Check if a parameter exists.
-
-```cpp
-bool contains(const std::string &name) const;
-```
-
-Usage:
-
-```cpp
-if (container.contains("age")) {
-    std::cout << "Parameter 'age' exists." << std::endl;
+    return 0;
 }
 ```
 
-Expected Output: Parameter 'age' exists.
-
-#### size
-
-Get the number of parameters.
+### Using Operators
 
 ```cpp
-std::size_t size() const;
+#include "args.hpp"
+#include <iostream>
+
+int main() {
+    Args args;
+
+    args["x"] = 10;
+    args["y"] = "Hello";
+
+    int x = args["x"].get<int>();
+    std::string y = args["y"].get<std::string>();
+
+    std::cout << "x: " << x << ", y: " << y << std::endl;
+
+    return 0;
+}
 ```
 
-Usage:
+## Important Notes
 
-```cpp
-std::cout << "Number of parameters: " << container.size() << std::endl;
-```
+1. When using the `get` method, an exception will be thrown if the key doesn't exist. Consider using `getOr` or `getOptional` to avoid exceptions.
+2. Using the `[]` operator will create a new key-value pair if the key doesn't exist.
+3. When using template methods, ensure you specify the correct type to avoid runtime errors.
+4. Batch operations can improve efficiency, especially when dealing with large amounts of data.
 
-Expected Output: Number of parameters: 0
+## Conclusion
 
-#### getNames
-
-Get all parameter names.
-
-```cpp
-std::vector<std::string> getNames() const;
-```
-
-Usage:
-
-```cpp
-std::vector<std::string> names = container.getNames();
-```
-
-Expected Output: Empty vector if no parameters are set.
-
-#### operator[]
-
-Overload the index operator [] to get and set the value of a parameter.
-
-```cpp
-template <typename T>
-T &operator[](const std::string &name);
-```
-
-Usage:
-
-```cpp
-container["age"] = 30;
-int age = container["age"];
-```
-
-Expected Output: N/A
-
-#### operator=
-
-Overload the assignment operator = to set the value of a parameter.
-
-```cpp
-template <typename T>
-void operator=(const std::pair<std::string, T> &argument);
-```
-
-Usage:
-
-```cpp
-container = std::make_pair("age", 30);
-```
-
-Expected Output: N/A
-
-#### toJson
-
-Convert the container to JSON format.
-
-```cpp
-std::string toJson() const;
-```
-
-Usage:
-
-```cpp
-std::string json = container.toJson();
-```
-
-Expected Output: JSON representation of the container.
-
-### Special Notes
-
-- The template methods `set`, `get`, `operator[]`, and `operator=` allow flexibility in handling different types of parameters.
-- The class uses `std::any` for storing values of any type.
-- It supports both `emhash8::HashMap` and `std::unordered_map` as underlying containers based on compilation flags.
+The `Args` class provides a flexible and efficient way to manage key-value pair data. It's suitable for scenarios where you need to store data of different types and offers an intuitive API for manipulating this data. By using the provided macro definitions, you can further simplify your code and improve readability.

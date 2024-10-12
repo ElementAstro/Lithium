@@ -1,68 +1,66 @@
 #include "check.hpp"
 
+#include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <utility>
 
 #include "atom/type/json.hpp"
 
 namespace lithium::debug {
-CommandChecker::CommandChecker() { initializeDefaultRules(); }
 
-void CommandChecker::addRule(
-    const std::string& name,
-    std::function<std::optional<Error>(const std::string&, size_t)> check) {
-    rules_.push_back({name, std::move(check)});
-}
+class CommandChecker::CommandCheckerImpl {
+public:
+    std::vector<CheckRule> rules_;
+    std::vector<std::string> dangerousCommands_{"rm", "mkfs", "dd", "format"};
+    size_t maxLineLength_{80};
 
-void CommandChecker::setDangerousCommands(
-    const std::vector<std::string>& commands) {
-    dangerousCommands_ = commands;
-}
+    CommandCheckerImpl() { initializeDefaultRules(); }
 
-void CommandChecker::setMaxLineLength(size_t length) { maxLineLength_ = length; }
-
-auto CommandChecker::check(
-    std::string_view command) const -> std::vector<CommandChecker::Error> {
-    std::vector<Error> errors;
-    std::vector<std::string> lines;
-
-    std::istringstream iss{std::string(command)};
-    std::string line;
-    while (std::getline(iss, line)) {
-        lines.push_back(line);
+    void addRule(
+        const std::string& name,
+        std::function<std::optional<Error>(const std::string&, size_t)> check) {
+        rules_.push_back({name, std::move(check)});
     }
 
-    for (size_t i = 0; i < lines.size(); ++i) {
-        checkLine(lines[i], i + 1, errors);
+    void setDangerousCommands(const std::vector<std::string>& commands) {
+        dangerousCommands_ = commands;
     }
 
-    return errors;
-}
+    void setMaxLineLength(size_t length) { maxLineLength_ = length; }
 
-auto CommandChecker::toJson(const std::vector<Error>& errors) const -> json {
-    json j = json::array();
-    for (const auto& error : errors) {
-        j.push_back({{"message", error.message},
-                     {"line", error.line},
-                     {"column", error.column},
-                     {"severity", severityToString(error.severity)}});
+    auto check(std::string_view command) const -> std::vector<Error> {
+        std::vector<Error> errors;
+        std::vector<std::string> lines;
+
+        std::istringstream iss{std::string(command)};
+        std::string line;
+        while (std::getline(iss, line)) {
+            lines.push_back(line);
+        }
+
+        for (size_t i = 0; i < lines.size(); ++i) {
+            checkLine(lines[i], i + 1, errors);
+        }
+
+        return errors;
     }
-    return j;
-}
 
-void CommandChecker::initializeDefaultRules() {
-    addRule(
-        "forkbomb",
-        [](const std::string& line, size_t lineNumber) -> std::optional<Error> {
-            auto pos = line.find(":(){ :|:& };:");
-            if (pos != std::string::npos) {
-                return Error{"Potential forkbomb detected", lineNumber, pos,
-                             ErrorSeverity::CRITICAL};
-            }
-            return std::nullopt;
-        });
+    void initializeDefaultRules() {
+        rules_.emplace_back("forkbomb",
+                            [](const std::string& line,
+                               size_t lineNumber) -> std::optional<Error> {
+                                auto pos = line.find(":(){ :|:& };:");
+                                if (pos != std::string::npos) {
+                                    return Error{"Potential forkbomb detected",
+                                                 lineNumber, pos,
+                                                 ErrorSeverity::CRITICAL};
+                                }
+                                return std::nullopt;
+                            });
 
-    addRule("dangerous_commands",
+        rules_.emplace_back(
+            "dangerous_commands",
             [this](const std::string& line,
                    size_t lineNumber) -> std::optional<Error> {
                 for (const auto& cmd : dangerousCommands_) {
@@ -75,60 +73,103 @@ void CommandChecker::initializeDefaultRules() {
                 return std::nullopt;
             });
 
-    addRule("line_length",
-            [this](const std::string& line,
-                   size_t lineNumber) -> std::optional<Error> {
-                if (line.length() > maxLineLength_) {
-                    return Error{"Line exceeds maximum length", lineNumber,
-                                 maxLineLength_, ErrorSeverity::WARNING};
+        rules_.emplace_back("line_length",
+                            [this](const std::string& line,
+                                   size_t lineNumber) -> std::optional<Error> {
+                                if (line.length() > maxLineLength_) {
+                                    return Error{"Line exceeds maximum length",
+                                                 lineNumber, maxLineLength_,
+                                                 ErrorSeverity::WARNING};
+                                }
+                                return std::nullopt;
+                            });
+
+        rules_.emplace_back(
+            "unmatched_quotes",
+            [](const std::string& line,
+               size_t lineNumber) -> std::optional<Error> {
+                int quoteCount = std::count(line.begin(), line.end(), '"');
+                if (quoteCount % 2 != 0) {
+                    return Error{"Unmatched quotes detected", lineNumber,
+                                 line.find('"'), ErrorSeverity::ERROR};
                 }
                 return std::nullopt;
             });
 
-    addRule(
-        "unmatched_quotes",
-        [](const std::string& line, size_t lineNumber) -> std::optional<Error> {
-            int quoteCount = std::count(line.begin(), line.end(), '"');
-            if (quoteCount % 2 != 0) {
-                return Error{"Unmatched quotes detected", lineNumber,
-                             line.find('"'), ErrorSeverity::ERROR};
-            }
-            return std::nullopt;
-        });
+        rules_.emplace_back(
+            "backtick_usage",
+            [](const std::string& line,
+               size_t lineNumber) -> std::optional<Error> {
+                auto pos = line.find('`');
+                if (pos != std::string::npos) {
+                    return Error{
+                        "Use of backticks detected, consider using $() instead",
+                        lineNumber, pos, ErrorSeverity::WARNING};
+                }
+                return std::nullopt;
+            });
+    }
 
-    addRule(
-        "backtick_usage",
-        [](const std::string& line, size_t lineNumber) -> std::optional<Error> {
-            auto pos = line.find('`');
-            if (pos != std::string::npos) {
-                return Error{
-                    "Use of backticks detected, consider using $() instead",
-                    lineNumber, pos, ErrorSeverity::WARNING};
+    void checkLine(const std::string& line, size_t lineNumber,
+                   std::vector<Error>& errors) const {
+        for (const auto& rule : rules_) {
+            if (auto error = rule.check(line, lineNumber)) {
+                errors.push_back(*error);
             }
-            return std::nullopt;
-        });
-}
-
-void CommandChecker::checkLine(const std::string& line, size_t lineNumber,
-                               std::vector<Error>& errors) const {
-    for (const auto& rule : rules_) {
-        if (auto error = rule.check(line, lineNumber)) {
-            errors.push_back(*error);
         }
     }
+
+    auto severityToString(ErrorSeverity severity) const -> std::string {
+        switch (severity) {
+            case ErrorSeverity::WARNING:
+                return "warning";
+            case ErrorSeverity::ERROR:
+                return "error";
+            case ErrorSeverity::CRITICAL:
+                return "critical";
+            default:
+                return "unknown";
+        }
+    }
+
+    auto toJson(const std::vector<Error>& errors) const -> json {
+        json j = json::array();
+        for (const auto& error : errors) {
+            j.push_back({{"message", error.message},
+                         {"line", error.line},
+                         {"column", error.column},
+                         {"severity", severityToString(error.severity)}});
+        }
+        return j;
+    }
+};
+
+CommandChecker::CommandChecker()
+    : impl_(std::make_unique<CommandCheckerImpl>()) {}
+CommandChecker::~CommandChecker() = default;
+
+void CommandChecker::addRule(
+    const std::string& name,
+    std::function<std::optional<Error>(const std::string&, size_t)> check) {
+    impl_->addRule(name, std::move(check));
 }
 
-auto CommandChecker::severityToString(ErrorSeverity severity) const -> std::string {
-    switch (severity) {
-        case ErrorSeverity::WARNING:
-            return "warning";
-        case ErrorSeverity::ERROR:
-            return "error";
-        case ErrorSeverity::CRITICAL:
-            return "critical";
-        default:
-            return "unknown";
-    }
+void CommandChecker::setDangerousCommands(
+    const std::vector<std::string>& commands) {
+    impl_->setDangerousCommands(commands);
+}
+
+void CommandChecker::setMaxLineLength(size_t length) {
+    impl_->setMaxLineLength(length);
+}
+
+auto CommandChecker::check(std::string_view command) const
+    -> std::vector<Error> {
+    return impl_->check(command);
+}
+
+auto CommandChecker::toJson(const std::vector<Error>& errors) const -> json {
+    return impl_->toJson(errors);
 }
 
 void printErrors(const std::vector<CommandChecker::Error>& errors,
@@ -156,6 +197,8 @@ void printErrors(const std::vector<CommandChecker::Error>& errors,
                 severityStr = "CRITICAL";
                 colorCode = "\033[35m";
                 break;
+            default:
+                colorCode = "";
         }
 
         if (useColor) {
@@ -173,4 +216,5 @@ void printErrors(const std::vector<CommandChecker::Error>& errors,
         std::cout << "\n";
     }
 }
+
 }  // namespace lithium::debug

@@ -12,23 +12,43 @@
 #include <type_traits>
 
 namespace atom::extra::boost {
-// 常量定义
+
+// Constants definition
 constexpr int ALIGNMENT = 16;
 constexpr int DEFAULT_BASE = 10;
 constexpr size_t BUFFER_SIZE = 128;
 
+/**
+ * @brief Enum class representing different number formats.
+ */
 enum class NumberFormat { GENERAL, SCIENTIFIC, FIXED, HEX };
 
+/**
+ * @brief Struct for specifying format options for number conversion.
+ */
 struct alignas(ALIGNMENT) FormatOptions {
-    NumberFormat format = NumberFormat::GENERAL;
-    std::optional<int> precision = std::nullopt;
-    bool uppercase = false;
-    char thousandsSeparator = '\0';
+    NumberFormat format = NumberFormat::GENERAL;  ///< The number format.
+    std::optional<int> precision =
+        std::nullopt;        ///< The precision for floating-point numbers.
+    bool uppercase = false;  ///< Whether to use uppercase letters.
+    char thousandsSeparator =
+        '\0';  ///< The character to use as a thousands separator.
 };
 
+/**
+ * @brief Class for converting numbers to and from strings using Boost.CharConv.
+ */
 class BoostCharConv {
 public:
-    // 整数到字符串的转换
+    /**
+     * @brief Converts an integer to a string.
+     * @tparam T The type of the integer.
+     * @param value The integer value to convert.
+     * @param base The base for the conversion (default is 10).
+     * @param options The format options for the conversion.
+     * @return The converted string.
+     * @throws std::runtime_error if the conversion fails.
+     */
     template <typename T>
     static auto intToString(T value, int base = DEFAULT_BASE,
                             const FormatOptions& options = {}) -> std::string {
@@ -51,7 +71,14 @@ public:
                                  std::make_error_code(result.ec).message());
     }
 
-    // 浮点数到字符串的转换
+    /**
+     * @brief Converts a floating-point number to a string.
+     * @tparam T The type of the floating-point number.
+     * @param value The floating-point value to convert.
+     * @param options The format options for the conversion.
+     * @return The converted string.
+     * @throws std::runtime_error if the conversion fails.
+     */
     template <typename T>
     static auto floatToString(T value, const FormatOptions& options = {})
         -> std::string {
@@ -75,7 +102,14 @@ public:
                                  std::make_error_code(result.ec).message());
     }
 
-    // 字符串到整数的转换
+    /**
+     * @brief Converts a string to an integer.
+     * @tparam T The type of the integer.
+     * @param str The string to convert.
+     * @param base The base for the conversion (default is 10).
+     * @return The converted integer.
+     * @throws std::runtime_error if the conversion fails.
+     */
     template <typename T>
     static auto stringToInt(const std::string& str,
                             int base = DEFAULT_BASE) -> T {
@@ -89,7 +123,13 @@ public:
                                  std::make_error_code(result.ec).message());
     }
 
-    // 字符串到浮点数的转换
+    /**
+     * @brief Converts a string to a floating-point number.
+     * @tparam T The type of the floating-point number.
+     * @param str The string to convert.
+     * @return The converted floating-point number.
+     * @throws std::runtime_error if the conversion fails.
+     */
     template <typename T>
     static auto stringToFloat(const std::string& str) -> T {
         T value;
@@ -102,7 +142,14 @@ public:
                                  std::make_error_code(result.ec).message());
     }
 
-    // 通用的 toString 函数
+    /**
+     * @brief Converts a value to a string using the appropriate conversion
+     * function.
+     * @tparam T The type of the value.
+     * @param value The value to convert.
+     * @param options The format options for the conversion.
+     * @return The converted string.
+     */
     template <typename T>
     static auto toString(T value,
                          const FormatOptions& options = {}) -> std::string {
@@ -115,7 +162,14 @@ public:
         }
     }
 
-    // 通用的 fromString 函数
+    /**
+     * @brief Converts a string to a value using the appropriate conversion
+     * function.
+     * @tparam T The type of the value.
+     * @param str The string to convert.
+     * @param base The base for the conversion (default is 10).
+     * @return The converted value.
+     */
     template <typename T>
     static auto fromString(const std::string& str,
                            int base = DEFAULT_BASE) -> T {
@@ -128,7 +182,12 @@ public:
         }
     }
 
-    // 特殊值处理
+    /**
+     * @brief Converts special floating-point values (NaN, Inf) to strings.
+     * @tparam T The type of the floating-point value.
+     * @param value The floating-point value to convert.
+     * @return The converted string.
+     */
     template <typename T>
     static auto specialValueToString(T value) -> std::string {
         if (std::isnan(value)) {
@@ -144,6 +203,11 @@ private:
     template <typename T>
     static constexpr bool ALWAYS_FALSE = false;
 
+    /**
+     * @brief Gets the Boost.CharConv format for floating-point numbers.
+     * @param format The number format.
+     * @return The Boost.CharConv format.
+     */
     static auto getFloatFormat(NumberFormat format)
         -> ::boost::charconv::chars_format {
         switch (format) {
@@ -158,6 +222,11 @@ private:
         }
     }
 
+    /**
+     * @brief Gets the Boost.CharConv format for integer numbers.
+     * @param format The number format.
+     * @return The Boost.CharConv format.
+     */
     static auto getIntegerFormat(NumberFormat format)
         -> ::boost::charconv::chars_format {
         return (format == NumberFormat::HEX)
@@ -165,6 +234,12 @@ private:
                    : ::boost::charconv::chars_format::general;
     }
 
+    /**
+     * @brief Adds a thousands separator to a string.
+     * @param str The string to modify.
+     * @param separator The character to use as a thousands separator.
+     * @return The modified string with thousands separators.
+     */
     static auto addThousandsSeparator(const std::string& str,
                                       char separator) -> std::string {
         std::string result;
@@ -184,6 +259,11 @@ private:
         return result;
     }
 
+    /**
+     * @brief Converts a string to uppercase.
+     * @param str The string to convert.
+     * @return The converted uppercase string.
+     */
     static auto toUpper(std::string str) -> std::string {
         for (char& character : str) {
             character = std::toupper(character);
@@ -191,6 +271,7 @@ private:
         return str;
     }
 };
+
 }  // namespace atom::extra::boost
 
-#endif
+#endif  // ATOM_EXTRA_BOOST_CHARCONV_HPP

@@ -3,23 +3,42 @@
 #include "atom/log/loguru.hpp"
 #include "atom/utils/to_string.hpp"
 
-Arg::Arg(std::string name) : name_(std::move(name)) {}
-
-Arg::Arg(std::string name, std::any default_value)
-    : name_(std::move(name)), default_value_(default_value) {}
-
-auto Arg::getName() const -> const std::string& { return name_; }
-
-auto Arg::getDefaultValue() const -> const std::optional<std::any>& {
-    return default_value_;
-}
-
 void CommandDispatcher::checkPrecondition(const Command& cmd,
                                           const std::string& name) {
     LOG_SCOPE_FUNCTION(INFO);
-    if (cmd.precondition && !cmd.precondition.value()()) {
-        LOG_F(ERROR, "Precondition failed for command: {}", name);
-        THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
+    if (!cmd.precondition.has_value()) {
+        LOG_F(INFO, "No precondition for command: {}", name);
+        return;
+    }
+    try {
+        std::invoke(cmd.precondition.value());
+    } catch (const std::bad_function_call& e) {
+        LOG_F(INFO, "Bad precondition function invoke: {}", e.what());
+    } catch (const std::bad_optional_access& e) {
+        LOG_F(INFO, "Bad precondition function access: {}", e.what());
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Precondition failed: {}", e.what());
+        THROW_DISPATCH_EXCEPTION("Precondition failed: " +
+                                 std::string(e.what()));
+    }
+}
+
+void CommandDispatcher::checkPostcondition(const Command& cmd,
+                                           const std::string& name) {
+    LOG_SCOPE_FUNCTION(INFO);
+    if (!cmd.postcondition.has_value()) {
+        LOG_F(INFO, "No postcondition for command: {}", name);
+        return;
+    }
+    try {
+        std::invoke(cmd.postcondition.value());
+    } catch (const std::bad_function_call& e) {
+        LOG_F(INFO, "Bad postcondition function invoke: {}", e.what());
+    } catch (const std::bad_optional_access& e) {
+        LOG_F(INFO, "Bad postcondition function access: {}", e.what());
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Postcondition failed: {}", e.what());
+        THROW_DISPATCH_EXCEPTION("Postcondition failed: " + std::string(e.what()));
     }
 }
 
@@ -72,22 +91,15 @@ auto CommandDispatcher::executeWithoutTimeout(
 auto CommandDispatcher::executeFunctions(
     const Command& cmd, const std::vector<std::any>& args) -> std::any {
     LOG_SCOPE_FUNCTION(INFO);
-    if (cmd.funcs.size() == 1) {
-        LOG_F(INFO, "Executing single function for command");
-        return cmd.funcs[0](args);
-    }
-
-    std::string funcHash = computeFunctionHash(args);
-    for (size_t i = 0; i < cmd.funcs.size(); ++i) {
-        if (cmd.hash[i] == funcHash) {
-            try {
-                LOG_F(INFO, "Executing function with hash: {}", funcHash);
-                return cmd.funcs[i](args);
-            } catch (const std::bad_any_cast&) {
-                LOG_F(ERROR, "Failed to call function with hash: {}", funcHash);
-                THROW_DISPATCH_EXCEPTION("Failed to call function with hash " +
-                                         funcHash);
-            }
+    if (std::string funcHash = computeFunctionHash(args);
+        cmd.hash == funcHash) {
+        try {
+            LOG_F(INFO, "Executing function with hash: {}", funcHash);
+            return std::invoke(cmd.func, args);
+        } catch (const std::bad_any_cast&) {
+            LOG_F(ERROR, "Failed to call function with hash: {}", funcHash);
+            THROW_DISPATCH_EXCEPTION("Failed to call function with hash " +
+                                     funcHash);
         }
     }
 
@@ -189,9 +201,10 @@ auto CommandDispatcher::dispatch(
 }
 
 auto CommandDispatcher::dispatch(const std::string& name,
-                                 const FunctionParams& params) -> std::any {
+                                 const atom::meta::FunctionParams& params)
+    -> std::any {
     LOG_SCOPE_FUNCTION(INFO);
-    return dispatchHelper(name, params.toVector());
+    return dispatchHelper(name, params.toAnyVector());
 }
 
 auto CommandDispatcher::getAllCommands() const -> std::vector<std::string> {
@@ -209,4 +222,14 @@ auto CommandDispatcher::getAllCommands() const -> std::vector<std::string> {
     auto it = std::unique(result.begin(), result.end());
     result.erase(it, result.end());
     return result;
+}
+
+auto CommandDispatcher::getCommandArgAndReturnType(const std::string& name)
+    -> std::pair<std::vector<atom::meta::Arg>, std::string> {
+    LOG_SCOPE_FUNCTION(INFO);
+    auto it = commands_.find(name);
+    if (it != commands_.end()) {
+        return {it->second.argTypes, it->second.returnType};
+    }
+    return {{}, ""};
 }

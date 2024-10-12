@@ -214,6 +214,8 @@ public:
 
     void doc(const std::string& description);
 
+    auto getDoc() const -> std::string;
+
     // -------------------------------------------------------------------
     // No Class
     // -------------------------------------------------------------------
@@ -383,6 +385,9 @@ public:
         -> std::vector<std::string>;
 
     auto getCommandDescription(const std::string& name) const -> std::string;
+
+    auto getCommandArgAndReturnType(const std::string& name)
+        -> std::pair<std::vector<atom::meta::Arg>, std::string>;
 
 #if ENABLE_FASTHASH
     emhash::HashSet<std::string> getCommandAliases(

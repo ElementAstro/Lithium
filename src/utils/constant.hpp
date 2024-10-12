@@ -15,6 +15,8 @@ Description: Constants for Lithium
 #ifndef LITHIUM_UTILS_CONSTANTS_HPP
 #define LITHIUM_UTILS_CONSTANTS_HPP
 
+#include "config.h"
+
 #include <string>
 #include <vector>
 
@@ -84,6 +86,10 @@ public:
     DEFINE_LITHIUM_CONSTANT(EXECUTOR)
     DEFINE_LITHIUM_CONSTANT(STRING_SPLITTER)
     DEFINE_LITHIUM_CONSTANT(MESSAGE_BUS)
+
+#if ENABLE_ASYNC
+    DEFINE_LITHIUM_CONSTANT(ASYNC_IO)
+#endif
 
     static std::vector<std::string> LITHIUM_RESOURCES;
     static std::vector<std::string_view> LITHIUM_RESOURCES_SHA256;

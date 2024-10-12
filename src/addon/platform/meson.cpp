@@ -45,8 +45,7 @@ auto MesonBuilder::checkAndInstallDependencies() -> bool {
 }
 
 auto MesonBuilder::configureProject(
-    const std::filesystem::path& sourceDir,
-    const std::filesystem::path& buildDir, BuildType buildType,
+    const fs::path& sourceDir, const fs::path& buildDir, BuildType buildType,
     const std::vector<std::string>& options) -> BuildResult {
     if (!fs::exists(buildDir)) {
         fs::create_directories(buildDir);
@@ -58,16 +57,16 @@ auto MesonBuilder::configureProject(
 
     std::string buildTypeStr;
     switch (buildType) {
-        case BuildType::Debug:
+        case BuildType::DEBUG:
             buildTypeStr = "debug";
             break;
-        case BuildType::Release:
+        case BuildType::RELEASE:
             buildTypeStr = "release";
             break;
-        case BuildType::RelWithDebInfo:
+        case BuildType::REL_WITH_DEB_INFO:
             buildTypeStr = "debugoptimized";
             break;
-        case BuildType::MinSizeRel:
+        case BuildType::MIN_SIZE_REL:
             buildTypeStr = "minsize";
             break;
     }
@@ -90,7 +89,7 @@ auto MesonBuilder::configureProject(
     return res;
 }
 
-auto MesonBuilder::buildProject(const std::filesystem::path& buildDir,
+auto MesonBuilder::buildProject(const fs::path& buildDir,
                                 std::optional<int> jobs) -> BuildResult {
     std::string command = "ninja -C " + buildDir.string();
     if (jobs.has_value()) {
@@ -108,8 +107,7 @@ auto MesonBuilder::buildProject(const std::filesystem::path& buildDir,
     return res;
 }
 
-auto MesonBuilder::cleanProject(const std::filesystem::path& buildDir)
-    -> BuildResult {
+auto MesonBuilder::cleanProject(const fs::path& buildDir) -> BuildResult {
     if (!fs::exists(buildDir)) {
         return {false, "",
                 "Build directory does not exist: " + buildDir.string()};
@@ -127,9 +125,8 @@ auto MesonBuilder::cleanProject(const std::filesystem::path& buildDir)
     return res;
 }
 
-auto MesonBuilder::installProject(const std::filesystem::path& buildDir,
-                                  const std::filesystem::path& installDir)
-    -> BuildResult {
+auto MesonBuilder::installProject(const fs::path& buildDir,
+                                  const fs::path& installDir) -> BuildResult {
     std::string command = "meson install -C " + buildDir.string() +
                           " --destdir " + installDir.string();
 
@@ -144,7 +141,7 @@ auto MesonBuilder::installProject(const std::filesystem::path& buildDir,
     return res;
 }
 
-auto MesonBuilder::runTests(const std::filesystem::path& buildDir,
+auto MesonBuilder::runTests(const fs::path& buildDir,
                             const std::vector<std::string>& testNames)
     -> BuildResult {
     std::string command = "meson test -C " + buildDir.string();
@@ -167,9 +164,8 @@ auto MesonBuilder::runTests(const std::filesystem::path& buildDir,
     return res;
 }
 
-auto MesonBuilder::generateDocs(const std::filesystem::path& buildDir,
-                                const std::filesystem::path& outputDir)
-    -> BuildResult {
+auto MesonBuilder::generateDocs(const fs::path& buildDir,
+                                const fs::path& outputDir) -> BuildResult {
     std::string command = "ninja -C " + buildDir.string() + " docs";
     auto [output, status] = atom::system::executeCommandWithStatus(command);
     BuildResult res;
@@ -193,7 +189,7 @@ auto MesonBuilder::generateDocs(const std::filesystem::path& buildDir,
     return res;
 }
 
-auto MesonBuilder::loadConfig(const std::filesystem::path& configPath) -> bool {
+auto MesonBuilder::loadConfig(const fs::path& configPath) -> bool {
     std::ifstream configFile(configPath);
     if (!configFile.is_open()) {
         pImpl_->logCallback("Failed to open config file: " +
@@ -225,7 +221,7 @@ auto MesonBuilder::setLogCallback(
     pImpl_->logCallback = std::move(callback);
 }
 
-auto MesonBuilder::getAvailableTargets(const std::filesystem::path& buildDir)
+auto MesonBuilder::getAvailableTargets(const fs::path& buildDir)
     -> std::vector<std::string> {
     std::string command = "ninja -C " + buildDir.string() + " -t targets all";
     auto [output, status] = atom::system::executeCommandWithStatus(command);
@@ -246,7 +242,7 @@ auto MesonBuilder::getAvailableTargets(const std::filesystem::path& buildDir)
     return targets;
 }
 
-auto MesonBuilder::buildTarget(const std::filesystem::path& buildDir,
+auto MesonBuilder::buildTarget(const fs::path& buildDir,
                                const std::string& target,
                                std::optional<int> jobs) -> BuildResult {
     std::string command = "ninja -C " + buildDir.string() + " " + target;
@@ -265,7 +261,7 @@ auto MesonBuilder::buildTarget(const std::filesystem::path& buildDir,
     return res;
 }
 
-auto MesonBuilder::getCacheVariables(const std::filesystem::path& buildDir)
+auto MesonBuilder::getCacheVariables(const fs::path& buildDir)
     -> std::vector<std::pair<std::string, std::string>> {
     std::string command = "meson configure " + buildDir.string();
     auto [output, status] = atom::system::executeCommandWithStatus(command);

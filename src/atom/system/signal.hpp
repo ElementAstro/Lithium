@@ -9,6 +9,14 @@
 #include <thread>
 #include <vector>
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <csignal>
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <signal.h>
+#endif
+
 /**
  * @brief Type alias for signal identifiers.
  */
@@ -105,31 +113,37 @@ private:
 #include <vector>
 
 /**
- * @brief Class to safely manage and dispatch signals with separate thread handling.
+ * @brief Class to safely manage and dispatch signals with separate thread
+ * handling.
  *
- * This class allows adding and removing signal handlers and dispatching signals in a separate thread
- * to ensure thread safety and avoid blocking signal handling.
+ * This class allows adding and removing signal handlers and dispatching signals
+ * in a separate thread to ensure thread safety and avoid blocking signal
+ * handling.
  */
 class SafeSignalManager {
 public:
     /**
-     * @brief Constructs a `SafeSignalManager` and starts the signal processing thread.
+     * @brief Constructs a `SafeSignalManager` and starts the signal processing
+     * thread.
      */
     SafeSignalManager();
 
     /**
-     * @brief Destructs the `SafeSignalManager` and stops the signal processing thread.
+     * @brief Destructs the `SafeSignalManager` and stops the signal processing
+     * thread.
      */
     ~SafeSignalManager();
 
     /**
-     * @brief Add a signal handler for a specific signal with an optional priority.
+     * @brief Add a signal handler for a specific signal with an optional
+     * priority.
      *
      * @param signal The signal ID to handle.
      * @param handler The handler function to execute.
      * @param priority The priority of the handler. Default is 0.
      */
-    void addSafeSignalHandler(SignalID signal, const SignalHandler& handler, int priority = 0);
+    void addSafeSignalHandler(SignalID signal, const SignalHandler& handler,
+                              int priority = 0);
 
     /**
      * @brief Remove a specific signal handler for a signal.
@@ -139,10 +153,13 @@ public:
      */
     void removeSafeSignalHandler(SignalID signal, const SignalHandler& handler);
 
+    void clearSignalQueue();
+
     /**
      * @brief Static method to safely dispatch signals to the manager.
      *
-     * This method is called by the system signal handler to queue signals for processing.
+     * This method is called by the system signal handler to queue signals for
+     * processing.
      *
      * @param signal The signal ID to queue.
      */
@@ -161,11 +178,14 @@ private:
      */
     void processSignals();
 
-    std::atomic<bool> keepRunning_; ///< Flag to control the running state of the signal processing thread.
-    std::map<SignalID, std::set<SignalHandlerWithPriority>> safeHandlers_; ///< Map of signal IDs to handlers with priorities.
-    std::vector<int> signalQueue_; ///< Queue of signals to be processed.
-    std::mutex queueMutex_; ///< Mutex for synchronizing access to the signal queue.
-    std::thread signalHandlingThread_; ///< Thread for processing signals.
+    std::atomic<bool> keepRunning_;  ///< Flag to control the running state of
+                                     ///< the signal processing thread.
+    std::map<SignalID, std::set<SignalHandlerWithPriority>>
+        safeHandlers_;  ///< Map of signal IDs to handlers with priorities.
+    std::vector<int> signalQueue_;  ///< Queue of signals to be processed.
+    std::mutex
+        queueMutex_;  ///< Mutex for synchronizing access to the signal queue.
+    std::jthread signalHandlingThread_;  ///< Thread for processing signals.
 };
 
-#endif // SAFE_SIGNAL_MANAGER_H
+#endif  // SAFE_SIGNAL_MANAGER_H

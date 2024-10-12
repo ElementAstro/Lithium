@@ -1,70 +1,81 @@
 #include "power.hpp"
 
 #ifdef _WIN32
+// clang-format off
 #include <windows.h>
 #include <winuser.h>
-#else
+// clang-format on
+#elif defined(__APPLE__)
+#include <cstdlib>
+#else  // Unix-like systems
 #include <cstdlib>
 #endif
 
 namespace atom::system {
+
 auto shutdown() -> bool {
 #ifdef _WIN32
-    ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, 0);
-#else
-    int ret = std::system("shutdown -h now");
-    if (ret == 0 || ret == 1) {
-        return true;
-    }
+    return ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, 0) != 0;
+#elif defined(__APPLE__)
+    return std::system(
+               "osascript -e 'tell app \"System Events\" to shut down'") == 0;
+#else  // Unix-like systems
+    return std::system("shutdown -h now") == 0;
 #endif
-    return true;
 }
 
 auto reboot() -> bool {
 #ifdef _WIN32
-    ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
-#else
-    int ret = std::system("reboot");
-    if (ret == 0 || ret == 1) {
-        return true;
-    }
+    return ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0) != 0;
+#elif defined(__APPLE__)
+    return std::system(
+               "osascript -e 'tell app \"System Events\" to restart'") == 0;
+#else  // Unix-like systems
+    return std::system("reboot") == 0;
 #endif
-    return true;
 }
 
 auto hibernate() -> bool {
 #ifdef _WIN32
-    SetSystemPowerState(TRUE, FALSE);
-#else
-    int ret = std::system("systemctl hibernate");
-    if (ret == 0 || ret == 1) {
-        return true;
-    }
+    return SetSystemPowerState(TRUE, FALSE) != 0;
+#elif defined(__APPLE__)
+    return std::system("pmset sleepnow") == 0;
+#else  // Unix-like systems
+    return std::system("systemctl hibernate") == 0;
 #endif
-    return false;
 }
 
 auto logout() -> bool {
 #ifdef _WIN32
-    ExitWindowsEx(EWX_LOGOFF | EWX_FORCE, 0);
-#else
-    int ret = std::system("pkill -KILL -u $(whoami)");
-    if (ret == 0 || ret == 1) {
-        return true;
-    }
+    return ExitWindowsEx(EWX_LOGOFF | EWX_FORCE, 0) != 0;
+#elif defined(__APPLE__)
+    return std::system(
+               "osascript -e 'tell app \"System Events\" to log out'") == 0;
+#else  // Unix-like systems
+    return std::system("pkill -KILL -u $(whoami)") == 0;
 #endif
-    return false;
 }
 
 auto lockScreen() -> bool {
 #ifdef _WIN32
-    LockWorkStation();
-#else
-    int ret = std::system("gnome-screensaver-command -l");
-    if (ret == 0 || ret == 1) {
+    return LockWorkStation() != 0;
+#elif defined(__APPLE__)
+    return std::system(
+               "/System/Library/CoreServices/Menu\\ "
+               "Extras/User.menu/Contents/Resources/CGSession -suspend") == 0;
+#else  // Unix-like systems
+    // Try different methods for various desktop environments
+    if (std::system("gnome-screensaver-command -l") == 0) {
+        return true;
+    } else if (std::system(
+                   "qdbus org.freedesktop.ScreenSaver /ScreenSaver Lock") ==
+               0) {
+        return true;
+    } else if (std::system("xdg-screensaver lock") == 0) {
         return true;
     }
-#endif
     return false;
+#endif
 }
+
 }  // namespace atom::system

@@ -915,4 +915,13 @@ auto ComponentManager::printDependencyTree() {
     }
 }
 
+auto ComponentManager::getComponentDoc(const std::string& component_name)
+    -> std::string {
+    std::lock_guard lock(impl_->mutex);
+    if (!impl_->components.contains(component_name)) {
+        LOG_F(ERROR, "Component {} is not loaded", component_name);
+        return "";
+    }
+    return impl_->components[component_name].lock()->getDoc();
+}
 }  // namespace lithium

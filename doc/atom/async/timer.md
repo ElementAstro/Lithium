@@ -1,94 +1,223 @@
-# Timer Module Documentation
+# Timer Class Documentation
 
-## TimerTask Class
+## Overview
 
-Represents a task to be scheduled and executed by the Timer.
+The `Timer` class is designed for scheduling and executing tasks at specified intervals or after a delay. It is defined in the `atom::async` namespace and is part of the `timer.hpp` header file. This class provides functionality for setting timeouts, intervals, and managing task execution with priorities.
 
-### Constructor
+## Class Declarations
 
-```cpp
-TimerTask(std::function<void()> func, unsigned int delay, int repeatCount, int priority);
-```
-
-## Public Member Functions
-
-- `bool operator<(const TimerTask &other) const`: Comparison operator based on next execution time.
-- `void run()`: Executes the task's associated function.
-- `std::chrono::steady_clock::time_point getNextExecutionTime() const`: Get the next scheduled execution time of the task.
-
-### Public Members
-
-- `std::function<void()> m_func`: The function to be executed.
-- `unsigned int m_delay`: The delay before the first execution.
-- `int m_repeatCount`: The number of repetitions remaining.
-- `int m_priority`: The priority of the task.
-- `std::chrono::steady_clock::time_point m_nextExecutionTime`: The next execution time.
-
-## Timer Class
-
-Represents a timer for scheduling and executing tasks.
-
-### Constructor
+### TimerTask
 
 ```cpp
-Timer();
+class TimerTask {
+public:
+    explicit TimerTask(std::function<void()> func, unsigned int delay,
+                       int repeatCount, int priority);
+    auto operator<(const TimerTask &other) const -> bool;
+    void run();
+    auto getNextExecutionTime() const -> std::chrono::steady_clock::time_point;
+
+    // Member variables
+    std::function<void()> m_func;
+    unsigned int m_delay;
+    int m_repeatCount;
+    int m_priority;
+    std::chrono::steady_clock::time_point m_nextExecutionTime;
+};
 ```
 
-### Destructor
+### Timer
 
 ```cpp
-~Timer();
+class Timer {
+public:
+    Timer();
+    ~Timer();
+
+    // Public member functions
+    // ... (detailed below)
+
+private:
+    // Private member functions and variables
+    // ... (detailed below)
+};
 ```
+
+## Timer Class Member Functions
 
 ### Public Member Functions
 
-- `template <typename Function, typename... Args> std::future<typename std::result_of<Function(Args...)>::type> setTimeout(Function &&func, unsigned int delay, Args &&...args)`: Schedules a task to be executed once after a specified delay.
-- `template <typename Function, typename... Args> void setInterval(Function &&func, unsigned int interval, int repeatCount, int priority, Args &&...args)`: Schedules a task to be executed repeatedly at a specified interval.
-- `std::chrono::steady_clock::time_point now() const`: Get the current time.
-- `void cancelAllTasks()`: Cancels all scheduled tasks.
-- `void pause()`: Pauses the execution of scheduled tasks.
-- `void resume()`: Resumes the execution of scheduled tasks.
-- `void stop()`: Stops the timer and cancels all tasks.
-- `template <typename Function> void setCallback(Function &&func)`: Sets a callback function to be called when a task is executed.
-- `int getTaskCount() const`: Get the count of scheduled tasks.
+#### setTimeout
+
+```cpp
+template <typename Function, typename... Args>
+[[nodiscard]] auto setTimeout(Function &&func, unsigned int delay,
+                              Args &&...args)
+    -> std::future<typename std::result_of<Function(Args...)>::type>;
+```
+
+Schedules a task to be executed once after a specified delay.
+
+- **Parameters:**
+  - `func`: The function to be executed.
+  - `delay`: The delay in milliseconds before the function is executed.
+  - `args`: The arguments to be passed to the function.
+- **Returns:** A future representing the result of the function execution.
+
+#### setInterval
+
+```cpp
+template <typename Function, typename... Args>
+void setInterval(Function &&func, unsigned int interval, int repeatCount,
+                 int priority, Args &&...args);
+```
+
+Schedules a task to be executed repeatedly at a specified interval.
+
+- **Parameters:**
+  - `func`: The function to be executed.
+  - `interval`: The interval in milliseconds between executions.
+  - `repeatCount`: The number of times the function should be repeated. -1 for infinite repetition.
+  - `priority`: The priority of the task.
+  - `args`: The arguments to be passed to the function.
+
+#### now
+
+```cpp
+[[nodiscard]] auto now() const -> std::chrono::steady_clock::time_point;
+```
+
+Gets the current time point.
+
+- **Returns:** The current time point of the steady clock.
+
+#### cancelAllTasks
+
+```cpp
+void cancelAllTasks();
+```
+
+Cancels all scheduled tasks.
+
+#### pause
+
+```cpp
+void pause();
+```
+
+Pauses the execution of scheduled tasks.
+
+#### resume
+
+```cpp
+void resume();
+```
+
+Resumes the execution of scheduled tasks after pausing.
+
+#### stop
+
+```cpp
+void stop();
+```
+
+Stops the timer and cancels all tasks.
+
+#### setCallback
+
+```cpp
+template <typename Function>
+void setCallback(Function &&func);
+```
+
+Sets a callback function to be called when a task is executed.
+
+- **Parameters:**
+  - `func`: The callback function to be set.
+
+#### getTaskCount
+
+```cpp
+[[nodiscard]] auto getTaskCount() const -> size_t;
+```
+
+Gets the number of tasks currently in the queue.
+
+- **Returns:** The number of tasks in the queue.
 
 ### Private Member Functions
 
-- `template <typename Function, typename... Args> std::future<typename std::result_of<Function(Args...)>::type> addTask(Function &&func, unsigned int delay, int repeatCount, int priority, Args &&...args)`: Adds a task to the task queue.
-- `void run()`: Main execution loop for processing and running tasks.
-
-### Private Members
-
-- `std::jthread m_thread` or `std::thread m_thread`: The thread for running the timer loop.
-- `std::priority_queue<TimerTask> m_taskQueue`: The priority queue for scheduled tasks.
-- `std::mutex m_mutex`: Mutex for thread synchronization.
-- `std::condition_variable m_cond`: Condition variable for thread synchronization.
-- `std::function<void()> m_callback`: The callback function to be called when a task is executed.
-- `bool m_stop`: Flag indicating whether the timer should stop.
-- `bool m_paused`: Flag indicating whether the timer is paused.
-
-### Example Usage
+#### addTask
 
 ```cpp
-// Create a Timer object
-Timer timer;
-
-// Schedule a task to be executed once after 1000 milliseconds
-auto future = timer.setTimeout([]() {
-    std::cout << "Task executed!" << std::endl;
-}, 1000);
-
-// Schedule a task to be repeated every 500 milliseconds, 5 times
-timer.setInterval([]() {
-    std::cout << "Repeated task" << std::endl;
-}, 500, 5, 1);
-
-// Pause the timer
-timer.pause();
-
-// Resume the timer
-timer.resume();
-
-// Stop the timer
-timer.stop();
+template <typename Function, typename... Args>
+auto addTask(Function &&func, unsigned int delay, int repeatCount,
+             int priority, Args &&...args)
+    -> std::future<typename std::result_of<Function(Args...)>::type>;
 ```
+
+Adds a task to the task queue.
+
+- **Parameters:**
+  - `func`: The function to be executed.
+  - `delay`: The delay in milliseconds before the function is executed.
+  - `repeatCount`: The number of repetitions remaining.
+  - `priority`: The priority of the task.
+  - `args`: The arguments to be passed to the function.
+- **Returns:** A future representing the result of the function execution.
+
+#### run
+
+```cpp
+void run();
+```
+
+Main execution loop for processing and running tasks.
+
+## Usage Example
+
+Here's a simple example demonstrating how to use the `Timer` class:
+
+```cpp
+#include "timer.hpp"
+#include <iostream>
+#include <chrono>
+
+int main() {
+    atom::async::Timer timer;
+
+    // Set a timeout
+    timer.setTimeout([]() {
+        std::cout << "This will be executed after 2 seconds." << std::endl;
+    }, 2000);
+
+    // Set an interval
+    timer.setInterval([]() {
+        std::cout << "This will be executed every 1 second, 5 times." << std::endl;
+    }, 1000, 5, 0);
+
+    // Set a callback
+    timer.setCallback([]() {
+        std::cout << "A task has been executed." << std::endl;
+    });
+
+    // Wait for 10 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    // Stop the timer
+    timer.stop();
+
+    return 0;
+}
+```
+
+This example creates a `Timer` object, sets a timeout for a one-time task, sets an interval for a repeating task, and sets a callback to be called after each task execution. It then waits for 10 seconds before stopping the timer.
+
+## Notes
+
+- The `Timer` class uses a priority queue to manage tasks, allowing for efficient scheduling based on execution time and priority.
+- Tasks can be scheduled for one-time execution (setTimeout) or repeated execution (setInterval).
+- The class is thread-safe, using mutexes and condition variables for synchronization.
+- The timer can be paused, resumed, and stopped, providing flexible control over task execution.
+- A callback function can be set to be called after each task execution, useful for logging or monitoring.
+- The class uses C++11 features and can utilize `std::jthread` if C++20 or later is available.

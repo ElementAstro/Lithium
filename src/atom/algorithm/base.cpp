@@ -26,12 +26,15 @@ Description: A collection of algorithms for C++
 #endif
 
 #ifdef USE_SIMD
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__AVX2__) || defined(USE_AVX)
 #include <immintrin.h>
-#define SIMD_AVAILABLE
-#elif defined(__ARM_NEON)
+#define SIMD_WIDTH 32
+#elif defined(__SSE4_1__) || defined(USE_SSE)
+#include <smmintrin.h>
+#define SIMD_WIDTH 16
+#elif defined(__ARM_NEON) || defined(USE_NEON)
 #include <arm_neon.h>
-#define SIMD_AVAILABLE
+#define SIMD_WIDTH 16
 #endif
 #endif
 
@@ -509,4 +512,212 @@ auto xorEncrypt(std::string_view plaintext, uint8_t key) -> std::string {
 auto xorDecrypt(std::string_view ciphertext, uint8_t key) -> std::string {
     return xorEncrypt(ciphertext, key);
 }
+
+constexpr std::string_view BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+constexpr int BITS_PER_BYTE = 8;
+constexpr int BITS_PER_BASE32_CHAR = 5;
+constexpr uint32_t BASE32_MASK = 0x1F;
+constexpr uint32_t BYTE_MASK = 0xFF;
+
+#ifdef USE_MP
+#pragma omp parallel for
+#endif
+auto encodeBase32(const std::vector<uint8_t>& data) -> std::string {
+    std::string encoded;
+    size_t bitCount = 0;
+    uint32_t buffer = 0;
+
+#ifdef USE_SIMD
+    size_t simdChunkSize = SIMD_WIDTH / BITS_PER_BYTE;  // 每个SIMD块的字节数
+
+    for (size_t i = 0; i + simdChunkSize <= data.size(); i += simdChunkSize) {
+#if defined(USE_AVX) || defined(__AVX2__)
+        __m256i simdData =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&data[i]));
+        uint32_t simdVal = _mm256_extract_epi32(simdData, 0);  // 提取低32位
+#elif defined(USE_SSE) || defined(__SSE4_1__)
+        __m128i simdData =
+            _mm_loadu_si128(reinterpret_cast<const __m128i*>(&data[i]));
+        uint32_t simdVal = _mm_extract_epi32(simdData, 0);  // 提取低32位
+#elif defined(USE_NEON) || defined(__ARM_NEON)
+        uint8x16_t simdData = vld1q_u8(&data[i]);
+        uint32_t simdVal = vgetq_lane_u32(vreinterpretq_u32_u8(simdData), 0);
+#endif
+
+        for (int j = 0; j < 5; ++j) {
+            uint8_t index =
+                (simdVal >> (27 - j * BITS_PER_BASE32_CHAR)) & BASE32_MASK;
+            encoded += BASE32_ALPHABET[index];
+        }
+    }
+
+    for (size_t i = (data.size() / simdChunkSize) * simdChunkSize;
+         i < data.size(); ++i) {
+        buffer = (buffer << BITS_PER_BYTE) | data[i];
+        bitCount += BITS_PER_BYTE;
+        while (bitCount >= BITS_PER_BASE32_CHAR) {
+            bitCount -= BITS_PER_BASE32_CHAR;
+            encoded += BASE32_ALPHABET[(buffer >> bitCount) & BASE32_MASK];
+        }
+    }
+#else
+    // 非SIMD编码流程
+#ifdef USE_MP
+#pragma omp parallel for
+#endif
+    for (uint8_t byte : data) {
+        buffer = (buffer << BITS_PER_BYTE) | byte;
+        bitCount += BITS_PER_BYTE;
+        while (bitCount >= BITS_PER_BASE32_CHAR) {
+            bitCount -= BITS_PER_BASE32_CHAR;
+            encoded += BASE32_ALPHABET[(buffer >> bitCount) & BASE32_MASK];
+        }
+    }
+#endif
+
+    if (bitCount > 0) {
+        encoded +=
+            BASE32_ALPHABET[(buffer << (BITS_PER_BASE32_CHAR - bitCount)) &
+                            BASE32_MASK];
+    }
+
+    while (encoded.size() % 8 != 0) {
+        encoded += '=';
+    }
+
+    return encoded;
+}
+
+// 解码函数
+#ifdef USE_MP
+#pragma omp parallel for
+#endif
+auto decodeBase32(const std::string& encoded) -> std::vector<uint8_t> {
+    std::vector<uint8_t> decoded;
+    size_t bitCount = 0;
+    uint32_t buffer = 0;
+
+#ifdef USE_SIMD
+    size_t simdChunkSize = SIMD_WIDTH / BITS_PER_BYTE;
+
+    for (size_t i = 0; i + simdChunkSize <= encoded.size();
+         i += simdChunkSize) {
+#if defined(USE_AVX) || defined(__AVX2__)
+        __m256i simdEncoded =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&encoded[i]));
+#elif defined(USE_SSE) || defined(__SSE4_1__)
+        __m128i simdEncoded =
+            _mm_loadu_si128(reinterpret_cast<const __m128i*>(&encoded[i]));
+#elif defined(USE_NEON) || defined(__ARM_NEON)
+        uint8x16_t simdEncoded =
+            vld1q_u8(reinterpret_cast<const uint8_t*>(&encoded[i]));
+#endif
+
+        for (int j = 0; j < simdChunkSize; ++j) {
+            int idx = BASE32_ALPHABET.find(encoded[i + j]);
+            if (idx == std::string::npos) {
+                throw std::invalid_argument("无效字符在Base32编码中");
+            }
+            buffer = (buffer << BITS_PER_BASE32_CHAR) | idx;
+            bitCount += BITS_PER_BASE32_CHAR;
+            if (bitCount >= BITS_PER_BYTE) {
+                bitCount -= BITS_PER_BYTE;
+                decoded.push_back(
+                    static_cast<uint8_t>((buffer >> bitCount) & BYTE_MASK));
+            }
+        }
+    }
+#else
+    for (char character : encoded) {
+        if (character == '=') {
+            break;
+        }
+        auto index = BASE32_ALPHABET.find(character);
+        if (index == std::string::npos) {
+            THROW_INVALID_ARGUMENT("Invalid character in Base32 encoding");
+        }
+
+        buffer = (buffer << BITS_PER_BASE32_CHAR) | index;
+        bitCount += BITS_PER_BASE32_CHAR;
+        if (bitCount >= BITS_PER_BYTE) {
+            bitCount -= BITS_PER_BYTE;
+            decoded.push_back(
+                static_cast<uint8_t>((buffer >> bitCount) & BYTE_MASK));
+        }
+    }
+#endif
+
+    return decoded;
+}
+
+#ifdef USE_CL
+// 读取OpenCL内核文件
+auto readKernelSource(const std::string& filename) -> std::string {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("无法打开内核文件");
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+// 使用OpenCL进行Base32编码
+auto encodeBase32CL(const std::vector<uint8_t>& data) -> std::string {
+    // OpenCL平台和设备初始化
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+    if (platforms.empty()) {
+        throw std::runtime_error("没有可用的OpenCL平台");
+    }
+
+    // 选择第一个平台和设备
+    cl::Platform platform = platforms[0];
+    std::vector<cl::Device> devices;
+    platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+    if (devices.empty()) {
+        throw std::runtime_error("没有可用的GPU设备");
+    }
+    cl::Device device = devices[0];
+
+    // 创建OpenCL上下文和命令队列
+    cl::Context context(device);
+    cl::CommandQueue queue(context, device);
+
+    // 读取内核源代码
+    std::string kernelSource = readKernelSource("base32_encode_kernel.cl");
+    cl::Program::Sources sources(1, std::make_pair(kernelSource.c_str(), kernelSource.size()));
+
+    // 构建程序
+    cl::Program program(context, sources);
+    if (program.build({device}) != CL_SUCCESS) {
+        throw std::runtime_error("内核程序构建失败");
+    }
+
+    // 分配输入和输出缓冲区
+    size_t dataSize = data.size();
+    size_t encodedSize = ((dataSize * 8) + 4) / 5;  // Base32输出大小
+
+    cl::Buffer inputBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, dataSize, (void*)data.data());
+    cl::Buffer outputBuffer(context, CL_MEM_WRITE_ONLY, encodedSize);
+
+    // 设置内核参数
+    cl::Kernel kernel(program, "base32_encode");
+    kernel.setArg(0, inputBuffer);
+    kernel.setArg(1, outputBuffer);
+    kernel.setArg(2, static_cast<uint32_t>(dataSize));
+
+    // 执行内核
+    cl::NDRange global(dataSize);  // 数据大小定义全局工作量
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+    queue.finish();
+
+    // 读取结果
+    std::vector<char> encoded(encodedSize);
+    queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, encodedSize, encoded.data());
+
+    // 将编码结果转成字符串
+    return std::string(encoded.begin(), encoded.end());
+}
+#endif
 }  // namespace atom::algorithm

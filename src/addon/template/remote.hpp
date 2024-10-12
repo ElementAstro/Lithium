@@ -2,19 +2,16 @@
 #define LITHIUM_ADDON_REMOTE_STANDALONE_HPP
 
 #include <chrono>
-#include <concepts>
 #include <functional>
 #include <future>
 #include <memory>
-#include <optional>
 #include <string>
 
+#include "atom/async/future.hpp"
 #include "atom/components/component.hpp"
+#include "atom/function/concept.hpp"
 
 enum class ProtocolType { TCP, UDP };
-
-template <typename T>
-concept Stringlike = std::is_convertible_v<T, std::string_view>;
 
 class RemoteStandAloneComponentImpl;
 
@@ -30,12 +27,12 @@ public:
 
     void disconnectRemoteDriver();
 
-    template <Stringlike T>
+    template <String T>
     void sendMessageToDriver(T&& message);
 
-    template <Stringlike T>
-    std::future<std::pair<std::error_code, std::size_t>> sendMessageAsync(
-        T&& message);
+    template <typename T>
+    auto sendMessageAsync(T&& message)
+        -> atom::async::EnhancedFuture<std::pair<std::error_code, std::size_t>>;
 
     void setOnMessageReceivedCallback(
         std::function<void(std::string_view)> callback);
@@ -53,8 +50,9 @@ public:
 
     void toggleDriverListening();
 
-    template <Stringlike T>
-    std::future<std::string> executeCommand(T&& command);
+    template <String T>
+    auto executeCommand(T&& command)
+        -> atom::async::EnhancedFuture<std::string>;
 
     void setReconnectionStrategy(std::chrono::milliseconds initialDelay,
                                  std::chrono::milliseconds maxDelay,

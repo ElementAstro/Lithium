@@ -5,22 +5,36 @@
 #include <chrono>
 #include <concepts>
 #include <functional>
-#include <iostream>
 #include <map>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace atom::extra::boost {
+
+/**
+ * @class RegexWrapper
+ * @brief A wrapper class for Boost.Regex providing various regex operations.
+ */
 class RegexWrapper {
 public:
+    /**
+     * @brief Constructs a RegexWrapper with the given pattern and flags.
+     * @param pattern The regex pattern.
+     * @param flags The regex syntax option flags.
+     */
     explicit RegexWrapper(std::string_view pattern,
                           ::boost::regex_constants::syntax_option_type flags =
                               ::boost::regex_constants::normal)
         : regex_(pattern.data(), flags) {}
 
+    /**
+     * @brief Matches the given string against the regex pattern.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to match.
+     * @return True if the string matches the pattern, false otherwise.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto match(const T& str) const -> bool {
@@ -28,6 +42,14 @@ public:
                                     std::string_view(str).end(), regex_);
     }
 
+    /**
+     * @brief Searches the given string for the first match of the regex
+     * pattern.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to search.
+     * @return An optional containing the first match if found, std::nullopt
+     * otherwise.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto search(const T& str) const -> std::optional<std::string> {
@@ -38,6 +60,12 @@ public:
         return std::nullopt;
     }
 
+    /**
+     * @brief Searches the given string for all matches of the regex pattern.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to search.
+     * @return A vector containing all matches found.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto searchAll(const T& str) const -> std::vector<std::string> {
@@ -51,6 +79,16 @@ public:
         return results;
     }
 
+    /**
+     * @brief Replaces all matches of the regex pattern in the given string with
+     * the replacement string.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @tparam U The type of the replacement string, convertible to
+     * std::string_view.
+     * @param str The input string.
+     * @param replacement The replacement string.
+     * @return A new string with all matches replaced.
+     */
     template <typename T, typename U>
         requires std::convertible_to<T, std::string_view> &&
                      std::convertible_to<U, std::string_view>
@@ -59,6 +97,12 @@ public:
                                       std::string(replacement));
     }
 
+    /**
+     * @brief Splits the given string by the regex pattern.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to split.
+     * @return A vector containing the split parts of the string.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto split(const T& str) const -> std::vector<std::string> {
@@ -72,6 +116,13 @@ public:
         return results;
     }
 
+    /**
+     * @brief Matches the given string and returns the groups of each match.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to match.
+     * @return A vector of pairs, each containing the full match and a vector of
+     * groups.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto matchGroups(const T& str) const
@@ -92,6 +143,14 @@ public:
         return results;
     }
 
+    /**
+     * @brief Applies a function to each match of the regex pattern in the given
+     * string.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @tparam Func The type of the function to apply.
+     * @param str The input string.
+     * @param func The function to apply to each match.
+     */
     template <typename T, typename Func>
         requires std::convertible_to<T, std::string_view> &&
                  std::invocable<Func, const ::boost::smatch&>
@@ -104,16 +163,31 @@ public:
         }
     }
 
+    /**
+     * @brief Gets the regex pattern as a string.
+     * @return The regex pattern.
+     */
     [[nodiscard]] auto getPattern() const -> std::string {
         return regex_.str();
     }
 
+    /**
+     * @brief Sets a new regex pattern with optional flags.
+     * @param pattern The new regex pattern.
+     * @param flags The regex syntax option flags.
+     */
     void setPattern(std::string_view pattern,
                     ::boost::regex_constants::syntax_option_type flags =
                         ::boost::regex_constants::normal) {
         regex_.assign(pattern.data(), flags);
     }
 
+    /**
+     * @brief Matches the given string and returns the named captures.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to match.
+     * @return A map of named captures.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto namedCaptures(const T& str) const
@@ -128,6 +202,12 @@ public:
         return result;
     }
 
+    /**
+     * @brief Checks if the given string is a valid match for the regex pattern.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to check.
+     * @return True if the string is a valid match, false otherwise.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto isValid(const T& str) const -> bool {
@@ -140,6 +220,14 @@ public:
         }
     }
 
+    /**
+     * @brief Replaces all matches of the regex pattern in the given string
+     * using a callback function.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string.
+     * @param callback The callback function to generate replacements.
+     * @return A new string with all matches replaced by the callback results.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto replaceCallback(
@@ -167,6 +255,12 @@ public:
         return result;
     }
 
+    /**
+     * @brief Escapes special characters in the given string for use in a regex
+     * pattern.
+     * @param str The input string to escape.
+     * @return The escaped string.
+     */
     [[nodiscard]] static auto escapeString(const std::string& str)
         -> std::string {
         return ::boost::regex_replace(
@@ -175,6 +269,14 @@ public:
                 ::boost::regex_constants::format_sed);
     }
 
+    /**
+     * @brief Benchmarks the match operation for the given string over a number
+     * of iterations.
+     * @tparam T The type of the input string, convertible to std::string_view.
+     * @param str The input string to match.
+     * @param iterations The number of iterations to run the benchmark.
+     * @return The average time per match operation in nanoseconds.
+     */
     template <typename T>
         requires std::convertible_to<T, std::string_view>
     auto benchmarkMatch(const T& str, int iterations = 1000) const
@@ -190,6 +292,11 @@ public:
                iterations;
     }
 
+    /**
+     * @brief Checks if the given regex pattern is valid.
+     * @param pattern The regex pattern to check.
+     * @return True if the pattern is valid, false otherwise.
+     */
     static auto isValidRegex(const std::string& pattern) -> bool {
         try {
             ::boost::regex test(pattern);
@@ -200,8 +307,9 @@ public:
     }
 
 private:
-    ::boost::regex regex_;
+    ::boost::regex regex_;  ///< The Boost.Regex object.
 };
+
 }  // namespace atom::extra::boost
 
 #endif

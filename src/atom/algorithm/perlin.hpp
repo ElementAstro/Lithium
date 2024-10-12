@@ -261,10 +261,34 @@ private:
         y -= std::floor(y);
         z -= std::floor(z);
 
-        // Compute fade curves for each of x, y, z
+// Compute fade curves for each of x, y, z
+#ifdef USE_SIMD
+        // SIMD-based fade function calculations
+        __m256d xSimd = _mm256_set1_pd(x);
+        __m256d ySimd = _mm256_set1_pd(y);
+        __m256d zSimd = _mm256_set1_pd(z);
+
+        __m256d uSimd =
+            _mm256_mul_pd(xSimd, _mm256_sub_pd(xSimd, _mm256_set1_pd(15)));
+        uSimd = _mm256_mul_pd(
+            uSimd, _mm256_add_pd(_mm256_set1_pd(10),
+                                 _mm256_mul_pd(xSimd, _mm256_set1_pd(6))));
+        // Apply similar SIMD operations for v and w if needed
+        __m256d vSimd =
+            _mm256_mul_pd(ySimd, _mm256_sub_pd(ySimd, _mm256_set1_pd(15)));
+        vSimd = _mm256_mul_pd(
+            vSimd, _mm256_add_pd(_mm256_set1_pd(10),
+                                 _mm256_mul_pd(ySimd, _mm256_set1_pd(6))));
+        __m256d wSimd =
+            _mm256_mul_pd(zSimd, _mm256_sub_pd(zSimd, _mm256_set1_pd(15)));
+        wSimd = _mm256_mul_pd(
+            wSimd, _mm256_add_pd(_mm256_set1_pd(10),
+                                 _mm256_mul_pd(zSimd, _mm256_set1_pd(6))));
+#else
         T u = fade(x);
         T v = fade(y);
         T w = fade(z);
+#endif
 
         // Hash coordinates of the 8 cube corners
         int A = p[X] + Y;

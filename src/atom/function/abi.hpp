@@ -149,14 +149,13 @@ private:
         return result;
     }
 
-    static auto visualizeTemplateParams(const std::string& params,
-                                        int indent_level) -> std::string {
+    std::string visualizeTemplateParams(const std::string& params,
+                                        int indent_level) {
         std::string indent(static_cast<long>(indent_level) * 4, ' ');
         std::string result;
         int paramIndex = 0;
 
         size_t start = 0;
-        size_t end = 0;
         int angleBrackets = 0;
 
         for (size_t i = 0; i < params.size(); ++i) {
@@ -165,19 +164,15 @@ private:
             } else if (params[i] == '>') {
                 --angleBrackets;
             } else if (params[i] == ',' && angleBrackets == 0) {
-                end = i;
-                result += indent + "|-- " + std::to_string(paramIndex++) +
-                          ": " +
-                          visualizeType(params.substr(start, end - start),
-                                        indent_level + 1)
-                              .substr(indent.size() + 4);
+                result += indent + "├── " + std::to_string(paramIndex++) + ": ";
+                result += visualizeType(params.substr(start, i - start),
+                                        indent_level + 1);
                 start = i + 1;
             }
         }
 
-        result += indent + "|-- " + std::to_string(paramIndex++) + ": " +
-                  visualizeType(params.substr(start), indent_level + 1)
-                      .substr(indent.size() + 4);
+        result += indent + "└── " + std::to_string(paramIndex) + ": ";
+        result += visualizeType(params.substr(start), indent_level + 1);
 
         return result;
     }

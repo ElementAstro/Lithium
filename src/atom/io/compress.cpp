@@ -26,6 +26,7 @@ Description: Compressor using ZLib
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <string>
 #ifdef __cpp_lib_format
 #include <format>
@@ -490,7 +491,102 @@ auto removeFileFromZip(std::string_view zip_file,
 
 auto getZipFileSize(std::string_view zip_file) -> size_t {
     std::ifstream inputFile(zip_file.data(),
-                             std::ifstream::ate | std::ifstream::binary);
+                            std::ifstream::ate | std::ifstream::binary);
     return inputFile.tellg();
+}
+
+bool decompressChunk(const std::vector<unsigned char> &chunkData,
+                     std::vector<unsigned char> &outputBuffer) {
+    z_stream stream;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+
+    if (inflateInit(&stream) != Z_OK) {
+        LOG_F(ERROR, "Error initializing zlib inflate.");
+        return false;
+    }
+
+    stream.avail_in = static_cast<uInt>(chunkData.size());
+    stream.next_in = const_cast<Bytef *>(chunkData.data());
+
+    do {
+        stream.avail_out = static_cast<uInt>(outputBuffer.size());
+        stream.next_out = outputBuffer.data();
+
+        int ret = inflate(&stream, Z_NO_FLUSH);
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR) {
+            LOG_F(ERROR, "Data error detected. Skipping corrupted chunk.");
+            inflateEnd(&stream);
+            return false;
+        }
+
+    } while (stream.avail_out == 0);
+
+    inflateEnd(&stream);
+    return true;
+}
+constexpr int CHUNK_SIZE = 4096;
+// Function to process files in parallel
+void processFilesInParallel(const std::vector<std::string> &filenames) {
+    std::vector<std::future<void>> futures;
+
+    for (const auto &filename : filenames) {
+        futures.push_back(std::async(std::launch::async, [filename]() {
+            LOG_F(INFO, "Processing file: {}", filename);
+            std::ifstream file(filename, std::ios::binary);
+
+            if (!file) {
+                LOG_F(INFO, "Failed to open file: {}", filename);
+                return;
+            }
+
+            std::vector<unsigned char> chunkData(CHUNK_SIZE);
+            std::vector<unsigned char> outputBuffer(
+                CHUNK_SIZE * 2);  // Preallocate a larger buffer to avoid
+                                  // multiple allocations
+
+            while (file.read(reinterpret_cast<char *>(chunkData.data()),
+                             CHUNK_SIZE) ||
+                   file.gcount() > 0) {
+                if (!decompressChunk(chunkData, outputBuffer)) {
+                    LOG_F(ERROR, "Failed to decompress chunk for file: {}",
+                          filename);
+                }
+            }
+        }));
+    }
+
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
+// Function to create a backup of a file
+bool createBackup(const std::string &originalFile,
+                  const std::string &backupFile) {
+    try {
+        std::filesystem::copy(
+            originalFile, backupFile,
+            std::filesystem::copy_options::overwrite_existing);
+        LOG_F(INFO, "Backup created: {}", backupFile);
+        return true;
+    } catch (const std::filesystem::filesystem_error &e) {
+        LOG_F(ERROR, "Failed to create backup: {}", e.what());
+        return false;
+    }
+}
+
+// Function to restore a backup
+bool restoreBackup(const std::string &backupFile,
+                   const std::string &originalFile) {
+    try {
+        std::filesystem::copy(
+            backupFile, originalFile,
+            std::filesystem::copy_options::overwrite_existing);
+        return true;
+    } catch (const std::filesystem::filesystem_error &e) {
+        return false;
+    }
 }
 }  // namespace atom::io

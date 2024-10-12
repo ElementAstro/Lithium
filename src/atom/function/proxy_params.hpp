@@ -18,45 +18,71 @@
 
 #include "atom/error/exception.hpp"
 
+namespace atom::meta {
+class Arg {
+public:
+    explicit Arg(std::string name);
+    Arg(std::string name, std::any default_value);
+
+    [[nodiscard]] auto getName() const -> const std::string&;
+    [[nodiscard]] auto getDefaultValue() const
+        -> const std::optional<std::any>&;
+
+private:
+    std::string name_;
+    std::optional<std::any> default_value_;
+};
+
+inline Arg::Arg(std::string name) : name_(std::move(name)) {}
+
+inline Arg::Arg(std::string name, std::any default_value)
+    : name_(std::move(name)), default_value_(default_value) {}
+
+inline auto Arg::getName() const -> const std::string& { return name_; }
+
+inline auto Arg::getDefaultValue() const -> const std::optional<std::any>& {
+    return default_value_;
+}
+
 /**
- * @brief A class to encapsulate function parameters using std::any.
+ * @brief A class to encapsulate function parameters using Arg objects.
  */
 class FunctionParams {
 public:
     /**
-     * @brief Constructs FunctionParams with a single std::any value.
+     * @brief Constructs FunctionParams with a single Arg value.
      *
-     * @param value The initial value to store in the parameters.
+     * @param arg The initial Arg to store in the parameters.
      */
-    explicit FunctionParams(const std::any& value) : params_{value} {}
+    explicit FunctionParams(const Arg& arg) : params_{arg} {}
 
     /**
-     * @brief Constructs FunctionParams from any range of std::any.
+     * @brief Constructs FunctionParams from any range of Arg.
      *
      * @tparam Range The type of the range.
-     * @param range The range of std::any values to initialize the parameters.
+     * @param range The range of Arg values to initialize the parameters.
      */
     template <std::ranges::input_range Range>
-        requires std::same_as<std::ranges::range_value_t<Range>, std::any>
+        requires std::same_as<std::ranges::range_value_t<Range>, Arg>
     explicit constexpr FunctionParams(const Range& range)
         : params_(std::ranges::begin(range), std::ranges::end(range)) {}
 
     /**
-     * @brief Constructs FunctionParams from an initializer list of std::any.
+     * @brief Constructs FunctionParams from an initializer list of Arg.
      *
-     * @param ilist The initializer list of std::any values.
+     * @param ilist The initializer list of Arg values.
      */
-    constexpr FunctionParams(std::initializer_list<std::any> ilist)
+    constexpr FunctionParams(std::initializer_list<Arg> ilist)
         : params_(ilist) {}
 
     /**
      * @brief Accesses the parameter at the given index.
      *
      * @param t_i The index of the parameter to access.
-     * @return const std::any& The parameter at the given index.
+     * @return const Arg& The parameter at the given index.
      * @throws std::out_of_range if the index is out of range.
      */
-    [[nodiscard]] auto operator[](std::size_t t_i) const -> const std::any& {
+    [[nodiscard]] auto operator[](std::size_t t_i) const -> const Arg& {
         if (t_i >= params_.size()) {
             THROW_OUT_OF_RANGE("Index out of range");
         }
@@ -80,9 +106,9 @@ public:
     /**
      * @brief Returns the first parameter.
      *
-     * @return const std::any& The first parameter.
+     * @return const Arg& The first parameter.
      */
-    [[nodiscard]] auto front() const noexcept -> const std::any& {
+    [[nodiscard]] auto front() const noexcept -> const Arg& {
         return params_.front();
     }
 
@@ -105,32 +131,36 @@ public:
     }
 
     /**
-     * @brief Converts the parameters to a vector of std::any.
+     * @brief Converts the parameters to a vector of Arg.
      *
-     * @return std::vector<std::any> The vector of parameters.
+     * @return std::vector<Arg> The vector of parameters.
      */
-    [[nodiscard]] auto toVector() const -> std::vector<std::any> {
-        return params_;
+    [[nodiscard]] auto toVector() const -> std::vector<Arg> { return params_; }
+
+    [[nodiscard]] auto toAnyVector() const -> std::vector<std::any> {
+        std::vector<std::any> anyVec;
+        anyVec.reserve(params_.size());
+        std::ranges::transform(
+            params_, std::back_inserter(anyVec),
+            [](const Arg& arg) { return arg.getDefaultValue(); });
+        return anyVec;
     }
 
     /**
-     * @brief Gets the parameter at the given index as a specific type.
+     * @brief Gets the parameter at the given index by name.
      *
-     * @tparam T The type to cast the parameter to.
-     * @param index The index of the parameter to get.
-     * @return std::optional<T> The parameter cast to the specified type, or
-     * std::nullopt if the cast fails.
+     * @param name The name of the parameter to get.
+     * @return std::optional<Arg> The parameter if found, std::nullopt
+     * otherwise.
      */
-    template <typename T>
-    [[nodiscard]] auto get(std::size_t index) const -> std::optional<T> {
-        if (index >= params_.size()) {
-            return std::nullopt;
+    [[nodiscard]] auto getByName(const std::string& name) const
+        -> std::optional<Arg> {
+        if (auto findTt = std::ranges::find_if(
+                params_, [&](const Arg& arg) { return arg.getName() == name; });
+            findTt != params_.end()) {
+            return *findTt;
         }
-        try {
-            return std::any_cast<T>(params_[index]);
-        } catch (const std::bad_any_cast&) {
-            return std::nullopt;
-        }
+        return std::nullopt;
     }
 
     /**
@@ -147,7 +177,7 @@ public:
             THROW_OUT_OF_RANGE("Invalid slice range");
         }
         using DifferenceType = std::make_signed_t<std::size_t>;
-        return FunctionParams(std::vector<std::any>(
+        return FunctionParams(std::vector<Arg>(
             params_.begin() + static_cast<DifferenceType>(start),
             params_.begin() + static_cast<DifferenceType>(end)));
     }
@@ -161,27 +191,28 @@ public:
      */
     template <typename Predicate>
     [[nodiscard]] auto filter(Predicate pred) const -> FunctionParams {
-        std::vector<std::any> filtered;
+        std::vector<Arg> filtered;
         std::ranges::copy_if(params_, std::back_inserter(filtered), pred);
         return FunctionParams(filtered);
     }
 
     /**
-     * @brief Sets the parameter at the given index to a new value.
+     * @brief Sets the parameter at the given index to a new Arg.
      *
      * @param index The index of the parameter to set.
-     * @param value The new value to set.
+     * @param arg The new Arg to set.
      * @throws std::out_of_range if the index is out of range.
      */
-    void set(std::size_t index, const std::any& value) {
+    void set(std::size_t index, const Arg& arg) {
         if (index >= params_.size()) {
             THROW_OUT_OF_RANGE("Index out of range");
         }
-        params_[index] = value;
+        params_[index] = arg;
     }
 
 private:
-    std::vector<std::any> params_;  ///< The vector of parameters.
+    std::vector<Arg> params_;  ///< The vector of Arg objects.
 };
+}  // namespace atom::meta
 
 #endif

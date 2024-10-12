@@ -8,7 +8,7 @@
 #define LITHIUM_ASYNC_SCRIPT_CONTROLLER_HPP
 
 #include "config.h"
-#include "oatpp/data/mapping/ObjectMapper.hpp"
+
 #include "oatpp/macro/codegen.hpp"
 #include "oatpp/macro/component.hpp"
 #include "oatpp/web/server/api/ApiController.hpp"
@@ -25,12 +25,69 @@
 
 class ConfigController : public oatpp::web::server::api::ApiController {
 private:
-    static inline std::shared_ptr<lithium::ConfigManager> m_configManager =
-        GetPtr<lithium::ConfigManager>("lithium.config").value();
+    static std::weak_ptr<lithium::ConfigManager> mConfigManager;
+
+    template <typename DtoType, typename Func>
+    static auto handleConfigAction(auto controller,
+                                   const oatpp::Object<DtoType>& body,
+                                   const std::string& command, Func func) {
+        OATPP_ASSERT_HTTP(
+            !body->path->empty(), Status::CODE_400,
+            "The 'path' parameter is required and cannot be empty.");
+
+        auto res = StatusDto::createShared();
+        res->command = command;
+
+        try {
+            auto configManager = mConfigManager.lock();
+            if (!configManager) {
+                res->status = "error";
+                res->code = Status::CODE_500.code;
+                res->error =
+                    "Internal Server Error: ConfigManager instance is null.";
+                LOG_F(ERROR,
+                      "ConfigManager instance is null. Unable to proceed with "
+                      "the command: {}",
+                      command);
+            } else {
+                auto success = func(configManager);
+                if (success) {
+                    res->status = "success";
+                    res->code = Status::CODE_200.code;
+                    LOG_F(INFO,
+                          "Successfully executed command: {} for path: {}",
+                          command, body->path->c_str());
+                } else {
+                    res->status = "error";
+                    res->code = Status::CODE_404.code;
+                    res->error =
+                        "Not Found: The specified path could not be found or "
+                        "the operation failed.";
+                    LOG_F(WARNING, "Failed to execute command: {} for path: {}",
+                          command, body->path->c_str());
+                }
+            }
+        } catch (const std::exception& e) {
+            res->status = "error";
+            res->code = Status::CODE_500.code;
+            res->error =
+                std::string("Internal Server Error: Exception occurred - ") +
+                e.what();
+            LOG_F(
+                ERROR,
+                "Exception occurred while executing command: {}. Exception: {}",
+                command, e.what());
+        }
+
+        return controller->createDtoResponse(Status::CODE_200, res);
+    }
 
 public:
     explicit ConfigController(const std::shared_ptr<ObjectMapper>& objectMapper)
-        : ApiController(objectMapper) {}
+        : ApiController(objectMapper) {
+        GET_OR_CREATE_WEAK_PTR(mConfigManager, lithium::ConfigManager,
+                               Constants::CONFIG_MANAGER);
+    }
 
     static auto createShared(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>,
                                              objectMapper))
@@ -55,36 +112,18 @@ public:
         }
 
         auto returnResponse(const oatpp::Object<GetConfigDTO>& body) -> Action {
-            OATPP_ASSERT_HTTP(!body->path->empty(), Status::CODE_400,
-                              "Missing Parameters");
-
-            auto res = ReturnConfigDTO::createShared();
-            res->status = "getConfig";
-            try {
-                if (!m_configManager) {
-                    res->status = "error";
-                    res->code = 500;
-                    res->error = "ConfigManager is null";
-                    LOG_F(ERROR, "ConfigManager is null");
-                } else if (auto tmp = m_configManager->getValue(body->path)) {
-                    res->status = "success";
-                    res->code = 200;
-                    res->value = tmp.value().dump();
-                    res->type = "string";
-                } else {
-                    res->status = "error";
-                    res->code = 404;
-                    res->error = "ConfigManager can't find the path";
-                    LOG_F(WARNING, "ConfigManager can't find the path: {}", body->path->c_str());
-                }
-            } catch (const std::exception& e) {
-                res->status = "error";
-                res->code = 500;
-                res->error = e.what();
-                LOG_F(ERROR, "Exception: {}", e.what());
-            }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, res));
+            return _return(handleConfigAction(
+                this->controller, body, "getConfig", [&](auto configManager) {
+                    if (auto tmp = configManager->getValue(body->path)) {
+                        auto res = ReturnConfigDTO::createShared();
+                        res->status = "success";
+                        res->code = Status::CODE_200.code;
+                        res->value = tmp.value().dump();
+                        res->type = "string";
+                        return true;
+                    }
+                    return false;
+                }));
         }
     };
 
@@ -105,34 +144,13 @@ public:
         }
 
         auto returnResponse(const oatpp::Object<SetConfigDTO>& body) -> Action {
-            OATPP_ASSERT_HTTP(!body->path->empty() && !body->value->empty(),
-                              Status::CODE_400, "Missing Parameters");
+            OATPP_ASSERT_HTTP(!body->value->empty(), Status::CODE_400,
+                              "Missing Parameters");
 
-            auto res = StatusDto::createShared();
-            res->command = "setConfig";
-            try {
-                if (!m_configManager) {
-                    res->status = "error";
-                    res->code = 500;
-                    res->error = "ConfigManager is null";
-                    LOG_F(ERROR, "ConfigManager is null");
-                } else if (m_configManager->setValue(body->path, body->value)) {
-                    res->status = "success";
-                    res->code = 200;
-                } else {
-                    res->status = "error";
-                    res->code = 404;
-                    res->error = "Failed to set the value";
-                    LOG_F(WARNING, "Failed to set the value for path: {}", body->path->c_str());
-                }
-            } catch (const std::exception& e) {
-                res->status = "error";
-                res->code = 500;
-                res->error = e.what();
-                LOG_F(ERROR, "Exception: {}", e.what());
-            }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, res));
+            return _return(handleConfigAction(
+                this->controller, body, "setConfig", [&](auto configManager) {
+                    return configManager->setValue(body->path, body->value);
+                }));
         }
     };
 
@@ -154,34 +172,11 @@ public:
 
         auto returnResponse(
             const oatpp::Object<DeleteConfigDTO>& body) -> Action {
-            OATPP_ASSERT_HTTP(!body->path->empty(), Status::CODE_400,
-                              "Missing Parameters");
-
-            auto res = StatusDto::createShared();
-            res->command = "deleteConfig";
-            try {
-                if (!m_configManager) {
-                    res->status = "error";
-                    res->code = 500;
-                    res->error = "ConfigManager is null";
-                    LOG_F(ERROR, "ConfigManager is null");
-                } else if (m_configManager->deleteValue(body->path)) {
-                    res->status = "success";
-                    res->code = 200;
-                } else {
-                    res->status = "error";
-                    res->code = 404;
-                    res->error = "ConfigManager can't find the path";
-                    LOG_F(WARNING, "ConfigManager can't find the path: {}", body->path->c_str());
-                }
-            } catch (const std::exception& e) {
-                res->status = "error";
-                res->code = 500;
-                res->error = e.what();
-                LOG_F(ERROR, "Exception: {}", e.what());
-            }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, res));
+            return _return(handleConfigAction(
+                this->controller, body, "deleteConfig",
+                [&](auto configManager) {
+                    return configManager->deleteValue(body->path);
+                }));
         }
     };
 
@@ -203,36 +198,31 @@ public:
 
         auto returnResponse(
             const oatpp::Object<LoadConfigDTO>& body) -> Action {
-            OATPP_ASSERT_HTTP(!body->path->empty(), Status::CODE_400,
-                              "Missing Parameters");
-
-            auto res = StatusDto::createShared();
-            res->command = "loadConfig";
-            try {
-                if (!m_configManager) {
-                    res->status = "error";
-                    res->code = 500;
-                    res->error = "ConfigManager is null";
-                    LOG_F(ERROR, "ConfigManager is null");
-                } else if (m_configManager->loadFromFile(
-                           body->path.getValue("config/config.json"))) {
-                    res->status = "success";
-                    res->code = 200;
-                } else {
-                    res->status = "error";
-                    res->code = 404;
-                    res->error = "ConfigManager can't find the path";
-                    LOG_F(WARNING, "ConfigManager can't find the path: {}", body->path->c_str());
-                }
-            } catch (const std::exception& e) {
-                res->status = "error";
-                res->code = 500;
-                res->error = e.what();
-                LOG_F(ERROR, "Exception: {}", e.what());
-            }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, res));
+            return _return(handleConfigAction(
+                this->controller, body, "loadConfig", [&](auto configManager) {
+                    return configManager->loadFromFile(
+                        body->path.getValue("config/config.json"));
+                }));
         }
+    };
+
+    ENDPOINT_INFO(getUIReloadConfig) {
+        info->summary = "Reload config from file";
+        info->addResponse<Object<StatusDto>>(Status::CODE_200,
+                                             "application/json");
+    }
+    ENDPOINT_ASYNC("GET", "/api/config/reload", getUIReloadConfig) {
+        ENDPOINT_ASYNC_INIT(getUIReloadConfig);
+        /*
+         auto act() -> Action override {
+            return _return(handleConfigAction(
+                this->controller, {}, "reloadConfig",
+                [&](auto configManager) {
+                    return configManager->reloadFromFile();
+                }));
+        }
+        */
+       
     };
 
     ENDPOINT_INFO(getUISaveConfig) {
@@ -253,35 +243,11 @@ public:
 
         auto returnResponse(
             const oatpp::Object<SaveConfigDTO>& body) -> Action {
-            OATPP_ASSERT_HTTP(!body->path->empty(), Status::CODE_400,
-                              "Missing Parameters");
-
-            auto res = StatusDto::createShared();
-            res->command = "saveConfig";
-            try {
-                if (!m_configManager) {
-                    res->status = "error";
-                    res->code = 500;
-                    res->error = "ConfigManager is null";
-                    LOG_F(ERROR, "ConfigManager is null");
-                } else if (m_configManager->saveToFile(
-                           body->path.getValue("config/config.json"))) {
-                    res->status = "success";
-                    res->code = 200;
-                } else {
-                    res->status = "error";
-                    res->code = 404;
-                    res->error = "Failed to save the config";
-                    LOG_F(WARNING, "Failed to save the config to path: {}", body->path->c_str());
-                }
-            } catch (const std::exception& e) {
-                res->status = "error";
-                res->code = 500;
-                res->error = e.what();
-                LOG_F(ERROR, "Exception: {}", e.what());
-            }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, res));
+            return _return(handleConfigAction(
+                this->controller, body, "saveConfig", [&](auto configManager) {
+                    return configManager->saveToFile(
+                        body->path.getValue("config/config.json"));
+                }));
         }
     };
 };

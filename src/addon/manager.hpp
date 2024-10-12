@@ -47,9 +47,13 @@ public:
 
     auto getComponent(const std::string& component_name)
         -> std::optional<std::weak_ptr<Component>>;
+        
     auto getComponentInfo(const std::string& component_name)
         -> std::optional<json>;
     auto getComponentList() -> std::vector<std::string>;
+
+    auto getComponentDoc(const std::string& component_name) -> std::string;
+
     auto hasComponent(const std::string& component_name) -> bool;
 
     auto savePackageLock(const std::string& filename) -> bool;

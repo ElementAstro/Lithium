@@ -43,18 +43,22 @@ add_subdirectory(function)
 add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(search)
+add_subdirectory(secret)
 add_subdirectory(sysinfo)
 add_subdirectory(system)
+add_subdirectory(tests)
 add_subdirectory(type)
 add_subdirectory(utils)
 add_subdirectory(web)
 
 # Sources and Headers
 set(ATOM_SOURCES
+    log/atomlog.cpp
     log/logger.cpp
 )
 
 set(ATOM_HEADERS
+    log/atomlog.hpp
     log/logger.hpp
 )
 

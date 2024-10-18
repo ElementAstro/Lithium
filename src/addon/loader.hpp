@@ -15,7 +15,6 @@ Description: C++20 and Modules Loader
 #ifndef LITHIUM_ADDON_LOADER_HPP
 #define LITHIUM_ADDON_LOADER_HPP
 
-#include <dlfcn.h>
 #include <cstdio>
 #include <functional>
 #include <memory>
@@ -24,21 +23,17 @@ Description: C++20 and Modules Loader
 #include <unordered_map>
 #include <vector>
 
+#include "atom/function/ffi.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/type/json.hpp"
+#include "atom/type/json_fwd.hpp"
+
 #include "module.hpp"
 
 using json = nlohmann::json;
 
 #define MODULE_HANDLE void*
-// #define LOAD_LIBRARY(p) dlopen(p, RTLD_LAZY | RTLD_GLOBAL)
-#define LOAD_LIBRARY(p) dlopen(p, RTLD_LAZY)
-#define UNLOAD_LIBRARY(p) dlclose(p)
-#define LOAD_ERROR() dlerror()
-#define LOAD_FUNCTION(handle, name) dlsym(handle, name)
 
 namespace lithium {
-
 class ModuleLoader {
 public:
     explicit ModuleLoader(std::string dirName);
@@ -89,14 +84,6 @@ private:
     auto getHandle(const std::string& name) const
         -> std::shared_ptr<atom::meta::DynamicLibrary>;
     auto checkModuleExists(const std::string& name) const -> bool;
-
-#ifdef _WIN32
-    void loadFunctionsWindows(
-        void* handle, std::vector<std::unique_ptr<FunctionInfo>>& funcs);
-#else
-    void loadFunctionsUnix(void* handle,
-                           std::vector<std::unique_ptr<FunctionInfo>>& funcs);
-#endif
 };
 
 template <typename T>
@@ -104,16 +91,17 @@ auto ModuleLoader::getFunction(const std::string& name,
                                const std::string& functionName)
     -> std::function<T> {
     std::shared_lock lock(sharedMutex_);
-    if (auto it = modules_.find(name); it != modules_.end()) {
-        if (auto funcPtr =
-                it->second->mLibrary->getFunction<T>(functionName.c_str());
-            funcPtr) {
-            return funcPtr;
-        }
-        LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", functionName,
-              name, LOAD_ERROR());
-    } else {
-        LOG_F(ERROR, "Failed to find module {}", name);
+    auto it = modules_.find(name);
+    if (it == modules_.end()) {
+        LOG_F(ERROR, "Module {} not found", name);
+        return nullptr;
+    }
+
+    try {
+        return it->second->mLibrary->getFunction<T>(functionName);
+    } catch (const FFIException& e) {
+        LOG_F(ERROR, "Failed to load function {} from module {}: {}",
+              functionName, name, e.what());
     }
     return nullptr;
 }
@@ -127,12 +115,6 @@ auto ModuleLoader::getInstance(const std::string& name, const json& config,
         getInstanceFunc) {
         return getInstanceFunc(config);
     }
-    if (auto getInstanceFunc =
-            getFunction<std::shared_ptr<T>()>(name, symbolName);
-        getInstanceFunc) {
-        return getInstanceFunc();
-    }
-
     return nullptr;
 }
 

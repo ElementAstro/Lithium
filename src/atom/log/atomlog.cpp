@@ -16,6 +16,7 @@ Description: Logger for Atom
 
 #include <algorithm>
 #include <condition_variable>
+#include <format>
 #include <fstream>
 #include <queue>
 #include <sstream>
@@ -23,6 +24,7 @@ Description: Logger for Atom
 
 #ifdef _WIN32
 #include <windows.h>
+#undef ERROR
 #elif defined(__linux__) || defined(__APPLE__)
 #include <syslog.h>
 #elif defined(__ANDROID__)
@@ -36,9 +38,9 @@ namespace atom::log {
 
 class LoggerImpl {
 public:
-    LoggerImpl(const fs::path& file_name_, LogLevel min_level,
-               size_t max_file_size, int max_files)
-        : file_name_(file_name_),
+    LoggerImpl(fs::path file_name_, LogLevel min_level, size_t max_file_size,
+               int max_files)
+        : file_name_(std::move(file_name_)),
           max_file_size_(max_file_size),
           max_files_(max_files),
           min_level_(min_level),
@@ -57,7 +59,7 @@ public:
             log_file_.close();
         }
 
-#ifdef __linux__ || __APPLE__
+#if defined(__linux__) || defined(__APPLE__)
         if (system_logging_enabled_) {
             closelog();
         }
@@ -89,7 +91,7 @@ public:
 
 #ifdef _WIN32
         if (system_logging_enabled_) {
-            h_event_log_ = RegisterEventSource(nullptr, L"AtomLogger");
+            h_event_log_ = RegisterEventSourceW(nullptr, L"AtomLogger");
         } else if (h_event_log_) {
             DeregisterEventSource(h_event_log_);
             h_event_log_ = nullptr;
@@ -137,7 +139,6 @@ private:
     size_t max_file_size_;
     int max_files_;
     LogLevel min_level_;
-    int file_index_ = 0;
     std::unordered_map<std::thread::id, std::string> thread_names_;
     std::string pattern_ = "[{}][{}][{}] {v}";
     std::vector<std::shared_ptr<LoggerImpl>> sinks_;
@@ -158,11 +159,11 @@ private:
 
             for (int i = max_files_ - 1; i > 0; --i) {
                 auto src = file_name_.parent_path() /
-                           (stem.string() + "." + std::to_string(i) +
-                            extension.string());
+                           std::format("{}.{}{}", stem.string(), i,
+                                       extension.string());
                 auto dst = file_name_.parent_path() /
-                           (stem.string() + "." + std::to_string(i + 1) +
-                            extension.string());
+                           std::format("{}.{}{}", stem.string(), i + 1,
+                                       extension.string());
 
                 if (fs::exists(src)) {
                     if (fs::exists(dst)) {
@@ -173,7 +174,7 @@ private:
             }
 
             auto dst = file_name_.parent_path() /
-                       (stem.string() + ".1" + extension.string());
+                       std::format("{}.1{}", stem.string(), extension.string());
             if (fs::exists(file_name_)) {
                 if (fs::exists(dst)) {
                     fs::remove(dst);
@@ -190,26 +191,27 @@ private:
     }
 
     auto getThreadName() -> std::string {
-        auto id = std::this_thread::get_id();
-        if (thread_names_.find(id) != thread_names_.end()) {
-            return thread_names_[id];
+        auto thread_id = std::this_thread::get_id();
+        if (thread_names_.contains(thread_id)) {
+            return thread_names_[thread_id];
         }
-        return std::to_string(std::hash<std::thread::id>{}(id));
+        return std::to_string(std::hash<std::thread::id>{}(thread_id));
     }
 
-    auto logLevelToString(LogLevel level) -> std::string {
+    static auto logLevelToString(LogLevel level) -> std::string {
+        using enum LogLevel;
         switch (level) {
-            case LogLevel::TRACE:
+            case TRACE:
                 return "TRACE";
-            case LogLevel::DEBUG:
+            case DEBUG:
                 return "DEBUG";
-            case LogLevel::INFO:
+            case INFO:
                 return "INFO";
-            case LogLevel::WARN:
+            case WARN:
                 return "WARN";
-            case LogLevel::ERROR:
+            case ERROR:
                 return "ERROR";
-            case LogLevel::CRITICAL:
+            case CRITICAL:
                 return "CRITICAL";
             default:
                 return "UNKNOWN";
@@ -219,15 +221,11 @@ private:
     auto formatMessage(LogLevel level, const std::string& msg) -> std::string {
         auto currentTime = utils::getChinaTimestampString();
         auto threadName = getThreadName();
-        std::ostringstream sss;
-        sss << "[" << currentTime << "]"
-            << "[" << logLevelToString(level) << "]"
-            << "[" << threadName << "]"
-            << "[" << msg << "]";
-        return sss.str();
+        return std::format("[{}][{}][{}][{}]", currentTime,
+                           logLevelToString(level), threadName, msg);
     }
 
-    void run(std::stop_token stop_token) {
+    void run(const std::stop_token& stop_token) {
         while (!stop_token.stop_requested()) {
             std::string msg;
             {
@@ -255,44 +253,47 @@ private:
     void logToSystem(LogLevel level, const std::string& msg) {
 #ifdef _WIN32
         if (h_event_log_) {
-            WORD event_type;
+            using enum LogLevel;
+            WORD eventType;
             switch (level) {
-                case LogLevel::ERROR:
-                case LogLevel::CRITICAL:
-                    event_type = EVENTLOG_ERROR_TYPE;
+                case ERROR:
+                case CRITICAL:
+                    eventType = EVENTLOG_ERROR_TYPE;
                     break;
-                case LogLevel::WARN:
-                    event_type = EVENTLOG_WARNING_TYPE;
+                case WARN:
+                    eventType = EVENTLOG_WARNING_TYPE;
                     break;
-                case LogLevel::INFO:
-                case LogLevel::DEBUG:
-                case LogLevel::TRACE:
+                case INFO:
+                case DEBUG:
+                case TRACE:
                 default:
-                    event_type = EVENTLOG_INFORMATION_TYPE;
+                    eventType = EVENTLOG_INFORMATION_TYPE;
                     break;
             }
 
-            LPCWSTR messages[] = {std::wstring(msg.begin(), msg.end()).c_str()};
-            ReportEventW(h_event_log_, event_type, 0, 0, nullptr, 1, 0,
-                         messages, nullptr);
+            std::wstring wideMsg = std::wstring(msg.begin(), msg.end());
+            LPCWSTR messages[] = {wideMsg.c_str()};
+            ReportEventW(h_event_log_, eventType, 0, 0, nullptr, 1, 0, messages,
+                         nullptr);
         }
 #elif defined(__linux__) || defined(__APPLE__)
+        using enum LogLevel;
         int priority;
         switch (level) {
-            case LogLevel::CRITICAL:
+            case CRITICAL:
                 priority = LOG_CRIT;
                 break;
-            case LogLevel::ERROR:
+            case ERROR:
                 priority = LOG_ERR;
                 break;
-            case LogLevel::WARN:
+            case WARN:
                 priority = LOG_WARNING;
                 break;
-            case LogLevel::INFO:
+            case INFO:
                 priority = LOG_INFO;
                 break;
-            case LogLevel::DEBUG:
-            case LogLevel::TRACE:
+            case DEBUG:
+            case TRACE:
             default:
                 priority = LOG_DEBUG;
                 break;
@@ -300,24 +301,25 @@ private:
 
         syslog(priority, "%s", msg.c_str());
 #elif defined(__ANDROID__)
+        using enum LogLevel;
         int priority;
         switch (level) {
-            case LogLevel::CRITICAL:
+            case CRITICAL:
                 priority = ANDROID_LOG_FATAL;
                 break;
-            case LogLevel::ERROR:
+            case ERROR:
                 priority = ANDROID_LOG_ERROR;
                 break;
-            case LogLevel::WARN:
+            case WARN:
                 priority = ANDROID_LOG_WARN;
                 break;
-            case LogLevel::INFO:
+            case INFO:
                 priority = ANDROID_LOG_INFO;
                 break;
-            case LogLevel::DEBUG:
+            case DEBUG:
                 priority = ANDROID_LOG_DEBUG;
                 break;
-            case LogLevel::TRACE:
+            case TRACE:
             default:
                 priority = ANDROID_LOG_VERBOSE;
                 break;

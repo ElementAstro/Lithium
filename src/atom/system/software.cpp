@@ -1,5 +1,4 @@
 #include "software.hpp"
-
 #include <array>
 #include <memory>
 
@@ -22,10 +21,14 @@
 #include <cstring>
 #endif
 
+#include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
 
 namespace atom::system {
+
 auto getAppVersion(const fs::path& app_path) -> std::string {
+    LOG_F(INFO, "Entering getAppVersion with app_path: {}", app_path.string());
+
 #ifdef _WIN32
     DWORD handle;
     auto wappPath = atom::utils::stringToWString(app_path.string());
@@ -40,6 +43,7 @@ auto getAppVersion(const fs::path& app_path) -> std::string {
                               &value, &length)) {
                 std::string version(static_cast<char*>(value), length);
                 free(buffer);
+                LOG_F(INFO, "Found version: {}", version);
                 return version;
             }
         }
@@ -60,6 +64,7 @@ auto getAppVersion(const fs::path& app_path) -> std::string {
                                        kCFStringEncodingUTF8)) {
                     CFRelease(bundle);
                     CFRelease(url);
+                    LOG_F(INFO, "Found version: {}", buffer);
                     return std::string(buffer);
                 }
             }
@@ -83,6 +88,7 @@ auto getAppVersion(const fs::path& app_path) -> std::string {
             std::string result(utf8_version);
             env->ReleaseStringUTFChars(version, utf8_version);
             env->DeleteLocalRef(version);
+            LOG_F(INFO, "Found version: {}", result);
             return result;
         }
         activity->vm->DetachCurrentThread();
@@ -106,15 +112,19 @@ auto getAppVersion(const fs::path& app_path) -> std::string {
         }
         fclose(file);
         if (!version.empty()) {
+            LOG_F(INFO, "Found version: {}", version);
             return version;
         }
     }
 #endif
 
+    LOG_F(WARNING, "Version not found for app_path: {}", app_path.string());
     return "";
 }
 
 auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {
+    LOG_F(INFO, "Entering getAppPermissions with app_path: {}",
+          app_path.string());
     std::vector<std::string> permissions;
 
 #ifdef _WIN32
@@ -133,34 +143,27 @@ auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {
                         ACCESS_ALLOWED_ACE_TYPE) {
                         auto* allowedAce =
                             static_cast<PACCESS_ALLOWED_ACE>(ace);
-                        LPTSTR userName = nullptr;
+                        std::vector<TCHAR> userName(0);
+                        std::vector<TCHAR> domainName(0);
                         DWORD nameSize = 0;
-                        LPTSTR domainName = nullptr;
                         DWORD domainSize = 0;
                         SID_NAME_USE sidType;
 
                         LookupAccountSid(nullptr, &allowedAce->SidStart,
-                                         userName, &nameSize, domainName,
+                                         nullptr, &nameSize, nullptr,
                                          &domainSize, &sidType);
-                        userName = static_cast<LPTSTR>(
-                            malloc(nameSize * sizeof(TCHAR)));
-                        domainName = static_cast<LPTSTR>(
-                            malloc(domainSize * sizeof(TCHAR)));
+                        userName.resize(nameSize);
+                        domainName.resize(domainSize);
                         if (LookupAccountSid(nullptr, &allowedAce->SidStart,
-                                             userName, &nameSize, domainName,
-                                             &domainSize, &sidType)) {
-                            std::string permission = "User: ";
-                            std::string permissionStr = permission;
-                            std::string userNameStr = userName;
-                            std::string domainNameStr = domainName;
-
-                            permissionStr += userNameStr + "\\" + domainNameStr;
-                            permission = permissionStr;
-
+                                             userName.data(), &nameSize,
+                                             domainName.data(), &domainSize,
+                                             &sidType)) {
+                            std::string permission =
+                                std::format("User: {}\\{}", userName.data(),
+                                            domainName.data());
                             permissions.push_back(permission);
+                            LOG_F(INFO, "Found permission: {}", permission);
                         }
-                        free(userName);
-                        free(domainName);
                     }
                 }
             }
@@ -197,6 +200,9 @@ auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {
         if (file_stat.st_mode & S_IXOTH) {
             permissions.push_back("Others: Execute");
         }
+        for (const auto& perm : permissions) {
+            LOG_F(INFO, "Found permission: {}", perm);
+        }
     }
 #elif defined(__ANDROID__)
     ANativeActivity* activity = ANativeActivity_getActivity();
@@ -217,6 +223,7 @@ auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {
                 const char* utf8_permission =
                     env->GetStringUTFChars(permission, nullptr);
                 permissions.push_back(std::string(utf8_permission));
+                LOG_F(INFO, "Found permission: {}", utf8_permission);
                 env->ReleaseStringUTFChars(permission, utf8_permission);
                 env->DeleteLocalRef(permission);
             }
@@ -230,6 +237,8 @@ auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {
 }
 
 auto getAppPath(const std::string& software_name) -> fs::path {
+    LOG_F(INFO, "Entering getAppPath with software_name: {}", software_name);
+
 #ifdef _WIN32
     WCHAR programFilesPath[MAX_PATH];
     if (SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILES, nullptr, 0,
@@ -237,16 +246,20 @@ auto getAppPath(const std::string& software_name) -> fs::path {
         fs::path path(programFilesPath);
         path.append(software_name);
         if (fs::exists(path)) {
+            LOG_F(INFO, "Found app path: {}", path.string());
             return path;
         }
     }
+    LOG_F(WARNING, "App path not found for software_name: {}", software_name);
     return "";
 #elif defined(__APPLE__)
     fs::path app_path("/Applications");
     app_path.append(software_name);
     if (fs::exists(app_path)) {
+        LOG_F(INFO, "Found app path: {}", app_path.string());
         return app_path;
     }
+    LOG_F(WARNING, "App path not found for software_name: {}", software_name);
     return "";
 #elif defined(__linux__)
     std::string command = "which " + software_name;
@@ -255,6 +268,7 @@ auto getAppPath(const std::string& software_name) -> fs::path {
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"),
                                                   pclose);
     if (!pipe) {
+        LOG_F(ERROR, "Failed to execute command: {}", command);
         return "";
     }
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
@@ -263,16 +277,21 @@ auto getAppPath(const std::string& software_name) -> fs::path {
     if (!result.empty()) {
         result.pop_back();  // Remove newline
         if (fs::exists(result)) {
+            LOG_F(INFO, "Found app path: {}", result);
             return fs::path(result);
         }
     }
+    LOG_F(WARNING, "App path not found for software_name: {}", software_name);
     return "";
 #endif
-    return fs::current_path();  // Fallback to current path if all
-                                // else fails
+    LOG_F(WARNING, "Fallback to current path for software_name: {}",
+          software_name);
+    return fs::current_path();  // Fallback to current path if all else fails
 }
 
 auto checkSoftwareInstalled(const std::string& software_name) -> bool {
+    LOG_F(INFO, "Entering checkSoftwareInstalled with software_name: {}",
+          software_name);
     bool isInstalled = false;
 
 #ifdef _WIN32
@@ -298,6 +317,7 @@ auto checkSoftwareInstalled(const std::string& software_name) -> bool {
                                      &displayNameSize) == ERROR_SUCCESS) {
                     if (software_name == displayName) {
                         isInstalled = true;
+                        LOG_F(INFO, "Software {} is installed", software_name);
                         RegCloseKey(hSubKey);
                         break;
                     }
@@ -323,12 +343,22 @@ auto checkSoftwareInstalled(const std::string& software_name) -> bool {
             result += buffer.data();
         }
         isInstalled = !result.empty();
+        if (isInstalled) {
+            LOG_F(INFO, "Software {} is installed", software_name);
+        } else {
+            LOG_F(WARNING, "Software {} is not installed", software_name);
+        }
     }
 
 #elif defined(__linux__)
     std::string command = "which " + software_name + " > /dev/null 2>&1";
     int result = std::system(command.c_str());
     isInstalled = (result == 0);
+    if (isInstalled) {
+        LOG_F(INFO, "Software {} is installed", software_name);
+    } else {
+        LOG_F(WARNING, "Software {} is not installed", software_name);
+    }
 
 #endif
 

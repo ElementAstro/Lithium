@@ -9,24 +9,27 @@
 #ifndef ATOM_META_TYPE_INFO_HPP
 #define ATOM_META_TYPE_INFO_HPP
 
-#include <bitset>
-#include <cstdlib>
-#include <functional>
-#include <memory>
-#include <ostream>
-#include <string>
-#include <type_traits>
-#include <typeinfo>
+#include <bitset>         // Include for flags
+#include <cstdlib>        // Include for std::size_t
+#include <functional>     // Include for std::hash
+#include <memory>         // Include for smart pointers
+#include <optional>       // Include for std::optional
+#include <ostream>        // Include for std::ostream
+#include <string>         // Include for std::string
+#include <type_traits>    // Include for type traits
+#include <typeinfo>       // Include for type_info
+#include <unordered_map>  // Include for registry
 
-#include "abi.hpp"
-#include "concept.hpp"
+#include "abi.hpp"  // Include for ATOM_INLINE, ATOM_CONSTEXPR, ATOM_NOEXCEPT
+#include "concept.hpp"  // Include for Pointer, SmartPointer
 
 #include "atom/macro.hpp"
 
 namespace atom::meta {
 
-// Constants for bitset size
-constexpr std::size_t K_FLAG_BITSET_SIZE = 13;
+// Constants for bitset size, increased for additional flags
+constexpr std::size_t K_FLAG_BITSET_SIZE =
+    16;  // Increased bitset size for new flags
 
 // Helper to remove cv-qualifiers, references, and pointers
 template <typename T>
@@ -92,6 +95,10 @@ public:
         flags.set(IS_STANDARD_LAYOUT_FLAG, std::is_standard_layout_v<T>);
         flags.set(IS_POD_FLAG, flags.test(IS_TRIVIAL_FLAG) &&
                                    flags.test(IS_STANDARD_LAYOUT_FLAG));
+        flags.set(IS_DEFAULT_CONSTRUCTIBLE_FLAG,
+                  std::is_default_constructible_v<T>);
+        flags.set(IS_MOVEABLE_FLAG, std::is_move_constructible_v<T>);
+        flags.set(IS_COPYABLE_FLAG, std::is_copy_constructible_v<T>);
 
         return {flags, &typeid(T), &typeid(BareT)};
     }
@@ -138,6 +145,19 @@ public:
     ATOM_NODISCARD auto bareName() const ATOM_NOEXCEPT -> std::string {
         return !isUndef() ? DemangleHelper::demangle(mBareTypeInfo_->name())
                           : "undefined";
+    }
+
+    // New functions to check for new traits
+    ATOM_NODISCARD auto isDefaultConstructible() const ATOM_NOEXCEPT -> bool {
+        return mFlags_.test(IS_DEFAULT_CONSTRUCTIBLE_FLAG);
+    }
+
+    ATOM_NODISCARD auto isMoveable() const ATOM_NOEXCEPT -> bool {
+        return mFlags_.test(IS_MOVEABLE_FLAG);
+    }
+
+    ATOM_NODISCARD auto isCopyable() const ATOM_NOEXCEPT -> bool {
+        return mFlags_.test(IS_COPYABLE_FLAG);
     }
 
     ATOM_NODISCARD auto isConst() const ATOM_NOEXCEPT -> bool {
@@ -216,8 +236,13 @@ private:
     static constexpr unsigned int IS_TRIVIAL_FLAG = 10;
     static constexpr unsigned int IS_STANDARD_LAYOUT_FLAG = 11;
     static constexpr unsigned int IS_POD_FLAG = 12;
+    static constexpr unsigned int IS_DEFAULT_CONSTRUCTIBLE_FLAG =
+        13;                                               // New flag
+    static constexpr unsigned int IS_MOVEABLE_FLAG = 14;  // New flag
+    static constexpr unsigned int IS_COPYABLE_FLAG = 15;  // New flag
 };
 
+// General template for pointer types
 template <typename T>
 struct GetTypeInfo {
     ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
@@ -233,16 +258,40 @@ struct GetTypeInfo<std::shared_ptr<T>> {
     }
 };
 
+// Specialization for std::unique_ptr<T>
+template <typename T>
+struct GetTypeInfo<std::unique_ptr<T>> {
+    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
+        return TypeInfo::fromType<std::unique_ptr<T>>();
+    }
+};
+
+// Specialization for std::weak_ptr<T>
+template <typename T>
+struct GetTypeInfo<std::weak_ptr<T>> {
+    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
+        return TypeInfo::fromType<std::weak_ptr<T>>();
+    }
+};
+
+// Specialization for const and non-const references
+template <typename T>
+struct GetTypeInfo<const std::shared_ptr<T> &> : GetTypeInfo<T> {};
+
 template <typename T>
 struct GetTypeInfo<std::shared_ptr<T> &> : GetTypeInfo<std::shared_ptr<T>> {};
 
-// Specialization for const std::shared_ptr<T>&
 template <typename T>
-struct GetTypeInfo<const std::shared_ptr<T> &> {
-    ATOM_CONSTEXPR static auto get() ATOM_NOEXCEPT -> TypeInfo {
-        return TypeInfo::fromType<T>();
-    }
-};
+struct GetTypeInfo<const std::unique_ptr<T> &> : GetTypeInfo<T> {};
+
+template <typename T>
+struct GetTypeInfo<std::unique_ptr<T> &> : GetTypeInfo<std::unique_ptr<T>> {};
+
+template <typename T>
+struct GetTypeInfo<const std::weak_ptr<T> &> : GetTypeInfo<T> {};
+
+template <typename T>
+struct GetTypeInfo<std::weak_ptr<T> &> : GetTypeInfo<std::weak_ptr<T>> {};
 
 // Specialization for const std::reference_wrapper<T>&
 template <typename T>
@@ -263,6 +312,13 @@ ATOM_CONSTEXPR auto userType() ATOM_NOEXCEPT -> TypeInfo {
     return GetTypeInfo<T>::get();
 }
 
+// Added support for checking if a type is derived from another type
+template <typename Derived, typename Base>
+ATOM_NODISCARD constexpr bool isBaseOf() {
+    return std::is_base_of_v<Base, Derived>;
+}
+
+// Detail namespace to handle the type registry
 namespace detail {
 ATOM_INLINE auto getTypeRegistry()
     -> std::unordered_map<std::string, TypeInfo> & {
@@ -296,6 +352,13 @@ ATOM_INLINE auto getTypeInfo(const std::string &type_name)
     }
     return std::nullopt;
 }
+
+// Function to check if a type is registered in the registry
+ATOM_INLINE auto isTypeRegistered(const std::string &type_name) -> bool {
+    auto &registry = detail::getTypeRegistry();
+    return registry.find(type_name) != registry.end();
+}
+
 }  // namespace atom::meta
 
 ATOM_INLINE auto operator<<(
@@ -317,4 +380,5 @@ struct hash<atom::meta::TypeInfo> {
     }
 };
 }  // namespace std
-#endif
+
+#endif  // ATOM_META_TYPE_INFO_HPP

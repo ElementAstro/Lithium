@@ -21,7 +21,7 @@
 namespace atom::web {
 class DownloadManager::Impl {
 public:
-    explicit Impl(const std::string& task_file);
+    explicit Impl(std::string task_file);
     ~Impl();
 
     void addTask(const std::string& url, const std::string& filepath,
@@ -46,6 +46,10 @@ public:
         size_t downloadedBytes{0};
         int priority{0};
         size_t retries{0};
+
+        auto operator<(const DownloadTask& other) const -> bool {
+            return priority < other.priority;
+        }
     };
 
 private:
@@ -62,13 +66,13 @@ private:
     std::atomic<bool> running_{false};
     std::chrono::system_clock::time_point startTime_;
     size_t maxRetries_{3};
-    size_t threadCount_;
+    size_t threadCount_{std::thread::hardware_concurrency()};
     std::function<void(size_t)> onComplete_;
     std::function<void(size_t, double)> onProgress_;
 };
 
 // 写入回调函数，带进度监控
-auto writeDataWithProgress(void* buffer, size_t size, size_t nmemb,
+auto writeDataWithProgress([[maybe_unused]] void* buffer, size_t size, size_t nmemb,
                            void* userp) -> size_t {
     auto* taskInfo = static_cast<DownloadManager::Impl::DownloadTask*>(userp);
     size_t bytesWritten = size * nmemb;
@@ -77,8 +81,8 @@ auto writeDataWithProgress(void* buffer, size_t size, size_t nmemb,
     return bytesWritten;
 }
 
-DownloadManager::Impl::Impl(const std::string& task_file)
-    : taskFile_(task_file), threadCount_(std::thread::hardware_concurrency()) {
+DownloadManager::Impl::Impl(std::string task_file)
+    : taskFile_(std::move(task_file)) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     // 读取任务列表
@@ -92,7 +96,7 @@ DownloadManager::Impl::Impl(const std::string& task_file)
         std::string filepath;
         infile >> url >> filepath;
         if (!url.empty() && !filepath.empty()) {
-            tasks_.push_back({url, filepath});
+            tasks_.emplace_back(DownloadTask{url, filepath});
         }
     }
 }
@@ -110,7 +114,7 @@ void DownloadManager::Impl::addTask(const std::string& url,
         THROW_EXCEPTION("Failed to open task file.");
     }
     outfile << url << " " << filepath << std::endl;
-    tasks_.push_back({url, filepath, false, false, false, 0, priority});
+    tasks_.emplace_back(DownloadTask{url, filepath, false, false, false, 0, priority});
 }
 
 auto DownloadManager::Impl::removeTask(size_t index) -> bool {
@@ -185,7 +189,7 @@ void DownloadManager::Impl::onProgressUpdate(
 }
 
 auto DownloadManager::Impl::getNextTaskIndex() -> std::optional<size_t> {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
     for (size_t i = 0; i < tasks_.size(); ++i) {
         if (!tasks_[i].completed && !tasks_[i].paused && !tasks_[i].cancelled) {
             return i;
@@ -195,15 +199,14 @@ auto DownloadManager::Impl::getNextTaskIndex() -> std::optional<size_t> {
 }
 
 auto DownloadManager::Impl::getNextTask() -> std::optional<DownloadTask> {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
     if (!taskQueue_.empty()) {
         auto task = taskQueue_.top();
         taskQueue_.pop();
         return task;
     }
 
-    auto index = getNextTaskIndex();
-    if (index) {
+    if (auto index = getNextTaskIndex()) {
         return tasks_[*index];
     }
 

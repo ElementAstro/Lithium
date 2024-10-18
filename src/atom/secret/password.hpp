@@ -3,30 +3,7 @@
 
 #include <string>
 
-/**
- * @brief Class for AES encryption and decryption.
- */
-class AESCipher {
-public:
-    /**
-     * @brief Encrypts plaintext using AES encryption.
-     * @param plaintext The plaintext to encrypt.
-     * @param key The encryption key.
-     * @return The encrypted ciphertext.
-     */
-    static std::string encrypt(const std::string& plaintext,
-                               const unsigned char* key);
-
-    /**
-     * @brief Decrypts ciphertext using AES decryption.
-     * @param ciphertext The ciphertext to decrypt.
-     * @param key The decryption key.
-     * @return The decrypted plaintext.
-     */
-    static std::string decrypt(const std::string& ciphertext,
-                               const unsigned char* key);
-};
-
+namespace atom::secret {
 /**
  * @brief Class for managing passwords securely.
  *
@@ -145,5 +122,6 @@ private:
                                 const std::string& attribute_name);
 #endif
 };
+}  // namespace atom::secret
 
 #endif  // ATOM_SECRET_PASSWORD_HPP

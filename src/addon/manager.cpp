@@ -41,7 +41,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 // clang-format off
-#include <windows.h>
+// #include <windows.h>
 #include <io.h>
 #include <process.h>
 #define pipe _pipe

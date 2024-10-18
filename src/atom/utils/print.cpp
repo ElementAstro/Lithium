@@ -5,7 +5,6 @@ namespace atom::utils {
 void printProgressBar(float progress, int barWidth) {
     int pos = static_cast<int>(barWidth * progress);
     std::cout << "[";
-#pragma unroll
     for (int i = 0; i < barWidth; ++i) {
         if (i < pos) {
             std::cout << "=";
@@ -28,7 +27,6 @@ void printTable(const std::vector<std::vector<std::string>>& data) {
     // 计算每列的最大宽度
     std::vector<size_t> colWidths(data[0].size(), 0);
     for (const auto& row : data) {
-#pragma unroll
         for (size_t i = 0; i < row.size(); ++i) {
             colWidths[i] = std::max(colWidths[i], row[i].length());
         }
@@ -36,7 +34,6 @@ void printTable(const std::vector<std::vector<std::string>>& data) {
 
     // 打印表格
     for (const auto& row : data) {
-#pragma unroll
         for (size_t i = 0; i < row.size(); ++i) {
             std::cout << "| " << std::setw(static_cast<int>(colWidths[i]))
                       << std::left << row[i] << " ";
@@ -45,7 +42,6 @@ void printTable(const std::vector<std::vector<std::string>>& data) {
 
         // 打印分隔线
         if (&row == data.data()) {
-#pragma unroll
             for (size_t i = 0; i < row.size(); ++i) {
                 std::cout << "+-" << std::string(colWidths[i], '-') << "-";
             }
@@ -138,7 +134,6 @@ auto generateRandomString(size_t length) -> std::string {
 
     std::string result;
     result.reserve(length);
-#pragma unroll
     for (size_t i = 0; i < length; ++i) {
         result += characters[distribution(generator)];
     }
@@ -148,7 +143,6 @@ auto generateRandomString(size_t length) -> std::string {
 auto xorEncryptDecrypt(const std::string& input,
                        const std::string& key) -> std::string {
     std::string output = input;
-#pragma unroll
     for (size_t i = 0; i < input.length(); ++i) {
         output[i] = static_cast<char>(input[i] ^ key[i % key.length()]);
     }

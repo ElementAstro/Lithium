@@ -22,7 +22,7 @@ namespace atom::utils {
 // -----------------------------------------------------------------------------
 
 template <typename T>
-concept StringType = String<T> || Char<T> || std::is_same_v<T, std::string>;
+concept StringType = String<T> || Char<T> || std::is_same_v<T, const char *>;
 
 template <typename T>
 concept Container = requires(T container) {
@@ -100,6 +100,7 @@ auto toString(const Enum& value) -> std::string {
  * @return A string representation of the pointer address or value.
  */
 template <PointerType T>
+    requires (!std::is_same_v<T, const char*>)
 auto toString(T ptr) -> std::string {
     if (ptr) {
         return "Pointer(" + toString(*ptr) + ")";

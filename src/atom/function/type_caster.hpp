@@ -10,17 +10,17 @@
 #ifndef ATOM_META_TYPE_CASTER_HPP
 #define ATOM_META_TYPE_CASTER_HPP
 
-#include <any>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <any>            // Includes for std::any
+#include <cstddef>        // Includes for std::size_t
+#include <functional>     // Includes for std::function
+#include <memory>         // Includes for std::shared_ptr
+#include <mutex>          // Includes for std::mutex
+#include <queue>          // Includes for std::queue
+#include <string>         // Includes for std::string
+#include <typeinfo>       // Includes for std::type_info
+#include <unordered_map>  // Includes for std::unordered_map
+#include <unordered_set>  // Includes for std::unordered_set
+#include <vector>         // Includes for std::vector
 
 #include "atom/error/exception.hpp"
 #include "type_info.hpp"

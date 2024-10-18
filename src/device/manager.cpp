@@ -55,6 +55,7 @@ auto DeviceManager::addDeviceFromComponent(const std::string& device_type,
         LOG_F(ERROR, "Failed to cast component {} to {}", component,
               device_type);
     }
+    return false;
 }
 
 std::shared_ptr<AtomDriver> DeviceManager::getDeviceByUUID(

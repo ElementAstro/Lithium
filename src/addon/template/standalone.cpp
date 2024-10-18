@@ -56,7 +56,7 @@ public:
 
 StandAloneComponent::StandAloneComponent(std::string name)
     : Component(std::move(name)),
-      impl_(std::make_unique<StandAloneComponentImpl>()) {
+      impl_(std::make_shared<StandAloneComponentImpl>()) {
     doc("A standalone component that can be used to run a local driver");
     def("start", &StandAloneComponent::startLocalDriver);
     def("stop", &StandAloneComponent::stopLocalDriver);

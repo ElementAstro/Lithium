@@ -9,10 +9,10 @@
 #ifndef ATOM_META_SIGNATURE_HPP
 #define ATOM_META_SIGNATURE_HPP
 
-#include <array>
-#include <optional>
-#include <string_view>
-#include <utility>
+#include <array>        // Includes for std::array
+#include <optional>     // Includes for std::optional
+#include <string_view>  // Includes for std::string_view
+#include <utility>      // Includes for std::pair
 
 #include "atom/utils/cstring.hpp"
 #include "macro.hpp"
@@ -84,7 +84,6 @@ constexpr auto parseFunctionDefinition(
     while (paramStart < params.size() && paramIndex < parameters.size()) {
         size_t paramEnd = params.size();
         int bracketCount = 0;
-#pragma unroll
         for (size_t i = paramStart; i < params.size(); ++i) {
             if (params[i] == ',' && bracketCount == 0) {
                 paramEnd = i;

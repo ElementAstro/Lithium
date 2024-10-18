@@ -241,6 +241,6 @@ TEST(StringTest, Trim) {
 
 // Test format function
 TEST(StringTest, Format) {
-    String s = String::format("Hello %s, %d", "World", 2024);
+    String s = String::format("Hello {}, {}", "World", 2024);
     EXPECT_EQ(s.cStr(), "Hello World, 2024");
 }

@@ -492,7 +492,7 @@ void Component::defBaseClass() {
 template <typename Callable>
 void Component::def(const std::string& name, Callable&& func,
                     const std::string& group, const std::string& description) {
-    using FuncType = std::function<std::result_of_t<Callable()>>;
+    using FuncType = std::function<typename std::invoke_result_t<Callable>>;
     m_CommandDispatcher_->def(name, group, description,
                               FuncType(std::forward<Callable>(func)));
 }
@@ -513,17 +513,28 @@ void Component::def(const std::string& name, Ret (*func)(Args...),
                               }));
 }
 
-template <typename Class, typename Ret, typename... Args>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...),
-                    const std::string& group, const std::string& description) {
-    auto boundFunc = atom::meta::bindMemberFunction(func);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Class&, Args...)>(
-            [boundFunc](Class& instance, Args... args) {
-                return boundFunc(instance, std::forward<Args>(args)...);
-            }));
-}
+#define DEF_MEMBER_FUNC_IMPL(cv_qualifier)                                   \
+    template <typename Class, typename Ret, typename... Args>                \
+    void Component::def(                                                     \
+        const std::string& name, Ret (Class::*func)(Args...) cv_qualifier,   \
+        const std::string& group, const std::string& description) {          \
+        auto boundFunc = atom::meta::bindMemberFunction(func);               \
+        m_CommandDispatcher_->def(                                           \
+            name, group, description,                                        \
+            std::function<Ret(std::reference_wrapper<Class>, Args...)>(      \
+                [boundFunc](std::reference_wrapper<Class> instance,          \
+                            Args... args) -> Ret {                           \
+                    return boundFunc(instance, std::forward<Args>(args)...); \
+                }));                                                         \
+    }
+
+DEF_MEMBER_FUNC_IMPL()
+DEF_MEMBER_FUNC_IMPL(const)
+DEF_MEMBER_FUNC_IMPL(volatile)
+DEF_MEMBER_FUNC_IMPL(const volatile)
+DEF_MEMBER_FUNC_IMPL(noexcept)
+DEF_MEMBER_FUNC_IMPL(const noexcept)
+DEF_MEMBER_FUNC_IMPL(const volatile noexcept)
 
 template <typename Ret, typename Class, typename InstanceType>
     requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
@@ -593,18 +604,6 @@ void Component::def(const std::string& name,
             return std::invoke(func, instance.get(),
                                std::forward<Args>(args)...);
         }));
-}
-
-template <typename Class, typename Ret, typename... Args>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
-                    const std::string& group, const std::string& description) {
-    auto boundFunc = atom::meta::bindMemberFunction(func);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Class&, Args...)>(
-            [boundFunc](Class& instance, Args... args) -> Ret {
-                return boundFunc(instance, std::forward<Args>(args)...);
-            }));
 }
 
 template <typename MemberType, typename Class, typename InstanceType>

@@ -17,14 +17,24 @@ Description: Process Manager
 
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
+
+#include "atom/error/exception.hpp"
+
 #include "macro.hpp"
 
 namespace fs = std::filesystem;
 
 namespace atom::system {
+class FailedToGetUserTokenException : public atom::error::Exception {
+public:
+    using atom::error::Exception::Exception;
+};
+
+#define THROW_FAILED_TO_GET_USER_TOKEN_EXCEPTION(...)  \
+    throw atom::system::FailedToGetUserTokenException( \
+        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
 
 /**
  * @struct Process
@@ -46,9 +56,19 @@ struct Process {
  * @brief Represents a network connection.
  */
 struct NetworkConnection {
-    std::string protocol;  ///< Protocol used by the connection.
-    std::string line;      ///< Connection details.
-} ATOM_ALIGNAS(64);
+    std::string protocol;       ///< Protocol (TCP or UDP).
+    std::string localAddress;   ///< Local IP address.
+    std::string remoteAddress;  ///< Remote IP address.
+    int localPort;              ///< Local port number.
+    int remotePort;             ///< Remote port number.
+} ATOM_ALIGNAS(128);
+
+struct PrivilegesInfo {
+    std::string username;
+    std::string groupname;
+    std::vector<std::string> privileges;
+    bool isAdmin;
+} ATOM_ALIGNAS(128);
 
 /**
  * @class ProcessManager
@@ -172,6 +192,13 @@ private:
 auto getAllProcesses() -> std::vector<std::pair<int, std::string>>;
 
 /**
+ * @brief Gets information about a process by its PID.
+ * @param pid The process ID.
+ * @return A Process struct containing information about the process.
+ */
+[[nodiscard("The process info is not used")]]
+auto getProcessInfoByPid(int pid) -> Process;
+/**
  * @brief Gets information about the current process.
  * @return A Process struct containing information about the current process.
  */
@@ -187,32 +214,6 @@ auto getAllProcesses() -> std::vector<std::pair<int, std::string>>;
  * @return The name of the controlling terminal.
  */
 [[nodiscard]] auto ctermid() -> std::string;
-
-/**
- * @brief Returns the priority of a process by its PID.
- *
- * This function retrieves the priority of a process given its process ID (PID).
- * If the process is not found or an error occurs, an empty std::optional is
- * returned.
- *
- * @param pid The process ID of the target process.
- * @return std::optional<int> The priority of the process if found, otherwise an
- * empty std::optional.
- */
-auto getProcessPriorityByPid(int pid) -> std::optional<int>;
-
-/**
- * @brief Returns the priority of a process by its name.
- *
- * This function retrieves the priority of a process given its name.
- * If the process is not found or an error occurs, an empty std::optional is
- * returned.
- *
- * @param name The name of the target process.
- * @return std::optional<int> The priority of the process if found, otherwise an
- * empty std::optional.
- */
-auto getProcessPriorityByName(const std::string &name) -> std::optional<int>;
 
 /**
  * @brief Checks if a process is running by its name.
@@ -268,6 +269,10 @@ auto getNetworkConnections(int pid) -> std::vector<NetworkConnection>;
  * @return A vector of process IDs.
  */
 auto getProcessIdByName(const std::string &processName) -> std::vector<int>;
+
+#ifdef _WIN32
+auto getWindowsPrivileges(int pid) -> PrivilegesInfo;
+#endif
 
 }  // namespace atom::system
 

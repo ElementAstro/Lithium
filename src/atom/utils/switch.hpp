@@ -173,11 +173,11 @@ public:
     auto matchWithSpan(const std::string &str, std::span<Args...> args)
         -> std::optional<std::variant<std::monostate, int, std::string>> {
         if (auto iter = cases_.find(str); iter != cases_.end()) {
-            return std::apply(iter->second, args);
+            return std::apply(iter->second, std::tuple(args.begin(), args.end()));
         }
 
-        if (defaultFunc_) {
-            return std::apply(*defaultFunc_, args);
+        if (defaultFunc_) {W
+            return std::apply(*defaultFunc_, std::tuple(args.begin(), args.end()));
         }
 
         return std::nullopt;

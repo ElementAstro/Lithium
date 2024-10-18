@@ -54,7 +54,7 @@ private:
     auto createSemaphore() -> std::optional<sem_t*>;
     void closeSharedMemory(int shm_fd, int* shm_ptr);
 
-    std::unique_ptr<StandAloneComponentImpl> impl_;
+    std::shared_ptr<StandAloneComponentImpl> impl_;
 };
 
 #endif

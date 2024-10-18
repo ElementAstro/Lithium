@@ -1,131 +1,118 @@
+// curl_wrapper_test.cpp
+
+#include <curl/curl.h>
 #include <gtest/gtest.h>
+
 #include "atom/web/curl.hpp"
 
-// Test fixture for CurlWrapper class
-class CurlWrapperTest : public ::testing::Test
-{
+using namespace atom::web;
+
+class CurlWrapperTest : public ::testing::Test {
 protected:
-    CurlWrapper curl;
+    CurlWrapper curlWrapper;
 
-    void SetUp() override
-    {
-        // Initialize CurlWrapper before each test
-    }
-
-    void TearDown() override
-    {
-        // Clean up CurlWrapper after each test
+    static size_t dummyWriteCallback(void* contents, size_t size, size_t nmemb,
+                                     void* userp) {
+        return size * nmemb;
     }
 };
 
-// Test case to check if setting URL works correctly
-TEST_F(CurlWrapperTest, SetUrlTest)
-{
-    std::string testUrl = "https://www.example.com";
-    curl.setUrl(testUrl);
-    EXPECT_EQ(testUrl, /* Get the URL from CurlWrapper instance and compare */);
+TEST_F(CurlWrapperTest, ConstructorDestructor) {
+    CurlWrapper* wrapper = new CurlWrapper();
+    ASSERT_NE(wrapper, nullptr);
+    delete wrapper;
 }
 
-// Test case to check if performing a request returns non-empty response data
-TEST_F(CurlWrapperTest, PerformRequestTest)
-{
-    std::string testUrl = "https://www.example.com";
-    curl.setUrl(testUrl);
-    std::string responseData = curl.performRequest();
-    EXPECT_FALSE(responseData.empty());
+TEST_F(CurlWrapperTest, SetUrl) {
+    std::string url = "http://example.com";
+    curlWrapper.setUrl(url);
+    // Assuming there's a way to get the URL from the internal state for
+    // verification
 }
 
-// Test case to check if setting header works correctly
-TEST_F(CurlWrapperTest, SetHeaderTest)
-{
-    std::string testKey = "Content-Type";
-    std::string testValue = "application/json";
-    curl.setHeader(testKey, testValue);
-    EXPECT_TRUE(/* Check if the header is set correctly in CurlWrapper instance */);
+TEST_F(CurlWrapperTest, SetRequestMethod) {
+    std::string method = "POST";
+    curlWrapper.setRequestMethod(method);
+    // Assuming there's a way to get the method from the internal state for
+    // verification
 }
 
-// Test case to check if setting request method works correctly
-TEST_F(CurlWrapperTest, SetRequestMethodTest)
-{
-    std::string testMethod = "POST";
-    curl.setRequestMethod(testMethod);
-    EXPECT_EQ(testMethod, /* Get the request method from CurlWrapper instance and compare */);
+TEST_F(CurlWrapperTest, SetHeader) {
+    std::string key = "Content-Type";
+    std::string value = "application/json";
+    curlWrapper.setHeader(key, value);
+    // Assuming there's a way to get headers from the internal state for
+    // verification
 }
 
-// Test case to check if setting timeout works correctly
-TEST_F(CurlWrapperTest, SetTimeoutTest)
-{
-    long testTimeout = 10L;
-    curl.setTimeout(testTimeout);
-    EXPECT_EQ(testTimeout, /* Get the timeout value from CurlWrapper instance and compare */);
+TEST_F(CurlWrapperTest, SetOnErrorCallback) {
+    bool callbackInvoked = false;
+    curlWrapper.setOnErrorCallback(
+        [&callbackInvoked](CURLcode) { callbackInvoked = true; });
+    curlWrapper.setOnErrorCallback(
+        [&callbackInvoked](CURLcode code) { callbackInvoked = true; });
+    // curlWrapper.onErrorCallback(CURLE_OK); // Simulate an error
+    ASSERT_TRUE(callbackInvoked);
 }
 
-// Test case to check if setting follow location works correctly
-TEST_F(CurlWrapperTest, SetFollowLocationTest)
-{
-    bool testFollowLocation = true;
-    curl.setFollowLocation(testFollowLocation);
-    EXPECT_EQ(testFollowLocation, /* Get the follow location flag from CurlWrapper instance and compare */);
+TEST_F(CurlWrapperTest, SetOnResponseCallback) {
+    bool callbackInvoked = false;
+    curlWrapper.setOnResponseCallback(
+        [&callbackInvoked](const std::string&) { callbackInvoked = true; });
+    curlWrapper.setOnResponseCallback([&](const std::string& response) {
+        // Simulate a response
+    });
+    ASSERT_TRUE(callbackInvoked);
 }
 
-// Test case to check if setting request body works correctly
-TEST_F(CurlWrapperTest, SetRequestBodyTest)
-{
-    std::string testRequestBody = "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}";
-    curl.setRequestBody(testRequestBody);
-    EXPECT_EQ(testRequestBody, /* Get the request body data from CurlWrapper instance and compare */);
+TEST_F(CurlWrapperTest, SetTimeout) {
+    long timeout = 30;
+    curlWrapper.setTimeout(timeout);
+    // Assuming there's a way to get the timeout from the internal state for
+    // verification
 }
 
-// Test case to check if setting upload file works correctly
-TEST_F(CurlWrapperTest, SetUploadFileTest)
-{
-    std::string testFilePath = "/path/to/test/file.txt";
-    curl.setUploadFile(testFilePath);
-    EXPECT_EQ(testFilePath, /* Get the upload file path from CurlWrapper instance and compare */);
+TEST_F(CurlWrapperTest, SetFollowLocation) {
+    bool follow = true;
+    curlWrapper.setFollowLocation(follow);
+    // Assuming there's a way to get the follow location flag from the internal
+    // state for verification
 }
 
-// Test case to check if setting error callback works correctly
-TEST_F(CurlWrapperTest, SetOnErrorCallbackTest)
-{
-    bool callbackCalled = false;
-    curl.setOnErrorCallback([&callbackCalled](CURLcode code)
-                            {
-        // Set flag and handle error
-        callbackCalled = true; });
-    /* Trigger an error and ensure the callback was called */
-    EXPECT_TRUE(callbackCalled);
+TEST_F(CurlWrapperTest, SetRequestBody) {
+    std::string data = "request body";
+    curlWrapper.setRequestBody(data);
+    // Assuming there's a way to get the request body from the internal state
+    // for verification
 }
 
-// Test case to check if setting response callback works correctly
-TEST_F(CurlWrapperTest, SetOnResponseCallbackTest)
-{
-    std::string responseBody = "The quick brown fox jumps over the lazy dog";
-    curl.setOnResponseCallback([&responseBody](const std::string &data)
-                               {
-        // Handle response data
-        responseBody = data; });
-    /* Perform a request and ensure the response data was handled by the callback */
-    EXPECT_EQ(responseBody, /* Expected response data */);
+TEST_F(CurlWrapperTest, SetUploadFile) {
+    std::string filePath = "path/to/file";
+    curlWrapper.setUploadFile(filePath);
+    // Assuming there's a way to get the file path from the internal state for
+    // verification
 }
 
-// Test case to check if asynchronous request works correctly
-TEST_F(CurlWrapperTest, AsyncPerformTest)
-{
-    std::string testUrl = "https://www.example.com";
-    curl.setUrl(testUrl);
-    bool callbackCalled = false;
-    curl.asyncPerform([&callbackCalled](const std::string &data)
-                      {
-        // Handle response data and set flag
-        callbackCalled = true; });
-    /* Wait for response and ensure the callback was called */
-    curl.waitAll();
-    EXPECT_TRUE(callbackCalled);
+TEST_F(CurlWrapperTest, PerformRequest) {
+    curlWrapper.setUrl("http://example.com");
+    curlWrapper.setOnResponseCallback(
+        [](const std::string& response) { ASSERT_FALSE(response.empty()); });
+    std::string response = curlWrapper.performRequest();
+    ASSERT_FALSE(response.empty());
 }
 
-// Main function to run all the tests
-int main(int argc, char **argv)
-{
+TEST_F(CurlWrapperTest, AsyncPerform) {
+    bool callbackInvoked = false;
+    curlWrapper.setUrl("http://example.com");
+    curlWrapper.asyncPerform([&callbackInvoked](const std::string& response) {
+        callbackInvoked = true;
+        ASSERT_FALSE(response.empty());
+    });
+    curlWrapper.waitAll();
+    ASSERT_TRUE(callbackInvoked);
+}
+
+int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

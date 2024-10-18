@@ -76,15 +76,6 @@ ATOM_INLINE void registerSuite(const std::string& suite_name,
     getTestSuites().push_back({suite_name, std::move(cases)});
 }
 
-ATOM_INLINE auto operator""_test(const char* name, std::size_t size) {
-    return [name](std::function<void()> func, bool async = false,
-                  double time_limit = 0.0, bool skip = false,
-                  std::vector<std::string> const& dependencies = {}) {
-        return TestCase{name,  std::move(func), skip,
-                        async, time_limit,      dependencies};
-    };
-}
-
 struct TestStats {
     int totalTests = 0;
     int totalAsserts = 0;
@@ -312,6 +303,8 @@ ATOM_INLINE void runTests(int argc, char* argv[]) {
     }
 }
 
+ATOM_INLINE void runTests() { runTests(0, nullptr); }
+
 // 过滤测试用例
 ATOM_INLINE auto filterTests(const std::regex& pattern)
     -> std::vector<TestCase> {
@@ -502,5 +495,14 @@ auto expectLe(const T& lhs, const U& rhs, const char* file,
 #define expect_contains(str, substr) \
     atom::test::expectContains(str, substr, __FILE__, __LINE__)
 #define expect_set_eq(lhs, rhs) ut::expectSetEq(lhs, rhs, __FILE__, __LINE__)
+
+ATOM_INLINE auto operator""_test(const char* name, std::size_t size) {
+    return [name](std::function<void()> func, bool async = false,
+                  double time_limit = 0.0, bool skip = false,
+                  std::vector<std::string> const& dependencies = {}) {
+        return atom::test::TestCase{name,  std::move(func), skip,
+                                    async, time_limit,      dependencies};
+    };
+}
 
 #endif

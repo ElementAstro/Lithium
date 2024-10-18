@@ -273,6 +273,17 @@ private:
 };
 
 template <Cacheable T>
+ResourceCache<T>::ResourceCache(int maxSize) : maxSize_(maxSize) {
+    cleanupThread_ = std::jthread([this] { cleanupExpiredEntries(); });
+}
+
+template <Cacheable T>
+ResourceCache<T>::~ResourceCache() {
+    stopCleanupThread_.store(true);
+    cleanupThread_.join();
+}
+
+template <Cacheable T>
 void ResourceCache<T>::insert(const std::string &key, const T &value,
                               std::chrono::seconds expirationTime) {
     std::unique_lock lock(cacheMutex_);

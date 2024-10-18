@@ -20,22 +20,28 @@ set(ATOM_SYSINFO_VERSION_STRING "${ATOM_SYSINFO_VERSION_MAJOR}.${ATOM_SYSINFO_VE
 # Sources and Headers
 set(ATOM_SYSINFO_SOURCES
     battery.cpp
+    bios.cpp
     cpu.cpp
     disk.cpp
     gpu.cpp
+    locale.cpp
     memory.cpp
     os.cpp
     wifi.cpp
+    wm.cpp
 )
 
 set(ATOM_SYSINFO_HEADERS
     battery.hpp
+    bios.hpp
     cpu.hpp
     disk.hpp
     gpu.hpp
+    locale.hpp
     memory.hpp
     os.hpp
     wifi.hpp
+    wm.hpp
 )
 
 set(ATOM_SYSINFO_LIBS

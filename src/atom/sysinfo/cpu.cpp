@@ -52,7 +52,9 @@ Description: System Information Module - CPU
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
+
 auto getCurrentCpuUsage() -> float {
+    LOG_F(INFO, "Starting getCurrentCpuUsage function");
     float cpuUsage = 0.0;
 
 #ifdef _WIN32
@@ -70,6 +72,7 @@ auto getCurrentCpuUsage() -> float {
     cpuUsage = static_cast<float>(counterValue.doubleValue);
 
     PdhCloseQuery(query);
+    LOG_F(INFO, "CPU Usage: %.2f", cpuUsage);
 #elif __linux__
     std::ifstream file("/proc/stat");
     if (!file.is_open()) {
@@ -77,7 +80,7 @@ auto getCurrentCpuUsage() -> float {
         return cpuUsage;
     }
     std::string line;
-    std::getline(file, line);  // 读取第一行
+    std::getline(file, line);  // Read the first line
 
     std::istringstream iss(line);
     std::vector<std::string> tokens(std::istream_iterator<std::string>{iss},
@@ -92,6 +95,7 @@ auto getCurrentCpuUsage() -> float {
 
     float usage = static_cast<float>(totalTime - idleTime) / totalTime;
     cpuUsage = usage * 100.0;
+    LOG_F(INFO, "CPU Usage: %.2f", cpuUsage);
 #elif __APPLE__
     host_cpu_load_info_data_t cpu_load;
     mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
@@ -105,13 +109,14 @@ auto getCurrentCpuUsage() -> float {
         uint64_t idle_time = cpu_load.cpu_ticks[CPU_STATE_IDLE];
         uint64_t total_time = user_time + sys_time + idle_time;
 
-        cpu_usage = static_cast<float>(user_time + sys_time) / total_time;
-        cpu_usage *= 100.0;
+        cpuUsage = static_cast<float>(user_time + sys_time) / total_time;
+        cpuUsage *= 100.0;
+        LOG_F(INFO, "CPU Usage: %.2f", cpuUsage);
     } else {
-        LOG_F(ERROR, "Failed to get CPU temperature");
+        LOG_F(ERROR, "Failed to get CPU usage");
     }
 #elif __ANDROID__
-    // Android 实现
+    // Android implementation
     android::sp<android::IBatteryStats> battery_stat_service =
         android::interface_cast<android::IBatteryStats>(
             android::defaultServiceManager()->getService(
@@ -124,14 +129,17 @@ auto getCurrentCpuUsage() -> float {
     int32_t idle_time = uid.getUidCpuTime(android::BatteryStats::UID_TIME_IDLE);
     int32_t total_time = user_time + system_time + idle_time;
 
-    cpu_usage = static_cast<float>(user_time + system_time) / total_time;
-    cpu_usage *= 100.0;
+    cpuUsage = static_cast<float>(user_time + system_time) / total_time;
+    cpuUsage *= 100.0;
+    LOG_F(INFO, "CPU Usage: %.2f", cpuUsage);
 #endif
 
+    LOG_F(INFO, "Finished getCurrentCpuUsage function");
     return cpuUsage;
 }
 
 auto getCurrentCpuTemperature() -> float {
+    LOG_F(INFO, "Starting getCurrentCpuTemperature function");
     float temperature = 0.0F;
 
 #ifdef _WIN32
@@ -146,8 +154,11 @@ auto getCurrentCpuTemperature() -> float {
                             (LPBYTE)&temperatureValue,
                             &size) == ERROR_SUCCESS) {
             temperature = static_cast<float>(temperatureValue) / 10.0F;
+            LOG_F(INFO, "CPU Temperature: %.2f", temperature);
         }
         RegCloseKey(hKey);
+    } else {
+        LOG_F(ERROR, "Failed to open registry key for CPU temperature");
     }
 #elif defined(__APPLE__)
     FILE *pipe = popen("sysctl -a | grep machdep.xcpm.cpu_thermal_level", "r");
@@ -161,14 +172,17 @@ auto getCurrentCpuTemperature() -> float {
                 std::string tempStr = result.substr(pos1 + 2, pos2 - pos1 - 2);
                 try {
                     temperature = std::stof(tempStr);
+                    LOG_F(INFO, "CPU Temperature: %.2f", temperature);
                 } catch (const std::exception &e) {
-                    LOG_F(ERROR, "GetCpuTemperature error: {}", e.what());
+                    LOG_F(ERROR, "GetCpuTemperature error: %s", e.what());
                 }
             }
         } else {
             LOG_F(ERROR, "GetCpuTemperature error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for CPU temperature");
     }
 #elif defined(__linux__)
     if (isWsl()) {
@@ -180,6 +194,7 @@ auto getCurrentCpuTemperature() -> float {
             tempFile >> temp;
             tempFile.close();
             temperature = static_cast<float>(temp) / 1000.0F;
+            LOG_F(INFO, "CPU Temperature: %.2f", temperature);
         } else {
             LOG_F(ERROR,
                   "GetCpuTemperature error: open "
@@ -187,13 +202,14 @@ auto getCurrentCpuTemperature() -> float {
         }
     }
 #elif defined(__ANDROID__)
-    // Android 实现
+    // Android implementation
     std::ifstream tempFile("/sys/class/thermal/thermal_zone0/temp");
     if (tempFile.is_open()) {
         int temp = 0;
         tempFile >> temp;
         tempFile.close();
         temperature = static_cast<float>(temp) / 1000.0f;
+        LOG_F(INFO, "CPU Temperature: %.2f", temperature);
     } else {
         LOG_F(ERROR,
               "GetCpuTemperature error: open "
@@ -201,10 +217,12 @@ auto getCurrentCpuTemperature() -> float {
     }
 #endif
 
+    LOG_F(INFO, "Finished getCurrentCpuTemperature function");
     return temperature;
 }
 
 auto getCPUModel() -> std::string {
+    LOG_F(INFO, "Starting getCPUModel function");
     std::string cpuModel;
 #ifdef _WIN32
 
@@ -217,8 +235,11 @@ auto getCPUModel() -> std::string {
         if (RegQueryValueEx(hKey, "ProcessorNameString", nullptr, nullptr,
                             (LPBYTE)cpuName, &size) == ERROR_SUCCESS) {
             cpuModel = cpuName;
+            LOG_F(INFO, "CPU Model: %s", cpuModel.c_str());
         }
         RegCloseKey(hKey);
+    } else {
+        LOG_F(ERROR, "Failed to open registry key for CPU model");
     }
 
 #elif __linux__
@@ -228,6 +249,7 @@ auto getCPUModel() -> std::string {
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 10) == "model name") {
             cpuModel = line.substr(line.find(':') + 2);
+            LOG_F(INFO, "CPU Model: %s", cpuModel.c_str());
             break;
         }
     }
@@ -240,10 +262,13 @@ auto getCPUModel() -> std::string {
             cpuModel = buffer;
             cpuModel.erase(std::remove(cpuModel.begin(), cpuModel.end(), '\n'),
                            cpuModel.end());
+            LOG_F(INFO, "CPU Model: %s", cpuModel.c_str());
         } else {
             LOG_F(ERROR, "GetCPUModel error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for CPU model");
     }
 #elif defined(__ANDROID__)
     FILE *pipe = popen("getprop ro.product.model", "r");
@@ -253,16 +278,21 @@ auto getCPUModel() -> std::string {
             cpuModel = buffer;
             cpuModel.erase(std::remove(cpuModel.begin(), cpuModel.end(), '\n'),
                            cpuModel.end());
+            LOG_F(INFO, "CPU Model: %s", cpuModel.c_str());
         } else {
             LOG_F(ERROR, "GetCPUModel error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for CPU model");
     }
 #endif
+    LOG_F(INFO, "Finished getCPUModel function");
     return cpuModel;
 }
 
 auto getProcessorIdentifier() -> std::string {
+    LOG_F(INFO, "Starting getProcessorIdentifier function");
     std::string identifier;
 
 #ifdef _WIN32
@@ -278,6 +308,9 @@ auto getProcessorIdentifier() -> std::string {
         RegCloseKey(hKey);
 
         identifier = identifierValue;
+        LOG_F(INFO, "Processor Identifier: %s", identifier.c_str());
+    } else {
+        LOG_F(ERROR, "Failed to open registry key for processor identifier");
     }
 #elif defined(__linux__)
     std::ifstream cpuinfo("/proc/cpuinfo");
@@ -285,9 +318,11 @@ auto getProcessorIdentifier() -> std::string {
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 9) == "processor") {
             identifier = line.substr(line.find(':') + 2);
+            LOG_F(INFO, "Processor Identifier: %s", identifier.c_str());
             break;
         }
     }
+    cpuinfo.close();
 #elif defined(__APPLE__)
     FILE *pipe = popen("sysctl -n machdep.cpu.brand_string", "r");
     if (pipe != nullptr) {
@@ -297,28 +332,34 @@ auto getProcessorIdentifier() -> std::string {
             identifier.erase(
                 std::remove(identifier.begin(), identifier.end(), '\n'),
                 identifier.end());
+            LOG_F(INFO, "Processor Identifier: %s", identifier.c_str());
         } else {
             LOG_F(ERROR, "GetProcessorIdentifier error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for processor identifier");
     }
 #elif defined(__ANDROID__)
-    // Android 实现
+    // Android implementation
     std::ifstream cpuinfo("/proc/cpuinfo");
     std::string line;
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 9) == "processor") {
             identifier = line.substr(line.find(":") + 2);
+            LOG_F(INFO, "Processor Identifier: %s", identifier.c_str());
             break;
         }
     }
     cpuinfo.close();
 #endif
 
+    LOG_F(INFO, "Finished getProcessorIdentifier function");
     return identifier;
 }
 
 auto getProcessorFrequency() -> double {
+    LOG_F(INFO, "Starting getProcessorFrequency function");
     double frequency = 0;
 
 #ifdef _WIN32
@@ -335,9 +376,12 @@ auto getProcessorFrequency() -> double {
 
         frequency = static_cast<double>(frequencyValue) /
                     1000.0;  // Convert frequency to GHz
+        LOG_F(INFO, "Processor Frequency: %.2f GHz", frequency);
+    } else {
+        LOG_F(ERROR, "Failed to open registry key for processor frequency");
     }
 #elif defined(__linux__)
-    // Linux 实现
+    // Linux implementation
     std::ifstream cpuinfo("/proc/cpuinfo");
     std::string line;
     while (std::getline(cpuinfo, line)) {
@@ -345,69 +389,86 @@ auto getProcessorFrequency() -> double {
             std::size_t pos = line.find(':') + 2;
             frequency = std::stod(line.substr(pos)) /
                         1000.0;  // Convert frequency to GHz
+            LOG_F(INFO, "Processor Frequency: %.2f GHz", frequency);
             break;
         }
     }
     cpuinfo.close();
 #elif defined(__APPLE__)
-    // macOS 实现
+    // macOS implementation
     FILE *pipe = popen("sysctl -n hw.cpufrequency", "r");
     if (pipe != nullptr) {
         char buffer[128];
         if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
             frequency = std::stod(buffer) / 1e9;  // Convert frequency to GHz
+            LOG_F(INFO, "Processor Frequency: %.2f GHz", frequency);
         } else {
             LOG_F(ERROR, "GetProcessorFrequency error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for processor frequency");
     }
 #endif
 
+    LOG_F(INFO, "Finished getProcessorFrequency function");
     return frequency;
 }
 
 auto getNumberOfPhysicalPackages() -> int {
+    LOG_F(INFO, "Starting getNumberOfPhysicalPackages function");
     int numberOfPackages = 0;
 
 #ifdef _WIN32
     SYSTEM_INFO systemInfo;
     GetSystemInfo(&systemInfo);
     numberOfPackages = systemInfo.dwNumberOfProcessors;
+    LOG_F(INFO, "Number of Physical Packages: %d", numberOfPackages);
 #elif defined(__APPLE__)
     FILE *pipe = popen("sysctl -n hw.packages", "r");
     if (pipe != nullptr) {
         char buffer[128];
         if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
             numberOfPackages = std::stoi(buffer);
+            LOG_F(INFO, "Number of Physical Packages: %d", numberOfPackages);
         } else {
             LOG_F(ERROR, "GetNumberOfPhysicalPackages error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for number of physical packages");
     }
 #elif defined(__linux__)
     numberOfPackages = static_cast<int>(sysconf(_SC_PHYS_PAGES));
+    LOG_F(INFO, "Number of Physical Packages: %d", numberOfPackages);
 #endif
 
+    LOG_F(INFO, "Finished getNumberOfPhysicalPackages function");
     return numberOfPackages;
 }
 
 auto getNumberOfPhysicalCPUs() -> int {
+    LOG_F(INFO, "Starting getNumberOfPhysicalCPUs function");
     int numberOfCPUs = 0;
 
 #ifdef _WIN32
     SYSTEM_INFO systemInfo;
     GetSystemInfo(&systemInfo);
     numberOfCPUs = systemInfo.dwNumberOfProcessors;
+    LOG_F(INFO, "Number of Physical CPUs: %d", numberOfCPUs);
 #elif defined(__APPLE__)
     FILE *pipe = popen("sysctl -n hw.physicalcpu", "r");
     if (pipe != nullptr) {
         char buffer[128];
         if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
             numberOfCPUs = std::stoi(buffer);
+            LOG_F(INFO, "Number of Physical CPUs: %d", numberOfCPUs);
         } else {
             LOG_F(ERROR, "GetNumberOfPhysicalCPUs error: popen error");
         }
         pclose(pipe);
+    } else {
+        LOG_F(ERROR, "Failed to open pipe for number of physical CPUs");
     }
 #elif defined(__linux__)
     std::ifstream cpuinfo("/proc/cpuinfo");
@@ -415,11 +476,14 @@ auto getNumberOfPhysicalCPUs() -> int {
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 7) == "physical") {
             numberOfCPUs = std::stoi(line.substr(line.find(':') + 2));
+            LOG_F(INFO, "Number of Physical CPUs: %d", numberOfCPUs);
             break;
         }
     }
+    cpuinfo.close();
 #endif
 
+    LOG_F(INFO, "Finished getNumberOfPhysicalCPUs function");
     return numberOfCPUs;
 }
 

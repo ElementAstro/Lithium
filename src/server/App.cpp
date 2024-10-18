@@ -1,3 +1,4 @@
+#include "controller/ComponentController.hpp"
 #include "controller/FileController.hpp"
 #include "controller/RoomsController.hpp"
 #include "controller/StaticController.hpp"
@@ -7,7 +8,12 @@
 
 #include "oatpp/network/Server.hpp"
 
-#include <iostream>
+#include "addon/loader.hpp"
+
+#include "atom/error/exception.hpp"
+#include "atom/function/global_ptr.hpp"
+#include "atom/io/io.hpp"
+#include "atom/log/loguru.hpp"
 
 void run(const oatpp::base::CommandLineArguments& args) {
     /* Register Components in scope of run() method */
@@ -17,10 +23,16 @@ void run(const oatpp::base::CommandLineArguments& args) {
     OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);
 
     /* Create RoomsController and add all of its endpoints to router */
+    router->addController(std::make_shared<ComponentController>());
     router->addController(std::make_shared<RoomsController>());
     router->addController(std::make_shared<StaticController>());
     router->addController(std::make_shared<FileController>());
     router->addController(std::make_shared<StatisticsController>());
+
+    // Dynamic router loading
+    std::weak_ptr<atom::meta::
+    GET_OR_CREATE_WEAK_PTR(, type, constant, ...)
+
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
@@ -49,20 +61,16 @@ void run(const oatpp::base::CommandLineArguments& args) {
     OATPP_COMPONENT(oatpp::Object<ConfigDto>, appConfig);
 
     if (appConfig->useTLS) {
-        OATPP_LOGi("canchat",
-                   "clients are expected to connect at https://{}:{}/",
-                   appConfig->host, appConfig->port);
+        LOG_F(INFO, "clients are expected to connect at https://{}:{}",
+              appConfig->host, appConfig->port);
     } else {
-        OATPP_LOGi("canchat",
-                   "clients are expected to connect at http://{}:{}/",
-                   appConfig->host, appConfig->port);
+        LOG_F(INFO, "Canonical base URL={}", appConfig->getCanonicalBaseUrl());
     }
 
-    OATPP_LOGi("canchat", "canonical base URL={}",
-               appConfig->getCanonicalBaseUrl())
-        OATPP_LOGi("canchat", "statistics URL={}", appConfig->getStatsUrl())
+    LOG_F(INFO, "Canonical base URL={}", appConfig->getCanonicalBaseUrl());
+    LOG_F(INFO, "Statistics URL={}", appConfig->getStatsUrl());
 
-            serverThread.join();
+    serverThread.join();
     pingThread.join();
     statThread.join();
 }

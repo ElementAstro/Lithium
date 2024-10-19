@@ -886,7 +886,7 @@ auto getWindowsPrivileges(int pid) -> PrivilegesInfo {
         LOG_F(INFO, "Current User: {}", info.username);
     } else {
         LOG_F(ERROR, "Failed to get username. Error: {}", GetLastError());
-        
+
     }
 
     // Open the access token of the specified process

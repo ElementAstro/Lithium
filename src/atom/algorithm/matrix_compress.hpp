@@ -31,7 +31,7 @@ public:
 #define THROW_NESTED_MATRIX_DECOMPRESS_EXCEPTION(...)                        \
     MatrixDecompressException::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                              ATOM_FUNC_NAME, __VA_ARGS__);
-                                             
+
 namespace atom::algorithm {
 /**
  * @class MatrixCompressor

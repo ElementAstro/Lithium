@@ -9,14 +9,14 @@
 #ifndef ATOM_META_TEMPLATE_TRAITS_HPP
 #define ATOM_META_TEMPLATE_TRAITS_HPP
 
-#include <concepts>
-#include <limits>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <utility>
+#include <concepts>  // Includes for C++20 concepts
+#include <limits>    // Includes for std::numeric_limits
+#include <string>    // Includes for std::string
+#include <tuple>     // Includes for std::tuple
+#include <type_traits>  // Includes for std::is_same, std::is_base_of, std::is_base_of_v, std::is_same_v
+#include <utility>  // Includes for std::declval, std::index_sequence, std::index_sequence_for, std::make_index_sequence
 
-#include "abi.hpp"
+#include "abi.hpp"  // Includes for DemangleHelper
 
 #ifdef _WIN32
 #undef max

@@ -23,7 +23,7 @@
 #include "abi.hpp"  // Include for ATOM_INLINE, ATOM_CONSTEXPR, ATOM_NOEXCEPT
 #include "concept.hpp"  // Include for Pointer, SmartPointer
 
-#include "atom/macro.hpp"
+#include "atom/macro.hpp"  // Include for ATOM_NODISCARD, ATOM_CONSTEXPR, ATOM_NOEXCEPT, ATOM_INLINE
 
 namespace atom::meta {
 

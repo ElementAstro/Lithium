@@ -15,6 +15,7 @@ Description: Basic Component Definition
 #ifndef ATOM_COMPONENT_HPP
 #define ATOM_COMPONENT_HPP
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -27,6 +28,7 @@ Description: Basic Component Definition
 #include "atom/function/concept.hpp"
 #include "atom/function/constructor.hpp"
 #include "atom/function/conversion.hpp"
+#include "atom/function/func_traits.hpp"
 #include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/log/loguru.hpp"
@@ -492,9 +494,10 @@ void Component::defBaseClass() {
 template <typename Callable>
 void Component::def(const std::string& name, Callable&& func,
                     const std::string& group, const std::string& description) {
-    using FuncType = std::function<typename std::invoke_result_t<Callable>>;
+    using Traits = atom::meta::FunctionTraits<decltype(func)>;
+
     m_CommandDispatcher_->def(name, group, description,
-                              FuncType(std::forward<Callable>(func)));
+                              std::function<typename Traits::return_type(typename Traits::argument_t)>(std::forward<Callable>(func)));
 }
 
 template <typename Ret>

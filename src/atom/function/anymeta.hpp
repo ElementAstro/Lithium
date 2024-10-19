@@ -9,8 +9,6 @@
 #define ATOM_META_ANYMETA_HPP
 
 #include "any.hpp"
-#include "atom/error/exception.hpp"
-#include "macro.hpp"
 #include "type_info.hpp"
 
 #include <functional>
@@ -21,8 +19,11 @@
 #include <unordered_map>
 #include <vector>
 
-namespace atom::meta {
+#include "atom/error/exception.hpp"
 
+#include "macro.hpp"
+
+namespace atom::meta {
 class TypeMetadata {
 public:
     using MethodFunction = std::function<BoxedValue(std::vector<BoxedValue>)>;

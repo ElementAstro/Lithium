@@ -244,6 +244,32 @@ class RequestINDIStartDto : public RequestDto {
     DTO_FIELD(Boolean, enableLog);
 };
 
+class RequestINDIDriverListDto: public RequestDto {
+    DTO_INIT(RequestINDIDriverListDto, RequestDto)
+
+    DTO_FIELD_INFO(type) {
+        info->description = "The type of the entity (driver/device)";
+        info->required = true;
+    }
+    DTO_FIELD(Vector<String>, type);
+
+    DTO_FIELD_INFO(path) {
+        info->description = "The path of the INDI driver declaration files";
+        info->required = true;
+    }
+    DTO_FIELD(String, path);
+};
+
+class ReturnINDIDriverListInvalidTypeDto: public StatusDto {
+    DTO_INIT(ReturnINDIDriverListInvalidTypeDto, StatusDto)
+
+    DTO_FIELD_INFO(invalidType) {
+        info->description = "The invalid type of the entity (driver/device)";
+        info->required = true;
+    }
+    DTO_FIELD(Vector<String>, invalidType);
+};
+
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section
 
 #endif  // INDIDTO_HPP

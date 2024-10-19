@@ -5,12 +5,16 @@
 #include "atom/log/loguru.hpp"
 
 namespace atom::async::io {
+
 AsyncFile::AsyncFile(asio::io_context& io_context)
-    : io_context_(io_context), timer_(io_context) {}
+    : io_context_(io_context), timer_(io_context) {
+    LOG_F(INFO, "AsyncFile constructor called");
+}
 
 void AsyncFile::asyncRead(
     const std::string& filename,
     const std::function<void(const std::string&)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncRead called with filename: {}", filename);
     io_context_.post([this, filename, callback]() {
         std::ifstream file(filename, std::ios::binary);
         if (!file.is_open()) {
@@ -37,6 +41,7 @@ void AsyncFile::asyncRead(
 void AsyncFile::asyncWrite(const std::string& filename,
                            const std::string& content,
                            const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncWrite called with filename: {}", filename);
     io_context_.post([this, filename, content, callback]() {
         std::ofstream file(filename, std::ios::binary);
         if (!file.is_open()) {
@@ -55,6 +60,7 @@ void AsyncFile::asyncWrite(const std::string& filename,
 
 void AsyncFile::asyncDelete(const std::string& filename,
                             const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncDelete called with filename: {}", filename);
     io_context_.post([this, filename, callback]() {
         if (std::remove(filename.c_str()) == 0) {
             LOG_F(INFO, "File deleted: {}", filename);
@@ -68,6 +74,8 @@ void AsyncFile::asyncDelete(const std::string& filename,
 
 void AsyncFile::asyncCopy(const std::string& src, const std::string& dest,
                           const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncCopy called with src: {}, dest: {}", src,
+          dest);
     io_context_.post([this, src, dest, callback]() {
         std::ifstream srcFile(src, std::ios::binary);
         if (!srcFile.is_open()) {
@@ -95,6 +103,10 @@ void AsyncFile::asyncCopy(const std::string& src, const std::string& dest,
 void AsyncFile::asyncReadWithTimeout(
     const std::string& filename, int timeoutMs,
     const std::function<void(const std::string&)>& callback) {
+    LOG_F(INFO,
+          "AsyncFile::asyncReadWithTimeout called with filename: {}, "
+          "timeoutMs: {}",
+          filename, timeoutMs);
     bool completed = false;
     asyncRead(filename,
               [this, &completed, callback](const std::string& content) {
@@ -118,6 +130,7 @@ void AsyncFile::asyncReadWithTimeout(
 void AsyncFile::asyncBatchRead(
     const std::vector<std::string>& files,
     const std::function<void(const std::vector<std::string>&)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncBatchRead called with {} files", files.size());
     auto results = std::make_shared<std::vector<std::string>>(files.size());
     auto remaining = std::make_shared<int>(files.size());
 
@@ -126,6 +139,7 @@ void AsyncFile::asyncBatchRead(
                              i](const std::string& content) {
             (*results)[i] = content;
             if (--(*remaining) == 0) {
+                LOG_F(INFO, "All files read successfully");
                 callback(*results);  // All reads are complete
             }
         });
@@ -135,6 +149,7 @@ void AsyncFile::asyncBatchRead(
 void AsyncFile::asyncStat(
     const std::string& filename,
     const std::function<void(bool, std::uintmax_t, std::time_t)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncStat called with filename: {}", filename);
     io_context_.post([this, filename, callback]() {
         std::error_code errorCode;
         auto fileSize = std::filesystem::file_size(filename, errorCode);
@@ -162,6 +177,8 @@ void AsyncFile::asyncStat(
 
 void AsyncFile::asyncMove(const std::string& src, const std::string& dest,
                           const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncMove called with src: {}, dest: {}", src,
+          dest);
     io_context_.post([this, src, dest, callback]() {
         std::error_code errorCode;
         std::filesystem::rename(src, dest, errorCode);
@@ -178,6 +195,8 @@ void AsyncFile::asyncMove(const std::string& src, const std::string& dest,
 void AsyncFile::asyncChangePermissions(
     const std::string& filename, std::filesystem::perms perms,
     const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncChangePermissions called with filename: {}",
+          filename);
     io_context_.post([this, filename, perms, callback]() {
         std::error_code errorCode;
         std::filesystem::permissions(filename, perms, errorCode);
@@ -194,6 +213,7 @@ void AsyncFile::asyncChangePermissions(
 
 void AsyncFile::asyncCreateDirectory(
     const std::string& path, const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncCreateDirectory called with path: {}", path);
     io_context_.post([this, path, callback]() {
         std::error_code errorCode;
         if (std::filesystem::create_directory(path, errorCode)) {
@@ -208,6 +228,7 @@ void AsyncFile::asyncCreateDirectory(
 
 void AsyncFile::asyncExists(const std::string& filename,
                             const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncFile::asyncExists called with filename: {}", filename);
     io_context_.post([this, filename, callback]() {
         bool exists = std::filesystem::exists(filename);
         LOG_F(INFO, "File existence check: {} - {}", filename, exists);
@@ -216,10 +237,13 @@ void AsyncFile::asyncExists(const std::string& filename,
 }
 
 AsyncDirectory::AsyncDirectory(asio::io_context& io_context)
-    : io_context_(io_context) {}
+    : io_context_(io_context) {
+    LOG_F(INFO, "AsyncDirectory constructor called");
+}
 
 void AsyncDirectory::asyncCreate(const std::string& path,
                                  const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncDirectory::asyncCreate called with path: {}", path);
     io_context_.post([this, path, callback]() {
         std::error_code errorCode;
         if (std::filesystem::create_directory(path, errorCode)) {
@@ -234,6 +258,7 @@ void AsyncDirectory::asyncCreate(const std::string& path,
 
 void AsyncDirectory::asyncRemove(const std::string& path,
                                  const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncDirectory::asyncRemove called with path: {}", path);
     io_context_.post([this, path, callback]() {
         std::error_code errorCode;
         if (std::filesystem::remove(path, errorCode)) {
@@ -249,6 +274,7 @@ void AsyncDirectory::asyncRemove(const std::string& path,
 void AsyncDirectory::asyncListContents(
     const std::string& path,
     const std::function<void(std::vector<std::string>)>& callback) {
+    LOG_F(INFO, "AsyncDirectory::asyncListContents called with path: {}", path);
     io_context_.post([this, path, callback]() {
         std::vector<std::string> contents;
         std::error_code errorCode;
@@ -271,10 +297,12 @@ void AsyncDirectory::asyncListContents(
 
 void AsyncDirectory::asyncExists(const std::string& path,
                                  const std::function<void(bool)>& callback) {
+    LOG_F(INFO, "AsyncDirectory::asyncExists called with path: {}", path);
     io_context_.post([this, path, callback]() {
         bool exists = std::filesystem::exists(path);
         LOG_F(INFO, "Directory existence check: {} - {}", path, exists);
         callback(exists);
     });
 }
+
 }  // namespace atom::async::io

@@ -32,47 +32,82 @@ public:
     void notifyEvent(const std::string& eventType, const std::string& keyName);
 };
 
-Registry::Registry() : pImpl_(std::make_unique<RegistryImpl>()) {}
+Registry::Registry() : pImpl_(std::make_unique<RegistryImpl>()) {
+    LOG_F(INFO, "Registry constructor called");
+}
 
-void Registry::loadRegistryFromFile() { pImpl_->saveRegistryToFile(); }
+void Registry::loadRegistryFromFile() {
+    LOG_F(INFO, "Registry::loadRegistryFromFile called");
+    pImpl_->saveRegistryToFile();
+    LOG_F(INFO, "Registry::loadRegistryFromFile completed");
+}
 
 void Registry::createKey(const std::string& keyName) {
+    LOG_F(INFO, "Registry::createKey called with keyName: {}", keyName);
     pImpl_->saveRegistryToFile();
     pImpl_->notifyEvent("KeyCreated", keyName);
+    LOG_F(INFO, "Registry::createKey completed for keyName: {}", keyName);
 }
 
 void Registry::deleteKey(const std::string& keyName) {
+    LOG_F(INFO, "Registry::deleteKey called with keyName: {}", keyName);
     pImpl_->saveRegistryToFile();
     pImpl_->notifyEvent("KeyDeleted", keyName);
+    LOG_F(INFO, "Registry::deleteKey completed for keyName: {}", keyName);
 }
 
 void Registry::setValue(const std::string& keyName,
                         const std::string& valueName, const std::string& data) {
+    LOG_F(INFO,
+          "Registry::setValue called with keyName: {}, valueName: {}, data: {}",
+          keyName, valueName, data);
     pImpl_->registryData[keyName][valueName] = data;
     pImpl_->saveRegistryToFile();
     pImpl_->notifyEvent("ValueSet", keyName);
+    LOG_F(INFO, "Registry::setValue completed for keyName: {}, valueName: {}",
+          keyName, valueName);
 }
 
 auto Registry::getValue(const std::string& keyName,
                         const std::string& valueName) -> std::string {
+    LOG_F(INFO, "Registry::getValue called with keyName: {}, valueName: {}",
+          keyName, valueName);
     if (pImpl_->registryData.find(keyName) != pImpl_->registryData.end() &&
         pImpl_->registryData[keyName].find(valueName) !=
             pImpl_->registryData[keyName].end()) {
-        return pImpl_->registryData[keyName][valueName];
+        std::string value = pImpl_->registryData[keyName][valueName];
+        LOG_F(
+            INFO,
+            "Registry::getValue found value: {} for keyName: {}, valueName: {}",
+            value, keyName, valueName);
+        return value;
     }
+    LOG_F(
+        WARNING,
+        "Registry::getValue did not find value for keyName: {}, valueName: {}",
+        keyName, valueName);
     return "Value not found";
 }
 
 void Registry::deleteValue(const std::string& keyName,
                            const std::string& valueName) {
+    LOG_F(INFO, "Registry::deleteValue called with keyName: {}, valueName: {}",
+          keyName, valueName);
     if (pImpl_->registryData.find(keyName) != pImpl_->registryData.end()) {
         pImpl_->registryData[keyName].erase(valueName);
         pImpl_->saveRegistryToFile();
         pImpl_->notifyEvent("ValueDeleted", keyName);
+        LOG_F(INFO,
+              "Registry::deleteValue completed for keyName: {}, valueName: {}",
+              keyName, valueName);
+    } else {
+        LOG_F(WARNING, "Registry::deleteValue did not find keyName: {}",
+              keyName);
     }
 }
 
 void Registry::backupRegistryData() {
+    LOG_F(INFO, "Registry::backupRegistryData called");
     std::time_t currentTime = std::time(nullptr);
     std::string backupFileName =
         "registry_backup_" + std::to_string(currentTime) + ".txt";
@@ -87,14 +122,16 @@ void Registry::backupRegistryData() {
             backupFile << std::endl;
         }
         backupFile.close();
-        DLOG_F(INFO, "Registry data backed up successfully to file: {}",
-               backupFileName);
+        LOG_F(INFO, "Registry data backed up successfully to file: {}",
+              backupFileName);
     } else {
         LOG_F(ERROR, "Error: Unable to create backup file");
     }
 }
 
 void Registry::restoreRegistryData(const std::string& backupFile) {
+    LOG_F(INFO, "Registry::restoreRegistryData called with backupFile: {}",
+          backupFile);
     std::ifstream backup(backupFile);
     if (backup.is_open()) {
         pImpl_->registryData.clear();  // Clear existing data before restoring
@@ -115,35 +152,48 @@ void Registry::restoreRegistryData(const std::string& backupFile) {
         }
 
         backup.close();
-        DLOG_F(INFO, "Registry data restored successfully from backup file: {}",
-               backupFile);
+        LOG_F(INFO, "Registry data restored successfully from backup file: {}",
+              backupFile);
     } else {
         LOG_F(ERROR, "Error: Unable to open backup file for restore");
     }
 }
 
 auto Registry::keyExists(const std::string& keyName) const -> bool {
-    return pImpl_->registryData.find(keyName) != pImpl_->registryData.end();
+    LOG_F(INFO, "Registry::keyExists called with keyName: {}", keyName);
+    bool exists =
+        pImpl_->registryData.find(keyName) != pImpl_->registryData.end();
+    LOG_F(INFO, "Registry::keyExists returning: {}", exists);
+    return exists;
 }
 
 auto Registry::valueExists(const std::string& keyName,
                            const std::string& valueName) const -> bool {
+    LOG_F(INFO, "Registry::valueExists called with keyName: {}, valueName: {}",
+          keyName, valueName);
     auto keyIter = pImpl_->registryData.find(keyName);
-    return keyIter != pImpl_->registryData.end() &&
-           keyIter->second.find(valueName) != keyIter->second.end();
+    bool exists = keyIter != pImpl_->registryData.end() &&
+                  keyIter->second.find(valueName) != keyIter->second.end();
+    LOG_F(INFO, "Registry::valueExists returning: {}", exists);
+    return exists;
 }
 
 auto Registry::getValueNames(const std::string& keyName) const
     -> std::vector<std::string> {
+    LOG_F(INFO, "Registry::getValueNames called with keyName: {}", keyName);
     std::vector<std::string> valueNames;
     if (pImpl_->registryData.find(keyName) != pImpl_->registryData.end()) {
         for (const auto& pair : pImpl_->registryData.at(keyName)) {
             valueNames.push_back(pair.first);
         }
     }
+    LOG_F(INFO, "Registry::getValueNames returning {} value names",
+          valueNames.size());
     return valueNames;
 }
+
 void Registry::RegistryImpl::saveRegistryToFile() {
+    LOG_F(INFO, "RegistryImpl::saveRegistryToFile called");
     std::ofstream file("registry_data.txt");
     if (file.is_open()) {
         for (auto const& key : registryData) {
@@ -154,6 +204,7 @@ void Registry::RegistryImpl::saveRegistryToFile() {
             file << std::endl;
         }
         file.close();
+        LOG_F(INFO, "Registry data saved to file successfully");
     } else {
         LOG_F(ERROR, "Error: Unable to save registry data to file");
     }
@@ -161,7 +212,7 @@ void Registry::RegistryImpl::saveRegistryToFile() {
 
 void Registry::RegistryImpl::notifyEvent(const std::string& eventType,
                                          const std::string& keyName) {
-    DLOG_F(INFO, "Event: {} occurred for key: {}", eventType, keyName);
+    LOG_F(INFO, "Event: {} occurred for key: {}", eventType, keyName);
 }
 
 }  // namespace atom::system

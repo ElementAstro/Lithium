@@ -13,6 +13,7 @@
 #include <cstring>
 #include <type_traits>
 #include <utility>
+
 #include "atom/macro.hpp"
 
 namespace atom::meta {
@@ -372,7 +373,7 @@ template <typename FirstType, typename SecondType, typename... RemainingTypes>
 struct IsSame<FirstType, SecondType, RemainingTypes...> {
     static constexpr bool K_VALUE =
         std::is_same_v<FirstType, SecondType> ||
-        IsSame<FirstType, RemainingTypes...>::kValue;
+        IsSame<FirstType, RemainingTypes...>::K_VALUE;
 };
 
 }  // namespace detail

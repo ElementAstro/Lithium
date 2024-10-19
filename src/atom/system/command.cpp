@@ -45,6 +45,7 @@ Description: Simple wrapper for executing commands.
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/system/process.hpp"
 #include "atom/utils/to_string.hpp"
 
@@ -62,8 +63,14 @@ auto executeCommandInternal(
     const std::string &input = "",  // 新增input参数
     const std::string &username = "", const std::string &domain = "",
     const std::string &password = "") -> std::string {
+    LOG_F(INFO,
+          "executeCommandInternal called with command: {}, openTerminal: {}, "
+          "input: {}, username: {}, domain: {}, password: [hidden]",
+          command, openTerminal, input, username, domain);
+
     if (command.empty()) {
         status = -1;
+        LOG_F(ERROR, "Command is empty");
         return "";
     }
 
@@ -81,10 +88,15 @@ auto executeCommandInternal(
 
     if (!username.empty() && !domain.empty() && !password.empty()) {
         if (!_CreateProcessAsUser(command, username, domain, password)) {
-            THROW_RUNTIME_ERROR("Error: failed to run command '" + command +
-                                "' as user.");
+            LOG_F(ERROR, "Failed to run command '{}' as user '{}\\{}'.",
+                  command, domain, username);
+            THROW_RUNTIME_ERROR(std::format(
+                "Error: failed to run command '{}' as user '{}\\{}'.", command,
+                domain, username));
         }
         status = 0;
+        LOG_F(INFO, "Command '{}' executed as user '{}\\{}'.", command, domain,
+              username);
         return "";
     }
 
@@ -99,10 +111,12 @@ auto executeCommandInternal(
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);
             status = 0;
-            return "";  // 因为终端界面会在新进程中执行，无法获得输出，所以这里返回空字符串。
+            LOG_F(INFO, "Command '{}' executed in terminal.", command);
+            return "";
         }
-        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
-                                     command + "'.");
+        LOG_F(ERROR, "Failed to run command '{}' in terminal.", command);
+        THROW_FAIL_TO_CREATE_PROCESS(std::format(
+            "Error: failed to run command '{}' in terminal.", command));
     }
     pipe.reset(_popen(command.c_str(), "w"));
 #else  // 非Windows平台
@@ -110,18 +124,25 @@ auto executeCommandInternal(
 #endif
 
     if (!pipe) {
-        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
-                                     command + "'.");
+        LOG_F(ERROR, "Failed to run command '{}'.", command);
+        THROW_FAIL_TO_CREATE_PROCESS(
+            std::format("Error: failed to run command '{}'.", command));
     }
 
     // 写入输入
     if (!input.empty()) {
         if (fwrite(input.c_str(), sizeof(char), input.size(), pipe.get()) !=
             input.size()) {
-            THROW_RUNTIME_ERROR("Error: failed to write input to pipe.");
+            LOG_F(ERROR, "Failed to write input to pipe for command '{}'.",
+                  command);
+            THROW_RUNTIME_ERROR(std::format(
+                "Error: failed to write input to pipe for command '{}'.",
+                command));
         }
         if (fflush(pipe.get()) != 0) {
-            THROW_RUNTIME_ERROR("Error: failed to flush pipe.");
+            LOG_F(ERROR, "Failed to flush pipe for command '{}'.", command);
+            THROW_RUNTIME_ERROR(std::format(
+                "Error: failed to flush pipe for command '{}'.", command));
         }
     }
 
@@ -168,7 +189,7 @@ auto executeCommandInternal(
 #else
     status = WEXITSTATUS(pclose(pipe.get()));
 #endif
-
+    LOG_F(INFO, "Command '{}' executed with status: {}", command, status);
     return output.str();
 }
 
@@ -176,8 +197,13 @@ auto executeCommandStream(
     const std::string &command, [[maybe_unused]] bool openTerminal,
     const std::function<void(const std::string &)> &processLine, int &status,
     const std::function<bool()> &terminateCondition) -> std::string {
+    LOG_F(INFO,
+          "executeCommandStream called with command: {}, openTerminal: {}",
+          command, openTerminal);
+
     if (command.empty()) {
         status = -1;
+        LOG_F(ERROR, "Command is empty");
         return "";
     }
 
@@ -208,11 +234,13 @@ auto executeCommandStream(
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);
             status = 0;
+            LOG_F(INFO, "Command '{}' executed in terminal.", command);
             return "";  // Since terminal window will execute in new process, we
                         // can't get output here.
         }
-        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
-                                     command + "'.");
+        LOG_F(ERROR, "Failed to run command '{}' in terminal.", command);
+        THROW_FAIL_TO_CREATE_PROCESS(std::format(
+            "Error: failed to run command '{}' in terminal.", command));
     }
     pipe.reset(_popen(command.c_str(), "r"));
 #else
@@ -220,8 +248,9 @@ auto executeCommandStream(
 #endif
 
     if (!pipe) {
-        THROW_FAIL_TO_CREATE_PROCESS("Error: failed to run command '" +
-                                     command + "'.");
+        LOG_F(ERROR, "Failed to run command '{}'.", command);
+        THROW_FAIL_TO_CREATE_PROCESS(
+            std::format("Error: failed to run command '{}'.", command));
     }
 
     constexpr std::size_t BUFFER_SIZE = 4096;
@@ -272,21 +301,29 @@ auto executeCommandStream(
                                               // pipe is closed correctly
 #endif
 
+    LOG_F(INFO, "Command '{}' executed with status: {}", command, status);
     return output.str();
 }
 
 auto executeCommand(const std::string &command, bool openTerminal,
                     const std::function<void(const std::string &)> &processLine)
     -> std::string {
+    LOG_F(INFO, "executeCommand called with command: {}, openTerminal: {}",
+          command, openTerminal);
     int status = 0;
-    return executeCommandInternal(command, openTerminal, processLine, status);
+    auto result =
+        executeCommandInternal(command, openTerminal, processLine, status);
+    LOG_F(INFO, "executeCommand completed with status: {}", status);
+    return result;
 }
 
 auto executeCommandWithStatus(const std::string &command)
     -> std::pair<std::string, int> {
+    LOG_F(INFO, "executeCommandWithStatus called with command: {}", command);
     int status = 0;
     std::string output =
         executeCommandInternal(command, false, nullptr, status);
+    LOG_F(INFO, "executeCommandWithStatus completed with status: {}", status);
     return {output, status};
 }
 
@@ -294,12 +331,17 @@ auto executeCommandWithInput(const std::string &command,
                              const std::string &input,
                              const std::function<void(const std::string &)>
                                  &processLine) -> std::string {
+    LOG_F(INFO, "executeCommandWithInput called with command: {}, input: {}",
+          command, input);
     int status = 0;
-    return executeCommandInternal(command, /*openTerminal=*/false, processLine,
-                                  status, input);
+    auto result = executeCommandInternal(command, /*openTerminal=*/false,
+                                         processLine, status, input);
+    LOG_F(INFO, "executeCommandWithInput completed with status: {}", status);
+    return result;
 }
 
 void executeCommands(const std::vector<std::string> &commands) {
+    LOG_F(INFO, "executeCommands called with {} commands", commands.size());
     std::vector<std::thread> threads;
     std::vector<std::string> errors;
 
@@ -326,12 +368,15 @@ void executeCommands(const std::vector<std::string> &commands) {
         THROW_INVALID_ARGUMENT("One or more commands failed." +
                                atom::utils::toString(errors));
     }
+    LOG_F(INFO, "executeCommands completed");
 }
 
 auto executeCommandWithEnv(const std::string &command,
                            const std::unordered_map<std::string, std::string>
                                &envVars) -> std::string {
+    LOG_F(INFO, "executeCommandWithEnv called with command: {}", command);
     if (command.empty()) {
+        LOG_F(WARNING, "Command is empty");
         return "";
     }
 
@@ -368,17 +413,24 @@ auto executeCommandWithEnv(const std::string &command,
         }
     }
 
+    LOG_F(INFO, "executeCommandWithEnv completed");
     return result;
 }
 
 auto executeCommandSimple(const std::string &command) -> bool {
-    return executeCommandWithStatus(command).second == 0;
+    LOG_F(INFO, "executeCommandSimple called with command: {}", command);
+    auto result = executeCommandWithStatus(command).second == 0;
+    LOG_F(INFO, "executeCommandSimple completed with result: {}", result);
+    return result;
 }
 
 void killProcessByName(const std::string &processName, ATOM_UNUSED int signal) {
+    LOG_F(INFO, "killProcessByName called with processName: {}, signal: {}",
+          processName, signal);
 #ifdef _WIN32
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE) {
+        LOG_F(ERROR, "Error: unable to create toolhelp snapshot.");
         THROW_SYSTEM_COLLAPSE("Error: unable to create toolhelp snapshot.");
     }
 
@@ -387,6 +439,7 @@ void killProcessByName(const std::string &processName, ATOM_UNUSED int signal) {
 
     if (Process32FirstW(snap, &entry) == 0) {
         CloseHandle(snap);
+        LOG_F(ERROR, "Error: unable to get the first process.");
         THROW_SYSTEM_COLLAPSE("Error: unable to get the first process.");
     }
 
@@ -398,6 +451,7 @@ void killProcessByName(const std::string &processName, ATOM_UNUSED int signal) {
             if (hProcess != nullptr) {
                 TerminateProcess(hProcess, 0);
                 CloseHandle(hProcess);
+                LOG_F(INFO, "Process '{}' terminated.", processName);
             }
         }
     } while (Process32NextW(snap, &entry) != 0);
@@ -408,30 +462,37 @@ void killProcessByName(const std::string &processName, ATOM_UNUSED int signal) {
         "pkill -" + std::to_string(signal) + " -f " + processName;
     int result = std::system(command.c_str());
     if (result != 0) {
+        LOG_F(ERROR, "Error: failed to kill process with name {}", processName);
         THROW_SYSTEM_COLLAPSE("Error: failed to kill process with name " +
                               processName);
     }
+    LOG_F(INFO, "Process '{}' terminated with signal {}.", processName, signal);
 #endif
 }
 
 void killProcessByPID(int pid, ATOM_UNUSED int signal) {
+    LOG_F(INFO, "killProcessByPID called with pid: {}, signal: {}", pid,
+          signal);
 #ifdef _WIN32
     HANDLE hProcess =
         OpenProcess(PROCESS_TERMINATE, 0, static_cast<DWORD>(pid));
     if (hProcess == nullptr) {
+        LOG_F(ERROR, "Error: unable to open process with PID {}", pid);
         THROW_SYSTEM_COLLAPSE("Error: unable to open process with PID " +
                               std::to_string(pid));
     }
     TerminateProcess(hProcess, 0);
     CloseHandle(hProcess);
+    LOG_F(INFO, "Process with PID {} terminated.", pid);
 #else
     if (kill(pid, signal) == -1) {
+        LOG_F(ERROR, "Error: failed to kill process with PID {}", pid);
         THROW_SYSTEM_COLLAPSE("Error: failed to kill process with PID " +
                               std::to_string(pid));
     }
     int status;
     waitpid(pid, &status, 0);
-
+    LOG_F(INFO, "Process with PID {} terminated with signal {}.", pid, signal);
 #endif
 }
 

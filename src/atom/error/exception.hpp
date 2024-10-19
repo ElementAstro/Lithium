@@ -103,6 +103,55 @@ private:
     StackTrace stack_trace_;
 };
 
+// System error exception class
+class SystemErrorException : public Exception {
+public:
+    SystemErrorException(const char *file, int line, const char *func,
+                         int err_code, std::string msg)
+        : Exception(file, line, func, msg),
+          error_code_(err_code),
+          error_message_(
+              std::error_code(err_code, std::generic_category()).message()) {}
+
+    const char *what() const noexcept override {
+        if (what_message_.empty()) {
+            what_message_ = "System error [" + std::to_string(error_code_) +
+                            "]: " + error_message_ + "\n" + Exception::what();
+        }
+        return what_message_.c_str();
+    }
+
+private:
+    int error_code_;
+    std::string error_message_;
+    mutable std::string what_message_;
+};
+
+// Nested exception handling
+class NestedException : public Exception {
+public:
+    explicit NestedException(const char *file, int line, const char *func,
+                             std::exception_ptr ptr)
+        : Exception(file, line, func), exception_ptr_(std::move(ptr)) {}
+
+    const char *what() const noexcept override {
+        if (what_message_.empty()) {
+            try {
+                std::rethrow_exception(exception_ptr_);
+            } catch (const std::exception &e) {
+                what_message_ = "Nested exception: " + std::string(e.what());
+            } catch (...) {
+                what_message_ = "Nested unknown exception";
+            }
+        }
+        return what_message_.c_str();
+    }
+
+private:
+    std::exception_ptr exception_ptr_;
+    mutable std::string what_message_;
+};
+
 #define THROW_EXCEPTION(...)                                     \
     throw atom::error::Exception(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                  ATOM_FUNC_NAME, __VA_ARGS__)
@@ -110,6 +159,14 @@ private:
 #define THROW_NESTED_EXCEPTION(...)                                       \
     atom::error::Exception::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                           ATOM_FUNC_NAME, __VA_ARGS__)
+
+#define THROW_SYSTEM_ERROR(error_code, ...)                                 \
+    static_assert(std::is_integral<decltype(error_code)>::value,            \
+                  "Error code must be an integral type");                   \
+    static_assert(error_code != 0, "Error code must be non-zero");          \
+    throw atom::error::SystemErrorException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                            ATOM_FUNC_NAME, error_code,     \
+                                            __VA_ARGS__)
 
 // -------------------------------------------------------------------
 // Common
@@ -120,11 +177,39 @@ public:
     using Exception::Exception;
 };
 
-#define THROW_RUNTIME_ERROR(...)                                    \
-    throw atom::error::RuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+namespace internal {
+// Template struct to check if all variadic arguments are printable
+template <typename... Args>
+struct are_all_printable;
+
+// Base case: Empty parameter pack is printable
+template <>
+struct are_all_printable<> {
+    static constexpr bool value = true;
+};
+
+// Recursive case: Check if the first argument is printable and recursively
+// check the rest
+template <typename First, typename... Rest>
+struct are_all_printable<First, Rest...> {
+    // Check if std::ostream can output the type
+    static constexpr bool value =
+        std::is_convertible<decltype(std::declval<std::ostream &>()
+                                     << std::declval<First>()),
+                            std::ostream &>::value &&
+        are_all_printable<Rest...>::value;
+};
+}  // namespace internal
+
+#define THROW_RUNTIME_ERROR(...)                                      \
+    static_assert(atom::error::are_all_printable<__VA_ARGS__>::value, \
+                  "All variadic arguments must be printable");        \
+    throw atom::error::RuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE,   \
                                     ATOM_FUNC_NAME, __VA_ARGS__)
 
 #define THROW_NESTED_RUNTIME_ERROR(...)                                      \
+    static_assert(atom::error::are_all_printable<__VA_ARGS__>::value,        \
+                  "All variadic arguments must be printable");               \
     atom::error::RuntimeError::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                              ATOM_FUNC_NAME, __VA_ARGS__)
 

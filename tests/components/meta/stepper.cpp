@@ -17,12 +17,12 @@ TEST_F(FunctionSequenceTest, NoFunctionsRegistered) {
     std::vector<std::vector<std::any>> args_batch = {{1}, {2}, {3}};
 
     EXPECT_THROW(sequence.run(args_batch), atom::error::Exception);
-    EXPECT_THROW(sequence.run_all(args_batch), atom::error::Exception);
+    EXPECT_THROW(sequence.runAll(args_batch), atom::error::Exception);
 }
 
 // Test with a single function that adds two integers
 TEST_F(FunctionSequenceTest, SingleFunctionAddIntegers) {
-    sequence.register_function(
+    sequence.registerFunction(
         [](const std::vector<std::any>& args) -> std::any {
             int sum = 0;
             for (const auto& arg : args) {
@@ -42,7 +42,7 @@ TEST_F(FunctionSequenceTest, SingleFunctionAddIntegers) {
 
 // Test with multiple functions
 TEST_F(FunctionSequenceTest, MultipleFunctions) {
-    sequence.register_function(
+    sequence.registerFunction(
         [](const std::vector<std::any>& args) -> std::any {
             int sum = 0;
             for (const auto& arg : args) {
@@ -51,7 +51,7 @@ TEST_F(FunctionSequenceTest, MultipleFunctions) {
             return sum;
         });
 
-    sequence.register_function(
+    sequence.registerFunction(
         [](const std::vector<std::any>& args) -> std::any {
             int product = 1;
             for (const auto& arg : args) {
@@ -70,7 +70,7 @@ TEST_F(FunctionSequenceTest, MultipleFunctions) {
     EXPECT_EQ(std::any_cast<int>(results[2]), 42);  // 6 * 7
 
     std::vector<std::vector<std::any>> results_all =
-        sequence.run_all(args_batch);
+        sequence.runAll(args_batch);
 
     ASSERT_EQ(results_all.size(), 3);
     EXPECT_EQ(std::any_cast<int>(results_all[0][0]),
@@ -84,7 +84,7 @@ TEST_F(FunctionSequenceTest, MultipleFunctions) {
 
 // Test function with different types of arguments
 TEST_F(FunctionSequenceTest, MixedArgumentTypes) {
-    sequence.register_function(
+    sequence.registerFunction(
         [](const std::vector<std::any>& args) -> std::any {
             std::string result;
             for (const auto& arg : args) {
@@ -110,7 +110,7 @@ TEST_F(FunctionSequenceTest, MixedArgumentTypes) {
 
 // Test with an empty argument batch
 TEST_F(FunctionSequenceTest, EmptyArgumentsBatch) {
-    sequence.register_function([](const std::vector<std::any>&) -> std::any {
+    sequence.registerFunction([](const std::vector<std::any>&) -> std::any {
         return std::string("No Args");
     });
 
@@ -120,30 +120,30 @@ TEST_F(FunctionSequenceTest, EmptyArgumentsBatch) {
     ASSERT_TRUE(results.empty());
 
     std::vector<std::vector<std::any>> results_all =
-        sequence.run_all(args_batch);
+        sequence.runAll(args_batch);
     ASSERT_TRUE(results_all.empty());
 }
 
 // Test with a function that throws an exception
 TEST_F(FunctionSequenceTest, FunctionThrowsException) {
-    sequence.register_function([](const std::vector<std::any>&) -> std::any {
+    sequence.registerFunction([](const std::vector<std::any>&) -> std::any {
         throw std::runtime_error("Test exception");
     });
 
     std::vector<std::vector<std::any>> args_batch = {{1, 2}, {3, 4}};
 
     EXPECT_THROW(sequence.run(args_batch), atom::error::Exception);
-    EXPECT_THROW(sequence.run_all(args_batch), atom::error::Exception);
+    EXPECT_THROW(sequence.runAll(args_batch), atom::error::Exception);
 }
 
 // Test when a function returns a different type
 TEST_F(FunctionSequenceTest, DifferentReturnType) {
-    sequence.register_function(
+    sequence.registerFunction(
         [](const std::vector<std::any>& args) -> std::any {
             return std::any_cast<int>(args[0]) * 2;
         });
 
-    sequence.register_function(
+    sequence.registerFunction(
         [](const std::vector<std::any>& args) -> std::any {
             return std::to_string(std::any_cast<int>(args[0])) + "x2";
         });
@@ -157,7 +157,7 @@ TEST_F(FunctionSequenceTest, DifferentReturnType) {
     EXPECT_EQ(std::any_cast<std::string>(results[2]), "15x2");
 
     std::vector<std::vector<std::any>> results_all =
-        sequence.run_all(args_batch);
+        sequence.runAll(args_batch);
 
     ASSERT_EQ(results_all.size(), 3);
     EXPECT_EQ(std::any_cast<int>(results_all[0][0]), 10);              // 5 * 2

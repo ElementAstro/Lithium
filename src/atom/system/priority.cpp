@@ -4,17 +4,21 @@
 #include "atom/log/loguru.hpp"
 
 void PriorityManager::setProcessPriority(PriorityLevel level, int pid) {
+    LOG_F(INFO, "Setting process priority to {} for PID {}",
+          static_cast<int>(level), pid);
 #ifdef _WIN32
     DWORD priority = getPriorityFromLevel(level);
     HANDLE hProcess = pid == 0
                           ? GetCurrentProcess()
                           : OpenProcess(PROCESS_SET_INFORMATION, FALSE, pid);
     if (hProcess == nullptr) {
+        LOG_F(ERROR, "Failed to open process: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to open process: " +
                             std::to_string(GetLastError()));
     }
     if (SetPriorityClass(hProcess, priority) == 0) {
         CloseHandle(hProcess);
+        LOG_F(ERROR, "Failed to set process priority: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to set process priority: " +
                             std::to_string(GetLastError()));
     }
@@ -24,6 +28,7 @@ void PriorityManager::setProcessPriority(PriorityLevel level, int pid) {
 #else
     int priority = getPriorityFromLevel(level);
     if (setpriority(PRIO_PROCESS, pid, priority) == -1) {
+        LOG_F(ERROR, "Failed to set process priority: {}", strerror(errno));
         THROW_RUNTIME_ERROR("Failed to set process priority: " +
                             std::string(strerror(errno)));
     }
@@ -33,11 +38,13 @@ void PriorityManager::setProcessPriority(PriorityLevel level, int pid) {
 }
 
 auto PriorityManager::getProcessPriority(int pid) -> PriorityLevel {
+    LOG_F(INFO, "Getting process priority for PID {}", pid);
 #ifdef _WIN32
     HANDLE hProcess = pid == 0
                           ? GetCurrentProcess()
                           : OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
     if (hProcess == nullptr) {
+        LOG_F(ERROR, "Failed to open process: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to open process: " +
                             std::to_string(GetLastError()));
     }
@@ -46,26 +53,36 @@ auto PriorityManager::getProcessPriority(int pid) -> PriorityLevel {
         CloseHandle(hProcess);
     }
     if (priority == 0) {
+        LOG_F(ERROR, "Failed to get process priority: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to get process priority: " +
                             std::to_string(GetLastError()));
     }
-    return getLevelFromPriority(priority);
+    PriorityLevel level = getLevelFromPriority(priority);
+    LOG_F(INFO, "Got process priority {} for PID {}", static_cast<int>(level),
+          pid);
+    return level;
 #else
     int priority = getpriority(PRIO_PROCESS, pid);
     if (priority == -1 && errno != 0) {
+        LOG_F(ERROR, "Failed to get process priority: {}", strerror(errno));
         THROW_RUNTIME_ERROR("Failed to get process priority: " +
                             std::string(strerror(errno)));
     }
-    return getLevelFromPriority(priority);
+    PriorityLevel level = getLevelFromPriority(priority);
+    LOG_F(INFO, "Got process priority {} for PID {}", static_cast<int>(level),
+          pid);
+    return level;
 #endif
 }
 
 void PriorityManager::setThreadPriority(
     PriorityLevel level, std::thread::native_handle_type thread) {
+    LOG_F(INFO, "Setting thread priority to {}", static_cast<int>(level));
 #ifdef _WIN32
     HANDLE hThread =
         thread == 0 ? GetCurrentThread() : reinterpret_cast<HANDLE>(thread);
     if (SetThreadPriority(hThread, getThreadPriorityFromLevel(level)) == 0) {
+        LOG_F(ERROR, "Failed to set thread priority: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to set thread priority: " +
                             std::to_string(GetLastError()));
     }
@@ -76,6 +93,7 @@ void PriorityManager::setThreadPriority(
     pthread_getschedparam(threadId, &policy, &param);
     param.sched_priority = getThreadPriorityFromLevel(level);
     if (pthread_setschedparam(threadId, SCHED_RR, &param) != 0) {
+        LOG_F(ERROR, "Failed to set thread priority: {}", strerror(errno));
         THROW_RUNTIME_ERROR("Failed to set thread priority: " +
                             std::string(strerror(errno)));
     }
@@ -85,30 +103,41 @@ void PriorityManager::setThreadPriority(
 
 auto PriorityManager::getThreadPriority(std::thread::native_handle_type thread)
     -> PriorityLevel {
+    LOG_F(INFO, "Getting thread priority");
 #ifdef _WIN32
     HANDLE hThread =
         thread == 0 ? GetCurrentThread() : reinterpret_cast<HANDLE>(thread);
     int priority = GetThreadPriority(hThread);
     if (priority == THREAD_PRIORITY_ERROR_RETURN) {
+        LOG_F(ERROR, "Failed to get thread priority: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to get thread priority: " +
                             std::to_string(GetLastError()));
     }
-    return getLevelFromThreadPriority(priority);
+    PriorityLevel level = getLevelFromThreadPriority(priority);
+    LOG_F(INFO, "Got thread priority {}", static_cast<int>(level));
+    return level;
 #else
     int policy;
     struct sched_param param;
     pthread_t threadId = thread == 0 ? pthread_self() : thread;
     if (pthread_getschedparam(threadId, &policy, &param) != 0) {
+        LOG_F(ERROR, "Failed to get thread priority: {}", strerror(errno));
         THROW_RUNTIME_ERROR("Failed to get thread priority: " +
                             std::string(strerror(errno)));
     }
-    return getLevelFromThreadPriority(param.sched_priority);
+    PriorityLevel level = getLevelFromThreadPriority(param.sched_priority);
+    LOG_F(INFO, "Got thread priority {}", static_cast<int>(level));
+    return level;
 #endif
 }
 
 void PriorityManager::setThreadSchedulingPolicy(
     SchedulingPolicy policy, std::thread::native_handle_type thread) {
+    LOG_F(INFO, "Setting thread scheduling policy to {}",
+          static_cast<int>(policy));
 #ifdef _WIN32
+    LOG_F(ERROR,
+          "Changing thread scheduling policy is not supported on Windows");
     THROW_RUNTIME_ERROR(
         "Changing thread scheduling policy is not supported on Windows");
 #else
@@ -127,11 +156,15 @@ void PriorityManager::setThreadSchedulingPolicy(
             nativePolicy = SCHED_RR;
             break;
         default:
+            LOG_F(ERROR, "Invalid scheduling policy: {}",
+                  static_cast<int>(policy));
             THROW_INVALID_ARGUMENT("Invalid scheduling policy");
     }
 
     pthread_getschedparam(threadId, &nativePolicy, &param);
     if (pthread_setschedparam(threadId, nativePolicy, &param) != 0) {
+        LOG_F(ERROR, "Failed to set thread scheduling policy: {}",
+              strerror(errno));
         THROW_RUNTIME_ERROR("Failed to set thread scheduling policy: " +
                             std::string(strerror(errno)));
     }
@@ -141,11 +174,14 @@ void PriorityManager::setThreadSchedulingPolicy(
 
 void PriorityManager::setProcessAffinity(const std::vector<int>& cpus,
                                          int pid) {
+    LOG_F(INFO, "Setting process affinity to CPUs: {} for PID {}",
+          vectorToString(cpus), pid);
 #ifdef _WIN32
     HANDLE hProcess = pid == 0
                           ? GetCurrentProcess()
                           : OpenProcess(PROCESS_SET_INFORMATION, FALSE, pid);
     if (hProcess == nullptr) {
+        LOG_F(ERROR, "Failed to open process: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to open process: " +
                             std::to_string(GetLastError()));
     }
@@ -155,6 +191,7 @@ void PriorityManager::setProcessAffinity(const std::vector<int>& cpus,
     }
     if (SetProcessAffinityMask(hProcess, mask) == 0) {
         CloseHandle(hProcess);
+        LOG_F(ERROR, "Failed to set process affinity: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to set process affinity: " +
                             std::to_string(GetLastError()));
     }
@@ -168,6 +205,7 @@ void PriorityManager::setProcessAffinity(const std::vector<int>& cpus,
         CPU_SET(cpu, &cpuset);
     }
     if (sched_setaffinity(pid, sizeof(cpu_set_t), &cpuset) == -1) {
+        LOG_F(ERROR, "Failed to set process affinity: {}", strerror(errno));
         THROW_RUNTIME_ERROR("Failed to set process affinity: " +
                             std::string(strerror(errno)));
     }
@@ -177,12 +215,14 @@ void PriorityManager::setProcessAffinity(const std::vector<int>& cpus,
 }
 
 auto PriorityManager::getProcessAffinity(int pid) -> std::vector<int> {
+    LOG_F(INFO, "Getting process affinity for PID {}", pid);
     std::vector<int> cpus;
 #ifdef _WIN32
     HANDLE hProcess = pid == 0
                           ? GetCurrentProcess()
                           : OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
     if (hProcess == nullptr) {
+        LOG_F(ERROR, "Failed to open process: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to open process: " +
                             std::to_string(GetLastError()));
     }
@@ -191,6 +231,7 @@ auto PriorityManager::getProcessAffinity(int pid) -> std::vector<int> {
     if (GetProcessAffinityMask(hProcess, &processAffinityMask,
                                &systemAffinityMask) == 0) {
         CloseHandle(hProcess);
+        LOG_F(ERROR, "Failed to get process affinity: {}", GetLastError());
         THROW_RUNTIME_ERROR("Failed to get process affinity: " +
                             std::to_string(GetLastError()));
     }
@@ -205,6 +246,7 @@ auto PriorityManager::getProcessAffinity(int pid) -> std::vector<int> {
 #else
     cpu_set_t cpuset;
     if (sched_getaffinity(pid, sizeof(cpu_set_t), &cpuset) == -1) {
+        LOG_F(ERROR, "Failed to get process affinity: {}", strerror(errno));
         THROW_RUNTIME_ERROR("Failed to get process affinity: " +
                             std::string(strerror(errno)));
     }
@@ -214,12 +256,15 @@ auto PriorityManager::getProcessAffinity(int pid) -> std::vector<int> {
         }
     }
 #endif
+    LOG_F(INFO, "Got process affinity for PID {}: {}", pid,
+          vectorToString(cpus));
     return cpus;
 }
 
 void PriorityManager::startPriorityMonitor(
     int pid, const std::function<void(PriorityLevel)>& callback,
     std::chrono::milliseconds interval) {
+    LOG_F(INFO, "Starting priority monitor for PID {}", pid);
     std::thread([pid, callback, interval]() {
         PriorityLevel lastPriority = getProcessPriority(pid);
         while (true) {
@@ -253,6 +298,7 @@ auto PriorityManager::vectorToString(const std::vector<int>& vec)
 }
 
 auto PriorityManager::getPriorityFromLevel(PriorityLevel level) -> DWORD {
+    LOG_F(INFO, "Getting priority from level {}", static_cast<int>(level));
     switch (level) {
         case PriorityLevel::LOWEST:
             return IDLE_PRIORITY_CLASS;
@@ -267,11 +313,13 @@ auto PriorityManager::getPriorityFromLevel(PriorityLevel level) -> DWORD {
         case PriorityLevel::REALTIME:
             return REALTIME_PRIORITY_CLASS;
         default:
+            LOG_F(ERROR, "Invalid priority level: {}", static_cast<int>(level));
             THROW_INVALID_ARGUMENT("Invalid priority level");
     }
 }
 
 auto PriorityManager::getLevelFromPriority(DWORD priority) -> PriorityLevel {
+    LOG_F(INFO, "Getting level from priority {}", priority);
     switch (priority) {
         case IDLE_PRIORITY_CLASS:
             return PriorityLevel::LOWEST;
@@ -286,11 +334,14 @@ auto PriorityManager::getLevelFromPriority(DWORD priority) -> PriorityLevel {
         case REALTIME_PRIORITY_CLASS:
             return PriorityLevel::REALTIME;
         default:
+            LOG_F(ERROR, "Invalid priority value: {}", priority);
             THROW_INVALID_ARGUMENT("Invalid priority value");
     }
 }
 
 auto PriorityManager::getThreadPriorityFromLevel(PriorityLevel level) -> int {
+    LOG_F(INFO, "Getting thread priority from level {}",
+          static_cast<int>(level));
     switch (level) {
         case PriorityLevel::LOWEST:
             return THREAD_PRIORITY_IDLE;
@@ -305,12 +356,14 @@ auto PriorityManager::getThreadPriorityFromLevel(PriorityLevel level) -> int {
         case PriorityLevel::REALTIME:
             return THREAD_PRIORITY_TIME_CRITICAL;
         default:
+            LOG_F(ERROR, "Invalid priority level: {}", static_cast<int>(level));
             THROW_INVALID_ARGUMENT("Invalid priority level");
     }
 }
 
 auto PriorityManager::getLevelFromThreadPriority(int priority)
     -> PriorityLevel {
+    LOG_F(INFO, "Getting level from thread priority {}", priority);
     switch (priority) {
         case THREAD_PRIORITY_IDLE:
             return PriorityLevel::LOWEST;
@@ -325,6 +378,7 @@ auto PriorityManager::getLevelFromThreadPriority(int priority)
         case THREAD_PRIORITY_TIME_CRITICAL:
             return PriorityLevel::REALTIME;
         default:
+            LOG_F(ERROR, "Unknown thread priority value: {}", priority);
             THROW_RUNTIME_ERROR("Unknown thread priority value");
     }
 }

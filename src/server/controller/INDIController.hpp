@@ -2,7 +2,9 @@
 #define INDICONTROLLER_HPP
 
 #include <exception>
+#include <memory>
 #include <regex>
+
 #include "oatpp/web/server/api/ApiController.hpp"
 
 #include "oatpp/macro/codegen.hpp"
@@ -11,17 +13,25 @@
 #include "data/INDIDto.hpp"
 #include "data/RequestDto.hpp"
 
+#include "addon/manager.hpp"
+#include "utils/constant.hpp"
+
+#include "atom/components/component.hpp"
 #include "atom/error/error_code.hpp"
 #include "atom/error/exception.hpp"
+#include "atom/function/global_ptr.hpp"
+#include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/sysinfo/os.hpp"
 #include "atom/system//software.hpp"
+#include "atom/system/command.hpp"
 #include "atom/system/process.hpp"
 #include "atom/system/user.hpp"
+#include "atom/utils/container.hpp"
+#include "atom/utils/to_string.hpp"
 #include "atom/utils/ranges.hpp"
 
 #include "atom/macro.hpp"
-#include "system/command.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController)  /// <-- Begin Code-Gen
 
@@ -84,12 +94,45 @@ inline auto compareVersions(const std::string& version1,
     return false;
 }
 
+/**
+ * @brief Specialization of isSubset for Oat++ Vector<String>.
+ * This function checks if the first vector is a subset of the second.
+ * It also returns the elements that are not found in the superset.
+ *
+ * @param subset The container to check if it is a subset.
+ * @param superset The container to check against.
+ * @return A pair where the first element is a boolean indicating if it is a
+ * subset, and the second element is a vector of elements not found in the
+ * superset.
+ */
+inline auto isSubset(const oatpp::Vector<oatpp::String>& subset,
+                     const oatpp::Vector<oatpp::String>& superset)
+    -> std::pair<bool, std::vector<oatpp::String>> {
+    std::unordered_set<oatpp::String> set(superset->begin(), superset->end());
+    std::vector<oatpp::String> invalidElements;
+
+    bool isSubset = true;
+
+    for (const auto& elem : *subset) {
+        if (set.find(elem) == set.end()) {
+            invalidElements.push_back(elem);  // Collect missing elements
+            isSubset = false;
+        }
+    }
+
+    return {isSubset, invalidElements};
+}
+
 class INDIController : public oatpp::web::server::api::ApiController {
     using ControllerType = INDIController;
 
 public:
     INDIController(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
         : oatpp::web::server::api::ApiController(objectMapper) {}
+
+    static auto createShared() -> std::shared_ptr<INDIController> {
+        return std::make_shared<INDIController>();
+    }
 
     ENDPOINT_INFO(getUIApiServerINDIExecutable) {
         info->summary = "Get INDI server executable";
@@ -332,6 +375,116 @@ public:
                       e.what());
                 return _return(createErrorResponse(
                     "Unable to get INDI server instances", Status::CODE_500));
+            }
+        }
+    };
+
+    ENDPOINT_INFO(getUIApiServerINDIDriverList) {
+        info->summary = "List INDI drivers";
+        info->addConsumes<Object<RequestDto>>("application/json");
+    }
+    ENDPOINT_ASYNC("GET", "/api/server/indi/drivers",
+                   getUIApiServerINDIDriverList) {
+        ENDPOINT_ASYNC_INIT(getUIApiServerINDIDriverList);
+
+        static constexpr auto COMMAND = "lithium.server.starter.indi.drivers";
+
+        auto act() -> Action override {
+            return request
+                ->readBodyToDtoAsync<oatpp::Object<RequestINDIDriverListDto>>(
+                    controller->getDefaultObjectMapper())
+                .callbackTo(&getUIApiServerINDIDriverList::returnResponse);
+        }
+
+    private:
+        auto createWarningResponse(const std::string& message, Status status) {
+            auto res = StatusDto::createShared();
+            res->command = COMMAND;
+            res->status = "warning";
+            res->warning = message;
+
+            return controller->createDtoResponse(status, res);
+        }
+
+        auto createErrorResponse(const std::string& message, Status status) {
+            auto res = StatusDto::createShared();
+            res->command = COMMAND;
+            res->status = "error";
+            res->error = message;
+            return controller->createDtoResponse(status, res);
+        }
+
+        auto returnResponse(
+            const oatpp::Object<RequestINDIDriverListDto>& body) -> Action {
+            const auto force = body->force;
+            const auto timeout = body->timeout;
+            const auto retry = body->retry;
+            const auto type = body->type;
+            const auto path = body->path;
+
+            // Check if type and path are empty
+            OATPP_ASSERT_HTTP(type->empty(), Status::CODE_400,
+                              "Type cannot be empty");
+            OATPP_ASSERT_HTTP(path->empty(), Status::CODE_400,
+                              "Path cannot be empty");
+
+            // Fetch INDI drivers
+            try {
+                if (!atom::io::isFolderExists(path)) {
+                    return _return(createErrorResponse("Path does not exist",
+                                                       Status::CODE_404));
+                }
+
+                oatpp::Vector<String> availableDrivers = {
+                    "all", "camera", "telescope", "focuser", "filterwheel", "dome",
+                };
+                // Check if type is subset of available drivers
+                if (auto [isSubsetResult, invalidElements] = isSubset(type, availableDrivers); !isSubsetResult) {
+                    LOG_F(ERROR, "Invalid type, must be either driver or device: {}", atom::utils::toString(invalidElements));
+                    auto res = ReturnINDIDriverListInvalidTypeDto::createShared();
+                    res->command = COMMAND;
+                    res->status = "error";
+                    res->error = "Invalid type, must be either driver or device";
+                    for (const auto& missElem : invalidElements) {
+                        res->invalidType->push_back(missElem);
+                    }
+                    return _return(controller->createDtoResponse(Status::CODE_400, res));
+                }
+
+                std::weak_ptr<Component> indiComponent;
+                std::weak_ptr<lithium::ComponentManager> componentManager;
+                GET_OR_CREATE_WEAK_PTR(componentManager, lithium::ComponentManager, Constants::COMPONENT_MANAGER);
+                if (auto com = componentManager.lock()->getComponent("lithium.indiserver"); com.has_value()) {
+                    indiComponent = com.value();
+                } else {
+                    LOG_F(ERROR, "INDI server component not found");
+                    return _return(createErrorResponse("INDI server component not found",
+                                                       Status::CODE_404));
+                }
+
+                static constexpr auto COM_COMMAND = "get_all_drivers";
+
+                if (!indiComponent.lock()->has(COM_COMMAND)) {
+                    LOG_F(ERROR, "{} command not found in the component, try to update it!", COM_COMMAND);
+                    return _return(createErrorResponse(std::format("{} command not found in the component, try to update it!", COM_COMMAND),
+                                                       Status::CODE_404));
+                }
+
+                if (const auto &argsAndRet = indiComponent.lock()->getCommandArgAndReturnType(COM_COMMAND); argsAndRet.first.size() != 0 || argsAndRet.second)
+                }
+
+                auto drivers = atom::system::getProcessIdByName("indiserver");
+                if (drivers.empty()) {
+                    return _return(createErrorResponse("No INDI drivers found",
+                                                       Status::CODE_404));
+                }
+
+                return _return(createWarningResponse("INDI drivers found",
+                                                     Status::CODE_200));
+            } catch (const std::exception& e) {
+                LOG_F(ERROR, "Unable to get INDI drivers: {}", e.what());
+                return _return(createErrorResponse("Unable to get INDI drivers",
+                                                   Status::CODE_500));
             }
         }
     };

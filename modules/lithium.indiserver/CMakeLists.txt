@@ -18,6 +18,8 @@ set(SOURCE_FILES
     src/indiserver.cpp
     src/collection.cpp
     src/iconnector.cpp
+
+    component.cpp
 )
 
 set(HEADER_FILES

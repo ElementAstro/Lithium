@@ -20,24 +20,22 @@ Description: System Information Module - Battery
 namespace atom::system {
 /**
  * @brief Battery information.
- * 电池信息
  */
 struct BatteryInfo {
-    bool isBatteryPresent = false;    // 是否存在电池
-    bool isCharging = false;          // 是否正在充电
-    float batteryLifePercent = 0.0;   // 电量百分比
-    float batteryLifeTime = 0.0;      // 剩余电量时间(分钟)
-    float batteryFullLifeTime = 0.0;  // 满电状态下电量时间(分钟)
-    float energyNow = 0.0;            // 当前剩余电量(微焦耳)
-    float energyFull = 0.0;           // 电池总容量(微焦耳)
-    float energyDesign = 0.0;         // 电池设计容量(微焦耳)
-    float voltageNow = 0.0;           // 当前电压(伏特)
-    float currentNow = 0.0;           // 电池当前电流(安培)
+    bool isBatteryPresent = false;    // Whether the battery is present
+    bool isCharging = false;          // Whether the battery is charging
+    float batteryLifePercent = 0.0;   // Battery life percentage
+    float batteryLifeTime = 0.0;      // Remaining battery life time (minutes)
+    float batteryFullLifeTime = 0.0;  // Full battery life time (minutes)
+    float energyNow = 0.0;            // Current remaining energy (microjoules)
+    float energyFull = 0.0;           // Total battery capacity (microjoules)
+    float energyDesign = 0.0;         // Designed battery capacity (microjoules)
+    float voltageNow = 0.0;           // Current voltage (volts)
+    float currentNow = 0.0;           // Current battery current (amperes)
 } ATOM_ALIGNAS(64);
 
 /**
  * @brief Get battery information.
- * 获取电池信息
  * @return BatteryInfo
  */
 [[nodiscard("Result of getBatteryInfo is not used")]] BatteryInfo

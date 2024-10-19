@@ -1,5 +1,6 @@
 #include "atom/components/dispatch.hpp"
 #include <gtest/gtest.h>
+#include <optional>
 #include "exception.hpp"
 #include "function/type_caster.hpp"
 
@@ -31,10 +32,11 @@ TEST_F(CommandDispatcherTest, DefineAndDispatchSimpleFunction) {
 
 // Test the `defT` method with a function that times out
 TEST_F(CommandDispatcherTest, DefineAndDispatchTimeoutFunction) {
-    dispatcher.defT("sleepy", "test", "Sleeps for a while",
-                    std::function<void()>([]() {
-                        std::this_thread::sleep_for(std::chrono::seconds(2));
-                    }));
+    dispatcher.def("sleepy", "test", "Sleeps for a while",
+                   std::function<void()>([]() {
+                       std::this_thread::sleep_for(std::chrono::seconds(2));
+                   }),
+                   std::nullopt, std::nullopt, {}, true);
     dispatcher.setTimeout("sleepy", std::chrono::milliseconds(500));
 
     ASSERT_THROW(dispatcher.dispatch("sleepy"), DispatchTimeout);
@@ -44,7 +46,7 @@ TEST_F(CommandDispatcherTest, DefineAndDispatchTimeoutFunction) {
 TEST_F(CommandDispatcherTest, DispatchWithDefaultArguments) {
     dispatcher.def("increment", "math", "Increments a number",
                    std::function<int(int)>([](int a) { return a + 1; }),
-                   std::nullopt, std::nullopt, {Arg("a", 42)});
+                   std::nullopt, std::nullopt, {atom::meta::Arg("a", 42)});
 
     std::any result = dispatcher.dispatch("increment");
     ASSERT_EQ(std::any_cast<int>(result), 43);

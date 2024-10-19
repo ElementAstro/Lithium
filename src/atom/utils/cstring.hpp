@@ -372,7 +372,6 @@ template <size_t N>
 constexpr auto charArrayToArrayConstexpr(const std::array<char, N>& input)
     -> std::array<char, N> {
     std::array<char, N> result{};
-#pragma unroll
     for (size_t i = 0; i < N; ++i) {
         result[i] = input[i];
     }

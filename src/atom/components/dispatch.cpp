@@ -12,14 +12,18 @@ void CommandDispatcher::checkPrecondition(const Command& cmd,
     }
     try {
         std::invoke(cmd.precondition.value());
+        LOG_F(INFO, "Precondition for command '{}' passed.", name);
     } catch (const std::bad_function_call& e) {
-        LOG_F(INFO, "Bad precondition function invoke: {}", e.what());
+        LOG_F(INFO, "Bad precondition function invoke for command '{}': {}",
+              name, e.what());
     } catch (const std::bad_optional_access& e) {
-        LOG_F(INFO, "Bad precondition function access: {}", e.what());
+        LOG_F(INFO, "Bad precondition function access for command '{}': {}",
+              name, e.what());
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Precondition failed: {}", e.what());
-        THROW_DISPATCH_EXCEPTION("Precondition failed: " +
-                                 std::string(e.what()));
+        LOG_F(ERROR, "Precondition for command '{}' failed: {}", name,
+              e.what());
+        THROW_DISPATCH_EXCEPTION("Precondition failed for command '{}': {}",
+                                 name, e.what());
     }
 }
 
@@ -32,13 +36,18 @@ void CommandDispatcher::checkPostcondition(const Command& cmd,
     }
     try {
         std::invoke(cmd.postcondition.value());
+        LOG_F(INFO, "Postcondition for command '{}' passed.", name);
     } catch (const std::bad_function_call& e) {
-        LOG_F(INFO, "Bad postcondition function invoke: {}", e.what());
+        LOG_F(INFO, "Bad postcondition function invoke for command '{}': {}",
+              name, e.what());
     } catch (const std::bad_optional_access& e) {
-        LOG_F(INFO, "Bad postcondition function access: {}", e.what());
+        LOG_F(INFO, "Bad postcondition function access for command '{}': {}",
+              name, e.what());
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Postcondition failed: {}", e.what());
-        THROW_DISPATCH_EXCEPTION("Postcondition failed: " + std::string(e.what()));
+        LOG_F(ERROR, "Postcondition for command '{}' failed: {}", name,
+              e.what());
+        THROW_DISPATCH_EXCEPTION("Postcondition failed for command '{}': {}",
+                                 name, e.what());
     }
 }
 
@@ -48,10 +57,10 @@ auto CommandDispatcher::executeCommand(
     LOG_SCOPE_FUNCTION(INFO);
     if (auto timeoutIt = timeoutMap_.find(name);
         timeoutIt != timeoutMap_.end()) {
-        LOG_F(INFO, "Executing command with timeout: {}", name);
+        LOG_F(INFO, "Executing command '{}' with timeout.", name);
         return executeWithTimeout(cmd, name, args, timeoutIt->second);
     }
-    LOG_F(INFO, "Executing command without timeout: {}", name);
+    LOG_F(INFO, "Executing command '{}' without timeout.", name);
     return executeWithoutTimeout(cmd, name, args);
 }
 
@@ -64,27 +73,27 @@ auto CommandDispatcher::executeWithTimeout(
                              [&]() { return executeFunctions(cmd, args); });
 
     if (future.wait_for(timeout) == std::future_status::timeout) {
-        LOG_F(ERROR, "Command timed out: {}", name);
-        THROW_DISPATCH_TIMEOUT("Command timed out: " + name);
+        LOG_F(ERROR, "Command '{}' timed out.", name);
+        THROW_DISPATCH_TIMEOUT("Command '{}' timed out.", name);
     }
 
     return future.get();
 }
 
 auto CommandDispatcher::executeWithoutTimeout(
-    const Command& cmd, [[maybe_unused]] const std::string& name,
+    const Command& cmd, const std::string& name,
     const std::vector<std::any>& args) -> std::any {
     LOG_SCOPE_FUNCTION(INFO);
     if (!args.empty()) {
         if (args.size() == 1 &&
             args[0].type() == typeid(std::vector<std::any>)) {
-            LOG_F(INFO, "Executing command with nested arguments: {}", name);
+            LOG_F(INFO, "Executing command '{}' with nested arguments.", name);
             return executeFunctions(
                 cmd, std::any_cast<std::vector<std::any>>(args[0]));
         }
     }
 
-    LOG_F(INFO, "Executing command with arguments: {}", name);
+    LOG_F(INFO, "Executing command '{}' with arguments.", name);
     return executeFunctions(cmd, args);
 }
 
@@ -94,17 +103,19 @@ auto CommandDispatcher::executeFunctions(
     if (std::string funcHash = computeFunctionHash(args);
         cmd.hash == funcHash) {
         try {
-            LOG_F(INFO, "Executing function with hash: {}", funcHash);
+            LOG_F(INFO, "Executing function for command with hash: {}",
+                  funcHash);
             return std::invoke(cmd.func, args);
         } catch (const std::bad_any_cast&) {
-            LOG_F(ERROR, "Failed to call function with hash: {}", funcHash);
-            THROW_DISPATCH_EXCEPTION("Failed to call function with hash " +
-                                     funcHash);
+            LOG_F(ERROR, "Failed to call function for command with hash: {}",
+                  funcHash);
+            THROW_DISPATCH_EXCEPTION(
+                "Failed to call function for command with hash {}", funcHash);
         }
     }
 
     LOG_F(ERROR, "No matching overload found for command");
-    THROW_INVALID_ARGUMENT("No matching overload found");
+    THROW_INVALID_ARGUMENT("No matching overload found for command ");
 }
 
 auto CommandDispatcher::computeFunctionHash(const std::vector<std::any>& args)
@@ -116,19 +127,25 @@ auto CommandDispatcher::computeFunctionHash(const std::vector<std::any>& args)
         argTypes.emplace_back(
             atom::meta::DemangleHelper::demangle(arg.type().name()));
     }
-    return atom::utils::toString(atom::algorithm::computeHash(argTypes));
+    auto hash = atom::utils::toString(atom::algorithm::computeHash(argTypes));
+    LOG_F(INFO, "Computed function hash: {}", hash);
+    return hash;
 }
 
 auto CommandDispatcher::has(const std::string& name) const -> bool {
     LOG_SCOPE_FUNCTION(INFO);
     if (commands_.find(name) != commands_.end()) {
+        LOG_F(INFO, "Command '{}' found.", name);
         return true;
     }
     for (const auto& command : commands_) {
         if (command.second.aliases.find(name) != command.second.aliases.end()) {
+            LOG_F(INFO, "Alias '{}' found for command '{}'.", name,
+                  command.first);
             return true;
         }
     }
+    LOG_F(INFO, "Command '{}' not found.", name);
     return false;
 }
 
@@ -140,6 +157,10 @@ void CommandDispatcher::addAlias(const std::string& name,
         it->second.aliases.insert(alias);
         commands_[alias] = it->second;
         groupMap_[alias] = groupMap_[name];
+        LOG_F(INFO, "Alias '{}' added for command '{}'.", alias, name);
+    } else {
+        LOG_F(WARNING, "Command '{}' not found. Alias '{}' not added.", name,
+              alias);
     }
 }
 
@@ -147,12 +168,14 @@ void CommandDispatcher::addGroup(const std::string& name,
                                  const std::string& group) {
     LOG_SCOPE_FUNCTION(INFO);
     groupMap_[name] = group;
+    LOG_F(INFO, "Command '{}' added to group '{}'.", name, group);
 }
 
 void CommandDispatcher::setTimeout(const std::string& name,
                                    std::chrono::milliseconds timeout) {
     LOG_SCOPE_FUNCTION(INFO);
     timeoutMap_[name] = timeout;
+    LOG_F(INFO, "Timeout set for command '{}': {} ms.", name, timeout.count());
 }
 
 void CommandDispatcher::removeCommand(const std::string& name) {
@@ -160,6 +183,7 @@ void CommandDispatcher::removeCommand(const std::string& name) {
     commands_.erase(name);
     groupMap_.erase(name);
     timeoutMap_.erase(name);
+    LOG_F(INFO, "Command '{}' removed.", name);
 }
 
 auto CommandDispatcher::getCommandsInGroup(const std::string& group) const
@@ -171,6 +195,8 @@ auto CommandDispatcher::getCommandsInGroup(const std::string& group) const
             result.push_back(pair.first);
         }
     }
+    LOG_F(INFO, "Commands in group '{}': {}", group,
+          atom::utils::toString(result));
     return result;
 }
 
@@ -179,8 +205,11 @@ auto CommandDispatcher::getCommandDescription(const std::string& name) const
     LOG_SCOPE_FUNCTION(INFO);
     auto it = commands_.find(name);
     if (it != commands_.end()) {
+        LOG_F(INFO, "Description for command '{}': {}", name,
+              it->second.description);
         return it->second.description;
     }
+    LOG_F(INFO, "No description found for command '{}'.", name);
     return "";
 }
 
@@ -189,14 +218,18 @@ auto CommandDispatcher::getCommandAliases(const std::string& name) const
     LOG_SCOPE_FUNCTION(INFO);
     auto it = commands_.find(name);
     if (it != commands_.end()) {
+        LOG_F(INFO, "Aliases for command '{}': {}", name,
+              atom::utils::toString(it->second.aliases));
         return it->second.aliases;
     }
+    LOG_F(INFO, "No aliases found for command '{}'.", name);
     return {};
 }
 
 auto CommandDispatcher::dispatch(
     const std::string& name, const std::vector<std::any>& args) -> std::any {
     LOG_SCOPE_FUNCTION(INFO);
+    LOG_F(INFO, "Dispatching command '{}'.", name);
     return dispatchHelper(name, args);
 }
 
@@ -204,6 +237,7 @@ auto CommandDispatcher::dispatch(const std::string& name,
                                  const atom::meta::FunctionParams& params)
     -> std::any {
     LOG_SCOPE_FUNCTION(INFO);
+    LOG_F(INFO, "Dispatching command '{}' with FunctionParams.", name);
     return dispatchHelper(name, params.toAnyVector());
 }
 
@@ -221,6 +255,7 @@ auto CommandDispatcher::getAllCommands() const -> std::vector<std::string> {
     }
     auto it = std::unique(result.begin(), result.end());
     result.erase(it, result.end());
+    LOG_F(INFO, "All commands: {}", atom::utils::toString(result));
     return result;
 }
 
@@ -229,7 +264,13 @@ auto CommandDispatcher::getCommandArgAndReturnType(const std::string& name)
     LOG_SCOPE_FUNCTION(INFO);
     auto it = commands_.find(name);
     if (it != commands_.end()) {
+        LOG_F(INFO,
+              "Argument and return types for command '{}': args = [{}], return "
+              "= {}",
+              name, atom::utils::toString(it->second.argTypes),
+              it->second.returnType);
         return {it->second.argTypes, it->second.returnType};
     }
+    LOG_F(INFO, "No argument and return types found for command '{}'.", name);
     return {{}, ""};
 }

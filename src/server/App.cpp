@@ -15,6 +15,8 @@
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 
+#include "controller/INDIController.hpp"
+
 void run(const oatpp::base::CommandLineArguments& args) {
     /* Register Components in scope of run() method */
     AppComponent components(args);
@@ -29,10 +31,9 @@ void run(const oatpp::base::CommandLineArguments& args) {
     router->addController(std::make_shared<FileController>());
     router->addController(std::make_shared<StatisticsController>());
 
-    // Dynamic router loading
-    std::weak_ptr<atom::meta::
-    GET_OR_CREATE_WEAK_PTR(, type, constant, ...)
+    router->addController(INDIController::createShared());
 
+    //router->addController(createInstance());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,

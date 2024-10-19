@@ -62,7 +62,8 @@ TEST(VariableManagerTest, SetStringOptions) {
     VariableManager vm;
 
     vm.addVariable("stringVar", std::string("Option1"));
-    vm.setStringOptions("stringVar", {"Option1", "Option2", "Option3"});
+    std::vector<std::string> options = {"Option1", "Option2", "Option3"};
+    vm.setStringOptions("stringVar", options);
 
     vm.setValue("stringVar", std::string("Option2"));
     auto stringVar = vm.getVariable<std::string>("stringVar");

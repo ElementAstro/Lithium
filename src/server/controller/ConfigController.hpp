@@ -222,7 +222,7 @@ public:
                 }));
         }
         */
-       
+
     };
 
     ENDPOINT_INFO(getUISaveConfig) {

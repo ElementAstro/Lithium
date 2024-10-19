@@ -47,7 +47,7 @@ public:
 
     auto getComponent(const std::string& component_name)
         -> std::optional<std::weak_ptr<Component>>;
-        
+
     auto getComponentInfo(const std::string& component_name)
         -> std::optional<json>;
     auto getComponentList() -> std::vector<std::string>;

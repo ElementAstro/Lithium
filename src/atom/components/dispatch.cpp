@@ -259,6 +259,16 @@ auto CommandDispatcher::getAllCommands() const -> std::vector<std::string> {
     return result;
 }
 
+namespace atom::utils {
+    auto toString(const std::vector<atom::meta::Arg> &arg) -> std::string{
+        std::string result;
+        for (const auto& a : arg) {
+            result += a.getName() + " ";
+        }
+        return result;
+    }
+}
+
 auto CommandDispatcher::getCommandArgAndReturnType(const std::string& name)
     -> std::pair<std::vector<atom::meta::Arg>, std::string> {
     LOG_SCOPE_FUNCTION(INFO);

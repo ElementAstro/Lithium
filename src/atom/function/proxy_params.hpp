@@ -17,10 +17,13 @@
 #include <vector>
 
 #include "atom/error/exception.hpp"
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
 
 namespace atom::meta {
 class Arg {
 public:
+    Arg();
     explicit Arg(std::string name);
     Arg(std::string name, std::any default_value);
 
@@ -33,10 +36,11 @@ private:
     std::optional<std::any> default_value_;
 };
 
+inline Arg::Arg() = default;
 inline Arg::Arg(std::string name) : name_(std::move(name)) {}
 
 inline Arg::Arg(std::string name, std::any default_value)
-    : name_(std::move(name)), default_value_(default_value) {}
+    : name_(std::move(name)), default_value_(std::move(default_value)) {}
 
 inline auto Arg::getName() const -> const std::string& { return name_; }
 
@@ -44,11 +48,90 @@ inline auto Arg::getDefaultValue() const -> const std::optional<std::any>& {
     return default_value_;
 }
 
+// Serialize std::any
+inline void to_json(nlohmann::json& j, const std::any& a) {
+    if (a.type() == typeid(int)) {
+        j = std::any_cast<int>(a);
+    } else if (a.type() == typeid(float)) {
+        j = std::any_cast<float>(a);
+    } else if (a.type() == typeid(double)) {
+        j = std::any_cast<double>(a);
+    } else if (a.type() == typeid(std::string)) {
+        j = std::any_cast<std::string>(a);
+    } else if (a.type() == typeid(std::string_view)) {
+        j = std::any_cast<std::string_view>(a);
+    } else if (a.type() == typeid(const char *)) {
+        j = std::any_cast<const char *>(a);
+    } else {
+        throw std::runtime_error("Unsupported type");
+    }
+}
+
+// Deserialize std::any
+inline void from_json(const nlohmann::json& j, std::any& a) {
+    if (j.is_number_integer()) {
+        a = j.get<int>();
+    } else if (j.is_number_float()) {
+        a = j.get<double>();
+    } else if (j.is_string()) {
+        a = j.get<std::string>();
+    } else {
+        throw std::runtime_error("Unsupported type");
+    }
+}
+
+// Serialize Arg
+inline void to_json(nlohmann::json& j, const Arg& arg) {
+    j = nlohmann::json{{"name", arg.getName()}};
+    if (arg.getDefaultValue()) {
+        to_json(j["default_value"], *arg.getDefaultValue());
+    } else {
+        j["default_value"] = nullptr;
+    }
+}
+
+// Deserialize Arg
+inline void from_json(const nlohmann::json& j, Arg& arg) {
+    // Get the name field
+    std::string name = j.at("name").get<std::string>();
+
+    // Handle the default_value field
+    std::optional<std::any> defaultValue;
+    if (!j.at("default_value").is_null()) {
+        std::any value;
+        from_json(j.at("default_value"), value);  // Use std::any's from_json
+        defaultValue = value;
+    }
+
+    // Create a new Arg instance using the deserialized values
+    arg = Arg(std::move(name), defaultValue ? *defaultValue : std::any());
+}
+
+// Serialize vector of Arg
+inline void to_json(nlohmann::json& j, const std::vector<Arg>& arg) {
+    for (const auto& a : arg) {
+        j.push_back(a);
+    }
+}
+
+// Deserialize vector of Arg
+inline void from_json(const nlohmann::json& j, std::vector<Arg>& arg) {
+    for (const auto& a : j) {
+        Arg temp;
+        from_json(a, temp);
+        arg.push_back(temp);
+    }
+}
+
 /**
  * @brief A class to encapsulate function parameters using Arg objects.
  */
 class FunctionParams {
 public:
+    /**
+     * @brief Default constructor for FunctionParams.
+     */
+    FunctionParams() = default;
     /**
      * @brief Constructs FunctionParams with a single Arg value.
      *

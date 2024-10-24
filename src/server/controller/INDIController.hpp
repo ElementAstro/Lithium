@@ -470,7 +470,12 @@ public:
                                                        Status::CODE_404));
                 }
 
-                if (const auto &argsAndRet = indiComponent.lock()->getCommandArgAndReturnType(COM_COMMAND); argsAndRet.first.size() != 0 || argsAndRet.second)
+                if (const auto &argsAndRet = indiComponent.lock()->getCommandArgAndReturnType(COM_COMMAND); argsAndRet.first.size() != 0 || argsAndRet.second.empty())
+                {
+                    LOG_F(ERROR, "Invalid command arguments or return type for command: {}", COM_COMMAND);
+                    LOG_F(ERROR, "Arguments: {}, Return: {}", atom::utils::toString(argsAndRet.first), argsAndRet.second);
+                    return _return(createErrorResponse(std::format("Invalid command arguments or return type for command: {}", COM_COMMAND),
+                                                       Status::CODE_404));
                 }
 
                 auto drivers = atom::system::getProcessIdByName("indiserver");

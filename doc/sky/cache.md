@@ -1,4 +1,4 @@
-# `CacheSkySurvey` Class Documentation
+# `CacheSkySurvey`
 
 ## Overview
 

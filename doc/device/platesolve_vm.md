@@ -1,4 +1,4 @@
-# PlateSolvingStatusVM Class Documentation
+# PlateSolvingStatusVM
 
 ## Overview
 

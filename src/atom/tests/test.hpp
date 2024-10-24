@@ -496,7 +496,7 @@ auto expectLe(const T& lhs, const U& rhs, const char* file,
     atom::test::expectContains(str, substr, __FILE__, __LINE__)
 #define expect_set_eq(lhs, rhs) ut::expectSetEq(lhs, rhs, __FILE__, __LINE__)
 
-ATOM_INLINE auto operator""_test(const char* name, std::size_t size) {
+ATOM_INLINE auto operator""_test(const char* name, [[maybe_unused]] std::size_t size) {
     return [name](std::function<void()> func, bool async = false,
                   double time_limit = 0.0, bool skip = false,
                   std::vector<std::string> const& dependencies = {}) {

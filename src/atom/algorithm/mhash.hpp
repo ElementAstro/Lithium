@@ -15,6 +15,7 @@ Description: Implementation of murmur3 hash and quick hash
 #ifndef ATOM_ALGORITHM_MHASH_HPP
 #define ATOM_ALGORITHM_MHASH_HPP
 
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <ranges>
@@ -28,6 +29,8 @@ Description: Implementation of murmur3 hash and quick hash
 #include "macro.hpp"
 
 namespace atom::algorithm {
+constexpr size_t K_HASH_SIZE = 32;
+
 /**
  * @brief Converts a string to a hexadecimal string representation.
  *
@@ -211,6 +214,9 @@ private:
     }
 #endif
 };
+
+auto keccak256(const uint8_t *input,
+               size_t length) -> std::array<uint8_t, K_HASH_SIZE>;
 
 }  // namespace atom::algorithm
 

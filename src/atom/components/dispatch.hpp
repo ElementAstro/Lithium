@@ -24,8 +24,11 @@
 #include "atom/error/exception.hpp"
 #include "atom/function/proxy.hpp"
 #include "atom/function/type_caster.hpp"
+#include "atom/type/json.hpp"
 
 #include "macro.hpp"
+
+using json = nlohmann::json;
 
 // -------------------------------------------------------------------
 // Command Exception
@@ -189,9 +192,22 @@ public:
     [[nodiscard]] auto getCommandArgAndReturnType(const std::string& name)
         -> std::pair<std::vector<atom::meta::Arg>, std::string>;
 
-private:
-    struct Command;
+    struct Command {
+        std::function<std::any(const std::vector<std::any>&)> func;
+        std::string returnType;
+        std::vector<atom::meta::Arg> argTypes;
+        std::string hash;
+        std::string description;
+#if ENABLE_FASTHASH
+        emhash::HashSet<std::string> aliases;
+#else
+        std::unordered_set<std::string> aliases;
+#endif
+        std::optional<std::function<bool()>> precondition;
+        std::optional<std::function<void()>> postcondition;
+    } ATOM_ALIGNAS(128);
 
+private:
     /**
      * @brief Helper function to dispatch a command.
      * @tparam ArgsType The type of the arguments.
@@ -294,21 +310,6 @@ private:
      */
     static auto computeFunctionHash(const std::vector<std::any>& args) -> std::string;
 
-    struct Command {
-        std::function<std::any(const std::vector<std::any>&)> func;
-        std::string returnType;
-        std::vector<atom::meta::Arg> argTypes;
-        std::string hash;
-        std::string description;
-#if ENABLE_FASTHASH
-        emhash::HashSet<std::string> aliases;
-#else
-        std::unordered_set<std::string> aliases;
-#endif
-        std::optional<std::function<bool()>> precondition;
-        std::optional<std::function<void()>> postcondition;
-    } ATOM_ALIGNAS(128);
-
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string, Command> commands;
     emhash8::HashMap<std::string, std::string> groupMap;
@@ -321,6 +322,48 @@ private:
 
     std::weak_ptr<atom::meta::TypeCaster> typeCaster_;
 };
+
+inline void to_json(json& j, const CommandDispatcher::Command& cmd) {
+    j = json{
+        {"returnType", cmd.returnType},
+        {"argTypes", cmd.argTypes},
+        {"hash", cmd.hash},
+        {"description", cmd.description},
+        {"aliases", cmd.aliases}
+    };
+
+    if (cmd.precondition) {
+        j["precondition"] = true;
+    } else {
+        j["precondition"] = false;
+    }
+
+    if (cmd.postcondition) {
+        j["postcondition"] = true;
+    } else {
+        j["postcondition"] = false;
+    }
+}
+
+inline void from_json(const json& j, CommandDispatcher::Command& cmd) {
+    j.at("returnType").get_to(cmd.returnType);
+    j.at("argTypes").get_to(cmd.argTypes);
+    j.at("hash").get_to(cmd.hash);
+    j.at("description").get_to(cmd.description);
+    j.at("aliases").get_to(cmd.aliases);
+
+    if (j.at("precondition").get<bool>()) {
+        cmd.precondition = []() { return true; };  // Placeholder function
+    } else {
+        cmd.precondition.reset();
+    }
+
+    if (j.at("postcondition").get<bool>()) {
+        cmd.postcondition = []() {};  // Placeholder function
+    } else {
+        cmd.postcondition.reset();
+    }
+}
 
 ATOM_INLINE auto CommandDispatcher::findCommand(const std::string& name) {
     auto it = commands_.find(name);
@@ -350,6 +393,7 @@ void CommandDispatcher::def(const std::string& name, const std::string& group,
     std::function<std::any(const std::vector<std::any>&)> wrappedFunc;
     atom::meta::FunctionInfo info;
     if (isTimed) {
+        // TODO: Custom timeout duration for each command
         auto _func = atom::meta::TimerProxyFunction(std::move(func));
         info = _func.getFunctionInfo();
         wrappedFunc =

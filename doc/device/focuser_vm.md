@@ -2,7 +2,7 @@ To document the `FocuserVM` class in Markdown with flowcharts, we need to break 
 
 ---
 
-## FocuserVM Class Documentation
+## FocuserVM
 
 ### Overview
 

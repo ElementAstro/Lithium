@@ -178,7 +178,6 @@ public:
 };
 
 namespace internal {
-// Template struct to check if all variadic arguments are printable
 template <typename... Args>
 struct are_all_printable;
 
@@ -202,14 +201,10 @@ struct are_all_printable<First, Rest...> {
 }  // namespace internal
 
 #define THROW_RUNTIME_ERROR(...)                                      \
-    static_assert(atom::error::are_all_printable<__VA_ARGS__>::value, \
-                  "All variadic arguments must be printable");        \
     throw atom::error::RuntimeError(ATOM_FILE_NAME, ATOM_FILE_LINE,   \
                                     ATOM_FUNC_NAME, __VA_ARGS__)
 
 #define THROW_NESTED_RUNTIME_ERROR(...)                                      \
-    static_assert(atom::error::are_all_printable<__VA_ARGS__>::value,        \
-                  "All variadic arguments must be printable");               \
     atom::error::RuntimeError::rethrowNested(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                              ATOM_FUNC_NAME, __VA_ARGS__)
 

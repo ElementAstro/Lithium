@@ -127,7 +127,7 @@ public:
             m_data_->mIsRef = true;
         }
     }
-    
+
     /*!
      * \brief Default constructor for VoidType.
      */

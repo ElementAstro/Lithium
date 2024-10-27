@@ -284,7 +284,7 @@ private:
     mutable std::shared_mutex cacheMutex_;
 
     // Generate a cache key based on the arguments
-    static auto generateCacheKey(const std::vector<std::any>& args) 
+    static auto generateCacheKey(const std::vector<std::any>& args)
         -> std::string {
         std::string key;
         for (const auto& arg : args) {

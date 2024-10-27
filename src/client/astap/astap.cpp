@@ -8,7 +8,7 @@
 #include "atom/system/command.hpp"
 #include "atom/system/software.hpp"
 #include "device/template/solver.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include <fitsio.h>
 #include <array>

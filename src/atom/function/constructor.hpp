@@ -3,12 +3,13 @@
  * \brief C++ Function Constructors
  * \author Max Qian <lightapt.com>
  * \date 2024-03-01
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \copyright Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_CONSTRUCTOR_HPP
 #define ATOM_META_CONSTRUCTOR_HPP
 
+#include <future>
 #include <memory>
 #include <utility>
 
@@ -192,6 +193,51 @@ auto buildMoveConstructor() {
 template <typename Class, typename T>
 auto buildInitializerListConstructor() {
     return [](std::initializer_list<T> init_list) { return Class(init_list); };
+}
+
+/*!
+ * \brief Constructs an instance of a class asynchronously.
+ * \tparam Class Type of the class.
+ * \tparam Args Types of the constructor arguments.
+ * \return A future that constructs an instance of the class.
+ */
+template <typename Class, typename... Args>
+auto asyncConstructor() {
+    return [](Args... args) -> std::future<std::shared_ptr<Class>> {
+        return std::async(
+            std::launch::async,
+            [](Args... args) {
+                return std::make_shared<Class>(std::forward<Args>(args)...);
+            },
+            std::forward<Args>(args)...);
+    };
+}
+
+/*!
+ * \brief Constructs a singleton instance of a class.
+ * \tparam Class Type of the class.
+ * \return A lambda that constructs a singleton instance of the class.
+ */
+template <typename Class>
+auto singletonConstructor() {
+    return []() -> std::shared_ptr<Class> {
+        static std::shared_ptr<Class> instance = std::make_shared<Class>();
+        return instance;
+    };
+}
+
+/*!
+ * \brief Constructs an instance of a class using a custom constructor.
+ * \tparam Class Type of the class.
+ * \tparam CustomConstructor Type of the custom constructor.
+ * \return A lambda that constructs an instance of the class using the custom
+ * constructor.
+ */
+template <typename Class, typename CustomConstructor>
+auto customConstructor(CustomConstructor custom_constructor) {
+    return [custom_constructor](auto &&...args) {
+        return custom_constructor(std::forward<decltype(args)>(args)...);
+    };
 }
 
 }  // namespace atom::meta

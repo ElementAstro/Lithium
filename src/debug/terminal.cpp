@@ -4,7 +4,7 @@
 #include <memory>
 #include <regex>
 #include <sstream>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #if __has_include(<ncurses.h>)
 #include <ncurses.h>  // ncurses library

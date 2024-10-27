@@ -41,7 +41,7 @@ Description: Simple wrapper for executing commands.
 #define UNSETENV(name) unsetenv(name)
 #endif
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"

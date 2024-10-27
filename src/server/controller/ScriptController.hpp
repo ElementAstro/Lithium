@@ -11,7 +11,7 @@
 #include "atom/function/global_ptr.hpp"
 #include "atom/system/env.hpp"
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController)  /// <-- Begin Code-Gen
 

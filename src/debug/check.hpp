@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "atom/type/json_fwd.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 using json = nlohmann::json;
 
 namespace lithium::debug {

@@ -19,7 +19,7 @@ Description: Error Stack
 #include <ostream>
 #include <vector>
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 namespace atom::error {
 /**

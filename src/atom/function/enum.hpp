@@ -3,7 +3,7 @@
  * \brief Enum Utilities
  * \author Max Qian <lightapt.com>
  * \date 2023-03-29
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \copyright Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_ENUM_HPP
@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -284,7 +285,7 @@ constexpr auto integer_in_enum_range(std::underlying_type_t<T> value) noexcept
  */
 template <typename T>
 struct EnumAliasTraits {
-    static constexpr std::array<std::string_view, 0> ALIASES = {};
+    static constexpr std::array<std::string_view, 0> aliases = {};
 };
 
 /*!
@@ -303,6 +304,90 @@ constexpr auto enum_cast_with_alias(std::string_view name) noexcept
     for (size_t i = 0; i < NAMES.size(); ++i) {
         if (NAMES[i] == name || (i < ALIASES.size() && ALIASES[i] == name)) {
             return VALUES[i];
+        }
+    }
+    return std::nullopt;
+}
+
+/*!
+ * \brief Get the description of an enum value.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \return Description of the enum value.
+ */
+template <typename T>
+constexpr auto enum_description(T value) noexcept -> std::string_view {
+    constexpr auto VALUES = EnumTraits<T>::values;
+    constexpr auto DESCRIPTIONS = EnumTraits<T>::descriptions;
+
+    for (size_t i = 0; i < VALUES.size(); ++i) {
+        if (VALUES[i] == value) {
+            return DESCRIPTIONS[i];
+        }
+    }
+    return {};
+}
+
+/*!
+ * \brief Serialize enum value to string.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \return Serialized string.
+ */
+template <typename T>
+auto serialize_enum(T value) -> std::string {
+    return std::string(enum_name(value));
+}
+
+/*!
+ * \brief Deserialize string to enum value.
+ * \tparam T Enum type.
+ * \param str Serialized string.
+ * \return Optional enum value.
+ */
+template <typename T>
+auto deserialize_enum(const std::string& str) -> std::optional<T> {
+    return enum_cast<T>(str);
+}
+
+/*!
+ * \brief Check if enum value is within a specified range.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \param min Minimum value.
+ * \param max Maximum value.
+ * \return True if within range, false otherwise.
+ */
+template <typename T>
+constexpr auto enum_in_range(T value, T min, T max) noexcept -> bool {
+    return value >= min && value <= max;
+}
+
+/*!
+ * \brief Get the bitmask of an enum value.
+ * \tparam T Enum type.
+ * \param value Enum value.
+ * \return Bitmask of the enum value.
+ */
+template <typename T>
+constexpr auto enum_bitmask(T value) noexcept -> std::underlying_type_t<T> {
+    return static_cast<std::underlying_type_t<T>>(value);
+}
+
+/*!
+ * \brief Convert bitmask to enum value.
+ * \tparam T Enum type.
+ * \param bitmask Bitmask value.
+ * \return Optional enum value.
+ */
+template <typename T>
+constexpr auto bitmask_to_enum(std::underlying_type_t<T> bitmask) noexcept
+    -> std::optional<T> {
+    constexpr auto VALUES = EnumTraits<T>::values;
+
+    for (const auto& val : VALUES) {
+        if (enum_bitmask(val) == bitmask) {
+            return val;
         }
     }
     return std::nullopt;

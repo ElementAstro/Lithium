@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <fstream>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using namespace lithium::cxxtools;
 

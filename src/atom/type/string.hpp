@@ -25,7 +25,7 @@ Description: A super enhanced string class.
 #include <string_view>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 /**
  * @brief A super enhanced string class.

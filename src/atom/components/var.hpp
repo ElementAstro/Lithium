@@ -22,7 +22,7 @@ Description: Variable Manager
 #include <utility>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"

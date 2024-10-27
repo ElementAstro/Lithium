@@ -31,7 +31,7 @@
 #include "atom/utils/to_string.hpp"
 #include "atom/utils/ranges.hpp"
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController)  /// <-- Begin Code-Gen
 

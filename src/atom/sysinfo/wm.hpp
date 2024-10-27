@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 namespace atom::system {
 struct SystemInfo {

@@ -11,7 +11,7 @@
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium {
 struct CompileCommand {

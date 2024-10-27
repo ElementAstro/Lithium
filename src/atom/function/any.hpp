@@ -10,9 +10,10 @@
 #define ATOM_META_ANY_HPP
 
 #include <any>
+#include <chrono>
 #include <concepts>
 #include <functional>
-#include <map>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -21,10 +22,11 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 #include "type_info.hpp"
 
 namespace atom::meta {
@@ -50,13 +52,18 @@ private:
     struct ATOM_ALIGNAS(128) Data {
         std::any mObj;       ///< The encapsulated value.
         TypeInfo mTypeInfo;  ///< Type information of the value.
-        std::shared_ptr<std::map<std::string, std::shared_ptr<Data>>>
+        std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Data>>>
             mAttrs;           ///< Attributes associated with the value.
         bool mIsRef = false;  ///< Indicates if the value is a reference.
         bool mReturnValue =
             false;               ///< Indicates if the value is a return value.
         bool mReadonly = false;  ///< Indicates if the value is read-only.
         const void* mConstDataPtr = nullptr;  ///< Pointer to the constant data.
+        std::chrono::time_point<std::chrono::system_clock>
+            mCreationTime;  ///< Creation time.
+        std::chrono::time_point<std::chrono::system_clock>
+            mModificationTime;  ///< Modification time.
+        int mAccessCount = 0;   ///< Access count.
 
         /*!
          * \brief Constructor for non-void types.
@@ -75,9 +82,10 @@ private:
               mIsRef(is_ref),
               mReturnValue(return_value),
               mReadonly(readonly),
-              mConstDataPtr(std::is_const_v<std::remove_reference_t<T>>
-                                ? &obj
-                                : nullptr) {}
+              mConstDataPtr(
+                  std::is_const_v<std::remove_reference_t<T>> ? &obj : nullptr),
+              mCreationTime(std::chrono::system_clock::now()),
+              mModificationTime(std::chrono::system_clock::now()) {}
 
         /*!
          * \brief Constructor for void type.
@@ -95,7 +103,9 @@ private:
               mAttrs(nullptr),
               mIsRef(is_ref),
               mReturnValue(return_value),
-              mReadonly(readonly) {}
+              mReadonly(readonly),
+              mCreationTime(std::chrono::system_clock::now()),
+              mModificationTime(std::chrono::system_clock::now()) {}
     };
 
     std::shared_ptr<Data> m_data_;  ///< Shared pointer to the internal data.
@@ -112,8 +122,7 @@ public:
     // clang-tidy: disable=hicpp-explicit-constructor
     template <typename T>
         requires(!std::same_as<BoxedValue, std::decay_t<T>>)
-    BoxedValue(T&& value, bool return_value = false,
-                        bool readonly = false)
+    BoxedValue(T&& value, bool return_value = false, bool readonly = false)
         : m_data_(std::make_shared<Data>(
               std::forward<T>(value),
               std::is_reference_v<T> ||
@@ -138,8 +147,7 @@ public:
      * \brief Constructor with shared data pointer.
      * \param data Shared pointer to the internal data.
      */
-    BoxedValue(std::shared_ptr<Data> data)
-        : m_data_(std::move(data)) {}
+    BoxedValue(std::shared_ptr<Data> data) : m_data_(std::move(data)) {}
 
     /*!
      * \brief Copy constructor.
@@ -204,6 +212,7 @@ public:
         std::unique_lock lock(m_mutex_);
         m_data_->mObj = std::forward<T>(value);
         m_data_->mTypeInfo = userType<T>();
+        m_data_->mModificationTime = std::chrono::system_clock::now();
         return *this;
     }
 
@@ -219,6 +228,7 @@ public:
         m_data_->mObj = value;
         m_data_->mTypeInfo = userType<T>();
         m_data_->mReadonly = true;
+        m_data_->mModificationTime = std::chrono::system_clock::now();
         return *this;
     }
 
@@ -323,6 +333,7 @@ public:
      */
     [[nodiscard]] auto get() const noexcept -> const std::any& {
         std::shared_lock lock(m_mutex_);
+        m_data_->mAccessCount++;
         return m_data_->mObj;
     }
 
@@ -346,9 +357,10 @@ public:
         std::unique_lock lock(m_mutex_);
         if (!m_data_->mAttrs) {
             m_data_->mAttrs = std::make_shared<
-                std::map<std::string, std::shared_ptr<Data>>>();
+                std::unordered_map<std::string, std::shared_ptr<Data>>>();
         }
         (*m_data_->mAttrs)[name] = value.m_data_;
+        m_data_->mModificationTime = std::chrono::system_clock::now();
         return *this;
     }
 
@@ -403,6 +415,7 @@ public:
         std::unique_lock lock(m_mutex_);
         if (m_data_->mAttrs) {
             m_data_->mAttrs->erase(name);
+            m_data_->mModificationTime = std::chrono::system_clock::now();
         }
     }
 

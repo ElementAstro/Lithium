@@ -16,7 +16,7 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/function/proxy_params.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using namespace atom::meta;
 

@@ -1,8 +1,12 @@
 #ifndef ATOM_META_PROPERTY_HPP
 #define ATOM_META_PROPERTY_HPP
 
+#include <chrono>
 #include <functional>
+#include <future>
 #include <optional>
+#include <shared_mutex>
+#include <unordered_map>
 
 #include "atom/error/exception.hpp"
 #include "concept.hpp"
@@ -23,6 +27,11 @@ private:
     std::function<void(T)> setter_;  ///< The setter function for the property.
     std::function<void(const T&)>
         onChange_;  ///< The onChange callback function for the property.
+    mutable std::shared_mutex mutex_;  ///< Mutex for thread-safe access.
+
+    // Cache for property values
+    mutable std::unordered_map<std::string, T> cache_;
+    mutable std::shared_mutex cacheMutex_;
 
 public:
     /**
@@ -120,6 +129,7 @@ public:
      * @throws std::invalid_argument if neither value nor getter is defined.
      */
     explicit operator T() const {
+        std::shared_lock lock(mutex_);
         if (getter_) {
             return getter_();
         }
@@ -136,6 +146,7 @@ public:
      * @return Property& A reference to this Property object.
      */
     auto operator=(const T& newValue) -> Property& {
+        std::unique_lock lock(mutex_);
         if (setter_) {
             setter_(newValue);
         } else {
@@ -150,17 +161,24 @@ public:
     /**
      * @brief Sets the property to readonly by removing the setter function.
      */
-    void makeReadonly() { setter_ = nullptr; }
+    void makeReadonly() {
+        std::unique_lock lock(mutex_);
+        setter_ = nullptr;
+    }
 
     /**
      * @brief Sets the property to writeonly by removing the getter function.
      */
-    void makeWriteonly() { getter_ = nullptr; }
+    void makeWriteonly() {
+        std::unique_lock lock(mutex_);
+        getter_ = nullptr;
+    }
 
     /**
      * @brief Removes both getter and setter functions.
      */
     void clear() {
+        std::unique_lock lock(mutex_);
         getter_ = nullptr;
         setter_ = nullptr;
     }
@@ -171,6 +189,7 @@ public:
      * @param callback The onChange callback function.
      */
     void setOnChange(std::function<void(const T&)> callback) {
+        std::unique_lock lock(mutex_);
         onChange_ = std::move(callback);
     }
 
@@ -269,6 +288,76 @@ public:
         *this = static_cast<T>(*this) % other;
         return *this;
     }
+
+    /**
+     * @brief Asynchronously gets the value of the property.
+     *
+     * @return A future containing the value of the property.
+     */
+    auto asyncGet() const -> std::future<T> {
+        return std::async(std::launch::async, [this] {
+            std::shared_lock lock(mutex_);
+            return static_cast<T>(*this);
+        });
+    }
+
+    /**
+     * @brief Asynchronously sets the value of the property.
+     *
+     * @param newValue The new value to set.
+     * @return A future indicating the completion of the operation.
+     */
+    auto asyncSet(const T& newValue) -> std::future<void> {
+        return std::async(std::launch::async, [this, newValue] {
+            std::unique_lock lock(mutex_);
+            *this = newValue;
+        });
+    }
+
+    /**
+     * @brief Caches the value of the property.
+     *
+     * @param key The key associated with the value.
+     * @param value The value to cache.
+     */
+    void cacheValue(const std::string& key, const T& value) const {
+        std::unique_lock lock(cacheMutex_);
+        cache_[key] = value;
+    }
+
+    /**
+     * @brief Retrieves the cached value of the property.
+     *
+     * @param key The key associated with the value.
+     * @return The cached value if found, std::nullopt otherwise.
+     */
+    auto getCachedValue(const std::string& key) const -> std::optional<T> {
+        std::shared_lock lock(cacheMutex_);
+        auto it = cache_.find(key);
+        if (it != cache_.end()) {
+            return it->second;
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Clears the cache.
+     */
+    void clearCache() const {
+        std::unique_lock lock(cacheMutex_);
+        cache_.clear();
+    }
+
+    /**
+     * @brief Notifies listeners of a change in the property value.
+     *
+     * @param newValue The new value of the property.
+     */
+    void notifyChange(const T& newValue) const {
+        if (onChange_) {
+            onChange_(newValue);
+        }
+    }
 };
 
 /**
@@ -313,4 +402,4 @@ public:                                    \
     Property<Type>(Name) = Property<Type>( \
         nullptr, [this](const Type& value) { Name##_ = value; });
 
-#endif
+#endif  // ATOM_META_PROPERTY_HPP

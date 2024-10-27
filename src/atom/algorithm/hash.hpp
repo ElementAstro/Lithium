@@ -15,6 +15,7 @@ Description: A collection of hash algorithms
 #ifndef ATOM_ALGORITHM_HASH_HPP
 #define ATOM_ALGORITHM_HASH_HPP
 
+#include <any>
 #include <array>
 #include <functional>
 #include <tuple>
@@ -101,6 +102,12 @@ auto computeHash(const std::array<T, N>& array) -> std::size_t {
     return result;
 }
 
+inline auto computeHash(const std::any& value) -> std::size_t {
+    if (value.has_value()) {
+        return value.type().hash_code();
+    }
+    return 0;
+}
 }  // namespace atom::algorithm
 
 /**

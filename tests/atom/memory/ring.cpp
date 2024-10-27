@@ -1,7 +1,7 @@
 #include "atom/memory/ring.hpp"
 #include <gtest/gtest.h>
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 // 测试构造函数
 TEST(RingBufferTest, Constructor) {

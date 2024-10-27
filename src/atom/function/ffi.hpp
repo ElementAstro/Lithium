@@ -3,25 +3,26 @@
  * \brief Enhanced FFI with Lazy Loading, Callbacks, and Timeout Mechanism
  * \author Max Qian <lightapt.com>
  * \date 2023-03-29, Updated 2024-10-14
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \copyright Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_FFI_HPP
 #define ATOM_META_FFI_HPP
 
 #include <any>
+#include <chrono>
 #include <cstdint>
 #include <functional>
+#include <future>
+#include <iostream>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
-#include <chrono>
-#include <future>
-#include <iostream>
-#include <optional>
 
 #ifdef _MSC_VER
 #include <windows.h>
@@ -30,12 +31,6 @@
 #endif
 
 #include <ffi.h>
-
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#else
-#include <unordered_map>
-#endif
 
 #include "atom/error/exception.hpp"
 
@@ -50,9 +45,7 @@ public:
 namespace atom::meta {
 
 // Logger for debug information
-void log(const std::string& msg) {
-    std::cerr << "[LOG] " << msg << std::endl;
-}
+void log(const std::string& msg) { std::cerr << "[LOG] " << msg << std::endl; }
 
 template <typename T>
 constexpr auto getFFIType() -> ffi_type* {
@@ -122,8 +115,8 @@ public:
     }
 
     // Overload with timeout
-    auto callWithTimeout(void* funcPtr, std::chrono::milliseconds timeout, Args... args)
-        -> std::optional<ReturnType> {
+    auto callWithTimeout(void* funcPtr, std::chrono::milliseconds timeout,
+                         Args... args) -> std::optional<ReturnType> {
         auto future = std::async(std::launch::async, [this, funcPtr, args...] {
             return this->call(funcPtr, args...);
         });
@@ -152,13 +145,14 @@ public:
 
     void loadLibrary() {
         if (handle_ != nullptr) {
-            return; // Already loaded
+            return;  // Already loaded
         }
 
 #ifdef _MSC_VER
         handle_ = LoadLibraryA(libraryPath_.data());
         if (handle_ == nullptr) {
-            THROW_FFI_EXCEPTION("Failed to load dynamic library: " + std::string(libraryPath_));
+            THROW_FFI_EXCEPTION("Failed to load dynamic library: " +
+                                std::string(libraryPath_));
         }
 #else
         handle_ = dlopen(libraryPath_.data(), RTLD_LAZY);
@@ -195,13 +189,15 @@ public:
         }
 
 #ifdef _MSC_VER
-        FARPROC proc = GetProcAddress(static_cast<HMODULE>(handle_), functionName.data());
+        FARPROC proc =
+            GetProcAddress(static_cast<HMODULE>(handle_), functionName.data());
 #else
         void* proc = dlsym(handle_, functionName.data());
 #endif
         if (!proc) {
             std::string error = dlerror();
-            THROW_FFI_EXCEPTION("Failed to load symbol: " + std::string(functionName) + " (" + error + ")");
+            THROW_FFI_EXCEPTION("Failed to load symbol: " +
+                                std::string(functionName) + " (" + error + ")");
         }
         log("Loaded function: " + std::string(functionName));
         return std::function<Func>(reinterpret_cast<Func*>(proc));
@@ -209,7 +205,9 @@ public:
 
     // Asynchronously call a function with timeout support
     template <typename ReturnType, typename... Args>
-    auto callFunctionWithTimeout(std::string_view functionName, std::chrono::milliseconds timeout,     Args... args) -> std::optional<ReturnType> {
+    auto callFunctionWithTimeout(std::string_view functionName,
+                                 std::chrono::milliseconds timeout,
+                                 Args... args) -> std::optional<ReturnType> {
         if (isLazyLoad_ && handle_ == nullptr) {
             loadLibrary();
         }
@@ -225,12 +223,14 @@ public:
         FFIWrapper<ReturnType, Args...> ffiWrapper;
 
         // Call the function with the specified timeout
-        return ffiWrapper.callWithTimeout(funcPtr, timeout, std::forward<Args>(args)...);
+        return ffiWrapper.callWithTimeout(funcPtr, timeout,
+                                          std::forward<Args>(args)...);
     }
 
     // Normal function call without timeout
     template <typename ReturnType, typename... Args>
-    auto callFunction(std::string_view functionName, Args... args) -> std::optional<ReturnType> {
+    auto callFunction(std::string_view functionName,
+                      Args... args) -> std::optional<ReturnType> {
         if (isLazyLoad_ && handle_ == nullptr) {
             loadLibrary();
         }
@@ -257,12 +257,14 @@ public:
 
         std::unique_lock lock(mutex_);
 #ifdef _MSC_VER
-        void* funcPtr = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle_), functionName.data()));
+        void* funcPtr = reinterpret_cast<void*>(
+            GetProcAddress(static_cast<HMODULE>(handle_), functionName.data()));
 #else
         void* funcPtr = dlsym(handle_, functionName.data());
 #endif
         if (!funcPtr) {
-            THROW_FFI_EXCEPTION("Failed to find symbol: " + std::string(functionName));
+            THROW_FFI_EXCEPTION("Failed to find symbol: " +
+                                std::string(functionName));
         }
         functionMap_[std::string(functionName)] = funcPtr;
     }
@@ -288,12 +290,14 @@ public:
     }
 
 private:
-    std::string libraryPath_;          // Store the path of the library
-    bool isLazyLoad_ = false;          // Lazy loading flag
-    void* handle_ = nullptr;           // Dynamic library handle
-    mutable std::shared_mutex mutex_;  // Use shared_mutex for more efficient concurrency
+    std::string libraryPath_;  // Store the path of the library
+    bool isLazyLoad_ = false;  // Lazy loading flag
+    void* handle_ = nullptr;   // Dynamic library handle
+    mutable std::shared_mutex
+        mutex_;  // Use shared_mutex for more efficient concurrency
 
-    std::unordered_map<std::string, void*> functionMap_;  // Cache of loaded functions
+    std::unordered_map<std::string, void*>
+        functionMap_;  // Cache of loaded functions
 };
 
 class CallbackRegistry {
@@ -302,7 +306,8 @@ public:
     template <typename Func>
     void registerCallback(const std::string& callbackName, Func&& func) {
         std::unique_lock lock(mutex_);
-        callbackMap_[callbackName] = std::make_any<std::function<Func>>(std::forward<Func>(func));
+        callbackMap_[callbackName] =
+            std::make_any<std::function<Func>>(std::forward<Func>(func));
     }
 
     // Retrieve a registered callback
@@ -316,6 +321,14 @@ public:
         return std::any_cast<std::function<Func>>(&it->second);
     }
 
+    // Register an asynchronous callback function
+    template <typename Func>
+    void registerAsyncCallback(const std::string& callbackName, Func&& func) {
+        std::unique_lock lock(mutex_);
+        callbackMap_[callbackName] = std::make_any<std::function<Func>>(
+            std::async(std::launch::async, std::forward<Func>(func)));
+    }
+
 private:
     std::unordered_map<std::string, std::any> callbackMap_;  // Callback map
     mutable std::shared_mutex mutex_;
@@ -327,8 +340,10 @@ struct MyStruct {
     double field2;
 
     static ffi_type* getFFITypeLayout() {
-        static ffi_type* elements[] = {&ffi_type_sint, &ffi_type_double, nullptr};
-        static ffi_type structType = {sizeof(MyStruct), alignof(MyStruct), FFI_TYPE_STRUCT, elements};
+        static ffi_type* elements[] = {&ffi_type_sint, &ffi_type_double,
+                                       nullptr};
+        static ffi_type structType = {sizeof(MyStruct), alignof(MyStruct),
+                                      FFI_TYPE_STRUCT, elements};
         return &structType;
     }
 };
@@ -339,7 +354,9 @@ public:
     LibraryObject(DynamicLibrary& library, const std::string& factoryFuncName) {
         auto factory = library.getFunction<T*(void)>(factoryFuncName);
         if (!factory) {
-            THROW_FFI_EXCEPTION("Failed to create object via factory function: " + factoryFuncName);
+            THROW_FFI_EXCEPTION(
+                "Failed to create object via factory function: " +
+                factoryFuncName);
         }
         object_.reset(factory());
         log("Library object created.");

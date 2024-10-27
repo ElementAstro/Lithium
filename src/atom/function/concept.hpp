@@ -3,24 +3,24 @@
  * \brief C++ Concepts
  * \author Max Qian <lightapt.com>
  * \date 2024-03-01
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \copyright Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_CONCEPT_HPP
 #define ATOM_META_CONCEPT_HPP
 
+#include <concepts>
 #include <deque>
+#include <functional>
 #include <list>
 #include <map>
+#include <memory>
 #include <string_view>
+#include <type_traits>
+
 #if __cplusplus < 202002L
 #error "C++20 is required for this library"
 #endif
-
-#include <concepts>
-#include <functional>
-#include <memory>
-#include <type_traits>
 
 // -----------------------------------------------------------------------------
 // Function Concepts
@@ -306,6 +306,55 @@ concept String = NotSequenceContainer<T> && requires(T obj) {
     { obj.begin() } -> std::convertible_to<typename T::iterator>;
     { obj.end() } -> std::convertible_to<typename T::iterator>;
 };
+
+// -----------------------------------------------------------------------------
+// Multi-threading Concepts
+// -----------------------------------------------------------------------------
+
+template <typename T>
+concept Lockable = requires(T obj) {
+    { obj.lock() } -> std::same_as<void>;
+    { obj.unlock() } -> std::same_as<void>;
+};
+
+template <typename T>
+concept SharedLockable = requires(T obj) {
+    { obj.lock_shared() } -> std::same_as<void>;
+    { obj.unlock_shared() } -> std::same_as<void>;
+};
+
+template <typename T>
+concept Mutex = Lockable<T> && requires(T obj) {
+    { obj.try_lock() } -> std::same_as<bool>;
+};
+
+template <typename T>
+concept SharedMutex = SharedLockable<T> && requires(T obj) {
+    { obj.try_lock_shared() } -> std::same_as<bool>;
+};
+
+// -----------------------------------------------------------------------------
+// Asynchronous Concepts
+// -----------------------------------------------------------------------------
+
+template <typename T>
+concept Future = requires(T obj) {
+    { obj.get() } -> std::same_as<typename T::value_type>;
+    { obj.wait() } -> std::same_as<void>;
+};
+
+template <typename T>
+concept Promise = requires(T obj) {
+    {
+        obj.set_value(std::declval<typename T::value_type>())
+    } -> std::same_as<void>;
+    {
+        obj.set_exception(std::declval<std::exception_ptr>())
+    } -> std::same_as<void>;
+};
+
+template <typename T>
+concept AsyncResult = Future<T> || Promise<T>;
 
 #endif
 

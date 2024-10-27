@@ -19,7 +19,7 @@ Description: UUID Generator
 #include <array>
 #include <cstdint>
 #include <string>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include <openssl/evp.h>
 

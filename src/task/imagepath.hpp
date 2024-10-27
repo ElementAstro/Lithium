@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;

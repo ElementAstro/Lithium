@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 namespace atom::meta {
 ATOM_INLINE auto getCompileTime() -> std::string {

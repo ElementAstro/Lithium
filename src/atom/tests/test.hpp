@@ -24,7 +24,7 @@
 #include "atom/type/json.hpp"
 #endif
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 // 一个简单的测试框架
 namespace atom::test {

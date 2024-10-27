@@ -102,7 +102,7 @@ loguru::Verbosity_MAX);
 
 */
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 #if defined(LOGURU_IMPLEMENTATION)
 #error \

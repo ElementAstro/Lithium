@@ -1,7 +1,7 @@
 #ifndef LITHIUM_APP_HPP
 #define LITHIUM_APP_HPP
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium {
 struct CommandLineArgs {

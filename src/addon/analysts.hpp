@@ -8,7 +8,7 @@
 #include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium {
 

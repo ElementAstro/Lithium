@@ -26,7 +26,7 @@ Description: Implementation of murmur3 hash and quick hash
 #include <CL/cl.h>
 #endif
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::algorithm {
 constexpr size_t K_HASH_SIZE = 32;

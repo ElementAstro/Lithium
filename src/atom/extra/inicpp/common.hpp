@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace inicpp {
 

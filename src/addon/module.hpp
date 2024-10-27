@@ -20,7 +20,7 @@ Description: Module Information
 #include <vector>
 
 #include "atom/function/ffi.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium {
 struct FunctionInfo {

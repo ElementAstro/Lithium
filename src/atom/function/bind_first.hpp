@@ -3,7 +3,7 @@
  * \brief An easy way to bind a function to an object
  * \author Max Qian <lightapt.com>
  * \date 2024-03-01
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \copyright Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_BIND_FIRST_HPP
@@ -11,6 +11,7 @@
 
 #include <concepts>
 #include <functional>
+#include <future>
 #include <type_traits>
 
 namespace atom::meta {
@@ -112,6 +113,41 @@ constexpr auto bindFirst(F &&func, O &&object)
                            std::forward<decltype(param)>(param)...);
     };
 }
+
+template <typename O, typename T, typename Class>
+constexpr auto bindMember(T Class::*member, O &&object) noexcept {
+    return [member, object = std::forward<O>(object)]() -> T & {
+        return removeConstPointer(getPointer(object))->*member;
+    };
+}
+
+template <typename Ret, typename Class, typename... Param>
+constexpr auto bindStatic(Ret (*func)(Param...)) noexcept {
+    return [func](Param... param) -> Ret {
+        return func(std::forward<Param>(param)...);
+    };
+}
+
+template <typename F, typename... Args>
+auto asyncBindFirst(F &&func, Args &&...args) {
+    return std::async(std::launch::async, std::forward<F>(func),
+                      std::forward<Args>(args)...);
+}
+
+template <typename O, typename Ret, typename P1, typename... Param>
+constexpr auto bindFirstWithExceptionHandling(Ret (*func)(P1, Param...),
+                                              O &&object)
+    requires invocable<Ret (*)(P1, Param...), O, Param...>
+{
+    return [func, object = std::forward<O>(object)](Param... param) -> Ret {
+        try {
+            return func(object, std::forward<Param>(param)...);
+        } catch (const std::exception &e) {
+            throw;
+        }
+    };
+}
+
 }  // namespace atom::meta
 
 #endif  // ATOM_META_BIND_FIRST_HPP

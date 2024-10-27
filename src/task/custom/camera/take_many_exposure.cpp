@@ -1,5 +1,5 @@
 #include "take_many_exposure.hpp"
-#include "task/utils/macro.hpp"
+#include "task/utils/atom/macro.hpp"
 
 #include <chrono>
 #include <format>

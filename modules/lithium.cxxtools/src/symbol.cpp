@@ -15,7 +15,7 @@
 #include "atom/function/abi.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 #include "yaml-cpp/yaml.h"
 
 using json = nlohmann::json;

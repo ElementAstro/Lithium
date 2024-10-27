@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 struct DeviceInfo {

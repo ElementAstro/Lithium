@@ -1,7 +1,7 @@
 #include "config/configor.hpp"
 #include <gtest/gtest.h>
 #include "atom/type/json.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include <fstream>
 using json = nlohmann::json;

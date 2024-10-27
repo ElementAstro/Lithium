@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 /**
  * @brief Class for benchmarking code performance.

@@ -21,7 +21,7 @@
 
 #include "atom/error/exception.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::meta {
 class TypeMetadata {
@@ -37,10 +37,14 @@ public:
     struct ATOM_ALIGNAS(64) Property {
         GetterFunction getter;
         SetterFunction setter;
+        BoxedValue default_value;
+        std::string description;
     };
 
     struct ATOM_ALIGNAS(32) Event {
-        std::vector<EventCallback> listeners;
+        std::vector<std::pair<int, EventCallback>>
+            listeners;  // Pair of priority and callback
+        std::string description;
     };
 
 private:
@@ -62,8 +66,10 @@ public:
 
     // Add property (getter and setter) to type metadata
     void addProperty(const std::string& name, GetterFunction getter,
-                     SetterFunction setter) {
-        m_properties_[name] = {std::move(getter), std::move(setter)};
+                     SetterFunction setter, BoxedValue default_value = {},
+                     const std::string& description = "") {
+        m_properties_[name] = {std::move(getter), std::move(setter),
+                               std::move(default_value), description};
     }
 
     // Remove property by name
@@ -76,8 +82,10 @@ public:
     }
 
     // Add event to type metadata
-    void addEvent(const std::string& event_name) {
-        m_events_[event_name];  // Creates an empty event
+    void addEvent(const std::string& event_name,
+                  const std::string& description = "") {
+        m_events_[event_name].description =
+            description;  // Creates an empty event with description
     }
 
     // Remove event by name
@@ -85,10 +93,16 @@ public:
         m_events_.erase(event_name);
     }
 
-    // Add event listener to a specific event
-    void addEventListener(const std::string& event_name,
-                          EventCallback callback) {
-        m_events_[event_name].listeners.push_back(std::move(callback));
+    // Add event listener to a specific event with priority
+    void addEventListener(const std::string& event_name, EventCallback callback,
+                          int priority = 0) {
+        m_events_[event_name].listeners.emplace_back(priority,
+                                                     std::move(callback));
+        std::sort(m_events_[event_name].listeners.begin(),
+                  m_events_[event_name].listeners.end(),
+                  [](const auto& a, const auto& b) {
+                      return a.first > b.first;  // Higher priority first
+                  });
     }
 
     // Fire event and notify listeners
@@ -96,7 +110,8 @@ public:
                    const std::vector<BoxedValue>& args) const {
         if (auto eventIter = m_events_.find(event_name);
             eventIter != m_events_.end()) {
-            for (const auto& listener : eventIter->second.listeners) {
+            for (const auto& [priority, listener] :
+                 eventIter->second.listeners) {
                 listener(obj, args);
             }
         } else {
@@ -279,8 +294,8 @@ public:
             });
 
         // Register events
-        metadata.addEvent("onCreate");
-        metadata.addEvent("onDestroy");
+        metadata.addEvent("onCreate", "Triggered when an object is created");
+        metadata.addEvent("onDestroy", "Triggered when an object is destroyed");
 
         // Add methods, properties, events dynamically as needed
         metadata.addMethod(

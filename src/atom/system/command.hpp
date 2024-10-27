@@ -19,7 +19,7 @@ Description: Simple wrapper for executing commands.
 #include <string>
 #include <unordered_map>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 

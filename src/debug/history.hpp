@@ -5,7 +5,7 @@
 #include <deque>
 #include <string>
 #include <unordered_map>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium::debug {
 /**

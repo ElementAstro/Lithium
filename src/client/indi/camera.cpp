@@ -8,7 +8,7 @@
 #include <string_view>
 #include <tuple>
 
-#include "atom/components/module_macro.hpp"
+#include "atom/components/module_atom/macro.hpp"
 #include "atom/components/registry.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
@@ -16,7 +16,7 @@
 #include "device/template/camera.hpp"
 #include "function/conversion.hpp"
 #include "function/type_info.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 INDICamera::INDICamera(std::string deviceName)
     : AtomCamera(name_), name_(std::move(deviceName)) {}

@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 enum class ModelType { POLYNOMIAL, GAUSSIAN, LORENTZIAN };
 

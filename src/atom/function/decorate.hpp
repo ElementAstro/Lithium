@@ -3,7 +3,7 @@
  * \brief An implementation of decorate function. Just like Python's decorator.
  * \author Max Qian <lightapt.com>
  * \date 2023-03-29
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \copyright Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_META_DECORATE_HPP
@@ -13,15 +13,19 @@
 #include <concepts>
 #include <exception>
 #include <functional>
+#include <future>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "func_traits.hpp"
 
 namespace atom::meta {
+
 template <typename F, typename... Args>
 concept Callable = requires(F&& func, Args&&... args) {
     {
@@ -280,6 +284,97 @@ auto makeDecorateStepper(Func&& func) {
 
     return DecorateStepper<ReturnType, std::tuple_element_t<0, ArgumentTuple>,
                            std::tuple_element_t<1, ArgumentTuple>>(
+        std::forward<Func>(func));
+}
+
+// 新增功能：缓存装饰器
+template <typename R, typename... Args>
+class CacheDecorator : public BaseDecorator<R, Args...> {
+    using FuncType = std::function<R(Args...)>;
+    mutable std::unordered_map<std::tuple<Args...>, R> cache_;
+    mutable std::mutex cacheMutex_;
+
+public:
+    auto operator()(FuncType func, Args... args) -> R override {
+        std::lock_guard<std::mutex> lock(cacheMutex_);
+        auto argsTuple = std::make_tuple(args...);
+        if (cache_.find(argsTuple) != cache_.end()) {
+            return cache_[argsTuple];
+        }
+        auto result = func(std::forward<Args>(args)...);
+        cache_[argsTuple] = result;
+        return result;
+    }
+};
+
+// 新增功能：重试装饰器
+template <typename R, typename... Args>
+class RetryDecorator : public BaseDecorator<R, Args...> {
+    using FuncType = std::function<R(Args...)>;
+    int retryCount_;
+
+public:
+    explicit RetryDecorator(int retryCount) : retryCount_(retryCount) {}
+
+    auto operator()(FuncType func, Args... args) -> R override {
+        for (int i = 0; i < retryCount_; ++i) {
+            try {
+                return func(std::forward<Args>(args)...);
+            } catch (...) {
+                if (i == retryCount_ - 1) {
+                    throw;
+                }
+            }
+        }
+        throw DecoratorError("Retry limit reached");
+    }
+};
+
+// 新增功能：异步装饰器
+template <typename R, typename... Args>
+class AsyncDecorator : public BaseDecorator<R, Args...> {
+    using FuncType = std::function<R(Args...)>;
+
+public:
+    auto operator()(FuncType func, Args... args) -> R override {
+        auto future =
+            std::async(std::launch::async, func, std::forward<Args>(args)...);
+        return future.get();
+    }
+};
+
+// Helper function: Create CacheDecorator
+template <typename Func>
+auto makeCacheDecorator(Func&& func) {
+    using Traits = FunctionTraits<std::remove_reference_t<Func>>;
+    using ReturnType = typename Traits::return_type;
+    using ArgumentTuple = typename Traits::argument_types;
+
+    return CacheDecorator<ReturnType, std::tuple_element_t<0, ArgumentTuple>,
+                          std::tuple_element_t<1, ArgumentTuple>>(
+        std::forward<Func>(func));
+}
+
+// Helper function: Create RetryDecorator
+template <typename Func>
+auto makeRetryDecorator(Func&& func, int retryCount) {
+    using Traits = FunctionTraits<std::remove_reference_t<Func>>;
+    using ReturnType = typename Traits::return_type;
+    using ArgumentTuple = typename Traits::argument_types;
+
+    return RetryDecorator<ReturnType, std::tuple_element_t<0, ArgumentTuple>,
+                          std::tuple_element_t<1, ArgumentTuple>>(retryCount);
+}
+
+// Helper function: Create AsyncDecorator
+template <typename Func>
+auto makeAsyncDecorator(Func&& func) {
+    using Traits = FunctionTraits<std::remove_reference_t<Func>>;
+    using ReturnType = typename Traits::return_type;
+    using ArgumentTuple = typename Traits::argument_types;
+
+    return AsyncDecorator<ReturnType, std::tuple_element_t<0, ArgumentTuple>,
+                          std::tuple_element_t<1, ArgumentTuple>>(
         std::forward<Func>(func));
 }
 

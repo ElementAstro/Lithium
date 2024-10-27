@@ -18,7 +18,7 @@ Description: Quote manager for crash report.
 #include <string>
 #include <utility>
 #include <vector>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 /**

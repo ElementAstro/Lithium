@@ -2,36 +2,38 @@
  * \file signature.hpp
  * \brief Signature parsing
  * \author Max Qian <lightapt.com>
- * \date 2024-6-7
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \date 2024-6-7, Updated 2024-10-14
  */
 
 #ifndef ATOM_META_SIGNATURE_HPP
 #define ATOM_META_SIGNATURE_HPP
 
-#include <array>        // Includes for std::array
 #include <optional>     // Includes for std::optional
 #include <string_view>  // Includes for std::string_view
-#include <utility>      // Includes for std::pair
+#include <vector>
 
 #include "atom/utils/cstring.hpp"
-#include "macro.hpp"
 
 namespace atom::meta {
+
 struct alignas(128) FunctionSignature {
 public:
     constexpr FunctionSignature(
         std::string_view name,
-        std::array<std::pair<std::string_view, std::string_view>, 2> parameters,
-        std::optional<std::string_view> returnType)
+        std::vector<std::pair<std::string_view, std::string_view>> parameters,
+        std::optional<std::string_view> returnType,
+        std::optional<std::string_view> modifiers,
+        std::optional<std::string_view> docComment)
         : name_(name),
           parameters_(std::move(parameters)),
-          returnType_(returnType) {}
+          returnType_(returnType),
+          modifiers_(modifiers),
+          docComment_(docComment) {}
 
     [[nodiscard]] auto getName() const -> std::string_view { return name_; }
 
     [[nodiscard]] auto getParameters() const
-        -> const std::array<std::pair<std::string_view, std::string_view>, 2>& {
+        -> const std::vector<std::pair<std::string_view, std::string_view>>& {
         return parameters_;
     }
 
@@ -40,10 +42,21 @@ public:
         return returnType_;
     }
 
+    [[nodiscard]] auto getModifiers() const -> std::optional<std::string_view> {
+        return modifiers_;
+    }
+
+    [[nodiscard]] auto getDocComment() const
+        -> std::optional<std::string_view> {
+        return docComment_;
+    }
+
 private:
     std::string_view name_;
-    std::array<std::pair<std::string_view, std::string_view>, 2> parameters_;
+    std::vector<std::pair<std::string_view, std::string_view>> parameters_;
     std::optional<std::string_view> returnType_;
+    std::optional<std::string_view> modifiers_;
+    std::optional<std::string_view> docComment_;
 };
 
 constexpr auto parseFunctionDefinition(
@@ -51,6 +64,8 @@ constexpr auto parseFunctionDefinition(
     -> std::optional<FunctionSignature> {
     constexpr std::string_view DEF_PREFIX = "def ";
     constexpr std::string_view ARROW = " -> ";
+    constexpr std::string_view CONST_MODIFIER = " const";
+    constexpr std::string_view NOEXCEPT_MODIFIER = " noexcept";
 
     if (DEFINITION.substr(0, DEF_PREFIX.size()) != DEF_PREFIX) {
         return std::nullopt;
@@ -77,11 +92,10 @@ constexpr auto parseFunctionDefinition(
         returnType = DEFINITION.substr(arrowPos + ARROW.size());
     }
 
-    std::array<std::pair<std::string_view, std::string_view>, 2> parameters{};
+    std::vector<std::pair<std::string_view, std::string_view>> parameters;
     size_t paramStart = 0;
-    size_t paramIndex = 0;
 
-    while (paramStart < params.size() && paramIndex < parameters.size()) {
+    while (paramStart < params.size()) {
         size_t paramEnd = params.size();
         int bracketCount = 0;
         for (size_t i = paramStart; i < params.size(); ++i) {
@@ -110,13 +124,30 @@ constexpr auto parseFunctionDefinition(
             paramName = atom::utils::trim(param);
         }
 
-        parameters[paramIndex++] = {paramName, paramType};
+        parameters.emplace_back(paramName, paramType);
         paramStart = paramEnd + 1;
     }
 
-    return FunctionSignature{name, parameters, returnType};
+    std::optional<std::string_view> modifiers;
+    if (DEFINITION.find(CONST_MODIFIER) != std::string_view::npos) {
+        modifiers = CONST_MODIFIER;
+    } else if (DEFINITION.find(NOEXCEPT_MODIFIER) != std::string_view::npos) {
+        modifiers = NOEXCEPT_MODIFIER;
+    }
+
+    std::optional<std::string_view> docComment;
+    size_t docStart = DEFINITION.find("/**");
+    if (docStart != std::string_view::npos) {
+        size_t docEnd = DEFINITION.find("*/", docStart);
+        if (docEnd != std::string_view::npos) {
+            docComment = DEFINITION.substr(docStart, docEnd - docStart + 2);
+        }
+    }
+
+    return FunctionSignature{name, parameters, returnType, modifiers,
+                             docComment};
 }
 
 }  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_SIGNATURE_HPP

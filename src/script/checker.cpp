@@ -14,7 +14,7 @@
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using json = nlohmann::json;
 

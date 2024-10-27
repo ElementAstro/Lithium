@@ -23,7 +23,7 @@
 #include "abi.hpp"  // Include for ATOM_INLINE, ATOM_CONSTEXPR, ATOM_NOEXCEPT
 #include "concept.hpp"  // Include for Pointer, SmartPointer
 
-#include "atom/macro.hpp"  // Include for ATOM_NODISCARD, ATOM_CONSTEXPR, ATOM_NOEXCEPT, ATOM_INLINE
+#include "atom/atom/macro.hpp"  // Include for ATOM_NODISCARD, ATOM_CONSTEXPR, ATOM_NOEXCEPT, ATOM_INLINE
 
 namespace atom::meta {
 
@@ -218,9 +218,9 @@ public:
     }
 
 private:
-    const std::type_info *mTypeInfo_ = &typeid(void);  // Adjusted for clarity
+    const std::type_info *mTypeInfo_ = &typeid(void);
     const std::type_info *mBareTypeInfo_ = &typeid(void);
-    Flags mFlags_ = Flags().set(IS_UNDEF_FLAG);  // Default to undefined
+    Flags mFlags_ = Flags().set(IS_UNDEF_FLAG);
 
     // Preserve flag indices
     static constexpr unsigned int IS_CONST_FLAG = 0;
@@ -236,10 +236,9 @@ private:
     static constexpr unsigned int IS_TRIVIAL_FLAG = 10;
     static constexpr unsigned int IS_STANDARD_LAYOUT_FLAG = 11;
     static constexpr unsigned int IS_POD_FLAG = 12;
-    static constexpr unsigned int IS_DEFAULT_CONSTRUCTIBLE_FLAG =
-        13;                                               // New flag
-    static constexpr unsigned int IS_MOVEABLE_FLAG = 14;  // New flag
-    static constexpr unsigned int IS_COPYABLE_FLAG = 15;  // New flag
+    static constexpr unsigned int IS_DEFAULT_CONSTRUCTIBLE_FLAG = 13;
+    static constexpr unsigned int IS_MOVEABLE_FLAG = 14;
+    static constexpr unsigned int IS_COPYABLE_FLAG = 15;
 };
 
 // General template for pointer types
@@ -310,12 +309,6 @@ ATOM_CONSTEXPR auto userType(const T & /*t*/) ATOM_NOEXCEPT -> TypeInfo {
 template <typename T>
 ATOM_CONSTEXPR auto userType() ATOM_NOEXCEPT -> TypeInfo {
     return GetTypeInfo<T>::get();
-}
-
-// Added support for checking if a type is derived from another type
-template <typename Derived, typename Base>
-ATOM_NODISCARD constexpr bool isBaseOf() {
-    return std::is_base_of_v<Base, Derived>;
 }
 
 // Detail namespace to handle the type registry

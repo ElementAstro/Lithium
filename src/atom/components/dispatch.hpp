@@ -26,7 +26,7 @@
 #include "atom/function/type_caster.hpp"
 #include "atom/type/json.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using json = nlohmann::json;
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 namespace lithium {
 

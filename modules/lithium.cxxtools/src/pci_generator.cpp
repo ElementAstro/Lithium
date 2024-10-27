@@ -26,7 +26,7 @@ Description: PCI info generator
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace fs = std::filesystem;
 

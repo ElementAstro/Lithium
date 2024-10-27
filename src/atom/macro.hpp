@@ -1,5 +1,5 @@
 /*
- * macro.hpp
+ * atom/macro.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -67,13 +67,13 @@ static_assert(false, "Unsupported compiler");
 //-------------------------------------------------------------------------------
 #pragma region common_macros
 
+// UNUSED
 #define ATOM_UNUSED_RESULT(expr)                \
     {                                           \
         ALLOW_UNUSED auto unused_result = expr; \
         (void)unused_result;                    \
     }
 
-// UNUSED
 #if defined(__cplusplus)
 #define ATOM_UNUSED [[maybe_unused]]
 #elif defined(__GNUC__) || defined(__clang__)
@@ -228,7 +228,6 @@ static_assert(false, "unsupported platform");
 
 // NOEXCEPT
 #ifdef __cplusplus
-// By Default we use cpp-standard above 2011XXL
 #define ATOM_NOEXCEPT noexcept
 #else
 #define ATOM_NOEXCEPT
@@ -455,8 +454,10 @@ ATOM_INLINE void unreachable ATOM_NORETURN() {
 
 #pragma endregion more_macros
 
-// This is a hack to make the virtual keyword work in tests
-#pragma  region virtual_macros
+//-------------------------------------------------------------------------------
+// Virtual Macros for Testing
+//-------------------------------------------------------------------------------
+#pragma region virtual_macros
 
 #if defined(TEST_F) || defined(TEST)
 #define ATOM_VIRTUAL virtual

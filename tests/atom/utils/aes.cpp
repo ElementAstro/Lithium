@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include "exception.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using namespace atom::utils;
 

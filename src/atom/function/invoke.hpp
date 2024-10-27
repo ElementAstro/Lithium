@@ -2,16 +2,19 @@
  * \file invoke.hpp
  * \brief An implementation of invoke function. Supports C++11 and C++17.
  * \author Max Qian <lightapt.com>
- * \date 2023-03-29
- * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * \date 2023-03-29, Updated 2024-10-14
  */
 
 #ifndef ATOM_META_INVOKE_HPP
 #define ATOM_META_INVOKE_HPP
 
+#include <chrono>
 #include <functional>
+#include <future>
+#include <shared_mutex>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 
@@ -210,6 +213,121 @@ auto safeTryCatchWithCustomHandler(
             throw;
         }
     }
+}
+
+/*!
+ * \brief Asynchronously calls a function with given arguments.
+ * \tparam Func The function type.
+ * \tparam Args The argument types.
+ * \param func The function to be called.
+ * \param args The arguments to be passed to the function.
+ * \return A future containing the result of the function call.
+ */
+template <typename Func, typename... Args>
+    requires Invocable<Func, Args...>
+auto asyncCall(Func &&func, Args &&...args) {
+    return std::async(std::launch::async, std::forward<Func>(func),
+                      std::forward<Args>(args)...);
+}
+
+/*!
+ * \brief Calls a function with given arguments, retrying if an exception
+ * occurs. \tparam Func The function type. \tparam Args The argument types.
+ * \param func The function to be called. \param retries The number of retries.
+ * \param args The arguments to be passed to the function. \return The result of
+ * the function call.
+ */
+template <typename Func, typename... Args>
+    requires Invocable<Func, Args...>
+auto retryCall(Func &&func, int retries, Args &&...args) {
+    while (retries-- > 0) {
+        try {
+            return std::invoke(std::forward<Func>(func),
+                               std::forward<Args>(args)...);
+        } catch (...) {
+            if (retries == 0) {
+                throw;
+            }
+        }
+    }
+}
+
+/*!
+ * \brief Calls a function with given arguments, timing out if the function
+ * takes too long. \tparam Func The function type. \tparam Args The argument
+ * types. \param func The function to be called. \param timeout The timeout
+ * duration. \param args The arguments to be passed to the function. \return The
+ * result of the function call, or a default-constructed value if the function
+ * times out.
+ */
+template <typename Func, typename... Args>
+    requires Invocable<Func, Args...>
+auto timeoutCall(Func &&func, std::chrono::milliseconds timeout,
+                 Args &&...args) {
+    auto future = std::async(std::launch::async, std::forward<Func>(func),
+                             std::forward<Args>(args)...);
+    if (future.wait_for(timeout) == std::future_status::timeout) {
+        THROW_RUNTIME_ERROR("Function call timed out");
+    }
+    return future.get();
+}
+
+/*!
+ * \brief Caches the result of a function call with given arguments.
+ * \tparam Func The function type.
+ * \tparam Args The argument types.
+ * \param func The function to be called.
+ * \param args The arguments to be passed to the function.
+ * \return The cached result of the function call.
+ */
+template <typename Func, typename... Args>
+    requires Invocable<Func, Args...>
+auto cacheCall(Func &&func, Args &&...args) {
+    using ReturnType =
+        std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...>;
+    static std::unordered_map<std::tuple<std::decay_t<Args>...>, ReturnType>
+        cache;
+    static std::shared_mutex mutex;
+
+    auto key = std::make_tuple(std::forward<Args>(args)...);
+    {
+        std::shared_lock lock(mutex);
+        if (auto it = cache.find(key); it != cache.end()) {
+            return it->second;
+        }
+    }
+
+    auto result =
+        std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
+
+    {
+        std::unique_lock lock(mutex);
+        cache[key] = result;
+    }
+
+    return result;
+}
+
+/*!
+ * \brief Processes a batch of function calls with given arguments.
+ * \tparam Func The function type.
+ * \tparam Args The argument types.
+ * \param func The function to be called.
+ * \param argsList The list of argument tuples to be passed to the function.
+ * \return A vector containing the results of the function calls.
+ */
+template <typename Func, typename... Args>
+    requires Invocable<Func, Args...>
+auto batchCall(Func &&func, const std::vector<std::tuple<Args...>> &argsList) {
+    std::vector<std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...>>
+        results;
+    results.reserve(argsList.size());
+
+    for (const auto &args : argsList) {
+        results.push_back(std::apply(std::forward<Func>(func), args));
+    }
+
+    return results;
 }
 
 #endif  // ATOM_META_INVOKE_HPP

@@ -1,6 +1,6 @@
 #include "atom/memory/shared.hpp"
 #include <gtest/gtest.h>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using namespace atom::connection;
 

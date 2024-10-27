@@ -37,7 +37,7 @@
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
 // clang-format off

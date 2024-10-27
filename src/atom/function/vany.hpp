@@ -9,7 +9,7 @@
 #include <typeinfo>
 
 #include "atom/error/exception.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 template <typename T, typename = void>
 struct IsIterable : std::false_type {};

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <limits>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::utils {
 

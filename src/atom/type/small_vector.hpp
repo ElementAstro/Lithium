@@ -22,7 +22,7 @@ Description: A Small Vector Implementation
 #include <limits>
 #include <utility>
 #include "error/exception.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 template <typename T, std::size_t N>
 class SmallVector {

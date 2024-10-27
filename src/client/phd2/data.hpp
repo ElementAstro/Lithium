@@ -1,7 +1,7 @@
 #ifndef LITHIUM_CLIENT_PHD2_DATA_HPP
 #define LITHIUM_CLIENT_PHD2_DATA_HPP
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include "atom/type/json_fwd.hpp"
 

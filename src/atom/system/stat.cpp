@@ -18,7 +18,7 @@ Description: Python like stat for Windows & Linux
 #include <sys/types.h>
 #include <chrono>
 #include "error/exception.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

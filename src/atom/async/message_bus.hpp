@@ -30,7 +30,7 @@ Description: Main Message Bus with Asio support
 #include <unordered_set>
 #include <vector>
 
-#include "atom/macro.hpp"
+#include "atom/atom/macro.hpp"
 
 namespace atom::async {
 

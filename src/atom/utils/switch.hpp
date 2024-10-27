@@ -27,7 +27,7 @@ Description: Smart Switch just like javascript
 
 #include "atom/error/exception.hpp"
 #include "atom/type/noncopyable.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::utils {
 

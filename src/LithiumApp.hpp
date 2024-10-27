@@ -24,7 +24,7 @@ Description: Lithium App Enter
 #include "atom/type/json_fwd.hpp"
 #include "atom/type/message.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;

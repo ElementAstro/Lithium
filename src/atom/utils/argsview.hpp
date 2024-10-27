@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 #include "exception.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::utils {
 

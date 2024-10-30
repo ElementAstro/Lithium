@@ -1,284 +1,291 @@
 #include "meson.hpp"
 
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
-#include <regex>
 #include <sstream>
 
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 #include "atom/type/json.hpp"
-
-namespace fs = std::filesystem;
-using json = nlohmann::json;
+#include "atom/utils/string.hpp"
 
 namespace lithium {
 
-class MesonBuilderImpl {
-public:
-    std::unique_ptr<json> configOptions = std::make_unique<json>();
-    std::vector<std::string> preBuildScripts;
-    std::vector<std::string> postBuildScripts;
-    std::vector<std::string> environmentVariables;
-    std::vector<std::string> dependencies;
-    std::function<void(const std::string&)> logCallback;
+struct MesonBuilder::Impl {
+    MesonBuilderConfig config;
 };
 
-MesonBuilder::MesonBuilder() : pImpl_(std::make_unique<MesonBuilderImpl>()) {}
+namespace {
+auto executeCommand(const std::string& command) -> BuildResult {
+    int ret = atom::system::executeCommandWithStatus(command).second;
+    if (ret != 0) {
+        LOG_F(ERROR, "Command failed with exit code {}", ret);
+        return BuildResult(false, "Command execution failed.", ret);
+    }
+    return BuildResult(true, "Command execution succeeded.", ret);
+}
+
+void logCommandExecution(const std::string& description,
+                         const std::string& command) {
+    LOG_F(INFO, "{}: {}", description, command);
+}
+}  // namespace
+
+MesonBuilder::MesonBuilder() : pImpl_(std::make_unique<Impl>()) {}
+
 MesonBuilder::~MesonBuilder() = default;
 
-auto MesonBuilder::checkAndInstallDependencies() -> bool {
-    for (const auto& dep : pImpl_->dependencies) {
-        std::string checkCommand = "pkg-config --exists " + dep;
-        if (!atom::system::executeCommandSimple(checkCommand)) {
-            pImpl_->logCallback("Dependency " + dep +
-                                " not found, attempting to install...");
-            std::string installCommand = "sudo apt-get install -y " + dep;
-            if (!atom::system::executeCommandSimple(installCommand)) {
-                pImpl_->logCallback("Failed to install dependency: " + dep);
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 auto MesonBuilder::configureProject(
-    const fs::path& sourceDir, const fs::path& buildDir, BuildType buildType,
-    const std::vector<std::string>& options) -> BuildResult {
-    if (!fs::exists(buildDir)) {
-        fs::create_directories(buildDir);
-    }
+    const std::filesystem::path& sourceDir,
+    const std::filesystem::path& buildDir, BuildType buildType,
+    const std::vector<std::string>& options,
+    const std::map<std::string, std::string>& envVars) -> BuildResult {
+    LOG_F(INFO, "Configuring project: sourceDir={}, buildDir={}",
+          sourceDir.string(), buildDir.string());
 
-    if (!checkAndInstallDependencies()) {
-        return {false, "", "Failed to install dependencies"};
-    }
+    std::ostringstream cmd;
+    cmd << "meson setup " << buildDir.string() << " " << sourceDir.string();
 
-    std::string buildTypeStr;
+    // Append build type
     switch (buildType) {
         case BuildType::DEBUG:
-            buildTypeStr = "debug";
+            cmd << " --buildtype=debug";
             break;
         case BuildType::RELEASE:
-            buildTypeStr = "release";
+            cmd << " --buildtype=release";
             break;
         case BuildType::REL_WITH_DEB_INFO:
-            buildTypeStr = "debugoptimized";
+            cmd << " --buildtype=debugoptimized";
             break;
         case BuildType::MIN_SIZE_REL:
-            buildTypeStr = "minsize";
+            cmd << " --buildtype=release --strip -O3";
             break;
     }
 
-    std::string command = "meson setup " + buildDir.string() + " " +
-                          sourceDir.string() + " --buildtype=" + buildTypeStr;
-
+    // Append additional options
     for (const auto& opt : options) {
-        command += " " + opt;
+        cmd << " " << opt;
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to configure project.";
+    // Handle environment variables
+    std::string envPrefix;
+    for (const auto& [key, value] : envVars) {
+        envPrefix.append(key).append("=").append(value).append(" ");
     }
-    return res;
+
+    std::string fullCommand = envPrefix + cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::buildProject(const fs::path& buildDir,
+auto MesonBuilder::buildProject(const std::filesystem::path& buildDir,
                                 std::optional<int> jobs) -> BuildResult {
-    std::string command = "ninja -C " + buildDir.string();
+    LOG_F(INFO, "Building project: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "meson compile -C " << buildDir.string();
     if (jobs.has_value()) {
-        command += " -j" + std::to_string(*jobs);
+        cmd << " -j" << jobs.value();
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to build project.";
-    }
-    return res;
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::cleanProject(const fs::path& buildDir) -> BuildResult {
-    if (!fs::exists(buildDir)) {
-        return {false, "",
-                "Build directory does not exist: " + buildDir.string()};
-    }
-    std::string command = "ninja -C " + buildDir.string() + " clean";
+auto MesonBuilder::cleanProject(const std::filesystem::path& buildDir)
+    -> BuildResult {
+    LOG_F(INFO, "Cleaning project: buildDir={}", buildDir.string());
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to clean project.";
-    }
-    return res;
+    std::ostringstream cmd;
+    cmd << "meson compile -C " << buildDir.string() << " --clean";
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::installProject(const fs::path& buildDir,
-                                  const fs::path& installDir) -> BuildResult {
-    std::string command = "meson install -C " + buildDir.string() +
-                          " --destdir " + installDir.string();
+auto MesonBuilder::installProject(const std::filesystem::path& buildDir,
+                                  const std::filesystem::path& installDir)
+    -> BuildResult {
+    LOG_F(INFO, "Installing project: buildDir={}, installDir={}",
+          buildDir.string(), installDir.string());
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to install project.";
-    }
-    return res;
+    std::ostringstream cmd;
+    cmd << "meson install -C " << buildDir.string() << " --destdir "
+        << installDir.string();
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::runTests(const fs::path& buildDir,
+auto MesonBuilder::runTests(const std::filesystem::path& buildDir,
                             const std::vector<std::string>& testNames)
     -> BuildResult {
-    std::string command = "meson test -C " + buildDir.string();
-    if (!testNames.empty()) {
-        command += " " + std::accumulate(
-                             testNames.begin(), testNames.end(), std::string(),
-                             [](const std::string& a, const std::string& b) {
-                                 return a + (a.empty() ? "" : " ") + b;
-                             });
+    LOG_F(INFO, "Running tests: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "meson test -C " << buildDir.string();
+
+    for (const auto& test : testNames) {
+        cmd << " -t " << test;
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to run tests.";
-    }
-    return res;
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::generateDocs(const fs::path& buildDir,
-                                const fs::path& outputDir) -> BuildResult {
-    std::string command = "ninja -C " + buildDir.string() + " docs";
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
+auto MesonBuilder::generateDocs(const std::filesystem::path& buildDir,
+                                const std::filesystem::path& outputDir)
+    -> BuildResult {
+    LOG_F(INFO, "Generating documentation: buildDir={}, outputDir={}",
+          buildDir.string(), outputDir.string());
 
-    if (status == 0) {
-        fs::path docsDir = buildDir / "docs";
-        if (fs::exists(docsDir)) {
-            fs::create_directories(outputDir);
-            fs::copy(docsDir, outputDir,
-                     fs::copy_options::recursive |
-                         fs::copy_options::update_existing);
-            res.output =
-                "Documentation generated and copied to " + outputDir.string();
-        } else {
-            res.error = "Documentation directory not found after generation.";
-        }
-    } else {
-        res.error = "Failed to generate documentation.";
-    }
-    return res;
+    std::ostringstream cmd;
+    cmd << "sphinx-build -b html " << (buildDir / "docs").string() << " "
+        << outputDir.string();
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::loadConfig(const fs::path& configPath) -> bool {
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open()) {
-        pImpl_->logCallback("Failed to open config file: " +
-                            configPath.string());
-        return false;
-    }
+auto MesonBuilder::loadConfig(const std::filesystem::path& configPath) -> bool {
+    LOG_F(INFO, "Loading configuration from {}", configPath.string());
 
     try {
-        configFile >> *(pImpl_->configOptions);
-        pImpl_->preBuildScripts = pImpl_->configOptions->value(
-            "preBuildScripts", std::vector<std::string>{});
-        pImpl_->postBuildScripts = pImpl_->configOptions->value(
-            "postBuildScripts", std::vector<std::string>{});
-        pImpl_->environmentVariables = pImpl_->configOptions->value(
-            "environmentVariables", std::vector<std::string>{});
-        pImpl_->dependencies = pImpl_->configOptions->value(
-            "dependencies", std::vector<std::string>{});
-    } catch (const json::exception& e) {
-        pImpl_->logCallback("Failed to parse config file: " +
-                            configPath.string() + " with " + e.what());
+        std::ifstream configFile(configPath);
+        if (!configFile.is_open()) {
+            LOG_F(ERROR, "Failed to open configuration file: {}",
+                  configPath.string());
+            return false;
+        }
+
+        nlohmann::json configJson;
+        configFile >> configJson;
+
+        // Example: Assuming the JSON contains a key "buildType"
+        if (configJson.contains("buildType")) {
+            std::string buildTypeStr = configJson["buildType"];
+            if (buildTypeStr == "Debug") {
+                pImpl_->config.buildType = BuildType::DEBUG;
+            } else if (buildTypeStr == "Release") {
+                pImpl_->config.buildType = BuildType::RELEASE;
+            } else if (buildTypeStr == "RelWithDebInfo") {
+                pImpl_->config.buildType = BuildType::REL_WITH_DEB_INFO;
+            } else if (buildTypeStr == "MinSizeRel") {
+                pImpl_->config.buildType = BuildType::MIN_SIZE_REL;
+            } else {
+                LOG_F(ERROR, "Unknown build type: {}", buildTypeStr);
+                return false;
+            }
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'buildType' key");
+            return false;
+        }
+
+        // Example: Assuming the JSON contains a key "options"
+        if (configJson.contains("options")) {
+            pImpl_->config.options =
+                configJson["options"].get<std::vector<std::string>>();
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'options' key");
+            return false;
+        }
+
+        // Example: Assuming the JSON contains a key "envVars"
+        if (configJson.contains("envVars")) {
+            pImpl_->config.envVars =
+                configJson["envVars"].get<std::map<std::string, std::string>>();
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'envVars' key");
+            return false;
+        }
+
+        LOG_F(INFO, "Configuration loaded successfully.");
+        return true;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Exception occurred while loading configuration: {}",
+              e.what());
         return false;
     }
-
-    return true;
 }
 
-auto MesonBuilder::setLogCallback(
-    std::function<void(const std::string&)> callback) -> void {
-    pImpl_->logCallback = std::move(callback);
-}
-
-auto MesonBuilder::getAvailableTargets(const fs::path& buildDir)
+auto MesonBuilder::getAvailableTargets(const std::filesystem::path& buildDir)
     -> std::vector<std::string> {
-    std::string command = "ninja -C " + buildDir.string() + " -t targets all";
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
+    LOG_F(INFO, "Retrieving available targets: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "meson introspect --targets -C " << buildDir.string();
+    auto output = atom::system::executeCommand(cmd.str());
 
     std::vector<std::string> targets;
-    if (status == 0 && !output.empty()) {
-        std::istringstream iss(output);
-        std::string line;
-        std::regex targetRegex(R"(^([^:]+):)");
-        while (std::getline(iss, line)) {
-            std::smatch match;
-            if (std::regex_search(line, match, targetRegex)) {
-                targets.push_back(match[1]);
-            }
+    try {
+        auto jsonOutput = nlohmann::json::parse(output);
+        for (const auto& target : jsonOutput) {
+            targets.push_back(target["name"]);
         }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to parse targets: {}", e.what());
     }
 
+    LOG_F(INFO, "Available targets retrieved: {}", targets.size());
     return targets;
 }
 
-auto MesonBuilder::buildTarget(const fs::path& buildDir,
+auto MesonBuilder::buildTarget(const std::filesystem::path& buildDir,
                                const std::string& target,
                                std::optional<int> jobs) -> BuildResult {
-    std::string command = "ninja -C " + buildDir.string() + " " + target;
+    LOG_F(INFO, "Building target: buildDir={}, target={}", buildDir.string(),
+          target);
+
+    std::ostringstream cmd;
+    cmd << "meson compile -C " << buildDir.string() << " " << target;
     if (jobs.has_value()) {
-        command += " -j" + std::to_string(*jobs);
+        cmd << " -j" << jobs.value();
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to build target: " + target;
-    }
-    return res;
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto MesonBuilder::getCacheVariables(const fs::path& buildDir)
+auto MesonBuilder::getCacheVariables(const std::filesystem::path& buildDir)
     -> std::vector<std::pair<std::string, std::string>> {
-    std::string command = "meson configure " + buildDir.string();
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
+    LOG_F(INFO, "Retrieving cache variables: buildDir={}", buildDir.string());
 
-    std::vector<std::pair<std::string, std::string>> variables;
-    if (status == 0 && !output.empty()) {
-        std::istringstream iss(output);
-        std::string line;
-        std::regex varRegex(R"(^([^:]+):\s*(.+)$)");
-        while (std::getline(iss, line)) {
-            std::smatch match;
-            if (std::regex_search(line, match, varRegex)) {
-                variables.emplace_back(match[1], match[2]);
-            }
+    std::ostringstream cmd;
+    cmd << "meson configure -C " << buildDir.string();
+    auto output = atom::system::executeCommand(cmd.str());
+
+    std::vector<std::pair<std::string, std::string>> cacheVars;
+    try {
+        auto jsonOutput = nlohmann::json::parse(output);
+        for (const auto& var : jsonOutput) {
+            cacheVars.emplace_back(var["name"], var["value"]);
         }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to parse cache variables: {}", e.what());
     }
-    return variables;
+
+    LOG_F(INFO, "Cache variables retrieved.");
+    return cacheVars;
+}
+
+auto MesonBuilder::setCacheVariable(const std::filesystem::path& buildDir,
+                                    const std::string& name,
+                                    const std::string& value) -> bool {
+    LOG_F(INFO, "Setting cache variable: buildDir={}, name={}, value={}",
+          buildDir.string(), name, value);
+
+    std::ostringstream cmd;
+    cmd << "meson configure -C " << buildDir.string() << " -D" << name << "="
+        << value;
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand).isSuccess();
 }
 
 }  // namespace lithium

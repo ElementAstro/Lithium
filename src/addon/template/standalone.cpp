@@ -1,5 +1,4 @@
 #include "standalone.hpp"
-#include <minwindef.h>
 
 #include <array>
 #include <chrono>

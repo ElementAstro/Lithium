@@ -1,12 +1,16 @@
 #include "compiler.hpp"
-#include "command.hpp"
+#include "compile_command_generator.hpp"
+#include "compiler_output_parser.hpp"
 #include "toolchain.hpp"
 
 #include "utils/constant.hpp"
 
 #include <fstream>
 #include <ios>
+#include <memory>
 #include <unordered_map>
+
+#include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 #include "atom/type/json.hpp"
@@ -32,7 +36,6 @@ public:
     void generateCompileCommands(const std::string &sourceDir);
 
 private:
-    void createOutputDirectory(const fs::path &outputDir);
     auto syntaxCheck(std::string_view code,
                      const std::string &compiler) -> bool;
     auto compileCode(std::string_view code, const std::string &compiler,
@@ -40,11 +43,18 @@ private:
                      const fs::path &output) -> bool;
 
     auto findAvailableCompilers() -> std::vector<std::string>;
+    auto readCompileOptions(const std::string &optionsFile,
+                            const std::vector<std::string> &availableCompilers)
+        -> json;
+    auto generateCompileCommand(const json &optionsJson,
+                                const fs::path &tempSourceFile,
+                                const fs::path &outputDir) -> std::string;
 
     std::unordered_map<std::string, fs::path> cache_;
     std::string customCompileOptions_;
     ToolchainManager toolchainManager_;
-    std::unique_ptr<CompileCommandGenerator> compileCommandGenerator_;
+    std::shared_ptr<CompileCommandGenerator> compileCommandGenerator_;
+    std::shared_ptr<CompilerOutputParser> compilerOutputParser_;
 };
 
 Compiler::Compiler() : impl_(std::make_unique<CompilerImpl>()) {}
@@ -68,7 +78,7 @@ auto Compiler::getAvailableCompilers() const -> std::vector<std::string> {
 }
 
 CompilerImpl::CompilerImpl()
-    : compileCommandGenerator_(std::make_unique<CompileCommandGenerator>()) {
+    : compileCommandGenerator_(std::make_shared<CompileCommandGenerator>()) {
     LOG_F(INFO, "Initializing CompilerImpl...");
     toolchainManager_.scanForToolchains();
     LOG_F(INFO, "Toolchains scanned.");
@@ -76,18 +86,18 @@ CompilerImpl::CompilerImpl()
     if (!availableCompilers.empty()) {
         compileCommandGenerator_->setCompiler(availableCompilers[0]);
     }
-    compileCommandGenerator_->setIncludeFlag("-I./include");
-    compileCommandGenerator_->setOutputFlag("-o output");
-    compileCommandGenerator_->addExtension(".cpp");
-    compileCommandGenerator_->addExtension(".c");
+    compileCommandGenerator_->setOption("include_flag", "-I./include");
+    compileCommandGenerator_->setOption("output_flag", "-o output");
+    compileCommandGenerator_->addDefine(".cpp");
+    compileCommandGenerator_->addDefine(".c");
     LOG_F(INFO, "CompileCommandGenerator initialized with default settings.");
 }
 
 void CompilerImpl::generateCompileCommands(const std::string &sourceDir) {
     LOG_F(INFO, "Generating compile commands for source directory: {}",
           sourceDir);
-    compileCommandGenerator_->setSourceDir(sourceDir);
-    compileCommandGenerator_->setOutputPath("compile_commands.json");
+    compileCommandGenerator_->setOption("source_dir", sourceDir);
+    compileCommandGenerator_->setOption("outputPath", "compile_commands.json");
     compileCommandGenerator_->generate();
     LOG_F(INFO, "Compile commands generation complete for directory: {}",
           sourceDir);
@@ -114,7 +124,13 @@ auto CompilerImpl::compileToSharedLibrary(
     }
 
     const fs::path OUTPUT_DIR = "atom/global";
-    createOutputDirectory(OUTPUT_DIR);
+    if (atom::io::createDirectory(OUTPUT_DIR)) {
+        LOG_F(INFO, "Output directory created at: {}", OUTPUT_DIR.string());
+    } else {
+        LOG_F(ERROR, "Failed to create output directory at: {}",
+              OUTPUT_DIR.string());
+        return false;
+    }
 
     auto availableCompilers = findAvailableCompilers();
     if (availableCompilers.empty()) {
@@ -125,47 +141,10 @@ auto CompilerImpl::compileToSharedLibrary(
           atom::utils::toString(availableCompilers));
 
     // Read compile options
-    std::ifstream optionsStream(optionsFile.data());
-    json optionsJson;
-    if (!optionsStream) {
-        LOG_F(WARNING,
-              "Failed to open compile options file {}, using default options.",
-              optionsFile);
-        optionsJson = {{"compiler", availableCompilers[0]},
-                       {"optimization_level", "-O2"},
-                       {"cplus_version", "-std=c++20"},
-                       {"warnings", "-Wall"}};
-    } else {
-        try {
-            optionsStream >> optionsJson;
-            LOG_F(INFO, "Compile options file {} successfully parsed.",
-                  optionsFile);
-        } catch (const json::parse_error &e) {
-            LOG_F(ERROR, "Failed to parse compile options file {}: {}",
-                  optionsFile, e.what());
-            return false;
-        }
-    }
-
-    std::string compiler = optionsJson.value("compiler", availableCompilers[0]);
-    if (std::find(availableCompilers.begin(), availableCompilers.end(),
-                  compiler) == availableCompilers.end()) {
-        LOG_F(WARNING,
-              "Compiler {} is not available, using default compiler {}.",
-              compiler, availableCompilers[0]);
-        compiler = availableCompilers[0];
-    }
+    auto optionsJson =
+        readCompileOptions(std::string(optionsFile), availableCompilers);
 
     // Use CompileCommandGenerator to generate compile command
-    compileCommandGenerator_->setCompiler(compiler);
-    compileCommandGenerator_->setIncludeFlag(
-        optionsJson.value("include_flag", "-I./include"));
-    compileCommandGenerator_->setOutputFlag(
-        optionsJson.value("output_flag", "-o output"));
-    compileCommandGenerator_->setProjectName(std::string(moduleName));
-    compileCommandGenerator_->setProjectVersion("1.0.0");
-
-    // Temporarily create a file to store the code
     fs::path tempSourceFile = fs::temp_directory_path() / "temp_code.cpp";
     {
         std::ofstream tempFile(tempSourceFile);
@@ -174,70 +153,39 @@ auto CompilerImpl::compileToSharedLibrary(
     LOG_F(INFO, "Temporary source file created at: {}",
           tempSourceFile.string());
 
-    compileCommandGenerator_->setSourceDir(
-        tempSourceFile.parent_path().string());
-    compileCommandGenerator_->setOutputPath(
-        (OUTPUT_DIR / "compile_commands.json").string());
-    compileCommandGenerator_->generate();
-
-    // Read generated compile_commands.json
-    json compileCommands;
-    {
-        std::ifstream commandsFile(OUTPUT_DIR / "compile_commands.json");
-        commandsFile >> compileCommands;
-    }
-    LOG_F(INFO, "Compile commands file read from: {}",
-          (OUTPUT_DIR / "compile_commands.json").string());
+    auto command =
+        generateCompileCommand(optionsJson, tempSourceFile, OUTPUT_DIR);
 
     // Use the generated command to compile
-    if (!compileCommands["commands"].empty()) {
-        auto command =
-            compileCommands["commands"][0]["command"].get<std::string>();
-        command += " " + customCompileOptions_;
-
-        fs::path outputPath =
-            OUTPUT_DIR / std::format("{}{}{}", Constants::LIB_EXTENSION,
-                                     moduleName, Constants::LIB_EXTENSION);
-        command += " -o " + outputPath.string();
-
-        LOG_F(INFO, "Executing compilation command: {}", command);
-        std::string compilationOutput = atom::system::executeCommand(command);
-        if (!compilationOutput.empty()) {
-            LOG_F(ERROR, "Compilation failed:\n{}", compilationOutput);
-            fs::remove(tempSourceFile);
-            return false;
+    LOG_F(INFO, "Executing compilation command: {}", command);
+    std::string compilationOutput = atom::system::executeCommand(command);
+    if (!compilationOutput.empty()) {
+        LOG_F(ERROR, "Compilation failed:\n{}", compilationOutput);
+        // 解析编译输出
+        std::istringstream outputStream(compilationOutput);
+        std::string line;
+        while (std::getline(outputStream, line)) {
+            compilerOutputParser_->parseLine(line);
         }
-
-        // Cache the compilation result
-        cache_[cacheKey] = outputPath;
-        LOG_F(INFO, "Compilation successful, result cached with key: {}",
-              cacheKey);
         fs::remove(tempSourceFile);
-        return true;
+        return false;
     }
 
-    LOG_F(ERROR, "Failed to generate compile command.");
+    // Cache the compilation result
+    cache_[cacheKey] =
+        OUTPUT_DIR / std::format("{}{}{}", Constants::LIB_EXTENSION, moduleName,
+                                 Constants::LIB_EXTENSION);
+    LOG_F(INFO, "Compilation successful, result cached with key: {}", cacheKey);
     fs::remove(tempSourceFile);
-    return false;
-}
-
-void CompilerImpl::createOutputDirectory(const fs::path &outputDir) {
-    if (!fs::exists(outputDir)) {
-        LOG_F(WARNING, "Output directory {} does not exist, creating it.",
-              outputDir.string());
-        fs::create_directories(outputDir);
-        LOG_F(INFO, "Output directory {} created.", outputDir.string());
-    } else {
-        LOG_F(INFO, "Output directory {} already exists.", outputDir.string());
-    }
+    return true;
 }
 
 auto CompilerImpl::syntaxCheck(std::string_view code,
                                const std::string &compiler) -> bool {
     LOG_F(INFO, "Starting syntax check using compiler: {}", compiler);
     compileCommandGenerator_->setCompiler(compiler);
-    compileCommandGenerator_->setIncludeFlag("-fsyntax-only");
-    compileCommandGenerator_->setOutputFlag("");
+    compileCommandGenerator_->setOption("include_flag", "-fsyntax-only");
+    compileCommandGenerator_->setOption("output_flag", "");
 
     fs::path tempSourceFile = fs::temp_directory_path() / "syntax_check.cpp";
     {
@@ -247,9 +195,10 @@ auto CompilerImpl::syntaxCheck(std::string_view code,
     LOG_F(INFO, "Temporary file for syntax check created at: {}",
           tempSourceFile.string());
 
-    compileCommandGenerator_->setSourceDir(
-        tempSourceFile.parent_path().string());
-    compileCommandGenerator_->setOutputPath(
+    compileCommandGenerator_->setOption("source_dir",
+                                        tempSourceFile.parent_path().string());
+    compileCommandGenerator_->setOption(
+        "outputPath",
         (fs::temp_directory_path() / "syntax_check_commands.json").string());
     compileCommandGenerator_->generate();
 
@@ -293,8 +242,8 @@ auto CompilerImpl::compileCode(std::string_view code,
 
     // Use CompileCommandGenerator to generate the compile command
     compileCommandGenerator_->setCompiler(compiler);
-    compileCommandGenerator_->setIncludeFlag(compileOptions);
-    compileCommandGenerator_->setOutputFlag("-o " + output.string());
+    compileCommandGenerator_->setOption("include_flag", compileOptions);
+    compileCommandGenerator_->setOption("output_flag", "-o " + output.string());
 
     fs::path tempSourceFile = fs::temp_directory_path() / "compile_code.cpp";
     {
@@ -304,9 +253,10 @@ auto CompilerImpl::compileCode(std::string_view code,
     LOG_F(INFO, "Temporary file for compilation created at: {}",
           tempSourceFile.string());
 
-    compileCommandGenerator_->setSourceDir(
-        tempSourceFile.parent_path().string());
-    compileCommandGenerator_->setOutputPath(
+    compileCommandGenerator_->setOption("source_dir",
+                                        tempSourceFile.parent_path().string());
+    compileCommandGenerator_->setOption(
+        "outputPath",
         (fs::temp_directory_path() / "compile_code_commands.json").string());
     compileCommandGenerator_->generate();
 
@@ -360,6 +310,93 @@ void CompilerImpl::addCompileOptions(const std::string &options) {
 auto CompilerImpl::getAvailableCompilers() const -> std::vector<std::string> {
     LOG_F(INFO, "Retrieving available compilers...");
     return toolchainManager_.getAvailableCompilers();
+}
+
+auto CompilerImpl::readCompileOptions(
+    const std::string &optionsFile,
+    const std::vector<std::string> &availableCompilers) -> json {
+    std::ifstream optionsStream(optionsFile);
+    json optionsJson;
+    if (!optionsStream) {
+        LOG_F(WARNING,
+              "Failed to open compile options file {}, using default options.",
+              optionsFile);
+        optionsJson = {{"compiler", availableCompilers[0]},
+                       {"optimization_level", "-O2"},
+                       {"cplus_version", "-std=c++20"},
+                       {"warnings", "-Wall"},
+                       {"include_paths", json::array()},
+                       {"library_paths", json::array()},
+                       {"defines", json::array()}};
+    } else {
+        try {
+            optionsStream >> optionsJson;
+            LOG_F(INFO, "Compile options file {} successfully parsed.",
+                  optionsFile);
+        } catch (const json::parse_error &e) {
+            LOG_F(ERROR, "Failed to parse compile options file {}: {}",
+                  optionsFile, e.what());
+            throw std::runtime_error("Failed to parse compile options file");
+        }
+    }
+    return optionsJson;
+}
+
+auto CompilerImpl::generateCompileCommand(
+    const json &optionsJson, const fs::path &tempSourceFile,
+    const fs::path &outputDir) -> std::string {
+    std::string compiler = optionsJson.value("compiler", "");
+    compileCommandGenerator_->setCompiler(compiler);
+    compileCommandGenerator_->setOption(
+        "include_flag", optionsJson.value("include_flag", "-I./include"));
+    compileCommandGenerator_->setOption(
+        "output_flag", optionsJson.value("output_flag", "-o output"));
+    compileCommandGenerator_->setOption(
+        "project_name", optionsJson.value("project_name", "project"));
+    compileCommandGenerator_->setOption(
+        "project_version", optionsJson.value("project_version", "1.0.0"));
+
+    for (const auto &includePath :
+         optionsJson.value("include_paths", json::array())) {
+        compileCommandGenerator_->addDefine(includePath.get<std::string>());
+    }
+    for (const auto &libraryPath :
+         optionsJson.value("library_paths", json::array())) {
+        compileCommandGenerator_->addLibrary(libraryPath.get<std::string>());
+    }
+    for (const auto &define : optionsJson.value("defines", json::array())) {
+        compileCommandGenerator_->addDefine(define.get<std::string>());
+    }
+
+    compileCommandGenerator_->setOption("source_dir",
+                                        tempSourceFile.parent_path().string());
+    compileCommandGenerator_->setOption(
+        "outputPath", (outputDir / "compile_commands.json").string());
+    compileCommandGenerator_->generate();
+
+    // Read generated compile_commands.json
+    json compileCommands;
+    {
+        std::ifstream commandsFile(outputDir / "compile_commands.json");
+        commandsFile >> compileCommands;
+    }
+    LOG_F(INFO, "Compile commands file read from: {}",
+          (outputDir / "compile_commands.json").string());
+
+    if (!compileCommands["commands"].empty()) {
+        auto command =
+            compileCommands["commands"][0]["command"].get<std::string>();
+        command += " " + customCompileOptions_;
+        command +=
+            " -o " + (outputDir /
+                      std::format("{}{}{}", Constants::LIB_EXTENSION,
+                                  optionsJson.value("project_name", "project"),
+                                  Constants::LIB_EXTENSION))
+                         .string();
+        return command;
+    }
+
+    throw std::runtime_error("Failed to generate compile command");
 }
 
 void Compiler::generateCompileCommands(const std::string &sourceDir) {

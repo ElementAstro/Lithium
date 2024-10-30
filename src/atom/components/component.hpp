@@ -22,7 +22,7 @@ Description: Basic Component Definition
 #include <vector>
 
 #include "dispatch.hpp"
-#include "module_atom/macro.hpp"
+#include "module_macro.hpp"
 #include "var.hpp"
 
 #include "atom/function/concept.hpp"

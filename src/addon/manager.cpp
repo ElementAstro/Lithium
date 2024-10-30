@@ -10,6 +10,7 @@
 #include <csignal>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -20,6 +21,7 @@
 #include "config/configor.hpp"
 #include "loader.hpp"
 #include "sandbox.hpp"
+#include "tracker.hpp"
 
 #include "template/standalone.hpp"
 
@@ -63,8 +65,9 @@ class ComponentManagerImpl {
 public:
     std::weak_ptr<ModuleLoader> moduleLoader;
     std::weak_ptr<atom::utils::Env> env;
-    std::unique_ptr<Sandbox> sandbox;
-    std::unique_ptr<Compiler> compiler;
+    std::shared_ptr<Sandbox> sandbox;
+    std::shared_ptr<Compiler> compiler;
+    std::shared_ptr<FileTracker> fileTracker;
     std::weak_ptr<AddonManager> addonManager;
     std::unordered_map<std::string, std::shared_ptr<ComponentEntry>>
         componentEntries;
@@ -75,6 +78,7 @@ public:
     std::string modulePath;
     DependencyGraph dependencyGraph;
     std::mutex mutex;
+    std::future<void> fileTrackerFuture;
 };
 
 ComponentManager::ComponentManager()
@@ -84,8 +88,8 @@ ComponentManager::ComponentManager()
     impl_->addonManager = GetWeakPtr<AddonManager>(Constants::ADDON_MANAGER);
     impl_->processManager =
         GetWeakPtr<atom::system::ProcessManager>(Constants::PROCESS_MANAGER);
-    impl_->sandbox = std::make_unique<Sandbox>();
-    impl_->compiler = std::make_unique<Compiler>();
+    impl_->sandbox = std::make_shared<Sandbox>();
+    impl_->compiler = std::make_shared<Compiler>();
 
     GET_OR_CREATE_WEAK_PTR(impl_->configManager, ConfigManager,
                            Constants::CONFIG_MANAGER);
@@ -97,11 +101,95 @@ ComponentManager::ComponentManager()
     LOG_F(INFO, "Component manager initialized");
 }
 
-ComponentManager::~ComponentManager() {}
+ComponentManager::~ComponentManager() = default;
 
 auto ComponentManager::initialize() -> bool {
-    // std::lock_guard lock(impl_->mutex);
-    // Max: 优先加载内置模组
+    LOG_F(INFO, "Initializing component manager");
+
+    if (!lockEnvironment()) {
+        return false;
+    }
+
+    startFileTracker();
+
+    if (!loadComponentDirectory()) {
+        return false;
+    }
+
+    initializeRegistryComponents();
+    try {
+        impl_->fileTrackerFuture.get();
+    } catch (const std::future_error& e) {
+        LOG_F(ERROR, "Failed to get file tracker future: {}", e.what());
+        return false;
+    }
+
+    if (!loadModules()) {
+        return false;
+    }
+
+    LOG_F(INFO, "Component manager initialized successfully");
+    return true;
+}
+
+bool ComponentManager::lockEnvironment() {
+    auto envLock = impl_->env.lock();
+    if (!envLock) {
+        LOG_F(ERROR, "Failed to lock environment");
+        return false;
+    }
+    LOG_F(INFO, "Environment locked successfully");
+    return true;
+}
+
+void ComponentManager::startFileTracker() {
+    LOG_F(INFO, "Starting file tracker and creating status json file");
+    auto statusFile = impl_->env.lock()->getEnv(
+        Constants::COMPONENT_STATUS_FILE_ENV, Constants::COMPONENT_STATUS_FILE);
+    auto componentDir = impl_->env.lock()->getEnv(Constants::COMPONENT_PATH_ENV,
+                                                  Constants::COMPONENT_PATH);
+    impl_->fileTracker = std::make_shared<FileTracker>(
+        componentDir, statusFile,
+        std::vector<std::string>{Constants::LIB_EXTENSION, ".json", ".xml"},
+        true);
+    impl_->fileTrackerFuture = impl_->fileTracker->asyncScan();
+    LOG_F(INFO, "File tracker started");
+}
+
+auto ComponentManager::loadComponentDirectory() -> bool {
+    auto envLock = impl_->env.lock();
+    auto componentDir = envLock->getEnv(Constants::COMPONENT_PATH_ENV,
+                                        Constants::COMPONENT_PATH);
+    LOG_F(INFO, "Component directory: {}", componentDir);
+
+    if (auto value = impl_->configManager.lock()->getValue("/app/modules/path");
+        value.has_value()) {
+        try {
+            componentDir = value.value();
+            LOG_F(INFO, "Component directory from config: {}", componentDir);
+            if (atom::io::isFolderExists(value.value())) {
+                LOG_F(INFO, "Component directory loaded from config exists");
+            } else {
+                LOG_F(
+                    ERROR,
+                    "Component directory loaded from config does not exist: {}",
+                    value.value());
+                return false;
+            }
+        } catch (const json::parse_error& e) {
+            LOG_F(ERROR, "Failed to parse config: {}", e.what());
+        } catch (const json::exception& e) {
+            LOG_F(ERROR, "Failed to get module path from config: {}", e.what());
+        }
+    }
+
+    impl_->modulePath = componentDir;
+    LOG_F(INFO, "Module path set to: {}", impl_->modulePath);
+    return true;
+}
+
+void ComponentManager::initializeRegistryComponents() {
+    LOG_F(INFO, "Initializing all registry components");
     Registry::instance().initializeAll();
     for (const auto& name : Registry::instance().getAllComponentNames()) {
         LOG_F(INFO, "Registering component: {}", name);
@@ -112,29 +200,11 @@ auto ComponentManager::initialize() -> bool {
         impl_->componentEntries[component->getName()] =
             std::make_shared<ComponentEntry>(component->getName(), "builtin",
                                              "embed", "main");
+        LOG_F(INFO, "Component registered: {}", component->getName());
     }
+}
 
-    auto envLock = impl_->env.lock();
-    if (!envLock) {
-        LOG_F(ERROR, "Failed to lock environment");
-        return false;
-    }
-
-    impl_->modulePath =
-        envLock->getEnv(Constants::ENV_VAR_MODULE_PATH, "./modules");
-    if (auto value = impl_->configManager.lock()->getValue("/app/modules/path");
-        value.has_value()) {
-        try {
-            impl_->modulePath = value.value();
-        } catch (const json::exception& e) {
-            LOG_F(ERROR, "Failed to get module path from config: {}", e.what());
-            impl_->modulePath = "./modules";
-        }
-    }
-
-    for (const auto& dir : getQualifiedSubDirs(impl_->modulePath)) {
-        LOG_F(INFO, "Found module: {}", dir);
-    }
+auto ComponentManager::loadModules() -> bool {
     auto qualifiedSubdirs = impl_->dependencyGraph.resolveDependencies(
         getQualifiedSubDirs(impl_->modulePath));
     if (qualifiedSubdirs.empty()) {
@@ -149,71 +219,81 @@ auto ComponentManager::initialize() -> bool {
         LOG_F(ERROR, "Failed to lock addon manager");
         return false;
     }
+    LOG_F(INFO, "Addon manager locked successfully");
+
+    impl_->fileTracker->asyncScan().get();
 
     for (const auto& dir : qualifiedSubdirs) {
-        std::filesystem::path path =
-            std::filesystem::path(impl_->modulePath) / dir;
+        if (!loadModule(dir, addonManagerLock)) {
+            return false;
+        }
+    }
+    return true;
+}
 
-        if (!addonManagerLock->addModule(path, dir)) {
-            LOG_F(ERROR, "Failed to load module: {}", path.string());
+auto ComponentManager::loadModule(
+    const std::string& dir,
+    const std::shared_ptr<AddonManager>& addonManagerLock) -> bool {
+    std::filesystem::path path = std::filesystem::path(impl_->modulePath) / dir;
+    LOG_F(INFO, "Loading module: {}", path.string());
+
+    if (!addonManagerLock->addModule(path, dir)) {
+        LOG_F(ERROR, "Failed to load module: {}", path.string());
+        return false;
+    }
+
+    const auto& addonInfo = addonManagerLock->getModule(dir);
+    if (!addonInfo.is_object() || !addonInfo.contains("name") ||
+        !addonInfo["name"].is_string()) {
+        LOG_F(ERROR, "Invalid module name: {}", path.string());
+        return false;
+    }
+
+    auto addonName = addonInfo["name"].get<std::string>();
+    LOG_F(INFO, "Start loading addon: {}", addonName);
+
+    if (!addonInfo.contains("modules") || !addonInfo["modules"].is_array()) {
+        LOG_F(ERROR,
+              "Failed to load module {}: Missing or invalid modules field",
+              path.string());
+        addonManagerLock->removeModule(dir);
+        return false;
+    }
+
+    for (const auto& componentInfo : addonInfo["modules"]) {
+        if (!componentInfo.is_object() || !componentInfo.contains("name") ||
+            !componentInfo.contains("entry") ||
+            !componentInfo["name"].is_string() ||
+            !componentInfo["entry"].is_string()) {
+            LOG_F(ERROR, "Failed to load module {}/{}: Invalid component info",
+                  path.string(), componentInfo.dump());
             continue;
         }
 
-        const auto& addonInfo = addonManagerLock->getModule(dir);
-        if (!addonInfo.is_object() || !addonInfo.contains("name") ||
-            !addonInfo["name"].is_string()) {
-            LOG_F(ERROR, "Invalid module name: {}", path.string());
-            continue;
+        auto componentName = componentInfo["name"].get<std::string>();
+        auto entry = componentInfo["entry"].get<std::string>();
+        auto dependencies =
+            componentInfo.value("dependencies", std::vector<std::string>{});
+        auto modulePath =
+            path / (componentName + std::string(Constants::LIB_EXTENSION));
+        std::string componentFullName;
+        componentFullName.reserve(addonName.length() + componentName.length() +
+                                  1);
+        componentFullName.append(addonName).append(".").append(componentName);
+
+        LOG_F(INFO, "Loading component info for: {}", componentFullName);
+        if (!loadComponentInfo(path.string(), componentFullName)) {
+            LOG_F(ERROR, "Failed to load addon package.json {}/{}",
+                  path.string(), componentFullName);
+            return false;
         }
 
-        auto addonName = addonInfo["name"].get<std::string>();
-        LOG_F(INFO, "Start loading addon: {}", addonName);
-
-        if (!addonInfo.contains("modules") ||
-            !addonInfo["modules"].is_array()) {
-            LOG_F(ERROR,
-                  "Failed to load module {}: Missing or invalid modules field",
-                  path.string());
-            addonManagerLock->removeModule(dir);
-            continue;
-        }
-
-        for (const auto& componentInfo : addonInfo["modules"]) {
-            if (!componentInfo.is_object() || !componentInfo.contains("name") ||
-                !componentInfo.contains("entry") ||
-                !componentInfo["name"].is_string() ||
-                !componentInfo["entry"].is_string()) {
-                LOG_F(ERROR,
-                      "Failed to load module {}/{}: Invalid component info",
-                      path.string(), componentInfo.dump());
-                continue;
-            }
-
-            auto componentName = componentInfo["name"].get<std::string>();
-            auto entry = componentInfo["entry"].get<std::string>();
-            auto dependencies =
-                componentInfo.value("dependencies", std::vector<std::string>{});
-            auto modulePath =
-                path / (componentName + std::string(Constants::LIB_EXTENSION));
-            std::string componentFullName;
-            componentFullName.reserve(addonName.length() +
-                                      componentName.length() +
-                                      1);  // 预留足够空间
-            componentFullName.append(addonName).append(".").append(
-                componentName);
-
-            if (!loadComponentInfo(path.string(), componentFullName)) {
-                LOG_F(ERROR, "Failed to load addon package.json {}/{}",
-                      path.string(), componentFullName);
-                return false;
-            }
-
-            if (!loadSharedComponent(componentName, addonName, path.string(),
-                                     entry, dependencies)) {
-                LOG_F(ERROR, "Failed to load module {}/{}", path.string(),
-                      componentName);
-                THROW_RUNTIME_ERROR("Failed to load module: " + componentName);
-            }
+        LOG_F(INFO, "Loading shared component: {}", componentFullName);
+        if (!loadSharedComponent(componentName, addonName, path.string(), entry,
+                                 dependencies)) {
+            LOG_F(ERROR, "Failed to load module {}/{}", path.string(),
+                  componentName);
+            THROW_RUNTIME_ERROR("Failed to load module: " + componentName);
         }
     }
     return true;
@@ -234,7 +314,9 @@ auto ComponentManager::createShared() -> std::shared_ptr<ComponentManager> {
 
 auto ComponentManager::scanComponents(const std::string& path)
     -> std::vector<std::string> {
+    // Once we call scanComponents, we will rerun file tracker
     std::vector<std::string> foundComponents;
+    impl_->fileTrackerFuture = impl_->fileTracker->asyncScan();
     try {
         auto subDirs = getQualifiedSubDirs(path);
         for (const auto& subDir : subDirs) {
@@ -246,6 +328,8 @@ auto ComponentManager::scanComponents(const std::string& path)
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to scan components: {}", e.what());
     }
+    // Wait for file tracker to finish
+    impl_->fileTrackerFuture.get();
     return foundComponents;
 }
 
@@ -923,5 +1007,15 @@ auto ComponentManager::getComponentDoc(const std::string& component_name)
         return "";
     }
     return impl_->components[component_name].lock()->getDoc();
+}
+
+auto ComponentManager::compileAndLoadComponent(const std::string& code, const std::string& moduleName,
+                                               const std::string& functionName) -> bool {
+    if (!impl_->compiler->compileToSharedLibrary(code, moduleName, functionName)) {
+        LOG_F(ERROR, "Failed to compile component: {}", moduleName);
+        return false;
+    }
+    // 编译成功后加载组件
+    return loadComponent({{"name", moduleName}, {"entry", functionName}});
 }
 }  // namespace lithium

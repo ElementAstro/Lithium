@@ -1,7 +1,7 @@
 #ifndef LITHIUM_ADDON_VERSION_HPP
 #define LITHIUM_ADDON_VERSION_HPP
 
-#include <iostream>
+#include <charconv>
 #include <string>
 #include <string_view>
 #include <utility>

@@ -5,6 +5,9 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
+#include <map>
 
 #include "platform/base.hpp"
 
@@ -12,10 +15,12 @@ namespace lithium {
 
 /**
  * @class BuildManager
- * @brief Manages the build process for various build systems.
+ * @brief Manages the build process for various build systems with enhanced features.
  *
- * This class provides an interface to configure, build, clean, install, and
- * test projects using different build systems like CMake, Meson, and XMake.
+ * This class provides an interface to configure, build, clean, install, test, and
+ * generate documentation for projects using different build systems like CMake, Meson, and XMake.
+ * It also supports defining and executing build task chains, managing environment variables,
+ * and enhanced logging capabilities.
  */
 class BuildManager {
 public:
@@ -28,6 +33,14 @@ public:
         Meson, /**< Meson build system. */
         XMake  /**< XMake build system. */
     };
+
+    /**
+     * @typedef BuildTask
+     * @brief Defines a type for build tasks using std::function.
+     *
+     * Each build task is a callable that returns a BuildResult.
+     */
+    using BuildTask = std::function<BuildResult()>;
 
     /**
      * @brief Constructs a BuildManager object.
@@ -43,13 +56,15 @@ public:
      * @param buildDir The build directory where the project will be configured.
      * @param buildType The type of build (e.g., Debug, Release).
      * @param options Additional options for the build system.
-     * @return A BuildResult indicating the success or failure of the
-     * configuration.
+     * @param envVars Environment variables to set during configuration.
+     * @return A BuildResult indicating the success or failure of the configuration.
      */
-    auto configureProject(
+    BuildResult configureProject(
         const std::filesystem::path& sourceDir,
-        const std::filesystem::path& buildDir, BuildType buildType,
-        const std::vector<std::string>& options) -> BuildResult;
+        const std::filesystem::path& buildDir,
+        BuildType buildType,
+        const std::vector<std::string>& options = {},
+        const std::map<std::string, std::string>& envVars = {});
 
     /**
      * @brief Builds the project.
@@ -58,28 +73,26 @@ public:
      * @param jobs The number of parallel jobs to use for building (optional).
      * @return A BuildResult indicating the success or failure of the build.
      */
-    auto buildProject(const std::filesystem::path& buildDir,
-                      std::optional<int> jobs = std::nullopt) -> BuildResult;
+    BuildResult buildProject(const std::filesystem::path& buildDir,
+                             std::optional<int> jobs = std::nullopt);
 
     /**
      * @brief Cleans the project.
      *
      * @param buildDir The build directory where the project is configured.
-     * @return A BuildResult indicating the success or failure of the clean
-     * operation.
+     * @return A BuildResult indicating the success or failure of the clean operation.
      */
-    auto cleanProject(const std::filesystem::path& buildDir) -> BuildResult;
+    BuildResult cleanProject(const std::filesystem::path& buildDir);
 
     /**
      * @brief Installs the project.
      *
      * @param buildDir The build directory where the project is configured.
      * @param installDir The directory where the project will be installed.
-     * @return A BuildResult indicating the success or failure of the install
-     * operation.
+     * @return A BuildResult indicating the success or failure of the install operation.
      */
-    auto installProject(const std::filesystem::path& buildDir,
-                        const std::filesystem::path& installDir) -> BuildResult;
+    BuildResult installProject(const std::filesystem::path& buildDir,
+                               const std::filesystem::path& installDir);
 
     /**
      * @brief Runs tests for the project.
@@ -88,37 +101,26 @@ public:
      * @param testNames The names of the tests to run (optional).
      * @return A BuildResult indicating the success or failure of the test run.
      */
-    auto runTests(const std::filesystem::path& buildDir,
-                  const std::vector<std::string>& testNames = {})
-        -> BuildResult;
+    BuildResult runTests(const std::filesystem::path& buildDir,
+                        const std::vector<std::string>& testNames = {});
 
     /**
      * @brief Generates documentation for the project.
      *
      * @param buildDir The build directory where the project is configured.
      * @param outputDir The directory where the documentation will be generated.
-     * @return A BuildResult indicating the success or failure of the
-     * documentation generation.
+     * @return A BuildResult indicating the success or failure of the documentation generation.
      */
-    auto generateDocs(const std::filesystem::path& buildDir,
-                      const std::filesystem::path& outputDir) -> BuildResult;
+    BuildResult generateDocs(const std::filesystem::path& buildDir,
+                             const std::filesystem::path& outputDir);
 
     /**
      * @brief Loads a build configuration from a file.
      *
      * @param configPath The path to the configuration file.
-     * @return True if the configuration was loaded successfully, false
-     * otherwise.
+     * @return True if the configuration was loaded successfully, false otherwise.
      */
-    auto loadConfig(const std::filesystem::path& configPath) -> bool;
-
-    /**
-     * @brief Sets a callback function for logging build messages.
-     *
-     * @param callback The callback function to use for logging.
-     */
-    auto setLogCallback(std::function<void(const std::string&)> callback)
-        -> void;
+    bool loadConfig(const std::filesystem::path& configPath);
 
     /**
      * @brief Gets the available build targets.
@@ -126,8 +128,7 @@ public:
      * @param buildDir The build directory where the project is configured.
      * @return A vector of strings representing the available build targets.
      */
-    auto getAvailableTargets(const std::filesystem::path& buildDir)
-        -> std::vector<std::string>;
+    std::vector<std::string> getAvailableTargets(const std::filesystem::path& buildDir);
 
     /**
      * @brief Builds a specific target.
@@ -137,19 +138,18 @@ public:
      * @param jobs The number of parallel jobs to use for building (optional).
      * @return A BuildResult indicating the success or failure of the build.
      */
-    auto buildTarget(const std::filesystem::path& buildDir,
-                     const std::string& target,
-                     std::optional<int> jobs = std::nullopt) -> BuildResult;
+    BuildResult buildTarget(const std::filesystem::path& buildDir,
+                            const std::string& target,
+                            std::optional<int> jobs = std::nullopt);
 
     /**
      * @brief Gets the cache variables for the build.
      *
      * @param buildDir The build directory where the project is configured.
-     * @return A vector of pairs representing the cache variables and their
-     * values.
+     * @return A vector of pairs representing the cache variables and their values.
      */
-    auto getCacheVariables(const std::filesystem::path& buildDir)
-        -> std::vector<std::pair<std::string, std::string>>;
+    std::vector<std::pair<std::string, std::string>> getCacheVariables(
+        const std::filesystem::path& buildDir);
 
     /**
      * @brief Sets a cache variable for the build.
@@ -159,13 +159,32 @@ public:
      * @param value The value of the cache variable.
      * @return True if the cache variable was set successfully, false otherwise.
      */
-    auto setCacheVariable(const std::filesystem::path& buildDir,
+    bool setCacheVariable(const std::filesystem::path& buildDir,
                           const std::string& name,
-                          const std::string& value) -> bool;
+                          const std::string& value);
+
+    /**
+     * @brief Adds a build task to the task chain.
+     *
+     * @param task The build task to add.
+     */
+    void addBuildTask(const BuildTask& task);
+
+    /**
+     * @brief Executes the defined build task chain sequentially.
+     *
+     * @return A BuildResult indicating the success or failure of the task chain execution.
+     */
+    BuildResult executeTaskChain();
+
+    /**
+     * @brief Clears all build tasks from the task chain.
+     */
+    void clearTaskChain();
 
 private:
-    std::unique_ptr<BuildSystem>
-        builder_; /**< Pointer to the build system implementation. */
+    std::unique_ptr<BuildSystem> builder_; /**< Pointer to the build system implementation. */
+    std::vector<BuildTask> taskChain_; /**< Sequence of build tasks to execute. */
 };
 
 }  // namespace lithium

@@ -50,6 +50,8 @@ void DependencyGraph::removeNode(const Node& node) {
         sources.erase(node);
     }
 
+    nodeVersions_.erase(node);
+
     LOG_F(INFO, "Node {} removed successfully.", node);
 }
 
@@ -159,8 +161,10 @@ auto DependencyGraph::resolveDependencies(
 
 auto DependencyGraph::parsePackageJson(const std::string& path)
     -> std::pair<std::string, std::unordered_map<std::string, Version>> {
+    LOG_F(INFO, "Parsing package.json file: {}", path);
     std::ifstream file(path);
     if (!file.is_open()) {
+        LOG_F(ERROR, "Failed to open package.json file: {}", path);
         THROW_FAIL_TO_OPEN_FILE("Failed to open " + path);
     }
 
@@ -168,11 +172,13 @@ auto DependencyGraph::parsePackageJson(const std::string& path)
     try {
         file >> packageJson;
     } catch (const json::exception& e) {
+        LOG_F(ERROR, "Error parsing JSON in file: {}: {}", path, e.what());
         THROW_JSON_PARSE_ERROR("Error parsing JSON in " + path + ": " +
                                e.what());
     }
 
     if (!packageJson.contains("name")) {
+        LOG_F(ERROR, "Missing package name in file: {}", path);
         THROW_MISSING_ARGUMENT("Missing package name in " + path);
     }
 
@@ -186,23 +192,28 @@ auto DependencyGraph::parsePackageJson(const std::string& path)
     }
 
     file.close();
+    LOG_F(INFO, "Parsed package.json file: {} successfully.", path);
     return {packageName, deps};
 }
 
 auto DependencyGraph::parsePackageXml(const std::string& path)
     -> std::pair<std::string, std::unordered_map<std::string, Version>> {
+    LOG_F(INFO, "Parsing package.xml file: {}", path);
     XMLDocument doc;
     if (doc.LoadFile(path.c_str()) != XML_SUCCESS) {
+        LOG_F(ERROR, "Failed to open package.xml file: {}", path);
         THROW_FAIL_TO_OPEN_FILE("Failed to open " + path);
     }
 
     XMLElement* root = doc.FirstChildElement("package");
     if (root == nullptr) {
+        LOG_F(ERROR, "Missing root element in package.xml file: {}", path);
         THROW_MISSING_ARGUMENT("Missing root element in " + path);
     }
 
     const char* packageName = root->FirstChildElement("name")->GetText();
     if (packageName == nullptr) {
+        LOG_F(ERROR, "Missing package name in package.xml file: {}", path);
         THROW_MISSING_ARGUMENT("Missing package name in " + path);
     }
 
@@ -218,6 +229,7 @@ auto DependencyGraph::parsePackageXml(const std::string& path)
         dependElement = dependElement->NextSiblingElement("depend");
     }
 
+    LOG_F(INFO, "Parsed package.xml file: {} successfully.", path);
     return {packageName, deps};
 }
 

@@ -1,24 +1,18 @@
 #include "async_glob.hpp"
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
+
+#if ATOM_ENABLE_ABSL
+#include <absl/strings/match.h>
+#include <absl/strings/str_replace.h>
+#endif
 
 namespace atom::io {
 
 AsyncGlob::AsyncGlob(asio::io_context& io_context) : io_context_(io_context) {
     LOG_F(INFO, "AsyncGlob constructor called");
-}
-
-void AsyncGlob::stringReplace(std::string& str, const std::string& from,
-                              const std::string& toStr) {
-    LOG_F(INFO, "AsyncGlob::stringReplace called with from: {}, toStr: {}",
-          from, toStr);
-    std::size_t startPos = str.find(from);
-    if (startPos == std::string::npos) {
-        LOG_F(WARNING, "Substring not found: {}", from);
-        return;
-    }
-    str.replace(startPos, from.length(), toStr);
-    LOG_F(INFO, "String after replacement: {}", str);
 }
 
 auto AsyncGlob::translate(const std::string& pattern) -> std::string {
@@ -51,9 +45,13 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                 auto stuff = std::string(
                     pattern.begin() + static_cast<std::ptrdiff_t>(index),
                     pattern.begin() + static_cast<std::ptrdiff_t>(innerIndex));
-                if (stuff.find("--") == std::string::npos) {
-                    stringReplace(stuff, std::string{"\\"},
-                                  std::string{R"(\\)"});
+#if ATOM_ENABLE_ABSL
+                if (!absl::StrContains(stuff, "--")) {
+#else
+                if (stuff.contains("--")) {
+#endif
+                    stuff = atom::utils::replaceString(stuff, std::string{"\\"},
+                                                       std::string{R"(\\)"});
                 } else {
                     std::vector<std::string> chunks;
                     std::size_t chunkIndex = 0;
@@ -83,10 +81,10 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                             static_cast<std::ptrdiff_t>(innerIndex));
                     bool first = false;
                     for (auto& chunk : chunks) {
-                        stringReplace(chunk, std::string{"\\"},
-                                      std::string{R"(\\)"});
-                        stringReplace(chunk, std::string{"-"},
-                                      std::string{R"(\-)"});
+                        chunk = atom::utils::replaceString(
+                            chunk, std::string{"\\"}, std::string{R"(\\)"});
+                        chunk = atom::utils::replaceString(
+                            chunk, std::string{"-"}, std::string{R"(\-)"});
                         if (first) {
                             stuff += chunk;
                             first = false;
@@ -106,7 +104,7 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                 if (stuff[0] == '!') {
                     stuff = "^" + std::string(stuff.begin() + 1, stuff.end());
                 } else if (stuff[0] == '^' || stuff[0] == '[') {
-                    stuff = "\\\\" + stuff;
+                    stuff.insert(0, "\\\\");
                 }
                 resultString += "[" + stuff + "]";
             }
@@ -121,7 +119,11 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                         std::string{"\\"} + std::string(1, specialChar)));
                 }
             }
-            if (specialCharacters.find(currentChar) != std::string::npos) {
+#if ATOM_ENABLE_ABSL
+            if (absl::StrContains(specialCharacters, currentChar)) {
+#else
+            if (specialCharacters.contains(currentChar)) {
+#endif
                 resultString +=
                     specialCharactersMap[static_cast<int>(currentChar)];
             } else {
@@ -171,8 +173,9 @@ auto AsyncGlob::expandTilde(fs::path path) -> fs::path {
 #else
     const char* homeVariable = "USER";
 #endif
+    // Max: Here we can not use GlobalSharedPtrManager
     const char* home = getenv(homeVariable);
-    if (!home) {
+    if (home == nullptr) {
         LOG_F(ERROR,
               "Unable to expand `~` - HOME environment variable not set.");
         THROW_INVALID_ARGUMENT(
@@ -185,9 +188,8 @@ auto AsyncGlob::expandTilde(fs::path path) -> fs::path {
         fs::path expandedPath(pathStr);
         LOG_F(INFO, "Expanded path: {}", expandedPath.string());
         return expandedPath;
-    } else {
-        return path;
     }
+    return path;
 }
 
 auto AsyncGlob::hasMagic(const std::string& pathname) -> bool {
@@ -385,7 +387,7 @@ void AsyncGlob::glob(const std::string& pathname,
     if (dirname != fs::path(pathname) && hasMagic(dirname.string())) {
         glob(
             dirname.string(),
-            [this, BASENAME, dironly, globInDir,
+            [BASENAME, dironly, globInDir,
              callback](std::vector<fs::path> dirs) {
                 std::vector<fs::path> result;
                 for (auto& dir : dirs) {

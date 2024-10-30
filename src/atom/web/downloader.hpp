@@ -1,9 +1,3 @@
-/*
- * downloader.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
 #pragma once
 
 #include <functional>
@@ -11,124 +5,118 @@
 #include <string>
 #include <thread>
 
+#ifdef USE_ASIO
+#include <asio.hpp>
+#endif
+
 namespace atom::web {
 
 /**
  * @class DownloadManager
- * @brief A class for managing download tasks using the Pimpl idiom to hide
- * implementation details.
+ * @brief 管理下载任务的类，使用 Pimpl 习语隐藏实现细节。
  */
 class DownloadManager {
 public:
     /**
-     * @brief Constructs a DownloadManager.
-     * @param task_file The file path to save the download task list.
+     * @brief 构造函数。
+     * @param task_file 保存下载任务列表的文件路径。
      */
     explicit DownloadManager(const std::string& task_file);
 
     /**
-     * @brief Destructor to release resources.
+     * @brief 析构函数，释放资源。
      */
     ~DownloadManager();
 
-    // Disable copy constructor and copy assignment operator
+    // 禁用复制构造和赋值运算符
     DownloadManager(const DownloadManager&) = delete;
     DownloadManager& operator=(const DownloadManager&) = delete;
 
-    // Enable move constructor and move assignment operator
+    // 启用移动构造和赋值运算符
     DownloadManager(DownloadManager&&) noexcept = default;
     DownloadManager& operator=(DownloadManager&&) noexcept = default;
 
     /**
-     * @brief Adds a download task.
-     * @param url The download URL.
-     * @param filepath The local file path to save the downloaded file.
-     * @param priority The priority of the download task, higher numbers
-     * indicate higher priority.
+     * @brief 添加下载任务。
+     * @param url 下载链接。
+     * @param filepath 保存下载文件的路径。
+     * @param priority 下载任务的优先级，数值越大优先级越高。
      */
     void addTask(const std::string& url, const std::string& filepath,
                  int priority = 0);
 
     /**
-     * @brief Removes a download task.
-     * @param index The index of the task in the task list to remove.
-     * @return True if the task was successfully removed, false otherwise.
+     * @brief 移除下载任务。
+     * @param index 任务列表中的索引。
+     * @return 如果成功移除，返回 true；否则返回 false。
      */
-    auto removeTask(size_t index) -> bool;
+    bool removeTask(size_t index);
 
     /**
-     * @brief Starts the download tasks.
-     * @param thread_count The number of download threads, defaults to the
-     * number of CPU cores.
-     * @param download_speed The download speed limit in bytes per second, 0
-     * means no limit.
+     * @brief 开始下载任务。
+     * @param thread_count 下载线程数，默认为 CPU 核心数。
+     * @param download_speed 下载限速（字节每秒），0 表示不限速。
      */
     void start(size_t thread_count = std::thread::hardware_concurrency(),
                size_t download_speed = 0);
 
     /**
-     * @brief Pauses a download task.
-     * @param index The index of the task in the task list to pause.
+     * @brief 暂停下载任务。
+     * @param index 任务列表中的索引。
      */
     void pauseTask(size_t index);
 
     /**
-     * @brief Resumes a paused download task.
-     * @param index The index of the task in the task list to resume.
+     * @brief 恢复已暂停的下载任务。
+     * @param index 任务列表中的索引。
      */
     void resumeTask(size_t index);
 
     /**
-     * @brief Gets the number of bytes downloaded for a task.
-     * @param index The index of the task in the task list.
-     * @return The number of bytes downloaded.
+     * @brief 获取任务已下载的字节数。
+     * @param index 任务列表中的索引。
+     * @return 已下载的字节数。
      */
-    auto getDownloadedBytes(size_t index) -> size_t;
+    size_t getDownloadedBytes(size_t index);
 
     /**
-     * @brief Cancels a download task.
-     * @param index The index of the task in the task list to cancel.
+     * @brief 取消下载任务。
+     * @param index 任务列表中的索引。
      */
     void cancelTask(size_t index);
 
     /**
-     * @brief Dynamically adjusts the number of download threads.
-     * @param thread_count The new number of download threads.
+     * @brief 动态调整下载线程数。
+     * @param thread_count 新的下载线程数。
      */
     void setThreadCount(size_t thread_count);
 
     /**
-     * @brief Sets the maximum number of retries for download errors.
-     * @param retries The maximum number of retries for each task on failure.
+     * @brief 设置下载错误的最大重试次数。
+     * @param retries 每个任务失败时的最大重试次数。
      */
     void setMaxRetries(size_t retries);
 
     /**
-     * @brief Registers a callback function to be called when a download is
-     * complete.
-     * @param callback The callback function, which takes the task index as a
-     * parameter.
+     * @brief 注册下载完成时的回调函数。
+     * @param callback 回调函数，参数为任务索引。
      */
     void onDownloadComplete(const std::function<void(size_t)>& callback);
 
     /**
-     * @brief Registers a callback function to be called when the download
-     * progress is updated.
-     * @param callback The callback function, which takes the task index and
-     * download percentage as parameters.
+     * @brief 注册下载进度更新时的回调函数。
+     * @param callback 回调函数，参数为任务索引和下载百分比。
      */
     void onProgressUpdate(const std::function<void(size_t, double)>& callback);
 
     /**
      * @class Impl
-     * @brief The implementation class for DownloadManager, used to hide
-     * implementation details.
+     * @brief DownloadManager 的实现类，用于隐藏实现细节。
      */
     class Impl;
 
 private:
-    std::unique_ptr<Impl> impl_;  ///< Pointer to the implementation, using
-                                  ///< Pimpl idiom to hide details.
+    std::unique_ptr<Impl> impl_;  ///< 实现的指针，使用 Pimpl 习语隐藏细节。
 };
 
 }  // namespace atom::web

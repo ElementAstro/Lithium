@@ -251,8 +251,8 @@ void RemoteStandAloneComponent::toggleDriverListening() {
 }
 
 template <String T>
-atom::async::EnhancedFuture<std::string>
-RemoteStandAloneComponent::executeCommand(T&& command) {
+auto RemoteStandAloneComponent::executeCommand(T&& command)
+    -> atom::async::EnhancedFuture<std::string> {
     auto promise =
         std::make_shared<atom::async::EnhancedPromise<std::string>>();
     auto future = promise->getEnhancedFuture();
@@ -280,11 +280,10 @@ RemoteStandAloneComponent::executeCommand(T&& command) {
                         } else if constexpr (std::is_same_v<
                                                  std::decay_t<decltype(socket)>,
                                                  std::optional<udp::socket>>) {
-                            udp::endpoint sender_endpoint;
+                            udp::endpoint senderEndpoint;
                             asio::error_code error;
-                            len =
-                                socket->receive_from(asio::buffer(buffer),
-                                                     sender_endpoint, 0, error);
+                            len = socket->receive_from(
+                                asio::buffer(buffer), senderEndpoint, 0, error);
                             if (error) {
                                 promise->setException(std::make_exception_ptr(
                                     std::runtime_error(error.message())));
@@ -332,8 +331,9 @@ void RemoteStandAloneComponent::monitorConnection() {
 }
 
 void RemoteStandAloneComponent::processMessages() {
-    if (!impl_->isListening)
+    if (!impl_->isListening) {
         return;
+    }
 
     std::visit(
         [this](auto&& socket) {
@@ -361,9 +361,9 @@ void RemoteStandAloneComponent::processMessages() {
                                                 std::optional<udp::socket>>) {
                 if (socket && socket->is_open()) {
                     std::array<char, 1024> buffer;
-                    udp::endpoint sender_endpoint;
+                    udp::endpoint senderEndpoint;
                     socket->async_receive_from(
-                        asio::buffer(buffer), sender_endpoint,
+                        asio::buffer(buffer), senderEndpoint,
                         [this, buffer](const asio::error_code& error,
                                        std::size_t bytes_transferred) {
                             if (!error) {

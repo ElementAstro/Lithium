@@ -8,7 +8,7 @@
 #include <string_view>
 #include <tuple>
 
-#include "atom/components/module_atom/macro.hpp"
+#include "atom/components/module_macro.hpp"
 #include "atom/components/registry.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"

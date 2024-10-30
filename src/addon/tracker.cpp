@@ -1,8 +1,5 @@
 #include "tracker.hpp"
 
-#include <openssl/evp.h>
-#include <openssl/sha.h>
-
 #include <algorithm>
 #include <ctime>
 #include <filesystem>
@@ -11,6 +8,7 @@
 #include <mutex>
 #include <variant>
 
+#include "atom/error/exception.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/aes.hpp"
 #include "atom/utils/time.hpp"
@@ -36,6 +34,10 @@ struct FileTracker::Impl {
     static void saveJSON(const json& j, const std::string& filePath,
                          const std::optional<std::string>& key) {
         std::ofstream outFile(filePath, std::ios::binary);
+        if (!outFile.is_open()) {
+            THROW_FAIL_TO_OPEN_FILE("Failed to open file for writing: " +
+                                    filePath);
+        }
         if (key) {
             std::vector<unsigned char> iv;
             std::vector<unsigned char> tag;
@@ -61,11 +63,10 @@ struct FileTracker::Impl {
             std::string decrypted =
                 atom::utils::decryptAES(encrypted, *key, iv, tag);
             return json::parse(decrypted);
-        } else {
-            json j;
-            inFile >> j;
-            return j;
         }
+        json j;
+        inFile >> j;
+        return j;
     }
 
     void generateJSON() {
@@ -161,11 +162,13 @@ void FileTracker::compare() { pImpl->differences = pImpl->compareJSON(); }
 
 void FileTracker::logDifferences(std::string_view logFilePath) const {
     std::ofstream logFile(logFilePath.data(), std::ios_base::app);
-    if (logFile.is_open()) {
-        for (const auto& [filePath, info] : pImpl->differences.items()) {
-            logFile << "File: " << filePath << ", Status: " << info["status"]
-                    << std::endl;
-        }
+    if (!logFile.is_open()) {
+        THROW_FAIL_TO_OPEN_FILE("Failed to open log file: " +
+                                 std::string(logFilePath));
+    }
+    for (const auto& [filePath, info] : pImpl->differences.items()) {
+        logFile << "File: " << filePath << ", Status: " << info["status"]
+                << std::endl;
     }
 }
 
@@ -186,8 +189,8 @@ auto FileTracker::getDifferences() const noexcept -> const json& {
     return pImpl->differences;
 }
 
-auto FileTracker::getTrackedFileTypes()
-    const noexcept -> const std::vector<std::string>& {
+auto FileTracker::getTrackedFileTypes() const noexcept
+    -> const std::vector<std::string>& {
     return pImpl->fileTypes;
 }
 
@@ -214,7 +217,8 @@ void FileTracker::forEachFile(Func&& func) const {
         fileRange);
 }
 
-auto FileTracker::getFileInfo(const fs::path& filePath) const -> std::optional<json> {
+auto FileTracker::getFileInfo(const fs::path& filePath) const
+    -> std::optional<json> {
     if (auto it = pImpl->newJson.find(filePath.string());
         it != pImpl->newJson.end()) {
         return *it;

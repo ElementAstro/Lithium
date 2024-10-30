@@ -13,8 +13,11 @@
 #pragma comment(lib, "Iphlpapi.lib")
 #endif
 #elif __linux__ || __APPLE__
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <cstdio>
 #include <cstring>
+#define WIN_FLAG false
 #endif
 
 #include "atom/log/loguru.hpp"
@@ -35,7 +38,9 @@ auto initializeWindowsSocketAPI() -> bool {
 auto createSocket() -> int {
     int sockfd = static_cast<int>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     if (sockfd < 0) {
-        LOG_F(ERROR, "Failed to create socket: {}", strerror(errno));
+        char buf[256];
+        LOG_F(ERROR, "Failed to create socket: %s",
+              strerror_r(errno, buf, sizeof(buf)));
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -43,7 +48,7 @@ auto createSocket() -> int {
     return sockfd;
 }
 
-auto bindSocket(int sockfd, int port) -> bool {
+auto bindSocket(int sockfd, uint16_t port) -> bool {
     struct sockaddr_in addr {};
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -55,7 +60,9 @@ auto bindSocket(int sockfd, int port) -> bool {
             DLOG_F(WARNING, "The port({}) is already in use", port);
             return false;
         }
-        LOG_F(ERROR, "Failed to bind socket: {}", strerror(errno));
+        char buf[256];
+        LOG_F(ERROR, "Failed to bind socket: %s",
+              strerror_r(errno, buf, sizeof(buf)));
         return false;
     }
     return true;

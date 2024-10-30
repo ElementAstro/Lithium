@@ -1,4 +1,4 @@
-#include "analysts.hpp"
+#include "compiler_output_parser.hpp"
 
 #include <atomic>
 #include <fstream>
@@ -176,7 +176,7 @@ void CompilerOutputParser::Impl::parseLine(const std::string& line) {
                 match.size() > 7 ? match.str(7) : match.str(5);
 
             LOG_F(INFO,
-                  "Parsed message - File: {}, Line: %d, Column: %d, ErrorCode: "
+                  "Parsed message - File: {}, Line: {}, Column: {}, ErrorCode: "
                   "{}, FunctionName: {}, Message: {}",
                   file, lineNum, column, errorCode, functionName, message);
 

@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 class SolveResult {
 public:
@@ -41,10 +42,37 @@ public:
     auto scanSolver() -> bool;
 
     auto solveImage(std::string_view image,
-                    std::optional<std::string_view> target_ra,
-                    std::optional<std::string_view> target_dec,
-                    std::optional<double> fov, bool update, int timeout,
-                    int debug) -> bool;
+                    std::optional<double> radius_search_field = {},
+                    std::optional<double> field_height = {},
+                    std::optional<double> ra = {},
+                    std::optional<double> spd = {},
+                    std::optional<int> downsample_factor = {},
+                    std::optional<int> max_stars = {},
+                    std::optional<double> tolerance = {},
+                    std::optional<double> min_star_size = {},
+                    std::optional<bool> apply_check = {},
+                    std::optional<std::string> database_path = {},
+                    std::optional<std::string> database_abbreviation = {},
+                    std::optional<std::string> output_file = {},
+                    std::optional<bool> add_sip = {},
+                    std::optional<std::string> speed_mode = {},
+                    bool write_wcs = false, bool update = false,
+                    bool log = false, int timeout = 60, int debug = 0) -> bool;
+
+    auto analyseImage(std::string_view image, double snr_minimum,
+                      bool extract = false, bool extract2 = false) -> bool;
+
+    auto convertToFits(std::string_view image, int binning) -> bool;
+
+    auto annotateImage(std::string_view image) -> bool;
+
+    auto debugSolve(std::string_view image) -> bool;
+
+    auto measureSkyBackground(std::string_view image, double pedestal) -> bool;
+
+    auto findBestFocus(const std::vector<std::string>& image_files) -> bool;
+
+    auto liveStack(std::string_view path) -> bool;
 
     auto getSolveResult(std::string_view image) -> SolveResult;
 

@@ -1,15 +1,12 @@
 #pragma once
+
 #include <asio.hpp>
 #include <cassert>
 #include <filesystem>
 #include <functional>
-#include <map>
 #include <regex>
 #include <string>
 #include <vector>
-
-#include "atom/error/exception.hpp"
-#include "atom/macro.hpp"
 
 namespace atom::io {
 
@@ -39,27 +36,18 @@ public:
 
 private:
     /**
-     * @brief Replaces all occurrences of a substring in a string.
-     * @param str The string to modify.
-     * @param from The substring to replace.
-     * @param toStr The string to replace with.
-     */
-    void stringReplace(std::string& str, const std::string& from,
-                       const std::string& toStr);
-
-    /**
      * @brief Translates a glob pattern to a regular expression.
      * @param pattern The glob pattern.
      * @return The translated regular expression.
      */
-    std::string translate(const std::string& pattern);
+    auto translate(const std::string& pattern) -> std::string;
 
     /**
      * @brief Compiles a glob pattern into a regular expression.
      * @param pattern The glob pattern.
      * @return The compiled regular expression.
      */
-    std::regex compilePattern(const std::string& pattern);
+    auto compilePattern(const std::string& pattern) -> std::regex;
 
     /**
      * @brief Matches a file name against a glob pattern.
@@ -67,7 +55,7 @@ private:
      * @param pattern The glob pattern.
      * @return True if the file name matches the pattern, false otherwise.
      */
-    bool fnmatch(const fs::path& name, const std::string& pattern);
+    auto fnmatch(const fs::path& name, const std::string& pattern) -> bool;
 
     /**
      * @brief Filters a list of file names against a glob pattern.
@@ -75,36 +63,36 @@ private:
      * @param pattern The glob pattern.
      * @return The filtered list of file names.
      */
-    std::vector<fs::path> filter(const std::vector<fs::path>& names,
-                                 const std::string& pattern);
+    auto filter(const std::vector<fs::path>& names,
+                const std::string& pattern) -> std::vector<fs::path>;
 
     /**
      * @brief Expands a tilde in a file path to the home directory.
      * @param path The file path.
      * @return The expanded file path.
      */
-    fs::path expandTilde(fs::path path);
+    auto expandTilde(fs::path path) -> fs::path;
 
     /**
      * @brief Checks if a pathname contains glob magic characters.
      * @param pathname The pathname to check.
      * @return True if the pathname contains magic characters, false otherwise.
      */
-    bool hasMagic(const std::string& pathname);
+    static auto hasMagic(const std::string& pathname) -> bool;
 
     /**
      * @brief Checks if a pathname is hidden.
      * @param pathname The pathname to check.
      * @return True if the pathname is hidden, false otherwise.
      */
-    bool isHidden(const std::string& pathname);
+    static auto isHidden(const std::string& pathname) -> bool;
 
     /**
      * @brief Checks if a glob pattern is recursive.
      * @param pattern The glob pattern.
      * @return True if the pattern is recursive, false otherwise.
      */
-    bool isRecursive(const std::string& pattern);
+    static auto isRecursive(const std::string& pattern) -> bool;
 
     /**
      * @brief Iterates over a directory and calls a callback with the file

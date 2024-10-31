@@ -1,7 +1,7 @@
 #include "print.hpp"
+#include <random>
 
 namespace atom::utils {
-
 void printProgressBar(float progress, int barWidth) {
     int pos = static_cast<int>(barWidth * progress);
     std::cout << "[";
@@ -123,30 +123,4 @@ void printBarChart(const std::map<std::string, int>& data, int maxWidth) {
         std::cout << "| " << value << std::endl;
     }
 }
-
-auto generateRandomString(size_t length) -> std::string {
-    const std::string characters =
-        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    std::random_device randomDevice;
-    std::mt19937 generator(randomDevice());
-    std::uniform_int_distribution<> distribution(
-        0, static_cast<int>(characters.size() - 1));
-
-    std::string result;
-    result.reserve(length);
-    for (size_t i = 0; i < length; ++i) {
-        result += characters[distribution(generator)];
-    }
-    return result;
-}
-
-auto xorEncryptDecrypt(const std::string& input,
-                       const std::string& key) -> std::string {
-    std::string output = input;
-    for (size_t i = 0; i < input.length(); ++i) {
-        output[i] = static_cast<char>(input[i] ^ key[i % key.length()]);
-    }
-    return output;
-}
-
 }  // namespace atom::utils

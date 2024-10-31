@@ -517,8 +517,8 @@ auto getFileTimes(const std::string &filePath)
         return fileTimes;
     }
 
-    std::array<char, TIME_STR_SIZE> createTimeStr;
-    std::array<char, TIME_STR_SIZE> modifyTimeStr;
+    std::array<char, ATOM_PTR_SIZE> createTimeStr;
+    std::array<char, ATOM_PTR_SIZE> modifyTimeStr;
     auto *createTimeTm = localtime(&fileInfo.st_ctime);
     auto *modifyTimeTm = localtime(&fileInfo.st_mtime);
 
@@ -753,4 +753,35 @@ auto getExecutableNameFromPath(const std::string &path) -> std::string {
     return fileName;
 }
 
+auto checkPathType(const fs::path &path) -> PathType {
+    if (fs::exists(path)) {
+        if (fs::is_regular_file(path)) {
+            return PathType::REGULAR_FILE;
+        }
+        if (fs::is_directory(path)) {
+            return PathType::DIRECTORY;
+        }
+        if (fs::is_symlink(path)) {
+            return PathType::SYMLINK;
+        }
+        return PathType::OTHER;
+    }
+    return PathType::NOT_EXISTS;
+}
+
+auto countLinesInFile(const std::string &filePath) -> std::optional<int> {
+    std::ifstream file(filePath);
+    int lineCount = 0;
+    std::string line;
+
+    if (file.is_open()) {
+        while (std::getline(file, line)) {
+            lineCount++;
+        }
+        file.close();
+    } else {
+        return std::nullopt;
+    }
+    return lineCount;
+}
 }  // namespace atom::io

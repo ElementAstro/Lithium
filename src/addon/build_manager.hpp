@@ -3,188 +3,139 @@
 
 #include <filesystem>
 #include <functional>
-#include <memory>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "platform/base.hpp"
 
 namespace lithium {
 
 /**
+ * @class Project
+ * @brief 表示一个项目，包含源代码目录、构建目录和构建系统类型。
+ */
+class Project {
+public:
+    /**
+     * @enum BuildSystemType
+     * @brief 表示构建系统的类型。
+     */
+    enum class BuildSystemType {
+        CMake,  /**< CMake 构建系统。 */
+        Meson,  /**< Meson 构建系统。 */
+        XMake,  /**< XMake 构建系统。 */
+        Unknown /**< 未知的构建系统。 */
+    };
+
+    /**
+     * @brief 构造函数，创建一个项目对象。
+     *
+     * @param sourceDir 项目的源代码目录。
+     * @param buildDir 项目的构建目录。
+     * @param type 构建系统类型，可选，默认为 Unknown，将自动检测。
+     */
+    Project(std::filesystem::path sourceDir,
+            std::filesystem::path buildDirectory,
+            BuildSystemType type = BuildSystemType::Unknown);
+
+    /**
+     * @brief 自动检测构建系统类型。
+     */
+    void detectBuildSystem();
+
+    /**
+     * @brief 获取源代码目录。
+     *
+     * @return 源代码目录的路径。
+     */
+    const std::filesystem::path& getSourceDir() const;
+
+    /**
+     * @brief 获取构建目录。
+     *
+     * @return 构建目录的路径。
+     */
+    const std::filesystem::path& getBuildDir() const;
+
+    /**
+     * @brief 获取构建系统类型。
+     *
+     * @return 构建系统类型。
+     */
+    BuildSystemType getBuildSystemType() const;
+
+private:
+    std::filesystem::path sourceDir_;
+    std::filesystem::path buildDir_;
+    BuildSystemType buildSystemType_;
+};
+
+/**
  * @class BuildManager
- * @brief Manages the build process for various build systems with enhanced features.
- *
- * This class provides an interface to configure, build, clean, install, test, and
- * generate documentation for projects using different build systems like CMake, Meson, and XMake.
- * It also supports defining and executing build task chains, managing environment variables,
- * and enhanced logging capabilities.
+ * @brief 管理多个项目的构建过程，支持各种构建系统。
  */
 class BuildManager {
 public:
     /**
-     * @enum BuildSystemType
-     * @brief Represents the type of build system.
-     */
-    enum class BuildSystemType {
-        CMake, /**< CMake build system. */
-        Meson, /**< Meson build system. */
-        XMake  /**< XMake build system. */
-    };
-
-    /**
      * @typedef BuildTask
-     * @brief Defines a type for build tasks using std::function.
+     * @brief 定义了一个构建任务类型，使用 std::function。
      *
-     * Each build task is a callable that returns a BuildResult.
+     * 每个构建任务是返回 BuildResult 的可调用对象。
      */
     using BuildTask = std::function<BuildResult()>;
 
     /**
-     * @brief Constructs a BuildManager object.
-     *
-     * @param type The type of build system to use.
+     * @brief 构造函数，创建一个 BuildManager 对象。
      */
-    BuildManager(BuildSystemType type);
+    BuildManager();
 
     /**
-     * @brief Configures the project.
+     * @brief 扫描指定目录，自动检测并管理项目。
      *
-     * @param sourceDir The source directory of the project.
-     * @param buildDir The build directory where the project will be configured.
-     * @param buildType The type of build (e.g., Debug, Release).
-     * @param options Additional options for the build system.
-     * @param envVars Environment variables to set during configuration.
-     * @return A BuildResult indicating the success or failure of the configuration.
+     * @param rootDir 要扫描的根目录。
      */
+    void scanForProjects(const std::filesystem::path& rootDir);
+
+    /**
+     * @brief 添加一个项目到管理器。
+     *
+     * @param project 要添加的项目。
+     */
+    void addProject(const Project& project);
+
+    /**
+     * @brief 获取所有管理的项目。
+     *
+     * @return 项目列表。
+     */
+    const std::vector<Project>& getProjects() const;
+
+    // 针对单个项目的构建操作
     BuildResult configureProject(
-        const std::filesystem::path& sourceDir,
-        const std::filesystem::path& buildDir,
-        BuildType buildType,
+        const Project& project, BuildType buildType,
         const std::vector<std::string>& options = {},
         const std::map<std::string, std::string>& envVars = {});
 
-    /**
-     * @brief Builds the project.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @param jobs The number of parallel jobs to use for building (optional).
-     * @return A BuildResult indicating the success or failure of the build.
-     */
-    BuildResult buildProject(const std::filesystem::path& buildDir,
+    BuildResult buildProject(const Project& project,
                              std::optional<int> jobs = std::nullopt);
 
-    /**
-     * @brief Cleans the project.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @return A BuildResult indicating the success or failure of the clean operation.
-     */
-    BuildResult cleanProject(const std::filesystem::path& buildDir);
+    BuildResult cleanProject(const Project& project);
 
-    /**
-     * @brief Installs the project.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @param installDir The directory where the project will be installed.
-     * @return A BuildResult indicating the success or failure of the install operation.
-     */
-    BuildResult installProject(const std::filesystem::path& buildDir,
+    BuildResult installProject(const Project& project,
                                const std::filesystem::path& installDir);
 
-    /**
-     * @brief Runs tests for the project.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @param testNames The names of the tests to run (optional).
-     * @return A BuildResult indicating the success or failure of the test run.
-     */
-    BuildResult runTests(const std::filesystem::path& buildDir,
-                        const std::vector<std::string>& testNames = {});
+    BuildResult runTests(const Project& project,
+                         const std::vector<std::string>& testNames = {});
 
-    /**
-     * @brief Generates documentation for the project.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @param outputDir The directory where the documentation will be generated.
-     * @return A BuildResult indicating the success or failure of the documentation generation.
-     */
-    BuildResult generateDocs(const std::filesystem::path& buildDir,
+    BuildResult generateDocs(const Project& project,
                              const std::filesystem::path& outputDir);
 
-    /**
-     * @brief Loads a build configuration from a file.
-     *
-     * @param configPath The path to the configuration file.
-     * @return True if the configuration was loaded successfully, false otherwise.
-     */
-    bool loadConfig(const std::filesystem::path& configPath);
-
-    /**
-     * @brief Gets the available build targets.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @return A vector of strings representing the available build targets.
-     */
-    std::vector<std::string> getAvailableTargets(const std::filesystem::path& buildDir);
-
-    /**
-     * @brief Builds a specific target.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @param target The name of the target to build.
-     * @param jobs The number of parallel jobs to use for building (optional).
-     * @return A BuildResult indicating the success or failure of the build.
-     */
-    BuildResult buildTarget(const std::filesystem::path& buildDir,
-                            const std::string& target,
-                            std::optional<int> jobs = std::nullopt);
-
-    /**
-     * @brief Gets the cache variables for the build.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @return A vector of pairs representing the cache variables and their values.
-     */
-    std::vector<std::pair<std::string, std::string>> getCacheVariables(
-        const std::filesystem::path& buildDir);
-
-    /**
-     * @brief Sets a cache variable for the build.
-     *
-     * @param buildDir The build directory where the project is configured.
-     * @param name The name of the cache variable.
-     * @param value The value of the cache variable.
-     * @return True if the cache variable was set successfully, false otherwise.
-     */
-    bool setCacheVariable(const std::filesystem::path& buildDir,
-                          const std::string& name,
-                          const std::string& value);
-
-    /**
-     * @brief Adds a build task to the task chain.
-     *
-     * @param task The build task to add.
-     */
-    void addBuildTask(const BuildTask& task);
-
-    /**
-     * @brief Executes the defined build task chain sequentially.
-     *
-     * @return A BuildResult indicating the success or failure of the task chain execution.
-     */
-    BuildResult executeTaskChain();
-
-    /**
-     * @brief Clears all build tasks from the task chain.
-     */
-    void clearTaskChain();
+    // 异常处理和性能优化已在实现中考虑
 
 private:
-    std::unique_ptr<BuildSystem> builder_; /**< Pointer to the build system implementation. */
-    std::vector<BuildTask> taskChain_; /**< Sequence of build tasks to execute. */
+    std::vector<Project> projects_; /**< 管理的项目列表。 */
 };
 
 }  // namespace lithium

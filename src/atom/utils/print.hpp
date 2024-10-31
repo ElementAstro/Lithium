@@ -3,17 +3,20 @@
 
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <format>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <list>
 #include <map>
-#include <random>
+#include <numeric>
 #include <set>
 #include <sstream>
 #include <string_view>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "atom/utils/time.hpp"
@@ -64,32 +67,27 @@ void log(Stream& stream, LogLevel level, std::string_view fmt, Args&&... args) {
            << std::vformat(fmt, std::make_format_args(args...)) << std::endl;
 }
 
-// 打印函数，支持自定义流
 template <typename Stream, typename... Args>
 void printToStream(Stream& stream, std::string_view fmt, Args&&... args) {
     stream << std::vformat(fmt, std::make_format_args(args...));
 }
 
-// 修改后的 print 仅输出到 std::cout
 template <typename... Args>
 void print(std::string_view fmt, Args&&... args) {
     printToStream(std::cout, fmt, std::forward<Args>(args)...);
 }
 
-// 打印并换行
 template <typename Stream, typename... Args>
 void printlnToStream(Stream& stream, std::string_view fmt, Args&&... args) {
     printToStream(stream, fmt, std::forward<Args>(args)...);
     stream << std::endl;
 }
 
-// 打印并换行到 std::cout
 template <typename... Args>
 void println(std::string_view fmt, Args&&... args) {
     printlnToStream(std::cout, fmt, std::forward<Args>(args)...);
 }
 
-// 打印到文件
 template <typename... Args>
 void printToFile(const std::string& fileName, std::string_view fmt,
                  Args&&... args) {
@@ -102,7 +100,6 @@ void printToFile(const std::string& fileName, std::string_view fmt,
     }
 }
 
-// 设置颜色输出
 enum class Color {
     RED = 31,
     GREEN = 32,
@@ -135,7 +132,6 @@ public:
     }
 };
 
-// 新增：带有自动缩进的代码块打印
 class CodeBlock {
 private:
     int indentLevel = 0;
@@ -172,14 +168,12 @@ enum class TextStyle {
     CONCEALED = 8
 };
 
-// 新增：设置文本样式
 template <typename... Args>
 void printStyled(TextStyle style, std::string_view fmt, Args&&... args) {
     std::cout << "\033[" << static_cast<int>(style) << "m"
               << std::vformat(fmt, std::make_format_args(args...)) << "\033[0m";
 }
 
-// 新增：简单的数学统计函数
 class MathStats {
 public:
     template <typename Container>
@@ -210,8 +204,7 @@ public:
         return std::sqrt(variance);
     }
 };
-
-// 新增：简单的内存使用跟踪器
+\
 class MemoryTracker {
 private:
     std::map<std::string, size_t> allocations;
@@ -251,15 +244,17 @@ public:
 constexpr auto operator""_fmt(const char* str, std::size_t len) {
     return FormatLiteral(std::string_view(str, len));
 }
+}  // namespace atom::utils
 
 #if __cplusplus >= 202302L
 template <typename T>
 struct std::formatter<
-    T,
-    std::enable_if_t<std::is_same_v<T, std::vector<typename T::value_type>> ||
-                         std::is_same_v<T, std::list<typename T::value_type>> ||
-                         std::is_same_v<T, std::set<typename T::value_type>>,
-                     char>> : std::formatter<string_view> {
+    T, std::enable_if_t<
+           std::is_same_v<T, std::vector<typename T::value_type>> ||
+               std::is_same_v<T, std::list<typename T::value_type>> ||
+               std::is_same_v<T, std::set<typename T::value_type>> ||
+               std::is_same_v<T, std::unordered_set<typename T::value_type>>,
+           char>> : std::formatter<std::string_view> {
     auto format(const T& container, format_context& ctx) const {
         auto out = ctx.out();
         *out++ = '[';
@@ -278,7 +273,7 @@ struct std::formatter<
 };
 
 template <typename K, typename V>
-struct std::formatter<std::map<K, V>> : std::formatter<string_view> {
+struct std::formatter<std::map<K, V>> : std::formatter<std::string_view> {
     auto format(const std::map<K, V>& m, format_context& ctx) const {
         auto out = ctx.out();
         *out++ = '{';
@@ -296,8 +291,28 @@ struct std::formatter<std::map<K, V>> : std::formatter<string_view> {
     }
 };
 
+template <typename K, typename V>
+struct std::formatter<std::unordered_map<K, V>>
+    : std::formatter<std::string_view> {
+    auto format(const std::unordered_map<K, V>& m, format_context& ctx) const {
+        auto out = ctx.out();
+        *out++ = '{';
+        bool first = true;
+        for (const auto& [key, value] : m) {
+            if (!first) {
+                *out++ = ',';
+                *out++ = ' ';
+            }
+            out = std::format_to(out, "{}: {}", key, value);
+            first = false;
+        }
+        *out++ = '}';
+        return out;
+    }
+};
+
 template <typename T, std::size_t N>
-struct std::formatter<std::array<T, N>> : std::formatter<string_view> {
+struct std::formatter<std::array<T, N>> : std::formatter<std::string_view> {
     auto format(const std::array<T, N>& arr, format_context& ctx) const {
         auto out = ctx.out();
         *out++ = '[';
@@ -312,7 +327,20 @@ struct std::formatter<std::array<T, N>> : std::formatter<string_view> {
         return out;
     }
 };
+
+template <typename T1, typename T2>
+struct std::formatter<std::pair<T1, T2>> : std::formatter<std::string_view> {
+    auto format(const std::pair<T1, T2>& p, format_context& ctx) const {
+        auto out = ctx.out();
+        *out++ = '(';
+        out = std::format_to(out, "{}", p.first);
+        *out++ = ',';
+        *out++ = ' ';
+        out = std::format_to(out, "{}", p.second);
+        *out++ = ')';
+        return out;
+    }
+};
 #endif
-}  // namespace atom::utils
 
 #endif

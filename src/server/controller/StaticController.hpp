@@ -34,7 +34,7 @@ private:
         const std::unordered_set<std::string> &allowedExtensions) {
         std::filesystem::path fullPath =
             std::filesystem::path(path).is_absolute()
-                ? path
+                ? std::filesystem::path(path)
                 : std::filesystem::current_path() / path;
         std::string extension = fullPath.extension().string().substr(1);
 

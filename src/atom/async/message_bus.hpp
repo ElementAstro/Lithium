@@ -8,19 +8,20 @@
 
 Date: 2023-7-23
 
-Description: Main Message Bus with Asio support
+Description: Main Message Bus with Asio support and additional features
 
 **************************************************/
 
 #ifndef ATOM_ASYNC_MESSAGE_BUS_HPP
 #define ATOM_ASYNC_MESSAGE_BUS_HPP
 
-#include <any>
+#include <algorithm>
 #include <asio/io_context.hpp>
 #include <asio/post.hpp>
 #include <asio/steady_timer.hpp>
 #include <chrono>
 #include <functional>
+#include <iostream>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -30,7 +31,7 @@ Description: Main Message Bus with Asio support
 #include <unordered_set>
 #include <vector>
 
-#include "atom/atom/macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::async {
 
@@ -90,6 +91,10 @@ public:
 
             // Record the message in history
             recordMessageHistory<MessageType>(name, message);
+
+            // 记录日志
+            std::cout << "[MessageBus] Published message: " << name
+                      << std::endl;
         };
 
         if (delay) {
@@ -116,9 +121,9 @@ public:
     template <typename MessageType>
     void publishGlobal(const MessageType& message) {
         std::shared_lock lock(mutex_);
-        for (const auto& subscribers : subscribers_) {
-            for (const auto& [name, _] : subscribers.second) {
-                publish(name, message);
+        for (const auto& [type, subscribersMap] : subscribers_) {
+            for (const auto& [name, subscribersList] : subscribersMap) {
+                publish<MessageType>(name, message);
             }
         }
     }
@@ -126,7 +131,7 @@ public:
     /**
      * @brief Subscribes to a message.
      * @tparam MessageType The type of the message.
-     * @param name The name of the message.
+     * @param name The name of the message or namespace (supports wildcard).
      * @param handler The handler function to call when the message is received.
      * @param async Whether to call the handler asynchronously.
      * @param once Whether to unsubscribe after the first message is received.
@@ -143,12 +148,12 @@ public:
             [](const MessageType&) { return true; }) -> Token {
         std::unique_lock lock(mutex_);
         Token token = nextToken_++;
-        auto filterWrapper = [filter](const std::any& msg) {
-            return filter(std::any_cast<const MessageType&>(msg));
-        };
         subscribers_[std::type_index(typeid(MessageType))][name].emplace_back(
-            Subscriber{std::move(handler), async, once, filterWrapper, token});
-        namespaces_.insert(name);  // Record namespace
+            Subscriber{std::move(handler), async, once, std::move(filter),
+                       token});
+        namespaces_.insert(extractNamespace(name));  // Record namespace
+        std::cout << "[MessageBus] Subscribed to: " << name
+                  << " with token: " << token << std::endl;
         return token;
     }
 
@@ -166,12 +171,13 @@ public:
                 removeSubscription(subscribersList, token);
             }
         }
+        std::cout << "[MessageBus] Unsubscribed token: " << token << std::endl;
     }
 
     /**
-     * @brief Unsubscribes all handlers for a given message name.
+     * @brief Unsubscribes all handlers for a given message name or namespace.
      * @tparam MessageType The type of the message.
-     * @param name The name of the message.
+     * @param name The name of the message or namespace.
      */
     template <typename MessageType>
     void unsubscribeAll(const std::string& name) {
@@ -180,15 +186,20 @@ public:
         if (iterator != subscribers_.end()) {
             auto nameIterator = iterator->second.find(name);
             if (nameIterator != iterator->second.end()) {
+                size_t count = nameIterator->second.size();
                 iterator->second.erase(nameIterator);
+                std::cout << "[MessageBus] Unsubscribed all handlers for: "
+                          << name << " (" << count << " subscribers)"
+                          << std::endl;
             }
         }
     }
 
     /**
-     * @brief Gets the number of subscribers for a given message name.
+     * @brief Gets the number of subscribers for a given message name or
+     * namespace.
      * @tparam MessageType The type of the message.
-     * @param name The name of the message.
+     * @param name The name of the message or namespace.
      * @return The number of subscribers.
      */
     template <typename MessageType>
@@ -205,31 +216,10 @@ public:
     }
 
     /**
-     * @brief Gets the number of subscribers for a given namespace.
+     * @brief Checks if there are any subscribers for a given message name or
+     * namespace.
      * @tparam MessageType The type of the message.
-     * @param namespaceName The name of the namespace.
-     * @return The number of subscribers.
-     */
-    template <typename MessageType>
-    auto getNamespaceSubscriberCount(const std::string& namespaceName)
-        -> std::size_t {
-        std::shared_lock lock(mutex_);
-        auto iterator = subscribers_.find(std::type_index(typeid(MessageType)));
-        std::size_t count = 0;
-        if (iterator != subscribers_.end()) {
-            for (const auto& [name, subscribersList] : iterator->second) {
-                if (name.find(namespaceName + ".") == 0) {
-                    count += subscribersList.size();
-                }
-            }
-        }
-        return count;
-    }
-
-    /**
-     * @brief Checks if there are any subscribers for a given message name.
-     * @tparam MessageType The type of the message.
-     * @param name The name of the message.
+     * @param name The name of the message or namespace.
      * @return True if there are subscribers, false otherwise.
      */
     template <typename MessageType>
@@ -251,6 +241,7 @@ public:
         std::unique_lock lock(mutex_);
         subscribers_.clear();
         namespaces_.clear();
+        std::cout << "[MessageBus] Cleared all subscribers." << std::endl;
     }
 
     /**
@@ -269,7 +260,8 @@ public:
      * @return A vector of messages.
      */
     template <typename MessageType>
-    auto getMessageHistory(const std::string& name) const
+    auto getMessageHistory(const std::string& name,
+                           std::size_t count = K_MAX_HISTORY_SIZE) const
         -> std::vector<MessageType> {
         std::shared_lock lock(mutex_);
         auto iterator =
@@ -278,21 +270,26 @@ public:
             auto nameIterator = iterator->second.find(name);
             if (nameIterator != iterator->second.end()) {
                 std::vector<MessageType> history;
-                for (const auto& message : nameIterator->second) {
-                    history.push_back(std::any_cast<MessageType>(message));
+                std::size_t start = (nameIterator->second.size() > count)
+                                        ? nameIterator->second.size() - count
+                                        : 0;
+                for (std::size_t i = start; i < nameIterator->second.size();
+                     ++i) {
+                    history.emplace_back(
+                        std::any_cast<MessageType>(nameIterator->second[i]));
                 }
                 return history;
             }
         }
-        static const std::vector<MessageType> EMPTY_HISTORY;
-        return EMPTY_HISTORY;
+        return {};
     }
 
 private:
     struct Subscriber {
-        std::any handler;  ///< The handler function.
-        bool async;        ///< Whether to call the handler asynchronously.
-        bool once;         ///< Whether to unsubscribe after the first message.
+        std::function<void(const std::any&)>
+            handler;  ///< The handler function.
+        bool async;   ///< Whether to call the handler asynchronously.
+        bool once;    ///< Whether to unsubscribe after the first message.
         std::function<bool(const std::any&)> filter;  ///< The filter function.
         Token token;  ///< The subscription token.
     } ATOM_ALIGNAS(64);
@@ -313,26 +310,25 @@ private:
             auto nameIterator = iterator->second.find(name);
             if (nameIterator != iterator->second.end()) {
                 auto& subscribersList = nameIterator->second;
-                for (auto& subscriber : subscribersList) {
-                    if (subscriber.filter(message) &&
-                        calledSubscribers.insert(subscriber.token).second) {
-                        auto handler = std::any_cast<
-                            std::function<void(const MessageType&)>>(
-                            subscriber.handler);
-                        if (handler) {
-                            if (subscriber.async) {
-                                asio::post(io_context_, [handler, message]() {
-                                    handler(message);
-                                });
-                            } else {
-                                handler(message);
-                            }
-                            if (subscriber.once) {
-                                removeSubscription(subscribersList,
-                                                   subscriber.token);
-                            }
+                for (auto it = subscribersList.begin();
+                     it != subscribersList.end();) {
+                    if (it->filter(message) &&
+                        calledSubscribers.insert(it->token).second) {
+                        auto handler = [handlerFunc = it->handler, message]() {
+                            std::any msg = message;
+                            handlerFunc(msg);
+                        };
+                        if (it->async) {
+                            asio::post(io_context_, handler);
+                        } else {
+                            handler();
+                        }
+                        if (it->once) {
+                            it = subscribersList.erase(it);
+                            continue;
                         }
                     }
+                    ++it;
                 }
             }
         }
@@ -363,10 +359,23 @@ private:
                               const MessageType& message) {
         auto& history =
             messageHistory_[std::type_index(typeid(MessageType))][name];
-        history.push_back(message);
+        history.emplace_back(message);
         if (history.size() > K_MAX_HISTORY_SIZE) {
             history.erase(history.begin());
         }
+    }
+
+    /**
+     * @brief Extracts the namespace from the message name.
+     * @param name The message name.
+     * @return The namespace part of the name.
+     */
+    std::string extractNamespace(const std::string& name) const {
+        auto pos = name.find('.');
+        if (pos != std::string::npos) {
+            return name.substr(0, pos);
+        }
+        return name;
     }
 
     std::unordered_map<std::type_index,

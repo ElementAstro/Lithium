@@ -9,7 +9,12 @@
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
+#if __has_include(<yaml-cpp/yaml.h>)
+#include <yaml-cpp/yaml.h>
+#endif
+
 namespace lithium {
+
 void DependencyGraph::addNode(const Node& node, const Version& version) {
     LOG_F(INFO, "Adding node: {} with version: {}", node, version.toString());
     adjList_.try_emplace(node);
@@ -116,6 +121,7 @@ auto DependencyGraph::resolveDependencies(
     for (const auto& dir : directories) {
         std::string packageJsonPath = dir + "/package.json";
         std::string packageXmlPath = dir + "/package.xml";
+        std::string packageYamlPath = dir + "/package.yaml";
 
         if (std::filesystem::exists(packageJsonPath)) {
             LOG_F(INFO, "Parsing package.json in directory: {}", dir);
@@ -133,6 +139,19 @@ auto DependencyGraph::resolveDependencies(
         if (std::filesystem::exists(packageXmlPath)) {
             LOG_F(INFO, "Parsing package.xml in directory: {}", dir);
             auto [package_name, deps] = parsePackageXml(packageXmlPath);
+            graph.addNode(package_name, deps.at(package_name));
+
+            for (const auto& dep : deps) {
+                if (dep.first != package_name) {
+                    graph.addNode(dep.first, dep.second);
+                    graph.addDependency(package_name, dep.first, dep.second);
+                }
+            }
+        }
+
+        if (std::filesystem::exists(packageYamlPath)) {
+            LOG_F(INFO, "Parsing package.yaml in directory: {}", dir);
+            auto [package_name, deps] = parsePackageYaml(packageYamlPath);
             graph.addNode(package_name, deps.at(package_name));
 
             for (const auto& dep : deps) {
@@ -231,6 +250,106 @@ auto DependencyGraph::parsePackageXml(const std::string& path)
 
     LOG_F(INFO, "Parsed package.xml file: {} successfully.", path);
     return {packageName, deps};
+}
+
+auto DependencyGraph::parsePackageYaml(const std::string& path)
+    -> std::pair<std::string, std::unordered_map<std::string, Version>> {
+    LOG_F(INFO, "Parsing package.yaml file: {}", path);
+    YAML::Node config;
+    try {
+        config = YAML::LoadFile(path);
+    } catch (const YAML::Exception& e) {
+        LOG_F(ERROR, "Error loading YAML file: {}: {}", path, e.what());
+        THROW_FAIL_TO_OPEN_FILE("Error loading YAML file: " + path + ": " +
+                                e.what());
+    }
+
+    if (!config["name"]) {
+        LOG_F(ERROR, "Missing package name in file: {}", path);
+        THROW_MISSING_ARGUMENT("Missing package name in " + path);
+    }
+
+    std::string packageName = config["name"].as<std::string>();
+    std::unordered_map<std::string, Version> deps;
+
+    if (config["dependencies"]) {
+        for (const auto& dep : config["dependencies"]) {
+            deps[dep.first.as<std::string>()] =
+                Version::parse(dep.second.as<std::string>());
+        }
+    }
+
+    LOG_F(INFO, "Parsed package.yaml file: {} successfully.", path);
+    return {packageName, deps};
+}
+
+void DependencyGraph::generatePackageYaml(const std::string& path) const {
+    LOG_F(INFO, "Generating package.yaml file: {}", path);
+    YAML::Emitter out;
+
+    out << YAML::BeginMap;
+    out << YAML::Key << "name" << YAML::Value << "my-cpp-package";
+    out << YAML::Key << "version" << YAML::Value << "1.0.0";
+    out << YAML::Key << "description" << YAML::Value
+        << "A sample C++20 package";
+    out << YAML::Key << "author" << YAML::Value
+        << "Your Name <your.email@example.com>";
+    out << YAML::Key << "license" << YAML::Value << "MIT";
+
+    out << YAML::Key << "dependencies" << YAML::Value << YAML::BeginMap;
+    for (const auto& [node, version] : nodeVersions_) {
+        out << YAML::Key << node << YAML::Value << version.toString();
+    }
+    out << YAML::EndMap;
+
+    out << YAML::EndMap;
+
+    std::ofstream fout(path);
+    if (!fout.is_open()) {
+        LOG_F(ERROR, "Failed to open file: {}", path);
+        THROW_FAIL_TO_OPEN_FILE("Failed to open " + path);
+    }
+    fout << out.c_str();
+    fout.close();
+
+    LOG_F(INFO, "Generated package.yaml file: {} successfully.", path);
+}
+
+auto DependencyGraph::hasCycleUtil(
+    const Node& node, std::unordered_set<Node>& visited,
+    std::unordered_set<Node>& recStack) const -> bool {
+    if (!visited.contains(node)) {
+        visited.insert(node);
+        recStack.insert(node);
+
+        for (const auto& neighbor : adjList_.at(node)) {
+            if (!visited.contains(neighbor) &&
+                hasCycleUtil(neighbor, visited, recStack)) {
+                return true;
+            } else if (recStack.contains(neighbor)) {
+                return true;
+            }
+        }
+    }
+    recStack.erase(node);
+    return false;
+}
+
+auto DependencyGraph::topologicalSortUtil(
+    const Node& node, std::unordered_set<Node>& visited,
+    std::stack<Node>& stack) const -> bool {
+    visited.insert(node);
+
+    for (const auto& neighbor : adjList_.at(node)) {
+        if (!visited.contains(neighbor)) {
+            if (!topologicalSortUtil(neighbor, visited, stack)) {
+                return false;
+            }
+        }
+    }
+
+    stack.push(node);
+    return true;
 }
 
 }  // namespace lithium

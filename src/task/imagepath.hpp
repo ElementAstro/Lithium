@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "atom/macro.hpp"
-
 #include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;
 
@@ -33,15 +32,14 @@ class ImagePatternParser {
 public:
     using FieldParser = std::function<void(ImageInfo&, const std::string&)>;
 
-    explicit ImagePatternParser(const std::string& pattern,
-                                char delimiter = '_');
+    explicit ImagePatternParser(const std::string& pattern);
     ~ImagePatternParser();
 
-    // Disable copy operations
+    // 禁用拷贝操作
     ImagePatternParser(const ImagePatternParser&) = delete;
     ImagePatternParser& operator=(const ImagePatternParser&) = delete;
 
-    // Enable move operations
+    // 启用移动操作
     ImagePatternParser(ImagePatternParser&&) noexcept;
     ImagePatternParser& operator=(ImagePatternParser&&) noexcept;
 
@@ -55,23 +53,15 @@ public:
     void setOptionalField(const std::string& key,
                           const std::string& defaultValue);
 
-    // New methods
+    void addFieldPattern(const std::string& key,
+                         const std::string& regexPattern);
     [[nodiscard]] auto getPatterns() const -> std::vector<std::string>;
-    [[nodiscard]] auto getDelimiter() const -> char;
 
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
 };
 
-// Template function to parse multiple filenames
-template <typename... Filenames>
-[[nodiscard]] auto parseMultipleFilenames(const ImagePatternParser& parser,
-                                          const Filenames&... filenames)
-    -> std::vector<std::optional<ImageInfo>> {
-    return {parser.parseFilename(filenames)...};
-}
-
 }  // namespace lithium
 
-#endif
+#endif  // LITHIUM_TASK_IMAGEPATH_HPP

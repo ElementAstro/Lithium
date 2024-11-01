@@ -13,7 +13,7 @@ Description: Main Entry
 **************************************************/
 
 #include "_component.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;

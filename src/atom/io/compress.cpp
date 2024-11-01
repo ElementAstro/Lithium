@@ -26,6 +26,7 @@ Description: Compressor using ZLib
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <string>
 #ifdef __cpp_lib_format
 #include <format>
@@ -55,6 +56,9 @@ constexpr int FILENAME_SIZE = 256;
 namespace atom::io {
 auto compressFile(std::string_view input_file_name,
                   std::string_view output_folder) -> bool {
+    LOG_F(INFO,
+          "compressFile called with input_file_name: {}, output_folder: {}",
+          input_file_name, output_folder);
     fs::path inputPath(input_file_name);
     if (!fs::exists(inputPath)) {
         LOG_F(ERROR, "Input file {} does not exist.", input_file_name);
@@ -101,12 +105,13 @@ auto compressFile(std::string_view input_file_name,
     }
 
     gzclose(out);
-    DLOG_F(INFO, "Compressed file {} -> {}", input_file_name,
-           outputPath.string());
+    LOG_F(INFO, "Compressed file {} -> {}", input_file_name,
+          outputPath.string());
     return true;
 }
 
 auto compressFile(const fs::path &file, gzFile out) -> bool {
+    LOG_F(INFO, "compressFile called with file: {}", file.string());
     std::ifstream input_file(file, std::ios::binary);
     if (!input_file) {
         LOG_F(ERROR, "Failed to open file {}", file.string());
@@ -135,11 +140,15 @@ auto compressFile(const fs::path &file, gzFile out) -> bool {
         return false;
     }
 
+    LOG_F(INFO, "Compressed file {}", file.string());
     return true;
 }
 
 auto decompressFile(std::string_view input_file_name,
                     std::string_view output_folder) -> bool {
+    LOG_F(INFO,
+          "decompressFile called with input_file_name: {}, output_folder: {}",
+          input_file_name, output_folder);
     fs::path inputPath(input_file_name);
     if (!fs::exists(inputPath)) {
         LOG_F(ERROR, "Input file {} does not exist.", input_file_name);
@@ -187,12 +196,14 @@ auto decompressFile(std::string_view input_file_name,
 
     fclose(out);
     gzclose(in);
-    DLOG_F(INFO, "Decompressed file {} -> {}", input_file_name,
-           outputPath.string());
+    LOG_F(INFO, "Decompressed file {} -> {}", input_file_name,
+          outputPath.string());
     return true;
 }
 
 auto compressFolder(const fs::path &folder_name) -> bool {
+    LOG_F(INFO, "compressFolder called with folder_name: {}",
+          folder_name.string());
     auto outfileName = folder_name.string() + ".gz";
     gzFile out = gzopen(outfileName.data(), "wb");
     if (out == nullptr) {
@@ -220,17 +231,20 @@ auto compressFolder(const fs::path &folder_name) -> bool {
     }
 
     gzclose(out);
-    DLOG_F(INFO, "Compressed folder {} -> {}", folder_name.string(),
-           outfileName);
+    LOG_F(INFO, "Compressed folder {} -> {}", folder_name.string(),
+          outfileName);
     return true;
 }
 
 auto compressFolder(const char *folder_name) -> bool {
+    LOG_F(INFO, "compressFolder called with folder_name: {}", folder_name);
     return compressFolder(fs::path(folder_name));
 }
 
 auto extractZip(std::string_view zip_file,
                 std::string_view destination_folder) -> bool {
+    LOG_F(INFO, "extractZip called with zip_file: {}, destination_folder: {}",
+          zip_file, destination_folder);
     void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
@@ -284,16 +298,20 @@ auto extractZip(std::string_view zip_file,
 
         unzCloseCurrentFile(zipReader);
         outFile.close();
-        DLOG_F(INFO, "Extracted file {}", filePath);
+        LOG_F(INFO, "Extracted file {}", filePath);
     } while (unzGoToNextFile(zipReader) != UNZ_END_OF_LIST_OF_FILE);
 
     unzClose(zipReader);
-    DLOG_F(INFO, "Extracted ZIP file {}", zip_file);
+    LOG_F(INFO, "Extracted ZIP file {}", zip_file);
     return true;
 }
 
 auto createZip(std::string_view source_folder, std::string_view zip_file,
                int compression_level) -> bool {
+    LOG_F(INFO,
+          "createZip called with source_folder: {}, zip_file: {}, "
+          "compression_level: {}",
+          source_folder, zip_file, compression_level);
     void *zipWriter = zipOpen(zip_file.data(), APPEND_STATUS_CREATE);
     if (zipWriter == nullptr) {
         LOG_F(ERROR, "Failed to create ZIP file: {}", zip_file);
@@ -343,7 +361,7 @@ auto createZip(std::string_view source_folder, std::string_view zip_file,
         }
 
         zipClose(zipWriter, nullptr);
-        DLOG_F(INFO, "ZIP file created successfully: {}", zip_file);
+        LOG_F(INFO, "ZIP file created successfully: {}", zip_file);
         return true;
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Failed to create ZIP file: {}", zip_file);
@@ -353,6 +371,7 @@ auto createZip(std::string_view source_folder, std::string_view zip_file,
 }
 
 auto listFilesInZip(std::string_view zip_file) -> std::vector<std::string> {
+    LOG_F(INFO, "listFilesInZip called with zip_file: {}", zip_file);
     std::vector<std::string> fileList;
     void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
@@ -377,31 +396,39 @@ auto listFilesInZip(std::string_view zip_file) -> std::vector<std::string> {
             return fileList;
         }
         fileList.emplace_back(filename.data());
+        LOG_F(INFO, "Found file in ZIP: {}", filename.data());
     } while (unzGoToNextFile(zipReader) != UNZ_END_OF_LIST_OF_FILE);
 
     unzClose(zipReader);
+    LOG_F(INFO, "Listed files in ZIP: {}", zip_file);
     return fileList;
 }
 
 auto fileExistsInZip(std::string_view zip_file,
                      std::string_view file_name) -> bool {
+    LOG_F(INFO, "fileExistsInZip called with zip_file: {}, file_name: {}",
+          zip_file, file_name);
     void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
         return false;
     }
 
-    if (unzLocateFile(zipReader, file_name.data(), 0) == UNZ_OK) {
-        unzClose(zipReader);
-        return true;
+    bool exists = unzLocateFile(zipReader, file_name.data(), 0) == UNZ_OK;
+    if (exists) {
+        LOG_F(INFO, "File found in ZIP: {}", file_name);
+    } else {
+        LOG_F(WARNING, "File not found in ZIP: {}", file_name);
     }
 
     unzClose(zipReader);
-    return false;
+    return exists;
 }
 
 auto removeFileFromZip(std::string_view zip_file,
                        std::string_view file_name) -> bool {
+    LOG_F(INFO, "removeFileFromZip called with zip_file: {}, file_name: {}",
+          zip_file, file_name);
     void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
@@ -414,11 +441,8 @@ auto removeFileFromZip(std::string_view zip_file,
         return false;
     }
 
-    // This is a simplified method that recreates the ZIP file without the
-    // specified file.
     std::string tempZipFile = std::string(zip_file) + ".tmp";
     void *zipWriter = zipOpen(tempZipFile.c_str(), APPEND_STATUS_CREATE);
-
     if (zipWriter == nullptr) {
         LOG_F(ERROR, "Failed to create temporary ZIP file: {}", tempZipFile);
         unzClose(zipReader);
@@ -445,6 +469,7 @@ auto removeFileFromZip(std::string_view zip_file,
         }
 
         if (file_name == filename.data()) {
+            LOG_F(INFO, "Skipping file: {} for removal", filename.data());
             continue;
         }
 
@@ -481,16 +506,123 @@ auto removeFileFromZip(std::string_view zip_file,
     unzClose(zipReader);
     zipClose(zipWriter, nullptr);
 
-    // Replace original ZIP file with the new one
     fs::remove(zip_file);
     fs::rename(tempZipFile, zip_file);
 
+    LOG_F(INFO, "File removed from ZIP: {}", file_name);
     return true;
 }
 
 auto getZipFileSize(std::string_view zip_file) -> size_t {
+    LOG_F(INFO, "getZipFileSize called with zip_file: {}", zip_file);
     std::ifstream inputFile(zip_file.data(),
-                             std::ifstream::ate | std::ifstream::binary);
-    return inputFile.tellg();
+                            std::ifstream::ate | std::ifstream::binary);
+    size_t size = inputFile.tellg();
+    LOG_F(INFO, "Size of ZIP file {}: {}", zip_file, size);
+    return size;
+}
+
+bool decompressChunk(const std::vector<unsigned char> &chunkData,
+                     std::vector<unsigned char> &outputBuffer) {
+    LOG_F(INFO, "decompressChunk called");
+    z_stream stream;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+
+    if (inflateInit(&stream) != Z_OK) {
+        LOG_F(ERROR, "Error initializing zlib inflate.");
+        return false;
+    }
+
+    stream.avail_in = static_cast<uInt>(chunkData.size());
+    stream.next_in = const_cast<Bytef *>(chunkData.data());
+
+    do {
+        stream.avail_out = static_cast<uInt>(outputBuffer.size());
+        stream.next_out = outputBuffer.data();
+
+        int ret = inflate(&stream, Z_NO_FLUSH);
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR) {
+            LOG_F(ERROR, "Data error detected. Skipping corrupted chunk.");
+            inflateEnd(&stream);
+            return false;
+        }
+
+    } while (stream.avail_out == 0);
+
+    inflateEnd(&stream);
+    LOG_F(INFO, "Chunk decompressed successfully");
+    return true;
+}
+
+constexpr int CHUNK_SIZE = 4096;
+
+void processFilesInParallel(const std::vector<std::string> &filenames) {
+    LOG_F(INFO, "processFilesInParallel called with {} files",
+          filenames.size());
+    std::vector<std::future<void>> futures;
+
+    for (const auto &filename : filenames) {
+        futures.push_back(std::async(std::launch::async, [filename]() {
+            LOG_F(INFO, "Processing file: {}", filename);
+            std::ifstream file(filename, std::ios::binary);
+
+            if (!file) {
+                LOG_F(ERROR, "Failed to open file: {}", filename);
+                return;
+            }
+
+            std::vector<unsigned char> chunkData(CHUNK_SIZE);
+            std::vector<unsigned char> outputBuffer(CHUNK_SIZE * 2);
+
+            while (file.read(reinterpret_cast<char *>(chunkData.data()),
+                             CHUNK_SIZE) ||
+                   file.gcount() > 0) {
+                if (!decompressChunk(chunkData, outputBuffer)) {
+                    LOG_F(ERROR, "Failed to decompress chunk for file: {}",
+                          filename);
+                }
+            }
+            LOG_F(INFO, "Finished processing file: {}", filename);
+        }));
+    }
+
+    for (auto &future : futures) {
+        future.get();
+    }
+    LOG_F(INFO, "All files processed in parallel");
+}
+
+bool createBackup(const std::string &originalFile,
+                  const std::string &backupFile) {
+    LOG_F(INFO, "createBackup called with originalFile: {}, backupFile: {}",
+          originalFile, backupFile);
+    try {
+        std::filesystem::copy(
+            originalFile, backupFile,
+            std::filesystem::copy_options::overwrite_existing);
+        LOG_F(INFO, "Backup created: {}", backupFile);
+        return true;
+    } catch (const std::filesystem::filesystem_error &e) {
+        LOG_F(ERROR, "Failed to create backup: {}", e.what());
+        return false;
+    }
+}
+
+bool restoreBackup(const std::string &backupFile,
+                   const std::string &originalFile) {
+    LOG_F(INFO, "restoreBackup called with backupFile: {}, originalFile: {}",
+          backupFile, originalFile);
+    try {
+        std::filesystem::copy(
+            backupFile, originalFile,
+            std::filesystem::copy_options::overwrite_existing);
+        LOG_F(INFO, "Backup restored: {}", originalFile);
+        return true;
+    } catch (const std::filesystem::filesystem_error &e) {
+        LOG_F(ERROR, "Failed to restore backup: {}", e.what());
+        return false;
+    }
 }
 }  // namespace atom::io

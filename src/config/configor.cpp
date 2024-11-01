@@ -32,24 +32,24 @@ class ConfigManagerImpl {
 public:
     mutable std::shared_mutex rwMutex;
     json config;
-    asio::io_context ioContext_;
-    std::thread ioThread_;
+    asio::io_context ioContext;
+    std::thread ioThread;
 };
 
 ConfigManager::ConfigManager()
     : m_impl_(std::make_unique<ConfigManagerImpl>()) {
     asio::executor_work_guard<asio::io_context::executor_type> workGuard(
-        m_impl_->ioContext_.get_executor());
-    m_impl_->ioThread_ = std::thread([this] { m_impl_->ioContext_.run(); });
+        m_impl_->ioContext.get_executor());
+    m_impl_->ioThread = std::thread([this] { m_impl_->ioContext.run(); });
     if (loadFromFile("config.json")) {
         DLOG_F(INFO, "Config loaded successfully.");
     }
 }
 
 ConfigManager::~ConfigManager() {
-    m_impl_->ioContext_.stop();
-    if (m_impl_->ioThread_.joinable()) {
-        m_impl_->ioThread_.join();
+    m_impl_->ioContext.stop();
+    if (m_impl_->ioThread.joinable()) {
+        m_impl_->ioThread.join();
     }
     if (saveToFile("config.json")) {
         DLOG_F(INFO, "Config saved successfully.");
@@ -76,9 +76,11 @@ auto ConfigManager::loadFromFile(const fs::path& path) -> bool {
         }
         json j = json::parse(ifs);
         if (j.empty()) {
+            LOG_F(WARNING, "Config file is empty: {}", path.string());
             return false;
         }
         mergeConfig(j);
+        LOG_F(INFO, "Config loaded from file: {}", path.string());
         return true;
     } catch (const json::exception& e) {
         LOG_F(ERROR, "Failed to parse file: {}, error message: {}",
@@ -97,17 +99,21 @@ auto ConfigManager::loadFromDir(const fs::path& dir_path,
         for (const auto& entry : fs::directory_iterator(dir_path)) {
             if (entry.is_regular_file() &&
                 entry.path().extension() == ".json") {
-                loadFromFile(entry.path());
+                if (!loadFromFile(entry.path())) {
+                    LOG_F(WARNING, "Failed to load config file: {}",
+                          entry.path().string());
+                }
             } else if (recursive && entry.is_directory()) {
                 loadFromDir(entry.path(), true);
             }
         }
+        LOG_F(INFO, "Config loaded from directory: {}", dir_path.string());
+        return true;
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to load config file from: {}, error message: {}",
               dir_path.string(), e.what());
         return false;
     }
-    return true;
 }
 
 auto ConfigManager::getValue(const std::string& key_path) const
@@ -119,6 +125,7 @@ auto ConfigManager::getValue(const std::string& key_path) const
         if (p->is_object() && p->contains(key_str)) {
             p = &(*p)[key_str];
         } else {
+            LOG_F(WARNING, "Key not found: {}", key_path);
             return std::nullopt;
         }
     }
@@ -202,11 +209,14 @@ auto ConfigManager::deleteValue(const std::string& key_path) -> bool {
         if (std::next(it) == keys.end()) {
             if (p->is_object() && p->contains(*it)) {
                 p->erase(*it);
+                LOG_F(INFO, "Deleted key: {}", key_path);
                 return true;
             }
+            LOG_F(WARNING, "Key not found for deletion: {}", key_path);
             return false;
         }
         if (!p->is_object() || !p->contains(*it)) {
+            LOG_F(WARNING, "Key not found for deletion: {}", key_path);
             return false;
         }
         p = &(*p)[*it];
@@ -228,6 +238,7 @@ auto ConfigManager::saveToFile(const fs::path& file_path) const -> bool {
     try {
         ofs << m_impl_->config.dump(4);
         ofs.close();
+        LOG_F(INFO, "Config saved to file: {}", file_path.string());
         return true;
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to save config to file: {}, error message: {}",
@@ -251,6 +262,7 @@ void ConfigManager::tidyConfig() {
         *p = value;
     }
     m_impl_->config = std::move(updatedConfig);
+    LOG_F(INFO, "Config tidied.");
 }
 
 void ConfigManager::mergeConfig(const json& src, json& target) {
@@ -282,26 +294,31 @@ void ConfigManager::mergeConfig(const json& src) {
     };
 
     merge(m_impl_->config, src);
+    LOG_F(INFO, "Config merged.");
 }
 
-void ConfigManager::clearConfig() { m_impl_->config.clear(); }
+void ConfigManager::clearConfig() {
+    std::unique_lock lock(m_impl_->rwMutex);
+    m_impl_->config.clear();
+    LOG_F(INFO, "Config cleared.");
+}
 
 void ConfigManager::asyncLoadFromFile(const fs::path& path,
                                       std::function<void(bool)> callback) {
-    asio::post(m_impl_->ioContext_, [this, path, callback]() {
+    asio::post(m_impl_->ioContext, [this, path, callback]() {
         bool success = loadFromFile(path);
         // Post back to caller's thread or IO context
-        asio::post(m_impl_->ioContext_,
+        asio::post(m_impl_->ioContext,
                    [callback, success]() { callback(success); });
     });
 }
 
 void ConfigManager::asyncSaveToFile(const fs::path& file_path,
                                     std::function<void(bool)> callback) const {
-    asio::post(m_impl_->ioContext_, [this, file_path, callback]() {
+    asio::post(m_impl_->ioContext, [this, file_path, callback]() {
         bool success = saveToFile(file_path);
         // Post back to caller's thread or IO context
-        asio::post(m_impl_->ioContext_,
+        asio::post(m_impl_->ioContext,
                    [callback, success]() { callback(success); });
     });
 }

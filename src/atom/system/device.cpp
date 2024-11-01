@@ -41,10 +41,12 @@ constexpr int BYTE_1 = 1;
 constexpr int BYTE_0 = 0;
 
 auto enumerateUsbDevices() -> std::vector<DeviceInfo> {
+    LOG_F(INFO, "enumerateUsbDevices called");
     std::vector<DeviceInfo> devices;
     HDEVINFO deviceInfoSet = SetupDiGetClassDevs(
         nullptr, "USB", nullptr, DIGCF_PRESENT | DIGCF_ALLCLASSES);
     if (deviceInfoSet == INVALID_HANDLE_VALUE) {
+        LOG_F(ERROR, "Failed to get USB device info set");
         return devices;
     }
 
@@ -59,18 +61,23 @@ auto enumerateUsbDevices() -> std::vector<DeviceInfo> {
                 deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, &dataType,
                 reinterpret_cast<PBYTE>(buffer.data()), buffer.size(), &size)) {
             devices.push_back({buffer.data(), ""});
+            LOG_F(INFO, "Found USB device: {}", buffer.data());
         }
     }
 
     SetupDiDestroyDeviceInfoList(deviceInfoSet);
+    LOG_F(INFO, "enumerateUsbDevices completed with {} devices found",
+          devices.size());
     return devices;
 }
 
 auto enumerateSerialPorts() -> std::vector<DeviceInfo> {
+    LOG_F(INFO, "enumerateSerialPorts called");
     std::vector<DeviceInfo> devices;
     HDEVINFO deviceInfoSet =
         SetupDiGetClassDevs(nullptr, "COM", nullptr, DIGCF_PRESENT);
     if (deviceInfoSet == INVALID_HANDLE_VALUE) {
+        LOG_F(ERROR, "Failed to get serial port info set");
         return devices;
     }
 
@@ -85,14 +92,18 @@ auto enumerateSerialPorts() -> std::vector<DeviceInfo> {
                 deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, &dataType,
                 reinterpret_cast<PBYTE>(buffer.data()), buffer.size(), &size)) {
             devices.push_back({buffer.data(), ""});
+            LOG_F(INFO, "Found serial port: {}", buffer.data());
         }
     }
 
     SetupDiDestroyDeviceInfoList(deviceInfoSet);
+    LOG_F(INFO, "enumerateSerialPorts completed with {} devices found",
+          devices.size());
     return devices;
 }
 
 auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
+    LOG_F(INFO, "enumerateBluetoothDevices called");
     std::vector<DeviceInfo> devices;
     BLUETOOTH_DEVICE_SEARCH_PARAMS searchParams = {
         sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS),
@@ -125,15 +136,20 @@ auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
             std::copy(formattedAddress.begin(), formattedAddress.end(),
                       address.begin());
             devices.push_back({name, address.data()});
+            LOG_F(INFO, "Found Bluetooth device: {} - {}", name,
+                  address.data());
         } while (BluetoothFindNextDevice(btFind, &deviceInfo) != 0);
         BluetoothFindDeviceClose(btFind);
     }
+    LOG_F(INFO, "enumerateBluetoothDevices completed with {} devices found",
+          devices.size());
     return devices;
 }
 
 #else  // Linux
 
 std::vector<DeviceInfo> enumerate_usb_devices() {
+    LOG_F(INFO, "enumerate_usb_devices called");
     std::vector<DeviceInfo> devices;
     libusb_context *ctx = nullptr;
     libusb_device **devList = nullptr;
@@ -198,6 +214,7 @@ std::vector<DeviceInfo> enumerate_usb_devices() {
         deviceInfo.description = address;
         deviceInfo.address = address;
         devices.push_back(deviceInfo);
+        LOG_F(INFO, "Found USB device: {}", address);
 
         // Free the configuration descriptor
         libusb_free_config_descriptor(cfg);
@@ -209,16 +226,19 @@ std::vector<DeviceInfo> enumerate_usb_devices() {
     // Clean up
     libusb_exit(ctx);
 
+    LOG_F(INFO, "enumerate_usb_devices completed with {} devices found",
+          devices.size());
     return devices;
 }
 
 std::vector<DeviceInfo> enumerate_serial_ports() {
+    LOG_F(INFO, "enumerate_serial_ports called");
     std::vector<DeviceInfo> devices;
     struct dirent *entry;
     DIR *dp = opendir("/dev");
 
     if (dp == nullptr) {
-        perror("opendir");
+        LOG_F(ERROR, "Failed to open /dev directory");
         return devices;
     }
 
@@ -227,14 +247,18 @@ std::vector<DeviceInfo> enumerate_serial_ports() {
         if (filename.find("ttyS") != std::string::npos ||
             filename.find("ttyUSB") != std::string::npos) {
             devices.push_back({filename, ""});
+            LOG_F(INFO, "Found serial port: {}", filename);
         }
     }
 
     closedir(dp);
+    LOG_F(INFO, "enumerate_serial_ports completed with {} devices found",
+          devices.size());
     return devices;
 }
 
 std::vector<DeviceInfo> enumerate_bluetooth_devices() {
+    LOG_F(INFO, "enumerate_bluetooth_devices called");
     std::vector<DeviceInfo> devices;
 #if __has_include(<bluetooth/bluetooth.h>)
     int devId = hci_get_route(nullptr);
@@ -290,8 +314,12 @@ std::vector<DeviceInfo> enumerate_bluetooth_devices() {
         }
         devices.push_back(
             DeviceInfo{std::string(name.data()), std::string(addr.data())});
+        LOG_F(INFO, "Found Bluetooth device: {} - {}", name.data(),
+              addr.data());
     }
 #endif
+    LOG_F(INFO, "enumerate_bluetooth_devices completed with {} devices found",
+          devices.size());
     return devices;
 }
 

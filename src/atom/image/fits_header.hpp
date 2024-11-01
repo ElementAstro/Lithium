@@ -1,9 +1,9 @@
-#pragma once
+#ifndef ATOM_IMAGE_FITS_HEADER_HPP
+#define ATOM_IMAGE_FITS_HEADER_HPP
 
 #include <array>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 class FITSHeader {
 public:
@@ -23,3 +23,5 @@ public:
 private:
     std::vector<KeywordRecord> records;
 };
+
+#endif

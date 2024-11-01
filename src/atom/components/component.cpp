@@ -104,6 +104,12 @@ auto Component::getCommandAliases(const std::string& name) const
     return m_CommandDispatcher_->getCommandAliases(name);
 }
 
+auto Component::getCommandArgAndReturnType(const std::string& name)
+    -> std::pair<std::vector<atom::meta::Arg>, std::string> {
+    LOG_SCOPE_FUNCTION(INFO);
+    return m_CommandDispatcher_->getCommandArgAndReturnType(name);
+}
+
 auto Component::getNeededComponents() -> std::vector<std::string> {
     LOG_SCOPE_FUNCTION(INFO);
     return {};
@@ -195,6 +201,11 @@ auto Component::runCommand(const std::string& name,
 void Component::doc(const std::string& description) {
     LOG_SCOPE_FUNCTION(INFO);
     m_doc_ = description;
+}
+
+auto Component::getDoc() const -> std::string {
+    LOG_SCOPE_FUNCTION(INFO);
+    return m_doc_;
 }
 
 void Component::defClassConversion(

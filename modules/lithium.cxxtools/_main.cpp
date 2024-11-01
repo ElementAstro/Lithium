@@ -15,7 +15,7 @@ Description: Main Entry
 #include "_component.hpp"
 
 #include "atom/type/json.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 using json = nlohmann::json;
 
 ATOM_C {

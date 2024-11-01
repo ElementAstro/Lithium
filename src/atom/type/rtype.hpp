@@ -10,17 +10,34 @@
 #include "ryaml.hpp"
 
 namespace atom::type {
+
+/**
+ * @struct Field
+ * @brief Represents a field in a reflectable type.
+ * @tparam T The type containing the field.
+ * @tparam MemberType The type of the field.
+ */
 template <typename T, typename MemberType>
 struct Field {
     using member_type = MemberType;
-    const char* name;
-    const char* description;
-    MemberType T::*member;
-    bool required;
-    MemberType default_value;
-    using Validator = std::function<bool(const MemberType&)>;
-    Validator validator;
+    const char* name;          ///< The name of the field.
+    const char* description;   ///< The description of the field.
+    MemberType T::*member;     ///< Pointer to the member field.
+    bool required;             ///< Indicates if the field is required.
+    MemberType default_value;  ///< The default value of the field.
+    using Validator =
+        std::function<bool(const MemberType&)>;  ///< Validator function type.
+    Validator validator;                         ///< Validator function.
 
+    /**
+     * @brief Constructs a Field.
+     * @param n The name of the field.
+     * @param desc The description of the field.
+     * @param m Pointer to the member field.
+     * @param r Indicates if the field is required (default is true).
+     * @param def The default value of the field (default is an empty value).
+     * @param v The validator function (default is nullptr).
+     */
     Field(const char* n, const char* desc, MemberType T::*m, bool r = true,
           MemberType def = {}, Validator v = nullptr)
         : name(n),
@@ -31,26 +48,55 @@ struct Field {
           validator(std::move(v)) {}
 };
 
+/**
+ * @struct ComplexField
+ * @brief Represents a complex field in a reflectable type.
+ * @tparam T The type containing the field.
+ * @tparam MemberType The type of the field.
+ * @tparam ReflectType The type used for reflection.
+ */
 template <typename T, typename MemberType, typename ReflectType>
 struct ComplexField {
     using member_type = MemberType;
-    const char* name;
-    const char* description;
-    MemberType T::*member;
-    ReflectType reflect_type;
+    const char* name;          ///< The name of the field.
+    const char* description;   ///< The description of the field.
+    MemberType T::*member;     ///< Pointer to the member field.
+    ReflectType reflect_type;  ///< The reflection type.
 
+    /**
+     * @brief Constructs a ComplexField.
+     * @param n The name of the field.
+     * @param desc The description of the field.
+     * @param m Pointer to the member field.
+     * @param reflect The reflection type.
+     */
     ComplexField(const char* n, const char* desc, MemberType T::*m,
                  ReflectType reflect)
         : name(n), description(desc), member(m), reflect_type(reflect) {}
 };
 
+/**
+ * @struct Reflectable
+ * @brief Represents a type that can be reflected upon.
+ * @tparam T The type to reflect.
+ * @tparam Fields The fields of the type.
+ */
 template <typename T, typename... Fields>
 struct Reflectable {
     using ReflectedType = T;
-    std::tuple<Fields...> fields;
+    std::tuple<Fields...> fields;  ///< The fields of the type.
 
+    /**
+     * @brief Constructs a Reflectable.
+     * @param flds The fields of the type.
+     */
     explicit Reflectable(Fields... flds) : fields(flds...) {}
 
+    /**
+     * @brief Creates an object from a JSON representation.
+     * @param j The JSON object.
+     * @return The created object.
+     */
     [[nodiscard]] auto from_json(const JsonObject& j) const -> T {
         T obj;
         std::apply(
@@ -82,7 +128,7 @@ struct Reflectable {
                                              item.as_number()));
                              }
                          } else if constexpr (std::is_class_v<MemberType>) {
-                             // 处理复杂对象反射
+                             // Handle complex object reflection
                              obj.*(field.member) = field.reflect_type.from_json(
                                  it->second.as_object());
                          } else {
@@ -113,6 +159,11 @@ struct Reflectable {
         return obj;
     }
 
+    /**
+     * @brief Converts an object to a JSON representation.
+     * @param obj The object to convert.
+     * @return The JSON representation.
+     */
     [[nodiscard]] auto to_json(const T& obj) const -> JsonObject {
         JsonObject j;
         std::apply(
@@ -141,7 +192,7 @@ struct Reflectable {
                          }
                          j[field.name] = JsonValue(arr);
                      } else if constexpr (std::is_class_v<MemberType>) {
-                         // 处理复杂对象反射
+                         // Handle complex object reflection
                          j[field.name] = JsonValue(
                              field.reflect_type.to_json(obj.*(field.member)));
                      } else {
@@ -155,6 +206,11 @@ struct Reflectable {
         return j;
     }
 
+    /**
+     * @brief Creates an object from a YAML representation.
+     * @param y The YAML object.
+     * @return The created object.
+     */
     [[nodiscard]] auto from_yaml(const YamlObject& y) const -> T {
         T obj;
         std::apply(
@@ -255,6 +311,11 @@ struct Reflectable {
         return obj;
     }
 
+    /**
+     * @brief Converts an object to a YAML representation.
+     * @param obj The object to convert.
+     * @return The YAML representation.
+     */
     [[nodiscard]] auto to_yaml(const T& obj) const -> YamlObject {
         YamlObject y;
         std::apply(
@@ -303,7 +364,19 @@ struct Reflectable {
     }
 };
 
-// 普通字段的 make_field
+/**
+ * @brief Creates a Field object.
+ * @tparam T The type containing the field.
+ * @tparam MemberType The type of the field.
+ * @param name The name of the field.
+ * @param description The description of the field.
+ * @param member Pointer to the member field.
+ * @param required Indicates if the field is required (default is true).
+ * @param default_value The default value of the field (default is an empty
+ * value).
+ * @param validator The validator function (default is nullptr).
+ * @return The created Field object.
+ */
 template <typename T, typename MemberType>
 auto make_field(const char* name, const char* description,
                 MemberType T::*member, bool required = true,
@@ -314,7 +387,17 @@ auto make_field(const char* name, const char* description,
                                 default_value, validator);
 }
 
-// 复杂字段（嵌套反射类型）的 make_field
+/**
+ * @brief Creates a ComplexField object.
+ * @tparam T The type containing the field.
+ * @tparam MemberType The type of the field.
+ * @tparam ReflectType The type used for reflection.
+ * @param name The name of the field.
+ * @param description The description of the field.
+ * @param member Pointer to the member field.
+ * @param reflect_type The reflection type.
+ * @return The created ComplexField object.
+ */
 template <typename T, typename MemberType, typename ReflectType>
 auto make_field(const char* name, const char* description,
                 MemberType T::*member, ReflectType reflect_type)
@@ -322,6 +405,7 @@ auto make_field(const char* name, const char* description,
     return ComplexField<T, MemberType, ReflectType>(name, description, member,
                                                     reflect_type);
 }
+
 }  // namespace atom::type
 
-#endif
+#endif  // ATOM_TYPE_RTYPE_HPP

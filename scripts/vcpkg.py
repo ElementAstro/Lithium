@@ -136,8 +136,8 @@ class VcpkgManager:
                         package_name, package.version)
         except Exception as e:
             logger.error("Error installing %s: %s", package_name, str(e))
-            raise InstallationError(f"Failed to install {
-                                    package_name}: {str(e)}") from e
+            raise InstallationError(
+                f"Failed to install {package_name}: {str(e)}") from e
 
     def _install_dependencies(self, dependencies):
         """
@@ -253,13 +253,13 @@ class VcpkgManager:
                 print(f"Checking for updates: {package}...")
                 new_info = self._fetch_package_info(package)
                 if new_info.version > installed[package]["version"]:
-                    print(f"Updating {package} from {
-                          installed[package]['version']} to {new_info.version}")
+                    print(
+                        f"Updating {package} from {installed[package]['version']} to {new_info.version}")
                     self.remove(package)
                     self.install(package)
                 else:
-                    print(f"{package} is already up to date (version {
-                          installed[package]['version']}).")
+                    print(
+                        f"{package} is already up to date (version {installed[package]['version']}).")
 
             print("All packages are up to date.")
             logger.info("All packages updated")
@@ -285,8 +285,8 @@ class VcpkgManager:
                     "description": f"Tools for working with {query}", "version": "2.1.0"},
             ]
             for result in results:
-                print(f"  {result['name']} (v{result['version']}): {
-                      result['description']}")
+                print(
+                    f"  {result['name']} (v{result['version']}): {result['description']}")
         except Exception as e:
             logger.error("Error searching for packages: %s", str(e))
             print(f"Error searching for packages: {str(e)}")
@@ -318,8 +318,8 @@ class VcpkgManager:
                     print("Status: Not installed")
                     print(f"Dependencies: {', '.join(package.dependencies)}")
                 except PackageNotFoundError:
-                    print(f"No information found for package '{
-                          package_name}'.")
+                    print(
+                        f"No information found for package '{package_name}'.")
         except Exception as e:
             logger.error("Error retrieving package info: %s", str(e))
             print(f"Error retrieving package info: {str(e)}")

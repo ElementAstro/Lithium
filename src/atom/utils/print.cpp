@@ -1,11 +1,10 @@
 #include "print.hpp"
+#include <random>
 
 namespace atom::utils {
-
 void printProgressBar(float progress, int barWidth) {
     int pos = static_cast<int>(barWidth * progress);
     std::cout << "[";
-#pragma unroll
     for (int i = 0; i < barWidth; ++i) {
         if (i < pos) {
             std::cout << "=";
@@ -28,7 +27,6 @@ void printTable(const std::vector<std::vector<std::string>>& data) {
     // 计算每列的最大宽度
     std::vector<size_t> colWidths(data[0].size(), 0);
     for (const auto& row : data) {
-#pragma unroll
         for (size_t i = 0; i < row.size(); ++i) {
             colWidths[i] = std::max(colWidths[i], row[i].length());
         }
@@ -36,7 +34,6 @@ void printTable(const std::vector<std::vector<std::string>>& data) {
 
     // 打印表格
     for (const auto& row : data) {
-#pragma unroll
         for (size_t i = 0; i < row.size(); ++i) {
             std::cout << "| " << std::setw(static_cast<int>(colWidths[i]))
                       << std::left << row[i] << " ";
@@ -45,7 +42,6 @@ void printTable(const std::vector<std::vector<std::string>>& data) {
 
         // 打印分隔线
         if (&row == data.data()) {
-#pragma unroll
             for (size_t i = 0; i < row.size(); ++i) {
                 std::cout << "+-" << std::string(colWidths[i], '-') << "-";
             }
@@ -127,32 +123,4 @@ void printBarChart(const std::map<std::string, int>& data, int maxWidth) {
         std::cout << "| " << value << std::endl;
     }
 }
-
-auto generateRandomString(size_t length) -> std::string {
-    const std::string characters =
-        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    std::random_device randomDevice;
-    std::mt19937 generator(randomDevice());
-    std::uniform_int_distribution<> distribution(
-        0, static_cast<int>(characters.size() - 1));
-
-    std::string result;
-    result.reserve(length);
-#pragma unroll
-    for (size_t i = 0; i < length; ++i) {
-        result += characters[distribution(generator)];
-    }
-    return result;
-}
-
-auto xorEncryptDecrypt(const std::string& input,
-                       const std::string& key) -> std::string {
-    std::string output = input;
-#pragma unroll
-    for (size_t i = 0; i < input.length(); ++i) {
-        output[i] = static_cast<char>(input[i] ^ key[i % key.length()]);
-    }
-    return output;
-}
-
 }  // namespace atom::utils

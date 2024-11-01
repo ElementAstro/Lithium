@@ -7,6 +7,9 @@
 #include "time.hpp"
 
 #include <chrono>
+#include <cmath>
+#include <ctime>
+#include <fstream>
 #include <mutex>
 
 #ifdef _WIN32  // Windows
@@ -14,6 +17,8 @@
 #include <winreg.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Iphlpapi.lib")
 #else  // Linux
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -36,15 +41,22 @@ namespace atom::web {
 class TimeManagerImpl {
 public:
     auto getSystemTime() -> std::time_t {
-        std::lock_guard lock(mutex_);
-        return std::chrono::system_clock::to_time_t(
+        LOG_F(INFO, "Entering getSystemTime");
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto systemTime = std::chrono::system_clock::to_time_t(
             std::chrono::system_clock::now());
+        LOG_F(INFO, "Exiting getSystemTime with value: {}", systemTime);
+        return systemTime;
     }
 
 #ifdef _WIN32
     void setSystemTime(int year, int month, int day, int hour, int minute,
                        int second) {
-        std::lock_guard lock(mutex_);
+        LOG_F(INFO,
+              "Entering setSystemTime with values: {}-{:02d}-{:02d} "
+              "{:02d}:{:02d}:{:02d}",
+              year, month, day, hour, minute, second);
+        std::lock_guard<std::mutex> lock(mutex_);
         SYSTEMTIME sysTime;
         sysTime.wYear = year;
         sysTime.wMonth = month;
@@ -52,6 +64,7 @@ public:
         sysTime.wHour = hour;
         sysTime.wMinute = minute;
         sysTime.wSecond = second;
+        sysTime.wMilliseconds = 0;
         if (SetSystemTime(&sysTime) == 0) {
             LOG_F(ERROR,
                   "Failed to set system time to {}-{:02d}-{:02d} "
@@ -63,10 +76,12 @@ public:
                    "{:02d}:{:02d}:{:02d}.",
                    year, month, day, hour, minute, second);
         }
+        LOG_F(INFO, "Exiting setSystemTime");
     }
 
     auto setSystemTimezone(const std::string &timezone) -> bool {
-        std::lock_guard lock(mutex_);
+        LOG_F(INFO, "Entering setSystemTimezone with timezone: {}", timezone);
+        std::lock_guard<std::mutex> lock(mutex_);
         DWORD tzId;
         if (!getTimeZoneInformationByName(timezone, &tzId)) {
             LOG_F(ERROR, "Error getting time zone id for {}: {}", timezone,
@@ -90,18 +105,27 @@ public:
                   GetLastError());
             return false;
         }
+        LOG_F(INFO, "Exiting setSystemTimezone with success");
         return true;
     }
 
     auto syncTimeFromRTC() -> bool {
-        std::lock_guard lock(mutex_);
+        LOG_F(INFO, "Entering syncTimeFromRTC");
+        std::lock_guard<std::mutex> lock(mutex_);
         SYSTEMTIME localTime;
         GetLocalTime(&localTime);
 
         TIME_ZONE_INFORMATION tzInfo;
         GetTimeZoneInformation(&tzInfo);
 
-        SYSTEMTIME epoch = {1970, 1, 4, 1, 0, 0, 0, 0};
+        SYSTEMTIME epoch = {0};
+        epoch.wYear = 1970;
+        epoch.wMonth = 1;
+        epoch.wDay = 1;
+        epoch.wHour = 0;
+        epoch.wMinute = 0;
+        epoch.wSecond = 0;
+        epoch.wMilliseconds = 0;
         FILETIME epochFt;
         SystemTimeToFileTime(&epoch, &epochFt);
         ULARGE_INTEGER epochUi;
@@ -120,7 +144,8 @@ public:
         time_t rtcTimestamp =
             0;  // Initialize rtcTimestamp to avoid uninitialized use
 
-        long msOffset = static_cast<int>(localTimestamp - rtcTimestamp) * 1000L;
+        long msOffset =
+            static_cast<long>(localTimestamp - rtcTimestamp) * 1000L;
         SYSTEMTIME newTime;
         GetLocalTime(&newTime);
         FILETIME newFt;
@@ -133,24 +158,28 @@ public:
         FILETIME fileTime;
         fileTime.dwLowDateTime = static_cast<DWORD>(newTimestamp);
         fileTime.dwHighDateTime = static_cast<DWORD>(newTimestamp >> 32);
-        if (!system::isRoot()) {
+        if (!atom::system::isRoot()) {
             LOG_F(ERROR,
                   "Permission denied. Need root privilege to set system time.");
             return false;
         }
         SetSystemTime(&localTime);
+        LOG_F(INFO, "Exiting syncTimeFromRTC with success");
         return true;
     }
 
 private:
     auto getTimeZoneInformationByName(const std::string &timezone,
                                       DWORD *tzId) -> bool {
+        LOG_F(INFO, "Entering getTimeZoneInformationByName with timezone: {}",
+              timezone);
         HKEY hkey;
         LPCTSTR regPath = TEXT(
             "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\\");
         LONG ret =
             RegOpenKeyEx(HKEY_LOCAL_MACHINE, regPath, 0, KEY_READ, &hkey);
         if (ret != ERROR_SUCCESS) {
+            LOG_F(ERROR, "Failed to open registry key: {}", ret);
             return false;
         }
 
@@ -178,6 +207,9 @@ private:
                                             &sizeTzId) == ERROR_SUCCESS) {
                             RegCloseKey(subHkey);
                             RegCloseKey(hkey);
+                            LOG_F(INFO,
+                                  "Exiting getTimeZoneInformationByName with "
+                                  "success");
                             return true;
                         }
                     }
@@ -187,26 +219,35 @@ private:
             sizeSubKey = MAX_PATH;
         }
         RegCloseKey(hkey);
+        LOG_F(ERROR, "Failed to find time zone information for: {}", timezone);
         return false;
     }
 #else
 public:
     void setSystemTime(int year, int month, int day, int hour, int minute,
                        int second) {
-        std::lock_guard lock(mutex_);
-        if (!system::isRoot()) {
+        LOG_F(INFO,
+              "Entering setSystemTime with values: {}-{:02d}-{:02d} "
+              "{:02d}:{:02d}:{:02d}",
+              year, month, day, hour, minute, second);
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!atom::system::isRoot()) {
             LOG_F(ERROR,
                   "Permission denied. Need root privilege to set system time.");
             return;
         }
 
-        struct tm newTime = {0};
+        constexpr int BASE_YEAR = 1900;
+        constexpr int BASE_MONTH = 1;
+        constexpr int BASE_SECOND = 0;
+        struct tm newTime;
+        std::memset(&newTime, 0, sizeof(newTime));
         newTime.tm_sec = second;
         newTime.tm_min = minute;
         newTime.tm_hour = hour;
         newTime.tm_mday = day;
         newTime.tm_mon = month - 1;
-        newTime.tm_year = year - 1900;
+        newTime.tm_year = year - BASE_YEAR;
         newTime.tm_isdst = -1;
 
         if (std::mktime(&newTime) == -1) {
@@ -229,11 +270,14 @@ public:
                   "{:02d}:{:02d}:{:02d}.",
                   year, month, day, hour, minute, second);
         }
+        LOG_F(INFO, "Exiting setSystemTime");
     }
 
     auto setSystemTimezone(const std::string &timezone) -> bool {
-        std::lock_guard lock(mutex_);
-        struct tm newTime = {0};
+        LOG_F(INFO, "Entering setSystemTimezone with timezone: {}", timezone);
+        std::lock_guard<std::mutex> lock(mutex_);
+        struct tm newTime;
+        std::memset(&newTime, 0, sizeof(newTime));
         if (strptime("20200101", "%Y%m%d", &newTime) == nullptr) {
             LOG_F(ERROR, "Failed to initialize struct tm.");
             return false;
@@ -241,25 +285,30 @@ public:
         tzset();
         if (setenv("TZ", timezone.c_str(), 1) != 0) {
             LOG_F(ERROR, "Error setting time zone to {}: {}", timezone,
-                  strerror(errno));
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
             return false;
         } else {
             tzset();
-            if (strftime(nullptr, 0, "%Z", &newTime) == 0) {
+            // strftime(nullptr, 0, "%Z", &newTime); // 不建议传入nullptr
+            char tzName[128];
+            if (strftime(tzName, sizeof(tzName), "%Z", &newTime) == 0) {
                 LOG_F(ERROR, "Error setting time zone to {}: {}", timezone,
-                      strerror(errno));
+                      strerror_r(errno, buffer_, sizeof(buffer_)));
                 return false;
             }
         }
+        LOG_F(INFO, "Exiting setSystemTimezone with success");
         return true;
     }
 
     auto syncTimeFromRTC() -> bool {
-        std::lock_guard lock(mutex_);
+        LOG_F(INFO, "Entering syncTimeFromRTC");
+        std::lock_guard<std::mutex> lock(mutex_);
         const char *rtcPath = "/sys/class/rtc/rtc0/time";
         struct stat rtcStat;
         if (stat(rtcPath, &rtcStat) != 0) {
-            LOG_F(ERROR, "Failed to stat RTC file: {}", strerror(errno));
+            LOG_F(ERROR, "Failed to stat RTC file: {}",
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
             return false;
         }
         if (!S_ISREG(rtcStat.st_mode)) {
@@ -268,35 +317,38 @@ public:
         }
         std::ifstream rtcFile(rtcPath);
         if (!rtcFile.is_open()) {
-            LOG_F(ERROR, "Failed to open RTC file: {}", strerror(errno));
+            LOG_F(ERROR, "Failed to open RTC file: {}",
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
             return false;
         }
         int year, month, day, hour, minute, second;
         rtcFile >> year >> month >> day >> hour >> minute >> second;
         rtcFile.close();
         struct tm rtcTm;
+        std::memset(&rtcTm, 0, sizeof(rtcTm));
         rtcTm.tm_year = year - 1900;
         rtcTm.tm_mon = month - 1;
         rtcTm.tm_mday = day;
         rtcTm.tm_hour = hour;
         rtcTm.tm_min = minute;
         rtcTm.tm_sec = second;
-        time_t rtcTimestamp = mktime(&rtcTm);
+        time_t rtcTimestamp = std::mktime(&rtcTm);
 
-        struct timeval tv;
-        gettimeofday(&tv, nullptr);
-        tv.tv_sec = rtcTimestamp;
-        tv.tv_usec = 0;
-        if (settimeofday(&tv, nullptr) != 0) {
-            LOG_F(ERROR, "Failed to adjust system time: {}", strerror(errno));
+        struct timeval currentTime;
+        gettimeofday(&currentTime, nullptr);
+        currentTime.tv_sec = rtcTimestamp;
+        currentTime.tv_usec = 0;
+        if (settimeofday(&currentTime, nullptr) != 0) {
+            LOG_F(ERROR, "Failed to adjust system time: {}",
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
             return false;
         }
+        LOG_F(INFO, "Exiting syncTimeFromRTC with success");
         return true;
     }
 #endif
-
-public:
     auto getNtpTime(const std::string &hostname) -> std::time_t {
+        LOG_F(INFO, "Entering getNtpTime with hostname: {}", hostname);
         constexpr int NTP_PACKET_SIZE = 48;
         std::array<uint8_t, NTP_PACKET_SIZE> packetBuffer = {0};
 
@@ -316,10 +368,21 @@ public:
 
         sockaddr_in serverAddr = {};
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(123);
-        inet_pton(AF_INET, hostname.c_str(), &serverAddr.sin_addr);
+        constexpr uint16_t NTP_PORT = 123;
+        serverAddr.sin_port = htons(NTP_PORT);
+        if (inet_pton(AF_INET, hostname.c_str(), &serverAddr.sin_addr) <= 0) {
+            LOG_F(ERROR, "Invalid NTP server address: {}", hostname);
+#ifdef _WIN32
+            closesocket(socketFd);
+            WSACleanup();
+#else
+            close(socketFd);
+#endif
+            return 0;
+        }
 
-        packetBuffer[0] = 0b11100011;
+        constexpr uint8_t NTP_VERSION = 3;
+        packetBuffer[0] = (3 << 3) | 3;  // LI=0, VN=3, Mode=3 (client)
         packetBuffer[1] = 0;
         packetBuffer[2] = 6;
         packetBuffer[3] = 0xEC;
@@ -332,7 +395,14 @@ public:
                    NTP_PACKET_SIZE, 0,
                    reinterpret_cast<sockaddr *>(&serverAddr),
                    sizeof(serverAddr)) < 0) {
-            LOG_F(ERROR, "Failed to send NTP request: {}", strerror(errno));
+            LOG_F(ERROR, "Failed to send NTP request: {}",
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
+#ifdef _WIN32
+            closesocket(socketFd);
+            WSACleanup();
+#else
+            close(socketFd);
+#endif
             return 0;
         }
 
@@ -340,8 +410,17 @@ public:
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(socketFd, &readfds);
-        if (select(socketFd + 1, &readfds, nullptr, nullptr, &timeout) <= 0) {
-            LOG_F(ERROR, "Failed to receive NTP response: {}", strerror(errno));
+        int selectResult =
+            select(socketFd + 1, &readfds, nullptr, nullptr, &timeout);
+        if (selectResult <= 0) {
+            LOG_F(ERROR, "Failed to receive NTP response: {}",
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
+#ifdef _WIN32
+            closesocket(socketFd);
+            WSACleanup();
+#else
+            close(socketFd);
+#endif
             return 0;
         }
 
@@ -352,7 +431,14 @@ public:
                      NTP_PACKET_SIZE, 0,
                      reinterpret_cast<sockaddr *>(&serverResponseAddr),
                      &addrLen) < 0) {
-            LOG_F(ERROR, "Failed to receive NTP response: {}", strerror(errno));
+            LOG_F(ERROR, "Failed to receive NTP response: {}",
+                  strerror_r(errno, buffer_, sizeof(buffer_)));
+#ifdef _WIN32
+            closesocket(socketFd);
+            WSACleanup();
+#else
+            close(socketFd);
+#endif
             return 0;
         }
 
@@ -364,44 +450,76 @@ public:
 #endif
 
         uint64_t timestamp = 0;
-        for (int i = 40; i <= 43; i++) {
-            timestamp = (timestamp << 8) | packetBuffer[i];
+        constexpr int NTP_TIMESTAMP_START = 40;
+        constexpr int NTP_TIMESTAMP_END = 43;
+        constexpr size_t TIMESTAMP_BITS = 8;
+        for (int i = NTP_TIMESTAMP_START; i <= NTP_TIMESTAMP_END; i++) {
+            timestamp = (timestamp << TIMESTAMP_BITS) | packetBuffer[i];
         }
 
-        timestamp -= 2208988800UL;
+        constexpr uint32_t NTP_DELTA = 2208988800UL;
+        timestamp -= NTP_DELTA;
 
         DLOG_F(INFO, "From NTP server: {} {}", hostname, timestamp);
 
+        LOG_F(INFO, "Exiting getNtpTime with value: {}", timestamp);
         return static_cast<std::time_t>(timestamp);
     }
 
 private:
     std::mutex mutex_;
+    char buffer_[256] = {0};
 };
+
+}  // namespace atom::web
 
 // TimeManager methods
 
-TimeManager::TimeManager() : impl_(std::make_unique<TimeManagerImpl>()) {}
+namespace atom::web {
 
-TimeManager::~TimeManager() = default;
+TimeManager::TimeManager() : impl_(std::make_unique<TimeManagerImpl>()) {
+    LOG_F(INFO, "TimeManager constructor called");
+}
+
+TimeManager::~TimeManager() { LOG_F(INFO, "TimeManager destructor called"); }
 
 auto TimeManager::getSystemTime() -> std::time_t {
-    return impl_->getSystemTime();
+    LOG_F(INFO, "TimeManager::getSystemTime called");
+    auto systemTime = impl_->getSystemTime();
+    LOG_F(INFO, "TimeManager::getSystemTime returning: {}", systemTime);
+    return systemTime;
 }
 
 void TimeManager::setSystemTime(int year, int month, int day, int hour,
                                 int minute, int second) {
+    LOG_F(INFO,
+          "TimeManager::setSystemTime called with values: {}-{:02d}-{:02d} "
+          "{:02d}:{:02d}:{:02d}",
+          year, month, day, hour, minute, second);
     impl_->setSystemTime(year, month, day, hour, minute, second);
+    LOG_F(INFO, "TimeManager::setSystemTime completed");
 }
 
 auto TimeManager::setSystemTimezone(const std::string &timezone) -> bool {
-    return impl_->setSystemTimezone(timezone);
+    LOG_F(INFO, "TimeManager::setSystemTimezone called with timezone: {}",
+          timezone);
+    auto result = impl_->setSystemTimezone(timezone);
+    LOG_F(INFO, "TimeManager::setSystemTimezone returning: {}", result);
+    return result;
 }
 
-auto TimeManager::syncTimeFromRTC() -> bool { return impl_->syncTimeFromRTC(); }
+auto TimeManager::syncTimeFromRTC() -> bool {
+    LOG_F(INFO, "TimeManager::syncTimeFromRTC called");
+    auto result = impl_->syncTimeFromRTC();
+    LOG_F(INFO, "TimeManager::syncTimeFromRTC returning: {}", result);
+    return result;
+}
 
 auto TimeManager::getNtpTime(const std::string &hostname) -> std::time_t {
-    return impl_->getNtpTime(hostname);
+    LOG_F(INFO, "TimeManager::getNtpTime called with hostname: {}", hostname);
+    auto ntpTime = impl_->getNtpTime(hostname);
+    LOG_F(INFO, "TimeManager::getNtpTime returning: {}", ntpTime);
+    return ntpTime;
 }
 
 }  // namespace atom::web

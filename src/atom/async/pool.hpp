@@ -27,7 +27,7 @@ Description: A very simple thread pool for preload
 #include <thread>
 #include <type_traits>
 #include <utility>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 #ifdef __has_include
 #if __has_include(<version>)
 #include <version>

@@ -18,9 +18,12 @@ Description: IO
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
-#include "macro.hpp"
+
+#include "atom/macro.hpp"
+
 namespace fs = std::filesystem;
 
 namespace atom::io {
@@ -52,6 +55,8 @@ struct CreateDirectoriesOptions {
     std::function<void(const std::string &)> onDelete =
         [](const std::string &) {};
 } ATOM_ALIGNAS(128);
+
+enum class PathType { NOT_EXISTS, REGULAR_FILE, DIRECTORY, SYMLINK, OTHER };
 
 /**
  * @brief Creates a directory with the specified path.
@@ -561,6 +566,16 @@ void quickMerge(const std::string &outputFilePath,
  */
 [[nodiscard]]
 auto getExecutableNameFromPath(const std::string &path) -> std::string;
+
+/**
+ * @brief Get the file type
+ *
+ * @param path The path of the file.
+ * @return The type of the file.
+ */
+auto checkPathType(const fs::path &path) -> PathType;
+
+auto countLinesInFile(const std::string &filePath) -> std::optional<int>;
 }  // namespace atom::io
 
 #endif

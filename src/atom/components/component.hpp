@@ -15,6 +15,7 @@ Description: Basic Component Definition
 #ifndef ATOM_COMPONENT_HPP
 #define ATOM_COMPONENT_HPP
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -27,6 +28,7 @@ Description: Basic Component Definition
 #include "atom/function/concept.hpp"
 #include "atom/function/constructor.hpp"
 #include "atom/function/conversion.hpp"
+#include "atom/function/func_traits.hpp"
 #include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/log/loguru.hpp"
@@ -214,6 +216,8 @@ public:
 
     void doc(const std::string& description);
 
+    auto getDoc() const -> std::string;
+
     // -------------------------------------------------------------------
     // No Class
     // -------------------------------------------------------------------
@@ -384,6 +388,9 @@ public:
 
     auto getCommandDescription(const std::string& name) const -> std::string;
 
+    auto getCommandArgAndReturnType(const std::string& name)
+        -> std::pair<std::vector<atom::meta::Arg>, std::string>;
+
 #if ENABLE_FASTHASH
     emhash::HashSet<std::string> getCommandAliases(
         const std::string& name) const;
@@ -487,9 +494,12 @@ void Component::defBaseClass() {
 template <typename Callable>
 void Component::def(const std::string& name, Callable&& func,
                     const std::string& group, const std::string& description) {
-    using FuncType = std::function<std::result_of_t<Callable()>>;
-    m_CommandDispatcher_->def(name, group, description,
-                              FuncType(std::forward<Callable>(func)));
+    using Traits = atom::meta::FunctionTraits<decltype(func)>;
+
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<typename Traits::return_type(
+            typename Traits::argument_t)>(std::forward<Callable>(func)));
 }
 
 template <typename Ret>
@@ -508,17 +518,28 @@ void Component::def(const std::string& name, Ret (*func)(Args...),
                               }));
 }
 
-template <typename Class, typename Ret, typename... Args>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...),
-                    const std::string& group, const std::string& description) {
-    auto boundFunc = atom::meta::bindMemberFunction(func);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Class&, Args...)>(
-            [boundFunc](Class& instance, Args... args) {
-                return boundFunc(instance, std::forward<Args>(args)...);
-            }));
-}
+#define DEF_MEMBER_FUNC_IMPL(cv_qualifier)                                   \
+    template <typename Class, typename Ret, typename... Args>                \
+    void Component::def(                                                     \
+        const std::string& name, Ret (Class::*func)(Args...) cv_qualifier,   \
+        const std::string& group, const std::string& description) {          \
+        auto boundFunc = atom::meta::bindMemberFunction(func);               \
+        m_CommandDispatcher_->def(                                           \
+            name, group, description,                                        \
+            std::function<Ret(std::reference_wrapper<Class>, Args...)>(      \
+                [boundFunc](std::reference_wrapper<Class> instance,          \
+                            Args... args) -> Ret {                           \
+                    return boundFunc(instance, std::forward<Args>(args)...); \
+                }));                                                         \
+    }
+
+DEF_MEMBER_FUNC_IMPL()
+DEF_MEMBER_FUNC_IMPL(const)
+DEF_MEMBER_FUNC_IMPL(volatile)
+DEF_MEMBER_FUNC_IMPL(const volatile)
+DEF_MEMBER_FUNC_IMPL(noexcept)
+DEF_MEMBER_FUNC_IMPL(const noexcept)
+DEF_MEMBER_FUNC_IMPL(const volatile noexcept)
 
 template <typename Ret, typename Class, typename InstanceType>
     requires Pointer<InstanceType> || SmartPointer<InstanceType> ||
@@ -552,12 +573,21 @@ template <typename... Args, typename Ret, typename Class, typename InstanceType>
 void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
                     const InstanceType& instance, const std::string& group,
                     const std::string& description) {
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Args...)>([instance, func](Args... args) {
-            return std::invoke(func, instance.get(),
-                               std::forward<Args>(args)...);
-        }));
+    if constexpr (SmartPointer<InstanceType> ||
+                  std::is_same_v<InstanceType, PointerSentinel<Class>>) {
+        m_CommandDispatcher_->def(
+            name, group, description,
+            std::function<Ret(Args...)>([instance, func](Args... args) {
+                return std::invoke(func, instance.get(),
+                                   std::forward<Args>(args)...);
+            }));
+    } else {
+        m_CommandDispatcher_->def(
+            name, group, description,
+            std::function<Ret(Args...)>([instance, func](Args... args) {
+                return std::invoke(func, instance, std::forward<Args>(args)...);
+            }));
+    }
 }
 
 template <typename... Args, typename Ret, typename Class, typename InstanceType>
@@ -588,18 +618,6 @@ void Component::def(const std::string& name,
             return std::invoke(func, instance.get(),
                                std::forward<Args>(args)...);
         }));
-}
-
-template <typename Class, typename Ret, typename... Args>
-void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
-                    const std::string& group, const std::string& description) {
-    auto boundFunc = atom::meta::bindMemberFunction(func);
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<Ret(Class&, Args...)>(
-            [boundFunc](Class& instance, Args... args) -> Ret {
-                return boundFunc(instance, std::forward<Args>(args)...);
-            }));
 }
 
 template <typename MemberType, typename Class, typename InstanceType>

@@ -31,7 +31,7 @@
 #include <unordered_map>
 #include "atom/error/exception.hpp"
 #include "atom/type/json.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 using json = nlohmann::json;
 

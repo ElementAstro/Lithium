@@ -1,14 +1,11 @@
 #include "imagepath.hpp"
 
-#include <array>
-#include <charconv>
 #include <filesystem>
 #include <regex>
 #include <unordered_map>
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
-#include "atom/utils/string.hpp"
 
 namespace fs = std::filesystem;
 
@@ -42,34 +39,26 @@ auto ImageInfo::fromJson(const json& jsonObj) -> ImageInfo {
 
 class ImagePatternParser::Impl {
 public:
-    explicit Impl(const std::string& pattern, char delimiter)
-        : delimiter_(delimiter) {
-        parsePattern(pattern);
-    }
+    explicit Impl(const std::string& pattern) { parsePattern(pattern); }
 
     [[nodiscard]] auto parseFilename(const std::string& filename) const
         -> std::optional<ImageInfo> {
-        ImageInfo info;
-        info.path = fs::absolute(fs::path(filename)).string();
-
-        // Remove file extension
-        auto name = filename.substr(0, filename.find_last_of('.'));
-
-        // Split into parts
-        auto parts = atom::utils::splitString(name, delimiter_);
-        if (parts.size() < patterns_.size()) {
-            LOG_F(ERROR, "Filename does not match the pattern: {}", name);
+        std::smatch matchResult;
+        if (!std::regex_match(filename, matchResult, fullRegexPattern_)) {
+            LOG_F(ERROR, "Filename does not match the pattern: {}", filename);
             return std::nullopt;
         }
 
-// Assign parts dynamically based on the pattern
-#pragma unroll
-        for (size_t index = 0; index < patterns_.size(); ++index) {
-            const auto& key = patterns_[index];
-            const auto& value = parts[index];
+        ImageInfo info;
+        info.path = fs::absolute(fs::path(filename)).string();
+
+        for (size_t i = 0; i < fieldKeys_.size(); ++i) {
+            const auto& key = fieldKeys_[i];
+            const std::string VALUE = matchResult[i + 1];
+
             if (auto parserIter = parsers_.find(key);
                 parserIter != parsers_.end()) {
-                parserIter->second(info, value);
+                parserIter->second(info, VALUE);
             } else {
                 LOG_F(ERROR, "No parser for key: {}", key);
             }
@@ -87,104 +76,129 @@ public:
         optionalFields_[key] = defaultValue;
     }
 
+    void addFieldPattern(const std::string& key,
+                         const std::string& regexPattern) {
+        fieldPatterns_[key] = regexPattern;
+    }
+
     [[nodiscard]] auto getPatterns() const -> const std::vector<std::string>& {
         return patterns_;
     }
 
-    [[nodiscard]] auto getDelimiter() const -> char { return delimiter_; }
-
 private:
+    std::vector<std::string> fieldKeys_;
     std::vector<std::string> patterns_;
     std::unordered_map<std::string, FieldParser> parsers_;
     std::unordered_map<std::string, std::string> optionalFields_;
-    char delimiter_;
+    std::unordered_map<std::string, std::string> fieldPatterns_;
+    std::regex fullRegexPattern_;
 
     void parsePattern(const std::string& pattern) {
-        std::string temp;
-        bool inVar = false;
-#pragma unroll
-        for (char character : pattern) {
-            if (character == '$') {
-                if (inVar) {
-                    patterns_.push_back(temp);
-                    temp.clear();
+        static const std::regex TOKEN_REGEX(R"(\$(\w+))");
+        std::smatch match;
+        std::string regexPattern;
+        std::string::const_iterator searchStart(pattern.cbegin());
+
+        while (
+            std::regex_search(searchStart, pattern.cend(), match, TOKEN_REGEX)) {
+            regexPattern += std::regex_replace(
+                match.prefix().str(),
+                std::regex(R"([\.\+\*\?\^\$\(\)\[\]\{\}\\\|])"), "\\$&");
+
+            std::string key = match[1];
+            fieldKeys_.push_back(key);
+
+            std::string fieldPattern = R"(.*)";  // 默认匹配任意内容
+
+            if (auto it = fieldPatterns_.find(key);
+                it != fieldPatterns_.end()) {
+                fieldPattern = it->second;
+            } else {
+                // 默认模式，可根据需要调整
+                if (key == "DATETIME") {
+                    fieldPattern = R"(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})";
+                } else if (key == "EXPOSURETIME") {
+                    fieldPattern = R"(\d+(\.\d+)?)";
+                } else {
+                    fieldPattern = R"(\w+)";
                 }
-                inVar = !inVar;
-            } else if (inVar) {
-                temp += character;
             }
+
+            regexPattern += "(" + fieldPattern + ")";
+            searchStart = match.suffix().first;
         }
+        regexPattern += std::regex_replace(
+            std::string(searchStart, pattern.cend()),
+            std::regex(R"([\.\+\*\?\^\$\(\)\[\]\{\}\\\|])"), "\\$&");
+
+        patterns_.push_back(regexPattern);
+
+        fullRegexPattern_ = std::regex(regexPattern);
 
         initializeParsers();
     }
 
     void initializeParsers() {
         parsers_["DATETIME"] = [](ImageInfo& info, const std::string& value) {
-            info.dateTime = validateDateTime(value)
-                                ? std::optional<std::string>(value)
-                                : std::nullopt;
+            info.dateTime = value;
         };
         parsers_["IMAGETYPE"] = [](ImageInfo& info, const std::string& value) {
-            info.imageType = !value.empty() ? std::optional<std::string>(value)
-                                            : std::nullopt;
+            info.imageType = value;
         };
         parsers_["FILTER"] = [](ImageInfo& info, const std::string& value) {
-            info.filter = !value.empty() ? std::optional<std::string>(value)
-                                         : std::nullopt;
+            info.filter = value;
         };
         parsers_["SENSORTEMP"] = [](ImageInfo& info, const std::string& value) {
-            info.sensorTemp = formatTemperature(value);
+            info.sensorTemp = value;
         };
         parsers_["EXPOSURETIME"] = [](ImageInfo& info,
                                       const std::string& value) {
-            if (auto pos = value.find('s'); pos != std::string::npos) {
-                info.exposureTime = value.substr(0, pos);
-            }
+            info.exposureTime = value;
         };
         parsers_["FRAMENR"] = [](ImageInfo& info, const std::string& value) {
-            info.frameNr = !value.empty() ? std::optional<std::string>(value)
-                                          : std::nullopt;
+            info.frameNr = value;
         };
 
-// Set default values for optional fields
-#pragma unroll
-        for (const auto& [key, value] : optionalFields_) {
-            if (parsers_.find(key) == parsers_.end()) {
-                parsers_[key] = [value](ImageInfo&, const std::string&) {
-                    // No-op: Assign default value if key is not present
-                };
-            }
+        // 设置可选字段的默认值
+        for (const auto& [key, defaultValue] : optionalFields_) {
+            parsers_[key] = [defaultValue, key](ImageInfo& info,
+                                                const std::string& value) {
+                if (value.empty()) {
+                    // 字段缺失，设置为默认值
+                    if (key == "DATETIME")
+                        info.dateTime = defaultValue;
+                    else if (key == "IMAGETYPE")
+                        info.imageType = defaultValue;
+                    else if (key == "FILTER")
+                        info.filter = defaultValue;
+                    else if (key == "SENSORTEMP")
+                        info.sensorTemp = defaultValue;
+                    else if (key == "EXPOSURETIME")
+                        info.exposureTime = defaultValue;
+                    else if (key == "FRAMENR")
+                        info.frameNr = defaultValue;
+                } else {
+                    // 字段存在，使用实际值
+                    if (key == "DATETIME")
+                        info.dateTime = value;
+                    else if (key == "IMAGETYPE")
+                        info.imageType = value;
+                    else if (key == "FILTER")
+                        info.filter = value;
+                    else if (key == "SENSORTEMP")
+                        info.sensorTemp = value;
+                    else if (key == "EXPOSURETIME")
+                        info.exposureTime = value;
+                    else if (key == "FRAMENR")
+                        info.frameNr = value;
+                }
+            };
         }
-    }
-
-    static auto validateDateTime(const std::string& dateTime) -> bool {
-        static const std::regex kDateTimePattern(
-            R"(^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$)");
-        return std::regex_match(dateTime, kDateTimePattern);
-    }
-
-    static auto formatTemperature(const std::string& temp) -> std::string {
-        // Assume temperature is in the format -10.0, format to 1 decimal place
-        float temperature;
-        auto [ptr, ec] = std::from_chars(temp.data(), temp.data() + temp.size(),
-                                         temperature);
-        if (ec == std::errc()) {
-            std::array<char, 16> buffer;
-            auto [ptr2, ec2] =
-                std::to_chars(buffer.data(), buffer.data() + buffer.size(),
-                              temperature, std::chars_format::fixed, 1);
-            if (ec2 == std::errc()) {
-                return {buffer.data(),
-                        static_cast<size_t>(ptr2 - buffer.data())};
-            }
-        }
-        return temp;  // Return as is if parsing fails
     }
 };
 
-ImagePatternParser::ImagePatternParser(const std::string& pattern,
-                                       char delimiter)
-    : pImpl(std::make_unique<Impl>(pattern, delimiter)) {}
+ImagePatternParser::ImagePatternParser(const std::string& pattern)
+    : pImpl(std::make_unique<Impl>(pattern)) {}
 
 ImagePatternParser::~ImagePatternParser() = default;
 
@@ -215,12 +229,13 @@ void ImagePatternParser::setOptionalField(const std::string& key,
     pImpl->setOptionalField(key, defaultValue);
 }
 
-auto ImagePatternParser::getPatterns() const -> std::vector<std::string> {
-    return pImpl->getPatterns();
+void ImagePatternParser::addFieldPattern(const std::string& key,
+                                         const std::string& regexPattern) {
+    pImpl->addFieldPattern(key, regexPattern);
 }
 
-auto ImagePatternParser::getDelimiter() const -> char {
-    return pImpl->getDelimiter();
+auto ImagePatternParser::getPatterns() const -> std::vector<std::string> {
+    return pImpl->getPatterns();
 }
 
 }  // namespace lithium

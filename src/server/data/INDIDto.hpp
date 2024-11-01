@@ -15,9 +15,8 @@ Description: Data Transform Object for INDI Controller
 #ifndef INDIDTO_HPP
 #define INDIDTO_HPP
 
-#include "Environment.hpp"
-#include "RequestDto.hpp"
-#include "StatusDto.hpp"
+#include "data/RequestDto.hpp"
+#include "data/StatusDto.hpp"
 #include "oatpp/Types.hpp"
 #include "oatpp/macro/codegen.hpp"
 
@@ -178,6 +177,97 @@ class ReturnServerINDIScanMultiInstancesDto : public StatusDto {
         info->required = true;
     }
     DTO_FIELD(List<Object<MultiInstancesDto>>, instance);
+};
+
+class INDIExecutableDto : public oatpp::DTO {
+    DTO_INIT(INDIExecutableDto, oatpp::DTO)
+
+    DTO_FIELD_INFO(executable) {
+        info->description = "The name of the executable file";
+    }
+    DTO_FIELD(String, executable);
+
+    DTO_FIELD_INFO(version) {
+        info->description = "The version of the INDI server";
+    }
+    DTO_FIELD(String, version);
+
+    DTO_FIELD_INFO(path) { info->description = "The path of the INDI server"; }
+    DTO_FIELD(String, path);
+
+    DTO_FIELD_INFO(permissions) {
+        info->description = "The permissions of the INDI server";
+    }
+    DTO_FIELD(List<String>, permissions);
+};
+
+class ReturnINDIExecutableDto : public StatusDto {
+    DTO_INIT(ReturnINDIExecutableDto, StatusDto)
+
+    DTO_FIELD_INFO(instances) {
+        info->description = "The INDI server instances";
+    }
+    DTO_FIELD(List<Object<INDIExecutableDto>>, instances);
+};
+
+class RequestINDIStartDto : public RequestDto {
+    DTO_INIT(RequestINDIStartDto, RequestDto)
+
+    DTO_FIELD_INFO(executable) {
+        info->description = "The executable path of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, executable);
+
+    DTO_FIELD_INFO(port) {
+        info->description = "The port of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, port);
+
+    DTO_FIELD_INFO(logLevel) {
+        info->description = "The log level of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(String, logLevel);
+
+    DTO_FIELD_INFO(tmpPath) {
+        info->description = "The temporary path of the INDI server log";
+        info->required = true;
+    }
+    DTO_FIELD(String, tmpPath);
+
+    DTO_FIELD_INFO(enableLog) {
+        info->description = "Whether to enable the log of the INDI server";
+        info->required = true;
+    }
+    DTO_FIELD(Boolean, enableLog);
+};
+
+class RequestINDIDriverListDto: public RequestDto {
+    DTO_INIT(RequestINDIDriverListDto, RequestDto)
+
+    DTO_FIELD_INFO(type) {
+        info->description = "The type of the entity (driver/device)";
+        info->required = true;
+    }
+    DTO_FIELD(Vector<String>, type);
+
+    DTO_FIELD_INFO(path) {
+        info->description = "The path of the INDI driver declaration files";
+        info->required = true;
+    }
+    DTO_FIELD(String, path);
+};
+
+class ReturnINDIDriverListInvalidTypeDto: public StatusDto {
+    DTO_INIT(ReturnINDIDriverListInvalidTypeDto, StatusDto)
+
+    DTO_FIELD_INFO(invalidType) {
+        info->description = "The invalid type of the entity (driver/device)";
+        info->required = true;
+    }
+    DTO_FIELD(Vector<String>, invalidType);
 };
 
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section

@@ -15,7 +15,7 @@
 #include "atom/function/concept.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/noncopyable.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

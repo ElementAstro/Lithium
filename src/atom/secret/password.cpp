@@ -2,7 +2,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/rand.h>
-#include <iostream>
+#include <vector>
 
 #if defined(_WIN32)
 // clang-format off
@@ -16,57 +16,28 @@
 #include <libsecret/secret.h>
 #endif
 
-std::string AESCipher::encrypt(const std::string& plaintext,
-                               const unsigned char* key) {
-    unsigned char iv[AES_BLOCK_SIZE];
-    RAND_bytes(iv, AES_BLOCK_SIZE);
+#include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/utils/aes.hpp"
 
-    std::string ciphertext(plaintext.size() + AES_BLOCK_SIZE, '\0');
-
-    AES_KEY aesKey;
-    AES_set_encrypt_key(key, 128, &aesKey);
-
-    int ciphertext_len = 0;
-    AES_cfb128_encrypt(
-        reinterpret_cast<const unsigned char*>(plaintext.c_str()),
-        reinterpret_cast<unsigned char*>(&ciphertext[AES_BLOCK_SIZE]),
-        plaintext.size(), &aesKey, iv, &ciphertext_len, AES_ENCRYPT);
-
-    std::copy(iv, iv + AES_BLOCK_SIZE, ciphertext.begin());
-
-    return ciphertext;
-}
-
-std::string AESCipher::decrypt(const std::string& ciphertext,
-                               const unsigned char* key) {
-    if (ciphertext.size() <= AES_BLOCK_SIZE) {
-        return "";
+namespace atom::secret {
+PasswordManager::PasswordManager() {
+    if (RAND_bytes(key, AES_BLOCK_SIZE) != 1) {
+        LOG_F(ERROR, "Failed to generate random key for AES encryption.");
+        THROW_RUNTIME_ERROR(
+            "Failed to generate random key for AES encryption.");
     }
-
-    unsigned char iv[AES_BLOCK_SIZE];
-    std::copy(ciphertext.begin(), ciphertext.begin() + AES_BLOCK_SIZE, iv);
-
-    std::string plaintext(ciphertext.size() - AES_BLOCK_SIZE, '\0');
-
-    AES_KEY aesKey;
-    AES_set_decrypt_key(key, 128, &aesKey);
-
-    int plaintext_len = 0;
-    AES_cfb128_encrypt(reinterpret_cast<const unsigned char*>(
-                           ciphertext.c_str() + AES_BLOCK_SIZE),
-                       reinterpret_cast<unsigned char*>(&plaintext[0]),
-                       ciphertext.size() - AES_BLOCK_SIZE, &aesKey, iv,
-                       &plaintext_len, AES_DECRYPT);
-
-    plaintext.resize(plaintext_len);
-    return plaintext;
+    LOG_F(INFO, "PasswordManager initialized with a random AES key.");
 }
-
-PasswordManager::PasswordManager() { RAND_bytes(key, AES_BLOCK_SIZE); }
 
 void PasswordManager::storePassword(const std::string& platformKey,
                                     const std::string& password) {
-    std::string encryptedPassword = AESCipher::encrypt(password, key);
+    LOG_F(INFO, "Storing password for platform key: {}", platformKey);
+    std::vector<unsigned char> iv;
+    std::vector<unsigned char> tag;
+    std::string encryptedPassword =
+        utils::encryptAES(password, platformKey, iv, tag);
+    LOG_F(INFO, "Password encrypted successfully.");
 
 #if defined(_WIN32)
     storeToWindowsCredentialManager(platformKey, encryptedPassword);
@@ -78,6 +49,7 @@ void PasswordManager::storePassword(const std::string& platformKey,
 }
 
 std::string PasswordManager::retrievePassword(const std::string& platformKey) {
+    LOG_F(INFO, "Retrieving password for platform key: {}", platformKey);
     std::string encryptedPassword;
 
 #if defined(_WIN32)
@@ -89,10 +61,23 @@ std::string PasswordManager::retrievePassword(const std::string& platformKey) {
         retrieveFromLinuxKeyring("PasswordManager", platformKey);
 #endif
 
-    return AESCipher::decrypt(encryptedPassword, key);
+    if (encryptedPassword.empty()) {
+        LOG_F(ERROR,
+              "Failed to retrieve encrypted password for platform key: {}",
+              platformKey);
+        return "";
+    }
+
+    std::vector<unsigned char> iv;
+    std::vector<unsigned char> tag;
+    std::string decryptedPassword =
+        utils::decryptAES(encryptedPassword, platformKey, iv, tag);
+    LOG_F(INFO, "Password decrypted successfully.");
+    return decryptedPassword;
 }
 
 void PasswordManager::deletePassword(const std::string& platformKey) {
+    LOG_F(INFO, "Deleting password for platform key: {}", platformKey);
 #if defined(_WIN32)
     deleteFromWindowsCredentialManager(platformKey);
 #elif defined(__APPLE__)
@@ -115,10 +100,15 @@ void PasswordManager::storeToWindowsCredentialManager(
     cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
     if (CredWriteW(&cred, 0)) {
-        std::cout
-            << "Password stored successfully in Windows Credential Manager.\n";
+        LOG_F(INFO,
+              "Password stored successfully in Windows Credential Manager for "
+              "target: {}",
+              target);
     } else {
-        std::cerr << "Failed to store password: " << GetLastError() << "\n";
+        LOG_F(ERROR,
+              "Failed to store password in Windows Credential Manager for "
+              "target: {}. Error: {}",
+              target, GetLastError());
     }
 }
 
@@ -131,9 +121,16 @@ std::string PasswordManager::retrieveFromWindowsCredentialManager(
             reinterpret_cast<char*>(cred->CredentialBlob),
             cred->CredentialBlobSize);
         CredFree(cred);
+        LOG_F(INFO,
+              "Password retrieved successfully from Windows Credential Manager "
+              "for target: {}",
+              target);
         return encryptedPassword;
     } else {
-        std::cerr << "Failed to retrieve password: " << GetLastError() << "\n";
+        LOG_F(ERROR,
+              "Failed to retrieve password from Windows Credential Manager for "
+              "target: {}. Error: {}",
+              target, GetLastError());
         return "";
     }
 }
@@ -142,10 +139,15 @@ void PasswordManager::deleteFromWindowsCredentialManager(
     const std::string& target) {
     std::wstring wideTarget(target.begin(), target.end());
     if (CredDeleteW(wideTarget.c_str(), CRED_TYPE_GENERIC, 0)) {
-        std::cout << "Password deleted successfully from Windows Credential "
-                     "Manager.\n";
+        LOG_F(INFO,
+              "Password deleted successfully from Windows Credential Manager "
+              "for target: {}",
+              target);
     } else {
-        std::cerr << "Failed to delete password: " << GetLastError() << "\n";
+        LOG_F(ERROR,
+              "Failed to delete password from Windows Credential Manager for "
+              "target: {}. Error: {}",
+              target, GetLastError());
     }
 }
 
@@ -159,9 +161,15 @@ void PasswordManager::storeToMacKeychain(const std::string& service,
         nullptr);
 
     if (status == errSecSuccess) {
-        std::cout << "Password stored successfully in macOS Keychain.\n";
+        LOG_F(INFO,
+              "Password stored successfully in macOS Keychain for service: {}, "
+              "account: {}",
+              service, account);
     } else {
-        std::cerr << "Failed to store password: " << status << "\n";
+        LOG_F(ERROR,
+              "Failed to store password in macOS Keychain for service: {}, "
+              "account: {}. Error: {}",
+              service, account, status);
     }
 }
 
@@ -177,9 +185,16 @@ std::string PasswordManager::retrieveFromMacKeychain(
         std::string encryptedPassword(static_cast<char*>(passwordData),
                                       passwordLength);
         SecKeychainItemFreeContent(nullptr, passwordData);
+        LOG_F(INFO,
+              "Password retrieved successfully from macOS Keychain for "
+              "service: {}, account: {}",
+              service, account);
         return encryptedPassword;
     } else {
-        std::cerr << "Failed to retrieve password: " << status << "\n";
+        LOG_F(ERROR,
+              "Failed to retrieve password from macOS Keychain for service: "
+              "{}, account: {}. Error: {}",
+              service, account, status);
         return "";
     }
 }
@@ -194,13 +209,22 @@ void PasswordManager::deleteFromMacKeychain(const std::string& service,
     if (status == errSecSuccess) {
         status = SecKeychainItemDelete(itemRef);
         if (status == errSecSuccess) {
-            std::cout << "Password deleted successfully from macOS Keychain.\n";
+            LOG_F(INFO,
+                  "Password deleted successfully from macOS Keychain for "
+                  "service: {}, account: {}",
+                  service, account);
         } else {
-            std::cerr << "Failed to delete password: " << status << "\n";
+            LOG_F(ERROR,
+                  "Failed to delete password from macOS Keychain for service: "
+                  "{}, account: {}. Error: {}",
+                  service, account, status);
         }
         CFRelease(itemRef);
     } else {
-        std::cerr << "Failed to find password for deletion: " << status << "\n";
+        LOG_F(ERROR,
+              "Failed to find password for deletion in macOS Keychain for "
+              "service: {}, account: {}. Error: {}",
+              service, account, status);
     }
 }
 
@@ -220,10 +244,16 @@ void PasswordManager::storeToLinuxKeyring(
         &error, attribute_name.c_str(), "encrypted_password", nullptr);
 
     if (error != nullptr) {
-        std::cerr << "Failed to store password: " << error->message << "\n";
+        LOG_F(ERROR,
+              "Failed to store password in Linux keyring for schema: {}, "
+              "attribute: {}. Error: {}",
+              schema_name, attribute_name, error->message);
         g_error_free(error);
     } else {
-        std::cout << "Password stored successfully in Linux keyring.\n";
+        LOG_F(INFO,
+              "Password stored successfully in Linux keyring for schema: {}, "
+              "attribute: {}",
+              schema_name, attribute_name);
     }
 }
 
@@ -241,15 +271,25 @@ std::string PasswordManager::retrieveFromLinuxKeyring(
                                                  "encrypted_password", nullptr);
 
     if (error != nullptr) {
-        std::cerr << "Failed to retrieve password: " << error->message << "\n";
+        LOG_F(ERROR,
+              "Failed to retrieve password from Linux keyring for schema: {}, "
+              "attribute: {}. Error: {}",
+              schema_name, attribute_name, error->message);
         g_error_free(error);
         return "";
     } else if (password == nullptr) {
-        std::cerr << "Password not found.\n";
+        LOG_F(
+            ERROR,
+            "Password not found in Linux keyring for schema: {}, attribute: {}",
+            schema_name, attribute_name);
         return "";
     } else {
         std::string encryptedPassword(password);
         secret_password_free(password);
+        LOG_F(INFO,
+              "Password retrieved successfully from Linux keyring for schema: "
+              "{}, attribute: {}",
+              schema_name, attribute_name);
         return encryptedPassword;
     }
 }
@@ -268,12 +308,22 @@ void PasswordManager::deleteFromLinuxKeyring(
                                                  "encrypted_password", nullptr);
 
     if (error != nullptr) {
-        std::cerr << "Failed to delete password: " << error->message << "\n";
+        LOG_F(ERROR,
+              "Failed to delete password from Linux keyring for schema: {}, "
+              "attribute: {}. Error: {}",
+              schema_name, attribute_name, error->message);
         g_error_free(error);
     } else if (result) {
-        std::cout << "Password deleted successfully from Linux keyring.\n";
+        LOG_F(INFO,
+              "Password deleted successfully from Linux keyring for schema: "
+              "{}, attribute: {}",
+              schema_name, attribute_name);
     } else {
-        std::cerr << "Password not found for deletion.\n";
+        LOG_F(ERROR,
+              "Password not found for deletion in Linux keyring for schema: "
+              "{}, attribute: {}",
+              schema_name, attribute_name);
     }
 }
 #endif
+}  // namespace atom::secret

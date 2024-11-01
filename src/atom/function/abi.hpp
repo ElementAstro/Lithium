@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <typeinfo>
+#include <unordered_map>
 #include <vector>
 
 #ifdef _MSC_VER
@@ -87,22 +88,31 @@ public:
 
 private:
     static auto demangleInternal(std::string_view mangled_name) -> std::string {
+        static std::unordered_map<std::string_view, std::string> cache;
+        if (auto it = cache.find(mangled_name); it != cache.end()) {
+            return it->second;
+        }
+
 #ifdef _MSC_VER
         std::array<char, BUFFER_SIZE> buffer;
         DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer.data(),
                                             buffer.size(), UNDNAME_COMPLETE);
 
-        return (length > 0) ? std::string(buffer.data(), length)
-                            : std::string(mangled_name);
+        std::string demangled = (length > 0)
+                                    ? std::string(buffer.data(), length)
+                                    : std::string(mangled_name);
 #else
         int status = -1;
         std::unique_ptr<char, void (*)(void*)> demangledName(
             abi::__cxa_demangle(mangled_name.data(), nullptr, nullptr, &status),
             std::free);
 
-        return (status == 0) ? std::string(demangledName.get())
-                             : std::string(mangled_name);
+        std::string demangled = (status == 0) ? std::string(demangledName.get())
+                                              : std::string(mangled_name);
 #endif
+
+        cache[mangled_name] = demangled;
+        return demangled;
     }
 
 #if ENABLE_DEBUG
@@ -116,6 +126,8 @@ private:
         std::regex templateRegex(R"((\w+)<(.*)>)");
         std::regex functionRegex(R"(\((.*)\)\s*->\s*(.*))");
         std::regex ptrRegex(R"((.+)\s*\*\s*)");
+        std::regex refRegex(R"((.+)\s*&\s*)");
+        std::regex constRegex(R"((const\s+)(.+))");
         std::regex arrayRegex(R"((.+)\s*\[(\d+)\])");
         std::smatch match;
 
@@ -137,6 +149,14 @@ private:
             // Pointer type
             result += indent + "`-- ptr\n";
             result += visualizeType(match[1].str(), indent_level + 1);
+        } else if (std::regex_match(type_name, match, refRegex)) {
+            // Reference type
+            result += indent + "`-- ref\n";
+            result += visualizeType(match[1].str(), indent_level + 1);
+        } else if (std::regex_match(type_name, match, constRegex)) {
+            // Const type
+            result += indent + "`-- const\n";
+            result += visualizeType(match[2].str(), indent_level + 1);
         } else if (std::regex_match(type_name, match, arrayRegex)) {
             // Array type
             result += indent + "`-- array [N = " + match[2].str() + "]\n";
@@ -149,14 +169,13 @@ private:
         return result;
     }
 
-    static auto visualizeTemplateParams(const std::string& params,
-                                        int indent_level) -> std::string {
+    std::string visualizeTemplateParams(const std::string& params,
+                                        int indent_level) {
         std::string indent(static_cast<long>(indent_level) * 4, ' ');
         std::string result;
         int paramIndex = 0;
 
         size_t start = 0;
-        size_t end = 0;
         int angleBrackets = 0;
 
         for (size_t i = 0; i < params.size(); ++i) {
@@ -165,19 +184,15 @@ private:
             } else if (params[i] == '>') {
                 --angleBrackets;
             } else if (params[i] == ',' && angleBrackets == 0) {
-                end = i;
-                result += indent + "|-- " + std::to_string(paramIndex++) +
-                          ": " +
-                          visualizeType(params.substr(start, end - start),
-                                        indent_level + 1)
-                              .substr(indent.size() + 4);
+                result += indent + "├── " + std::to_string(paramIndex++) + ": ";
+                result += visualizeType(params.substr(start, i - start),
+                                        indent_level + 1);
                 start = i + 1;
             }
         }
 
-        result += indent + "|-- " + std::to_string(paramIndex++) + ": " +
-                  visualizeType(params.substr(start), indent_level + 1)
-                      .substr(indent.size() + 4);
+        result += indent + "└── " + std::to_string(paramIndex) + ": ";
+        result += visualizeType(params.substr(start), indent_level + 1);
 
         return result;
     }

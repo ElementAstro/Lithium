@@ -64,9 +64,12 @@ const std::regex FILE_NAME_REGEX("^[^/]+$");
 namespace atom::io {
 
 auto createDirectory(const std::string &path) -> bool {
+    LOG_F(INFO, "createDirectory called with path: {}", path);
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
-        return fs::create_directory(path);
+        bool result = fs::create_directory(path);
+        LOG_F(INFO, "Directory created: {}", path);
+        return result;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to create directory {}: {}", path, e.what());
         return false;
@@ -76,6 +79,8 @@ auto createDirectory(const std::string &path) -> bool {
 auto createDirectoriesRecursive(
     const fs::path &basePath, const std::vector<std::string> &subdirs,
     const CreateDirectoriesOptions &options = {}) -> bool {
+    LOG_F(INFO, "createDirectoriesRecursive called with basePath: {}",
+          basePath.string());
     for (const auto &subdir : subdirs | std::views::filter([&](const auto &s) {
                                   return options.filter(s);
                               })) {
@@ -101,14 +106,16 @@ auto createDirectoriesRecursive(
                 std::chrono::milliseconds(options.delay));
         }
     }
+    LOG_F(INFO, "createDirectoriesRecursive completed");
     return true;
 }
 
 auto removeDirectory(const std::string &path) -> bool {
+    LOG_F(INFO, "removeDirectory called with path: {}", path);
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
         fs::remove_all(path);
-        DLOG_F(INFO, "Directory removed: {}", path);
+        LOG_F(INFO, "Directory removed: {}", path);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to remove directory {}: {}", path, e.what());
@@ -119,6 +126,8 @@ auto removeDirectory(const std::string &path) -> bool {
 auto removeDirectoriesRecursive(
     const fs::path &basePath, const std::vector<std::string> &subdirs,
     const CreateDirectoriesOptions &options) -> bool {
+    LOG_F(INFO, "removeDirectoriesRecursive called with basePath: {}",
+          basePath.string());
     for (const auto &subdir : subdirs | std::views::filter([&](const auto &s) {
                                   return options.filter(s);
                               })) {
@@ -147,11 +156,14 @@ auto removeDirectoriesRecursive(
                 std::chrono::milliseconds(options.delay));
         }
     }
+    LOG_F(INFO, "removeDirectoriesRecursive completed");
     return true;
 }
 
 auto renameDirectory(const std::string &old_path,
                      const std::string &new_path) -> bool {
+    LOG_F(INFO, "renameDirectory called with old_path: {}, new_path: {}",
+          old_path, new_path);
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
     return moveDirectory(old_path, new_path);
@@ -159,11 +171,13 @@ auto renameDirectory(const std::string &old_path,
 
 auto moveDirectory(const std::string &old_path,
                    const std::string &new_path) -> bool {
+    LOG_F(INFO, "moveDirectory called with old_path: {}, new_path: {}",
+          old_path, new_path);
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
     try {
         fs::rename(old_path, new_path);
-        DLOG_F(INFO, "Directory moved from {} to {}", old_path, new_path);
+        LOG_F(INFO, "Directory moved from {} to {}", old_path, new_path);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to move directory from {} to {}: {}", old_path,
@@ -174,11 +188,13 @@ auto moveDirectory(const std::string &old_path,
 
 auto copyFile(const std::string &src_path,
               const std::string &dst_path) -> bool {
+    LOG_F(INFO, "copyFile called with src_path: {}, dst_path: {}", src_path,
+          dst_path);
     ATOM_IO_CHECK_ARGUMENT(src_path);
     ATOM_IO_CHECK_ARGUMENT(dst_path);
     try {
         fs::copy_file(src_path, dst_path);
-        DLOG_F(INFO, "File copied from {} to {}", src_path, dst_path);
+        LOG_F(INFO, "File copied from {} to {}", src_path, dst_path);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to copy file from {} to {}: {}", src_path,
@@ -189,16 +205,20 @@ auto copyFile(const std::string &src_path,
 
 auto moveFile(const std::string &src_path,
               const std::string &dst_path) -> bool {
+    LOG_F(INFO, "moveFile called with src_path: {}, dst_path: {}", src_path,
+          dst_path);
     return renameFile(src_path, dst_path);
 }
 
 auto renameFile(const std::string &old_path,
                 const std::string &new_path) -> bool {
+    LOG_F(INFO, "renameFile called with old_path: {}, new_path: {}", old_path,
+          new_path);
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
     try {
         fs::rename(old_path, new_path);
-        DLOG_F(INFO, "File renamed from {} to {}", old_path, new_path);
+        LOG_F(INFO, "File renamed from {} to {}", old_path, new_path);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to rename file from {} to {}: {}", old_path,
@@ -208,10 +228,11 @@ auto renameFile(const std::string &old_path,
 }
 
 auto removeFile(const std::string &path) -> bool {
+    LOG_F(INFO, "removeFile called with path: {}", path);
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
         fs::remove(path);
-        DLOG_F(INFO, "File removed: {}", path);
+        LOG_F(INFO, "File removed: {}", path);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to remove file {}: {}", path, e.what());
@@ -221,12 +242,13 @@ auto removeFile(const std::string &path) -> bool {
 
 auto createSymlink(const std::string &target_path,
                    const std::string &symlink_path) -> bool {
+    LOG_F(INFO, "createSymlink called with target_path: {}, symlink_path: {}",
+          target_path, symlink_path);
     ATOM_IO_CHECK_ARGUMENT(target_path);
     ATOM_IO_CHECK_ARGUMENT(symlink_path);
     try {
         fs::create_symlink(target_path, symlink_path);
-        DLOG_F(INFO, "Symlink created from {} to {}", target_path,
-               symlink_path);
+        LOG_F(INFO, "Symlink created from {} to {}", target_path, symlink_path);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to create symlink from {} to {}: {}", target_path,
@@ -235,11 +257,17 @@ auto createSymlink(const std::string &target_path,
     }
 }
 
-auto removeSymlink(const std::string &path) -> bool { return removeFile(path); }
+auto removeSymlink(const std::string &path) -> bool {
+    LOG_F(INFO, "removeSymlink called with path: {}", path);
+    return removeFile(path);
+}
 
 auto fileSize(const std::string &path) -> std::uintmax_t {
+    LOG_F(INFO, "fileSize called with path: {}", path);
     try {
-        return fs::file_size(path);
+        std::uintmax_t size = fs::file_size(path);
+        LOG_F(INFO, "File size of {}: {}", path, size);
+        return size;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to get file size of {}: {}", path, e.what());
         return 0;
@@ -247,44 +275,55 @@ auto fileSize(const std::string &path) -> std::uintmax_t {
 }
 
 auto truncateFile(const std::string &path, std::streamsize size) -> bool {
+    LOG_F(INFO, "truncateFile called with path: {}, size: {}", path, size);
     std::ofstream file(path,
                        std::ios::out | std::ios::binary | std::ios::trunc);
     if (!file.is_open()) {
+        LOG_F(ERROR, "Failed to open file for truncation: {}", path);
         return false;
     }
     file.seekp(size);
     file.put('\0');
+    LOG_F(INFO, "File truncated: {}", path);
     return true;
 }
 
 auto convertToLinuxPath(std::string_view windows_path) -> std::string {
+    LOG_F(INFO, "convertToLinuxPath called with windows_path: {}",
+          windows_path);
     std::string linuxPath(windows_path);
     std::ranges::replace(linuxPath, '\\', '/');
     if (linuxPath.length() >= 2 && linuxPath[1] == ':') {
         linuxPath[0] = std::tolower(linuxPath[0]);
     }
+    LOG_F(INFO, "Converted to Linux path: {}", linuxPath);
     return linuxPath;
 }
 
 auto convertToWindowsPath(std::string_view linux_path) -> std::string {
+    LOG_F(INFO, "convertToWindowsPath called with linux_path: {}", linux_path);
     std::string windowsPath(linux_path);
     std::ranges::replace(windowsPath, '/', '\\');
     if (windowsPath.length() >= 2 && std::islower(windowsPath[0]) &&
         windowsPath[1] == ':') {
         windowsPath[0] = std::toupper(windowsPath[0]);
     }
+    LOG_F(INFO, "Converted to Windows path: {}", windowsPath);
     return windowsPath;
 }
 
 auto normalizePath(std::string_view path) -> std::string {
+    LOG_F(INFO, "normalizePath called with path: {}", path);
     std::string normalizedPath(path);
     char preferredSeparator = fs::path::preferred_separator;
     std::ranges::replace(normalizedPath, '/', preferredSeparator);
     std::ranges::replace(normalizedPath, '\\', preferredSeparator);
+    LOG_F(INFO, "Normalized path: {}", normalizedPath);
     return normalizedPath;
 }
 
 auto normPath(std::string_view raw_path) -> std::string {
+    LOG_F(INFO, "normPath called with raw_path: {}", raw_path);
     std::string path = normalizePath(raw_path);
     fs::path fsPath(path);
     fs::path normalizedFsPath;
@@ -304,20 +343,28 @@ auto normPath(std::string_view raw_path) -> std::string {
             normalizedFsPath /= part;
         }
     }
-    return normalizedFsPath.string().empty() ? "/" : normalizedFsPath.string();
+    std::string result =
+        normalizedFsPath.string().empty() ? "/" : normalizedFsPath.string();
+    LOG_F(INFO, "Normalized path: {}", result);
+    return result;
 }
 
 void walk(const fs::path &root, bool recursive,
           const std::function<void(const fs::path &)> &callback) {
+    LOG_F(INFO, "walk called with root: {}, recursive: {}", root.string(),
+          recursive);
     for (const auto &entry : fs::directory_iterator(root)) {
         callback(entry.path());
         if (recursive && fs::is_directory(entry)) {
             walk(entry.path(), recursive, callback);
         }
     }
+    LOG_F(INFO, "walk completed for root: {}", root.string());
 }
 
 auto buildJsonStructure(const fs::path &root, bool recursive) -> json {
+    LOG_F(INFO, "buildJsonStructure called with root: {}, recursive: {}",
+          root.string(), recursive);
     json folder = {{"path", root.generic_string()},
                    {"directories", json::array()},
                    {"files", json::array()}};
@@ -329,59 +376,87 @@ auto buildJsonStructure(const fs::path &root, bool recursive) -> json {
             folder["files"].push_back(entry.generic_string());
         }
     });
+    LOG_F(INFO, "buildJsonStructure completed for root: {}", root.string());
     return folder;
 }
 
 auto jwalk(const std::string &root) -> std::string {
+    LOG_F(INFO, "jwalk called with root: {}", root);
     fs::path rootPath(root);
     if (!isFolderExists(rootPath.string())) {
+        LOG_F(WARNING, "Folder does not exist: {}", root);
         return "";
     }
-    return buildJsonStructure(rootPath, true).dump();
+    std::string result = buildJsonStructure(rootPath, true).dump();
+    LOG_F(INFO, "jwalk completed for root: {}", root);
+    return result;
 }
 
 void fwalk(const fs::path &root,
            const std::function<void(const fs::path &)> &callback) {
+    LOG_F(INFO, "fwalk called with root: {}", root.string());
     walk(root, true, callback);
+    LOG_F(INFO, "fwalk completed for root: {}", root.string());
 }
 
 auto isFolderNameValid(const std::string &folderName) -> bool {
-    ATOM_IO_CHECK_ARGUMENT(folderName);
-    return std::regex_match(folderName, FOLDER_NAME_REGEX);
+    LOG_F(INFO, "isFolderNameValid called with folderName: {}", folderName);
+    bool result = std::regex_match(folderName, FOLDER_NAME_REGEX);
+    LOG_F(INFO, "isFolderNameValid returning: {}", result);
+    return result;
 }
 
 auto isFileNameValid(const std::string &fileName) -> bool {
-    ATOM_IO_CHECK_ARGUMENT(fileName);
-    return std::regex_match(fileName, FILE_NAME_REGEX);
+    LOG_F(INFO, "isFileNameValid called with fileName: {}", fileName);
+    bool result = std::regex_match(fileName, FILE_NAME_REGEX);
+    LOG_F(INFO, "isFileNameValid returning: {}", result);
+    return result;
 }
 
 auto isFolderExists(const std::string &folderName) -> bool {
-    return isFolderNameValid(folderName) && fs::exists(folderName) &&
-           fs::is_directory(folderName);
+    LOG_F(INFO, "isFolderExists called with folderName: {}", folderName);
+    bool result = isFolderNameValid(folderName) && fs::exists(folderName) &&
+                  fs::is_directory(folderName);
+    LOG_F(INFO, "isFolderExists returning: {}", result);
+    return result;
 }
 
 auto isFileExists(const std::string &fileName) -> bool {
-    return isFileNameValid(fileName) && fs::exists(fileName) &&
-           fs::is_regular_file(fileName);
+    LOG_F(INFO, "isFileExists called with fileName: {}", fileName);
+    bool result = isFileNameValid(fileName) && fs::exists(fileName) &&
+                  fs::is_regular_file(fileName);
+    LOG_F(INFO, "isFileExists returning: {}", result);
+    return result;
 }
 
 auto isFolderEmpty(const std::string &folderName) -> bool {
-    if (!isFolderExists(folderName))
+    LOG_F(INFO, "isFolderEmpty called with folderName: {}", folderName);
+    if (!isFolderExists(folderName)) {
+        LOG_F(WARNING, "Folder does not exist: {}", folderName);
         return false;
-    return fs::is_empty(folderName);
+    }
+    bool result = fs::is_empty(folderName);
+    LOG_F(INFO, "isFolderEmpty returning: {}", result);
+    return result;
 }
 
 auto isAbsolutePath(const std::string &path) -> bool {
-    return fs::path(path).is_absolute();
+    LOG_F(INFO, "isAbsolutePath called with path: {}", path);
+    bool result = fs::path(path).is_absolute();
+    LOG_F(INFO, "isAbsolutePath returning: {}", result);
+    return result;
 }
 
 auto changeWorkingDirectory(const std::string &directoryPath) -> bool {
+    LOG_F(INFO, "changeWorkingDirectory called with directoryPath: {}",
+          directoryPath);
     if (!isFolderExists(directoryPath)) {
         LOG_F(ERROR, "Directory does not exist: {}", directoryPath);
         return false;
     }
     try {
         fs::current_path(directoryPath);
+        LOG_F(INFO, "Changed working directory to: {}", directoryPath);
         return true;
     } catch (const fs::filesystem_error &e) {
         LOG_F(ERROR, "Failed to change working directory: {}", e.what());
@@ -391,6 +466,7 @@ auto changeWorkingDirectory(const std::string &directoryPath) -> bool {
 
 auto getFileTimes(const std::string &filePath)
     -> std::pair<std::string, std::string> {
+    LOG_F(INFO, "getFileTimes called with filePath: {}", filePath);
     std::pair<std::string, std::string> fileTimes;
 
 #ifdef _WIN32
@@ -401,26 +477,38 @@ auto getFileTimes(const std::string &filePath)
         return fileTimes;
     }
 
-    FILETIME createTime, modifyTime;
+    FILETIME createTime;
+    FILETIME modifyTime;
     FileTimeToLocalFileTime(&fileInfo.ftCreationTime, &createTime);
     FileTimeToLocalFileTime(&fileInfo.ftLastWriteTime, &modifyTime);
 
-    SYSTEMTIME createSysTime, modifySysTime;
+    SYSTEMTIME createSysTime;
+    SYSTEMTIME modifySysTime;
     FileTimeToSystemTime(&createTime, &createSysTime);
     FileTimeToSystemTime(&modifyTime, &modifySysTime);
 
-    char createTimeStr[20], modifyTimeStr[20];
-    std::snprintf(createTimeStr, sizeof(createTimeStr),
-                  "%04d/%02d/%02d %02d:%02d:%02d", createSysTime.wYear,
-                  createSysTime.wMonth, createSysTime.wDay, createSysTime.wHour,
-                  createSysTime.wMinute, createSysTime.wSecond);
-    std::snprintf(modifyTimeStr, sizeof(modifyTimeStr),
-                  "%04d/%02d/%02d %02d:%02d:%02d", modifySysTime.wYear,
-                  modifySysTime.wMonth, modifySysTime.wDay, modifySysTime.wHour,
-                  modifySysTime.wMinute, modifySysTime.wSecond);
+    std::ostringstream createTimeStream;
+    createTimeStream << std::setw(4) << createSysTime.wYear << "/"
+                     << std::setw(2) << std::setfill('0')
+                     << createSysTime.wMonth << "/" << std::setw(2)
+                     << std::setfill('0') << createSysTime.wDay << " "
+                     << std::setw(2) << std::setfill('0') << createSysTime.wHour
+                     << ":" << std::setw(2) << std::setfill('0')
+                     << createSysTime.wMinute << ":" << std::setw(2)
+                     << std::setfill('0') << createSysTime.wSecond;
 
-    fileTimes.first = createTimeStr;
-    fileTimes.second = modifyTimeStr;
+    std::ostringstream modifyTimeStream;
+    modifyTimeStream << std::setw(4) << modifySysTime.wYear << "/"
+                     << std::setw(2) << std::setfill('0')
+                     << modifySysTime.wMonth << "/" << std::setw(2)
+                     << std::setfill('0') << modifySysTime.wDay << " "
+                     << std::setw(2) << std::setfill('0') << modifySysTime.wHour
+                     << ":" << std::setw(2) << std::setfill('0')
+                     << modifySysTime.wMinute << ":" << std::setw(2)
+                     << std::setfill('0') << modifySysTime.wSecond;
+
+    fileTimes.first = createTimeStream.str();
+    fileTimes.second = modifyTimeStream.str();
 
 #else
     struct stat fileInfo;
@@ -429,25 +517,32 @@ auto getFileTimes(const std::string &filePath)
         return fileTimes;
     }
 
-    char createTimeStr[20], modifyTimeStr[20];
+    std::array<char, ATOM_PTR_SIZE> createTimeStr;
+    std::array<char, ATOM_PTR_SIZE> modifyTimeStr;
     auto *createTimeTm = localtime(&fileInfo.st_ctime);
     auto *modifyTimeTm = localtime(&fileInfo.st_mtime);
 
-    strftime(createTimeStr, sizeof(createTimeStr), "%Y/%m/%d %H:%M:%S",
+    strftime(createTimeStr.data(), createTimeStr.size(), "%Y/%m/%d %H:%M:%S",
              createTimeTm);
-    strftime(modifyTimeStr, sizeof(modifyTimeStr), "%Y/%m/%d %H:%M:%S",
+    strftime(modifyTimeStr.data(), modifyTimeStr.size(), "%Y/%m/%d %H:%M:%S",
              modifyTimeTm);
 
-    fileTimes.first = createTimeStr;
-    fileTimes.second = modifyTimeStr;
+    fileTimes.first = createTimeStr.data();
+    fileTimes.second = modifyTimeStr.data();
 
 #endif
+    LOG_F(INFO, "getFileTimes returning: createTime: {}, modifyTime: {}",
+          fileTimes.first, fileTimes.second);
     return fileTimes;
 }
 
 auto checkFileTypeInFolder(const std::string &folderPath,
                            const std::string &fileType,
                            FileOption fileOption) -> std::vector<std::string> {
+    LOG_F(INFO,
+          "checkFileTypeInFolder called with folderPath: {}, fileType: {}, "
+          "fileOption: {}",
+          folderPath, fileType, static_cast<int>(fileOption));
     std::vector<std::string> files;
     try {
         for (const auto &entry : fs::directory_iterator(folderPath)) {
@@ -461,11 +556,14 @@ auto checkFileTypeInFolder(const std::string &folderPath,
     } catch (const fs::filesystem_error &ex) {
         LOG_F(ERROR, "Failed to check files in folder: {}", ex.what());
     }
+    LOG_F(INFO, "checkFileTypeInFolder returning {} files", files.size());
     return files;
 }
 
 auto isExecutableFile(const std::string &fileName,
-                      const std::string &fileExt = "") -> bool {
+                      const std::string &fileExt) -> bool {
+    LOG_F(INFO, "isExecutableFile called with fileName: {}, fileExt: {}",
+          fileName, fileExt);
 #ifdef _WIN32
     fs::path filePath = fileName + fileExt;
 #else
@@ -493,15 +591,26 @@ auto isExecutableFile(const std::string &fileName,
 }
 
 auto getFileSize(const std::string &filePath) -> std::size_t {
-    return fs::file_size(filePath);
+    LOG_F(INFO, "getFileSize called with filePath: {}", filePath);
+    std::size_t size = fs::file_size(filePath);
+    LOG_F(INFO, "getFileSize returning: {}", size);
+    return size;
 }
 
 auto calculateChunkSize(std::size_t fileSize, int numChunks) -> std::size_t {
-    return (fileSize + numChunks - 1) / numChunks;
+    LOG_F(INFO, "calculateChunkSize called with fileSize: {}, numChunks: {}",
+          fileSize, numChunks);
+    std::size_t chunkSize = (fileSize + numChunks - 1) / numChunks;
+    LOG_F(INFO, "calculateChunkSize returning: {}", chunkSize);
+    return chunkSize;
 }
 
 void splitFile(const std::string &filePath, std::size_t chunkSize,
                const std::string &outputPattern) {
+    LOG_F(
+        INFO,
+        "splitFile called with filePath: {}, chunkSize: {}, outputPattern: {}",
+        filePath, chunkSize, outputPattern);
     std::ifstream inputFile(filePath, std::ios::binary);
     if (!inputFile) {
         LOG_F(ERROR, "Failed to open file: {}", filePath);
@@ -538,6 +647,8 @@ void splitFile(const std::string &filePath, std::size_t chunkSize,
 
 void mergeFiles(const std::string &outputFilePath,
                 const std::vector<std::string> &partFiles) {
+    LOG_F(INFO, "mergeFiles called with outputFilePath: {}, partFiles size: {}",
+          outputFilePath, partFiles.size());
     std::ofstream outputFile(outputFilePath, std::ios::binary);
     if (!outputFile) {
         LOG_F(ERROR, "Failed to create output file: {}", outputFilePath);
@@ -566,13 +677,22 @@ void mergeFiles(const std::string &outputFilePath,
 
 void quickSplit(const std::string &filePath, int numChunks,
                 const std::string &outputPattern) {
+    LOG_F(
+        INFO,
+        "quickSplit called with filePath: {}, numChunks: {}, outputPattern: {}",
+        filePath, numChunks, outputPattern);
     std::size_t fileSize = getFileSize(filePath);
     std::size_t chunkSize = calculateChunkSize(fileSize, numChunks);
     splitFile(filePath, chunkSize, outputPattern);
+    LOG_F(INFO, "quickSplit completed for filePath: {}", filePath);
 }
 
 void quickMerge(const std::string &outputFilePath,
                 const std::string &partPattern, int numChunks) {
+    LOG_F(INFO,
+          "quickMerge called with outputFilePath: {}, partPattern: {}, "
+          "numChunks: {}",
+          outputFilePath, partPattern, numChunks);
     std::vector<std::string> partFiles;
     for (int i = 0; i < numChunks; ++i) {
         std::ostringstream partFileName;
@@ -580,6 +700,7 @@ void quickMerge(const std::string &outputFilePath,
         partFiles.push_back(partFileName.str());
     }
     mergeFiles(outputFilePath, partFiles);
+    LOG_F(INFO, "quickMerge completed for outputFilePath: {}", outputFilePath);
 }
 
 #ifdef _WIN32
@@ -589,33 +710,78 @@ const char PATH_SEPARATORS[] = "/";
 #endif
 
 auto getExecutableNameFromPath(const std::string &path) -> std::string {
+    LOG_F(INFO, "getExecutableNameFromPath called with path: {}", path);
+
     if (path.empty()) {
+        LOG_F(ERROR, "The provided path is empty.");
         THROW_INVALID_ARGUMENT("The provided path is empty.");
     }
 
     size_t lastSlashPos = path.find_last_of(PATH_SEPARATORS);
+    LOG_F(INFO, "Last slash position: {}", lastSlashPos);
 
     if (lastSlashPos == std::string::npos) {
         if (path.find('.') == std::string::npos) {
+            LOG_F(ERROR,
+                  "The provided path does not contain a valid file name.");
             THROW_INVALID_ARGUMENT(
                 "The provided path does not contain a valid file name.");
         }
+        LOG_F(INFO, "Returning path as file name: {}", path);
         return path;
     }
 
     std::string fileName = path.substr(lastSlashPos + 1);
+    LOG_F(INFO, "Extracted file name: {}", fileName);
 
     if (fileName.empty()) {
+        LOG_F(ERROR,
+              "The provided path ends with a slash and contains no file name.");
         THROW_INVALID_ARGUMENT(
             "The provided path ends with a slash and contains no file name.");
     }
 
     size_t dotPos = fileName.find_last_of('.');
+    LOG_F(INFO, "Last dot position: {}", dotPos);
+
     if (dotPos == std::string::npos) {
+        LOG_F(ERROR, "The file name does not contain an extension.");
         THROW_INVALID_ARGUMENT("The file name does not contain an extension.");
     }
 
+    LOG_F(INFO, "Returning file name: {}", fileName);
     return fileName;
 }
 
+auto checkPathType(const fs::path &path) -> PathType {
+    if (fs::exists(path)) {
+        if (fs::is_regular_file(path)) {
+            return PathType::REGULAR_FILE;
+        }
+        if (fs::is_directory(path)) {
+            return PathType::DIRECTORY;
+        }
+        if (fs::is_symlink(path)) {
+            return PathType::SYMLINK;
+        }
+        return PathType::OTHER;
+    }
+    return PathType::NOT_EXISTS;
+}
+
+auto countLinesInFile(const std::string &filePath) -> std::optional<int> {
+    std::ifstream file(filePath);
+    int lineCount = 0;
+    std::string line;
+
+    if (file.is_open()) {
+        while (std::getline(file, line)) {
+            lineCount++;
+        }
+        file.close();
+    } else {
+        return std::nullopt;
+    }
+    return lineCount;
+}
 }  // namespace atom::io

@@ -23,19 +23,35 @@ Description: Environment variable management
 #endif
 
 #include "atom/log/loguru.hpp"
+#include "atom/utils/argsview.hpp"
 
 namespace fs = std::filesystem;
 
 namespace atom::utils {
-Env::Env() : Env(0, nullptr) {}
+class Env::Impl {
+public:
+    std::string mExe;      ///< Full path of the executable file.
+    std::string mCwd;      ///< Working directory.
+    std::string mProgram;  ///< Program name.
+
+    std::unordered_map<std::string, std::string>
+        mArgs;                  ///< List of command-line arguments.
+    mutable std::mutex mMutex;  ///< Mutex to protect member variables.
+    ArgumentParser mParser;     ///< Argument parser for command-line arguments.
+};
+
+Env::Env() : Env(0, nullptr) { LOG_F(INFO, "Env default constructor called"); }
 
 Env::Env(int argc, char **argv) {
+    LOG_F(INFO, "Env constructor called with argc: {}, argv: {}", argc, argv);
     fs::path exePath;
 
 #ifdef _WIN32
     wchar_t buf[MAX_PATH];
     if (GetModuleFileNameW(nullptr, buf, MAX_PATH) == 0U) {
         LOG_F(ERROR, "GetModuleFileNameW failed with error {}", GetLastError());
+        exePath = buf;
+    } else {
         exePath = buf;
     }
 #else
@@ -47,11 +63,13 @@ Env::Env(int argc, char **argv) {
     }
 #endif
 
-    m_exe = exePath.string();
+    impl_->mExe = exePath.string();
+    impl_->mCwd = exePath.parent_path().string() + '/';
+    impl_->mProgram = argv[0];
 
-    m_cwd = exePath.parent_path().string() + '/';
-
-    m_program = argv[0];
+    LOG_F(INFO, "Executable path: {}", impl_->mExe);
+    LOG_F(INFO, "Current working directory: {}", impl_->mCwd);
+    LOG_F(INFO, "Program name: {}", impl_->mProgram);
 
     if (argc > 1) {
         int i = 1;
@@ -77,83 +95,74 @@ Env::Env(int argc, char **argv) {
             }
         }
     }
+    LOG_F(INFO, "Env constructor completed");
 }
 
 auto Env::createShared(int argc, char **argv) -> std::shared_ptr<Env> {
+    LOG_F(INFO, "Env::createShared called with argc: {}, argv: {}", argc, argv);
     return std::make_shared<Env>(argc, argv);
 }
 
 void Env::add(const std::string &key, const std::string &val) {
-    std::lock_guard lock(m_mutex);
+    LOG_F(INFO, "Env::add called with key: {}, val: {}", key, val);
+    std::lock_guard lock(impl_->mMutex);
     if (has(key)) {
         LOG_F(ERROR, "Env::add: Duplicate key: {}", key);
     } else {
         DLOG_F(INFO, "Env::add: Add key: {} with value: {}", key, val);
-        m_args[key] = val;
+        impl_->mArgs[key] = val;
     }
 }
 
 auto Env::has(const std::string &key) -> bool {
-    std::lock_guard lock(m_mutex);
-    return m_args.contains(key);
+    LOG_F(INFO, "Env::has called with key: {}", key);
+    std::lock_guard lock(impl_->mMutex);
+    bool result = impl_->mArgs.contains(key);
+    LOG_F(INFO, "Env::has returning: {}", result);
+    return result;
 }
 
 void Env::del(const std::string &key) {
-    std::lock_guard lock(m_mutex);
-    m_args.erase(key);
+    LOG_F(INFO, "Env::del called with key: {}", key);
+    std::lock_guard lock(impl_->mMutex);
+    impl_->mArgs.erase(key);
     DLOG_F(INFO, "Env::del: Remove key: {}", key);
 }
 
 auto Env::get(const std::string &key,
               const std::string &default_value) -> std::string {
-    std::lock_guard lock(m_mutex);
-    auto it = m_args.find(key);
-    if (it == m_args.end()) {
+    LOG_F(INFO, "Env::get called with key: {}, default_value: {}", key,
+          default_value);
+    std::lock_guard lock(impl_->mMutex);
+    auto it = impl_->mArgs.find(key);
+    if (it == impl_->mArgs.end()) {
         DLOG_F(INFO, "Env::get: Key: {} not found, return default value: {}",
                key, default_value);
-        return "";
+        return default_value;
     }
-    return it != m_args.end() ? it->second : default_value;
-}
-
-void Env::addHelp(const std::string &key, const std::string &desc) {
-    std::lock_guard lock(m_mutex);
-    m_helps.emplace_back(key, desc);
-    DLOG_F(INFO, "Env::addHelp: Add key: {} with description: {}", key, desc);
-}
-
-void Env::removeHelp(const std::string &key) {
-    std::lock_guard lock(m_mutex);
-    m_helps.erase(
-        std::remove_if(m_helps.begin(), m_helps.end(),
-                       [&](const std::pair<std::string, std::string> &p) {
-                           return p.first == key;
-                       }),
-        m_helps.end());
-    DLOG_F(INFO, "Env::removeHelp: Remove key: {}", key);
-}
-
-void Env::printHelp() {
-    std::lock_guard lock(m_mutex);
-    DLOG_F(INFO, "Usage: {} [options]", m_program);
-    for (const auto &i : m_helps) {
-        DLOG_F(INFO, "    {} : {}", i.first, i.second);
-    }
+    std::string value = it->second;
+    LOG_F(INFO, "Env::get returning: {}", value);
+    return value;
 }
 
 auto Env::setEnv(const std::string &key, const std::string &val) -> bool {
-    std::lock_guard lock(m_mutex);
+    LOG_F(INFO, "Env::setEnv called with key: {}, val: {}", key, val);
+    std::lock_guard lock(impl_->mMutex);
     DLOG_F(INFO, "Env::setEnv: Set key: {} with value: {}", key, val);
 #ifdef _WIN32
-    return SetEnvironmentVariableA(key.c_str(), val.c_str()) != 0;
+    bool result = SetEnvironmentVariableA(key.c_str(), val.c_str()) != 0;
 #else
-    return setenv(key.c_str(), val.c_str(), 1) == 0;
+    bool result = setenv(key.c_str(), val.c_str(), 1) == 0;
 #endif
+    LOG_F(INFO, "Env::setEnv returning: {}", result);
+    return result;
 }
 
 auto Env::getEnv(const std::string &key,
                  const std::string &default_value) -> std::string {
-    std::lock_guard lock(m_mutex);
+    LOG_F(INFO, "Env::getEnv called with key: {}, default_value: {}", key,
+          default_value);
+    std::lock_guard lock(impl_->mMutex);
     DLOG_F(INFO, "Env::getEnv: Get key: {} with default value: {}", key,
            default_value);
 #ifdef _WIN32
@@ -176,47 +185,14 @@ auto Env::getEnv(const std::string &key,
 #endif
 }
 
-auto Env::getAbsolutePath(const std::string &path) const -> std::string {
-    if (path.empty()) {
-        return "/";
-    }
-#ifdef _WIN32
-    if (path[1] == ':') {
-        return path;
-    }
-#else
-    if (path[0] == '/') {
-        return path;
-    }
-#endif
-    return m_cwd + path;
-}
-
-auto Env::getAbsoluteWorkPath(const std::string &path) const -> std::string {
-    if (!path.empty()) {
-#ifdef _WIN32
-        if (path[1] == ':') {
-            return path;
-        }
-#else
-        if (path[0] == '/') {
-            return path;
-        }
-#endif
-    }
-    return "/";
-}
-
-auto Env::getConfigPath() -> std::string {
-    return getAbsolutePath(get("c", "config"));
-}
-
 auto Env::Environ() -> std::unordered_map<std::string, std::string> {
+    LOG_F(INFO, "Env::Environ called");
     std::unordered_map<std::string, std::string> envMap;
 
 #ifdef _WIN32
     LPCH envStrings = GetEnvironmentStrings();
     if (envStrings == nullptr) {
+        LOG_F(ERROR, "Env::Environ: GetEnvironmentStrings failed");
         return envMap;
     }
 
@@ -247,43 +223,13 @@ auto Env::Environ() -> std::unordered_map<std::string, std::string> {
     }
 #endif
 
+    LOG_F(INFO, "Env::Environ returning environment map with {} entries",
+          envMap.size());
     return envMap;
 }
 
-void Env::setVariable(const std::string &name, const std::string &value,
-                      bool overwrite) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (overwrite || (getenv(name.c_str()) == nullptr)) {
-        if (SetEnvironmentVariableA(name.c_str(), value.c_str()) == 0) {
-            LOG_F(ERROR, "Failed to set environment variable: {}", name);
-        }
-    }
-#else
-    if (setenv(name.c_str(), value.c_str(), overwrite ? 1 : 0) != 0) {
-        LOG_F(ERROR, "Failed to set environment variable: {}", name);
-    }
-#endif
-}
-
-// 获取环境变量
-auto Env::getVariable(const std::string &name) -> std::string {
-#if defined(_WIN32) || defined(_WIN64)
-    char buffer[32767];
-    if (GetEnvironmentVariableA(name.c_str(), buffer, 32767) > 0) {
-        return std::string(buffer);
-    }
-#else
-    const char *value = getenv(name.c_str());
-    if (value != nullptr) {
-        return value;
-    }
-#endif
-    LOG_F(ERROR, "Environment variable not found: {}", name);
-    return "";
-}
-
-// 删除环境变量
-void Env::unsetVariable(const std::string &name) {
+void Env::unsetEnv(const std::string &name) {
+    LOG_F(INFO, "Env::unsetVariable called with name: {}", name);
 #if defined(_WIN32) || defined(_WIN64)
     if (SetEnvironmentVariableA(name.c_str(), nullptr) == 0) {
         LOG_F(ERROR, "Failed to unset environment variable: {}", name);
@@ -295,8 +241,8 @@ void Env::unsetVariable(const std::string &name) {
 #endif
 }
 
-// 列出所有环境变量
 auto Env::listVariables() -> std::vector<std::string> {
+    LOG_F(INFO, "Env::listVariables called");
     std::vector<std::string> vars;
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -315,14 +261,17 @@ auto Env::listVariables() -> std::vector<std::string> {
     }
 #endif
 
+    LOG_F(INFO, "Env::listVariables returning {} variables", vars.size());
     return vars;
 }
 
-// 输出所有环境变量
+#if ATOM_ENABLE_DEBUG
 void Env::printAllVariables() {
+    LOG_F(INFO, "Env::printAllVariables called");
     std::vector<std::string> vars = listVariables();
     for (const auto &var : vars) {
         DLOG_F(INFO, "{}", var);
     }
 }
+#endif
 }  // namespace atom::utils

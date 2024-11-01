@@ -21,7 +21,7 @@ Description: Pointer Sentinel for Atom
 #include <variant>
 
 #include "error/exception.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 /**
  * @brief Concept to check if a type is a pointer type, including raw pointers,

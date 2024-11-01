@@ -19,7 +19,7 @@ Description: AtomSolver Simulator and Basic Definition
 #include <future>
 #include <optional>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 template<typename T>
 concept CoordinateType = requires(T t) {

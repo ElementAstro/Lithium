@@ -1,4 +1,5 @@
 #include "atom/function/signature.hpp"
+
 #include <gtest/gtest.h>
 
 TEST(FunctionSignatureTest,
@@ -8,13 +9,13 @@ TEST(FunctionSignatureTest,
         atom::meta::parseFunctionDefinition(definition);
 
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->name, "foo");
-    EXPECT_EQ(result->parameters.size(), 2);
-    EXPECT_EQ(result->parameters[0].first, "a");
-    EXPECT_EQ(result->parameters[0].second, "int");
-    EXPECT_EQ(result->parameters[1].first, "b");
-    EXPECT_EQ(result->parameters[1].second, "float");
-    EXPECT_EQ(result->returnType.value(), "float");
+    EXPECT_EQ(result->getName(), "foo");
+    EXPECT_EQ(result->getParameters().size(), 2);
+    EXPECT_EQ(result->getParameters()[0].first, "a");
+    EXPECT_EQ(result->getParameters()[0].second, "int");
+    EXPECT_EQ(result->getParameters()[1].first, "b");
+    EXPECT_EQ(result->getParameters()[1].second, "float");
+    EXPECT_EQ(result->getReturnType().value(), "float");
 }
 
 TEST(FunctionSignatureTest,
@@ -34,14 +35,14 @@ TEST(
         atom::meta::parseFunctionDefinition(definition);
 
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->name, "foo");
-    EXPECT_EQ(result->parameters.size(), 2);
-    EXPECT_EQ(result->parameters[0].first, "a");
-    EXPECT_EQ(result->parameters[0].second, "int");
-    EXPECT_EQ(result->parameters[1].first, "b");
-    EXPECT_EQ(result->parameters[1].second, "float");
-    EXPECT_TRUE(result->returnType.has_value());
-    EXPECT_EQ(result->returnType.value(), "none");
+    EXPECT_EQ(result->getName(), "foo");
+    EXPECT_EQ(result->getParameters().size(), 2);
+    EXPECT_EQ(result->getParameters()[0].first, "a");
+    EXPECT_EQ(result->getParameters()[0].second, "int");
+    EXPECT_EQ(result->getParameters()[1].first, "b");
+    EXPECT_EQ(result->getParameters()[1].second, "float");
+    EXPECT_TRUE(result->getReturnType().has_value());
+    EXPECT_EQ(result->getReturnType().value(), "none");
 }
 
 // Max: 这里确实是可以的，因为冒号是不影响的
@@ -51,10 +52,10 @@ TEST(FunctionSignatureTest,
     std::optional<atom::meta::FunctionSignature> result =
         atom::meta::parseFunctionDefinition(definition);
     EXPECT_TRUE(result.has_value());
-    EXPECT_EQ(result->name, "foo");
-    EXPECT_EQ(result->parameters.size(), 2);
-    EXPECT_EQ(result->parameters[0].first, "a");
-    EXPECT_EQ(result->parameters[0].second, "int");
-    EXPECT_EQ(result->parameters[1].first, "b");
-    EXPECT_EQ(result->parameters[1].second, "float");
+    EXPECT_EQ(result->getName(), "foo");
+    EXPECT_EQ(result->getParameters().size(), 2);
+    EXPECT_EQ(result->getParameters()[0].first, "a");
+    EXPECT_EQ(result->getParameters()[0].second, "int");
+    EXPECT_EQ(result->getParameters()[1].first, "b");
+    EXPECT_EQ(result->getParameters()[1].second, "float");
 }

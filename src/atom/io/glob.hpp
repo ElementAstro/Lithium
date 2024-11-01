@@ -9,7 +9,7 @@
 
 #include "atom/error/exception.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::io {
 

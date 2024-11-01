@@ -19,7 +19,7 @@ Description: System Information Module - Memory
 #include <utility>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 struct MemoryInfo {

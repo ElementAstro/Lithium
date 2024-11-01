@@ -16,7 +16,7 @@
 #include "device/template/camera.hpp"
 #include "function/conversion.hpp"
 #include "function/type_info.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 INDICamera::INDICamera(std::string deviceName)
     : AtomCamera(name_), name_(std::move(deviceName)) {}

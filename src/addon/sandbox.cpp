@@ -7,10 +7,8 @@
 #include "sandbox.hpp"
 
 #ifdef _WIN32
-// clang-format off
-#include <windows.h>
 #include <psapi.h>
-// clang-format on
+#include <windows.h>
 #else
 #include <fcntl.h>
 #include <seccomp.h>
@@ -35,6 +33,9 @@ public:
     std::vector<std::string> mProgramArgs;
     int mTimeUsed{0};
     long mMemoryUsed{0};
+    int mCpuLimit{0};
+    long mDiskLimit{0};
+    bool mNetworkAccess{true};
 
     auto setTimeLimit(int timeLimitMs) -> bool;
     auto setMemoryLimit(long memoryLimitKb) -> bool;
@@ -42,6 +43,9 @@ public:
     auto setUserId(int userId) -> bool;
     auto setProgramPath(const std::string& programPath) -> bool;
     auto setProgramArgs(const std::vector<std::string>& programArgs) -> bool;
+    auto setCpuLimit(int cpuLimit) -> bool;
+    auto setDiskLimit(long diskLimitKb) -> bool;
+    auto setNetworkAccess(bool networkAccess) -> bool;
     auto run() -> bool;
 
 #ifdef _WIN32
@@ -92,6 +96,24 @@ auto Sandbox::setProgramArgs(const std::vector<std::string>& programArgs)
     return pimpl->setProgramArgs(programArgs);
 }
 
+auto SandboxImpl::setCpuLimit(int cpuLimit) -> bool {
+    mCpuLimit = cpuLimit;
+    LOG_F(INFO, "CPU limit set to {}", cpuLimit);
+    return true;
+}
+
+auto SandboxImpl::setDiskLimit(long diskLimitKb) -> bool {
+    mDiskLimit = diskLimitKb;
+    LOG_F(INFO, "Disk limit set to {} KB", diskLimitKb);
+    return true;
+}
+
+auto SandboxImpl::setNetworkAccess(bool networkAccess) -> bool {
+    mNetworkAccess = networkAccess;
+    LOG_F(INFO, "Network access set to {}", networkAccess);
+    return true;
+}
+
 auto Sandbox::run() -> bool {
     LOG_F(INFO, "Running sandbox");
     return pimpl->run();
@@ -105,6 +127,60 @@ auto Sandbox::getTimeUsed() const -> int {
 auto Sandbox::getMemoryUsed() const -> long {
     LOG_F(INFO, "Getting memory used: {} KB", pimpl->mMemoryUsed);
     return pimpl->mMemoryUsed;
+}
+
+// MultiSandbox class implementation
+MultiSandbox::MultiSandbox() { LOG_F(INFO, "MultiSandbox created"); }
+
+MultiSandbox::~MultiSandbox() { LOG_F(INFO, "MultiSandbox destroyed"); }
+
+auto MultiSandbox::createSandbox(int id) -> bool {
+    if (sandboxes.find(id) != sandboxes.end()) {
+        LOG_F(ERROR, "Sandbox with ID {} already exists", id);
+        return false;
+    }
+    sandboxes[id] = std::make_unique<Sandbox>();
+    LOG_F(INFO, "Created sandbox with ID {}", id);
+    return true;
+}
+
+auto MultiSandbox::removeSandbox(int id) -> bool {
+    if (sandboxes.erase(id)) {
+        LOG_F(INFO, "Removed sandbox with ID {}", id);
+        return true;
+    }
+    LOG_F(ERROR, "No sandbox found with ID {}", id);
+    return false;
+}
+
+auto MultiSandbox::runAll() -> bool {
+    bool allSucceeded = true;
+    for (auto& [id, sandbox] : sandboxes) {
+        LOG_F(INFO, "Running sandbox with ID {}", id);
+        if (!sandbox->run()) {
+            LOG_F(ERROR, "Sandbox with ID {} failed", id);
+            allSucceeded = false;
+        }
+    }
+    return allSucceeded;
+}
+
+auto MultiSandbox::getSandboxTimeUsed(int id) const -> int {
+    auto it = sandboxes.find(id);
+    if (it != sandboxes.end()) {
+        return it->second->getTimeUsed();
+    }
+    LOG_F(ERROR, "No sandbox found with ID {}", id);
+    return -1;  // Indicate failure
+}
+
+auto MultiSandbox::getSandboxMemoryUsed(int id) const -> long {
+    auto it = sandboxes.find(id);
+    if (it != sandboxes.end()) {
+        return it->second->getMemoryUsed();
+    }
+    LOG_F(ERROR, "No sandbox found with ID {}", id);
+    return -1;  // Indicate failure
 }
 
 auto SandboxImpl::setTimeLimit(int timeLimitMs) -> bool {
@@ -293,7 +369,7 @@ auto SandboxImpl::run() -> bool {
 
         std::vector<char*> args;
         args.reserve(mProgramArgs.size() + 2);
-        args.emplace_back(mProgramPath.data());
+        args.emplace_back(const_cast<char*>(mProgramPath.c_str()));
         for (const auto& arg : mProgramArgs) {
             args.emplace_back(const_cast<char*>(arg.c_str()));
         }

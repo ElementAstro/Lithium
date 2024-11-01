@@ -1,21 +1,27 @@
+#ifdef __linux__
+
 #include "elf.hpp"
 
 #include <elf.h>
 #include <algorithm>
 #include <fstream>
-#include <stdexcept>
 
 #include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace lithium {
 
 class ElfParser::Impl {
 public:
-    explicit Impl(std::string_view file) : filePath_(file) {}
+    explicit Impl(std::string_view file) : filePath_(file) {
+        LOG_F(INFO, "ElfParser::Impl created for file: {}", file);
+    }
 
     auto parse() -> bool {
+        LOG_F(INFO, "Parsing ELF file: {}", filePath_);
         std::ifstream file(filePath_, std::ios::binary);
         if (!file) {
+            LOG_F(ERROR, "Failed to open file: {}", filePath_);
             return false;
         }
 
@@ -26,54 +32,85 @@ public:
         fileContent_.resize(fileSize_);
         file.read(reinterpret_cast<char*>(fileContent_.data()), fileSize_);
 
-        return parseElfHeader() && parseProgramHeaders() &&
-               parseSectionHeaders() && parseSymbolTable();
+        bool result = parseElfHeader() && parseProgramHeaders() &&
+                      parseSectionHeaders() && parseSymbolTable();
+        if (result) {
+            LOG_F(INFO, "Successfully parsed ELF file: {}", filePath_);
+        } else {
+            LOG_F(ERROR, "Failed to parse ELF file: {}", filePath_);
+        }
+        return result;
     }
 
-    [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader> { return elfHeader_; }
+    [[nodiscard]] auto getElfHeader() const -> std::optional<ElfHeader> {
+        LOG_F(INFO, "Getting ELF header");
+        return elfHeader_;
+    }
 
-    [[nodiscard]] auto getProgramHeaders() const -> std::span<const ProgramHeader> {
+    [[nodiscard]] auto getProgramHeaders() const
+        -> std::span<const ProgramHeader> {
+        LOG_F(INFO, "Getting program headers");
         return programHeaders_;
     }
 
-    [[nodiscard]] auto getSectionHeaders() const -> std::span<const SectionHeader> {
+    [[nodiscard]] auto getSectionHeaders() const
+        -> std::span<const SectionHeader> {
+        LOG_F(INFO, "Getting section headers");
         return sectionHeaders_;
     }
 
-    [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol> { return symbolTable_; }
+    [[nodiscard]] auto getSymbolTable() const -> std::span<const Symbol> {
+        LOG_F(INFO, "Getting symbol table");
+        return symbolTable_;
+    }
 
-    [[nodiscard]] auto findSymbolByName(std::string_view name) const -> std::optional<Symbol> {
-        auto it = std::ranges::find_if(symbolTable_, [name](const auto& symbol) {
-            return symbol.name == name;
-        });
+    [[nodiscard]] auto findSymbolByName(std::string_view name) const
+        -> std::optional<Symbol> {
+        LOG_F(INFO, "Finding symbol by name: {}", name);
+        auto it = std::ranges::find_if(
+            symbolTable_,
+            [name](const auto& symbol) { return symbol.name == name; });
         if (it != symbolTable_.end()) {
+            LOG_F(INFO, "Found symbol: {}", name);
             return *it;
         }
+        LOG_F(WARNING, "Symbol not found: {}", name);
         return std::nullopt;
     }
 
-    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const -> std::optional<Symbol> {
+    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
+        -> std::optional<Symbol> {
+        LOG_F(INFO, "Finding symbol by address: {}", address);
         auto it = std::ranges::find_if(
             symbolTable_,
             [address](const auto& symbol) { return symbol.value == address; });
         if (it != symbolTable_.end()) {
+            LOG_F(INFO, "Found symbol at address: {}", address);
             return *it;
         }
+        LOG_F(WARNING, "Symbol not found at address: {}", address);
         return std::nullopt;
     }
 
-    [[nodiscard]] auto findSection(std::string_view name) const -> std::optional<SectionHeader> {
+    [[nodiscard]] auto findSection(std::string_view name) const
+        -> std::optional<SectionHeader> {
+        LOG_F(INFO, "Finding section by name: {}", name);
         auto it = std::ranges::find_if(
             sectionHeaders_,
             [name](const auto& section) { return section.name == name; });
         if (it != sectionHeaders_.end()) {
+            LOG_F(INFO, "Found section: {}", name);
             return *it;
         }
+        LOG_F(WARNING, "Section not found: {}", name);
         return std::nullopt;
     }
 
-    [[nodiscard]] auto getSectionData(const SectionHeader& section) const -> std::vector<uint8_t> {
+    [[nodiscard]] auto getSectionData(const SectionHeader& section) const
+        -> std::vector<uint8_t> {
+        LOG_F(INFO, "Getting data for section: {}", section.name);
         if (section.offset + section.size > fileSize_) {
+            LOG_F(ERROR, "Section data out of bounds: {}", section.name);
             THROW_OUT_OF_RANGE("Section data out of bounds");
         }
         return {fileContent_.begin() + section.offset,
@@ -91,31 +128,36 @@ private:
     std::vector<Symbol> symbolTable_;
 
     auto parseElfHeader() -> bool {
+        LOG_F(INFO, "Parsing ELF header");
         if (fileSize_ < sizeof(Elf64_Ehdr)) {
+            LOG_F(ERROR, "File size too small for ELF header");
             return false;
         }
 
         const auto* ehdr =
             reinterpret_cast<const Elf64_Ehdr*>(fileContent_.data());
         elfHeader_ = ElfHeader{.type = ehdr->e_type,
-                              .machine = ehdr->e_machine,
-                              .version = ehdr->e_version,
-                              .entry = ehdr->e_entry,
-                              .phoff = ehdr->e_phoff,
-                              .shoff = ehdr->e_shoff,
-                              .flags = ehdr->e_flags,
-                              .ehsize = ehdr->e_ehsize,
-                              .phentsize = ehdr->e_phentsize,
-                              .phnum = ehdr->e_phnum,
-                              .shentsize = ehdr->e_shentsize,
-                              .shnum = ehdr->e_shnum,
-                              .shstrndx = ehdr->e_shstrndx};
+                               .machine = ehdr->e_machine,
+                               .version = ehdr->e_version,
+                               .entry = ehdr->e_entry,
+                               .phoff = ehdr->e_phoff,
+                               .shoff = ehdr->e_shoff,
+                               .flags = ehdr->e_flags,
+                               .ehsize = ehdr->e_ehsize,
+                               .phentsize = ehdr->e_phentsize,
+                               .phnum = ehdr->e_phnum,
+                               .shentsize = ehdr->e_shentsize,
+                               .shnum = ehdr->e_shnum,
+                               .shstrndx = ehdr->e_shstrndx};
 
+        LOG_F(INFO, "Parsed ELF header successfully");
         return true;
     }
 
     auto parseProgramHeaders() -> bool {
+        LOG_F(INFO, "Parsing program headers");
         if (!elfHeader_) {
+            LOG_F(ERROR, "ELF header not parsed");
             return false;
         }
 
@@ -123,20 +165,23 @@ private:
             fileContent_.data() + elfHeader_->phoff);
         for (uint16_t i = 0; i < elfHeader_->phnum; ++i) {
             programHeaders_.push_back(ProgramHeader{.type = phdr[i].p_type,
-                                                   .offset = phdr[i].p_offset,
-                                                   .vaddr = phdr[i].p_vaddr,
-                                                   .paddr = phdr[i].p_paddr,
-                                                   .filesz = phdr[i].p_filesz,
-                                                   .memsz = phdr[i].p_memsz,
-                                                   .flags = phdr[i].p_flags,
-                                                   .align = phdr[i].p_align});
+                                                    .offset = phdr[i].p_offset,
+                                                    .vaddr = phdr[i].p_vaddr,
+                                                    .paddr = phdr[i].p_paddr,
+                                                    .filesz = phdr[i].p_filesz,
+                                                    .memsz = phdr[i].p_memsz,
+                                                    .flags = phdr[i].p_flags,
+                                                    .align = phdr[i].p_align});
         }
 
+        LOG_F(INFO, "Parsed program headers successfully");
         return true;
     }
 
     auto parseSectionHeaders() -> bool {
+        LOG_F(INFO, "Parsing section headers");
         if (!elfHeader_) {
+            LOG_F(ERROR, "ELF header not parsed");
             return false;
         }
 
@@ -159,15 +204,18 @@ private:
                               .entsize = shdr[i].sh_entsize});
         }
 
+        LOG_F(INFO, "Parsed section headers successfully");
         return true;
     }
 
     auto parseSymbolTable() -> bool {
+        LOG_F(INFO, "Parsing symbol table");
         auto symtabSection = std::ranges::find_if(
             sectionHeaders_,
             [](const auto& section) { return section.type == SHT_SYMTAB; });
 
         if (symtabSection == sectionHeaders_.end()) {
+            LOG_F(WARNING, "No symbol table found");
             return true;  // No symbol table, but not an error
         }
 
@@ -188,49 +236,70 @@ private:
                        .shndx = symtab[i].st_shndx});
         }
 
+        LOG_F(INFO, "Parsed symbol table successfully");
         return true;
     }
 };
 
 // ElfParser method implementations
 ElfParser::ElfParser(std::string_view file)
-    : pImpl(std::make_unique<Impl>(file)) {}
+    : pImpl_(std::make_unique<Impl>(file)) {
+    LOG_F(INFO, "ElfParser created for file: {}", file);
+}
 
 ElfParser::~ElfParser() = default;
 
-auto ElfParser::parse() -> bool { return pImpl->parse(); }
+auto ElfParser::parse() -> bool {
+    LOG_F(INFO, "ElfParser::parse called");
+    return pImpl_->parse();
+}
 
 auto ElfParser::getElfHeader() const -> std::optional<ElfHeader> {
-    return pImpl->getElfHeader();
+    LOG_F(INFO, "ElfParser::getElfHeader called");
+    return pImpl_->getElfHeader();
 }
 
 auto ElfParser::getProgramHeaders() const -> std::span<const ProgramHeader> {
-    return pImpl->getProgramHeaders();
+    LOG_F(INFO, "ElfParser::getProgramHeaders called");
+    return pImpl_->getProgramHeaders();
 }
 
 auto ElfParser::getSectionHeaders() const -> std::span<const SectionHeader> {
-    return pImpl->getSectionHeaders();
+    LOG_F(INFO, "ElfParser::getSectionHeaders called");
+    return pImpl_->getSectionHeaders();
 }
 
 auto ElfParser::getSymbolTable() const -> std::span<const Symbol> {
-    return pImpl->getSymbolTable();
+    LOG_F(INFO, "ElfParser::getSymbolTable called");
+    return pImpl_->getSymbolTable();
 }
 
-auto ElfParser::findSymbolByName(std::string_view name) const -> std::optional<Symbol> {
-    return pImpl->findSymbolByName(name);
+auto ElfParser::findSymbolByName(std::string_view name) const
+    -> std::optional<Symbol> {
+    LOG_F(INFO, "ElfParser::findSymbolByName called with name: {}", name);
+    return pImpl_->findSymbolByName(name);
 }
 
-auto ElfParser::findSymbolByAddress(uint64_t address) const -> std::optional<Symbol> {
-    return pImpl->findSymbolByAddress(address);
+auto ElfParser::findSymbolByAddress(uint64_t address) const
+    -> std::optional<Symbol> {
+    LOG_F(INFO, "ElfParser::findSymbolByAddress called with address: {}",
+          address);
+    return pImpl_->findSymbolByAddress(address);
 }
 
-auto ElfParser::findSection(
-    std::string_view name) const -> std::optional<SectionHeader> {
-    return pImpl->findSection(name);
+auto ElfParser::findSection(std::string_view name) const
+    -> std::optional<SectionHeader> {
+    LOG_F(INFO, "ElfParser::findSection called with name: {}", name);
+    return pImpl_->findSection(name);
 }
 
-auto ElfParser::getSectionData(
-    const SectionHeader& section) const -> std::vector<uint8_t> {
-    return pImpl->getSectionData(section);
+auto ElfParser::getSectionData(const SectionHeader& section) const
+    -> std::vector<uint8_t> {
+    LOG_F(INFO, "ElfParser::getSectionData called for section: {}",
+          section.name);
+    return pImpl_->getSectionData(section);
 }
+
 }  // namespace lithium
+
+#endif  // __linux__

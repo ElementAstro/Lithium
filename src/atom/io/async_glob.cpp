@@ -1,19 +1,22 @@
 #include "async_glob.hpp"
 
+#include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
+
+#if ATOM_ENABLE_ABSL
+#include <absl/strings/match.h>
+#include <absl/strings/str_replace.h>
+#endif
+
 namespace atom::io {
 
-AsyncGlob::AsyncGlob(asio::io_context& io_context) : io_context_(io_context) {}
-
-void AsyncGlob::stringReplace(std::string& str, const std::string& from,
-                              const std::string& toStr) {
-    std::size_t startPos = str.find(from);
-    if (startPos == std::string::npos) {
-        return;
-    }
-    str.replace(startPos, from.length(), toStr);
+AsyncGlob::AsyncGlob(asio::io_context& io_context) : io_context_(io_context) {
+    LOG_F(INFO, "AsyncGlob constructor called");
 }
 
 auto AsyncGlob::translate(const std::string& pattern) -> std::string {
+    LOG_F(INFO, "AsyncGlob::translate called with pattern: {}", pattern);
     std::size_t index = 0;
     std::size_t patternSize = pattern.size();
     std::string resultString;
@@ -42,9 +45,13 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                 auto stuff = std::string(
                     pattern.begin() + static_cast<std::ptrdiff_t>(index),
                     pattern.begin() + static_cast<std::ptrdiff_t>(innerIndex));
-                if (stuff.find("--") == std::string::npos) {
-                    stringReplace(stuff, std::string{"\\"},
-                                  std::string{R"(\\)"});
+#if ATOM_ENABLE_ABSL
+                if (!absl::StrContains(stuff, "--")) {
+#else
+                if (stuff.contains("--")) {
+#endif
+                    stuff = atom::utils::replaceString(stuff, std::string{"\\"},
+                                                       std::string{R"(\\)"});
                 } else {
                     std::vector<std::string> chunks;
                     std::size_t chunkIndex = 0;
@@ -74,10 +81,10 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                             static_cast<std::ptrdiff_t>(innerIndex));
                     bool first = false;
                     for (auto& chunk : chunks) {
-                        stringReplace(chunk, std::string{"\\"},
-                                      std::string{R"(\\)"});
-                        stringReplace(chunk, std::string{"-"},
-                                      std::string{R"(\-)"});
+                        chunk = atom::utils::replaceString(
+                            chunk, std::string{"\\"}, std::string{R"(\\)"});
+                        chunk = atom::utils::replaceString(
+                            chunk, std::string{"-"}, std::string{R"(\-)"});
                         if (first) {
                             stuff += chunk;
                             first = false;
@@ -97,7 +104,7 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                 if (stuff[0] == '!') {
                     stuff = "^" + std::string(stuff.begin() + 1, stuff.end());
                 } else if (stuff[0] == '^' || stuff[0] == '[') {
-                    stuff = "\\\\" + stuff;
+                    stuff.insert(0, "\\\\");
                 }
                 resultString += "[" + stuff + "]";
             }
@@ -112,7 +119,11 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
                         std::string{"\\"} + std::string(1, specialChar)));
                 }
             }
-            if (specialCharacters.find(currentChar) != std::string::npos) {
+#if ATOM_ENABLE_ABSL
+            if (absl::StrContains(specialCharacters, currentChar)) {
+#else
+            if (specialCharacters.contains(currentChar)) {
+#endif
                 resultString +=
                     specialCharactersMap[static_cast<int>(currentChar)];
             } else {
@@ -120,30 +131,39 @@ auto AsyncGlob::translate(const std::string& pattern) -> std::string {
             }
         }
     }
+    LOG_F(INFO, "Translated pattern: {}", resultString);
     return std::string{"(("} + resultString + std::string{R"()|[\r\n])$)"};
 }
 
 auto AsyncGlob::compilePattern(const std::string& pattern) -> std::regex {
+    LOG_F(INFO, "AsyncGlob::compilePattern called with pattern: {}", pattern);
     return std::regex(translate(pattern), std::regex::ECMAScript);
 }
 
 auto AsyncGlob::fnmatch(const fs::path& name,
                         const std::string& pattern) -> bool {
-    return std::regex_match(name.string(), compilePattern(pattern));
+    LOG_F(INFO, "AsyncGlob::fnmatch called with name: {}, pattern: {}",
+          name.string(), pattern);
+    bool result = std::regex_match(name.string(), compilePattern(pattern));
+    LOG_F(INFO, "AsyncGlob::fnmatch returning: {}", result);
+    return result;
 }
 
 auto AsyncGlob::filter(const std::vector<fs::path>& names,
                        const std::string& pattern) -> std::vector<fs::path> {
+    LOG_F(INFO, "AsyncGlob::filter called with pattern: {}", pattern);
     std::vector<fs::path> result;
     for (const auto& name : names) {
         if (fnmatch(name, pattern)) {
             result.push_back(name);
         }
     }
+    LOG_F(INFO, "AsyncGlob::filter returning {} paths", result.size());
     return result;
 }
 
 auto AsyncGlob::expandTilde(fs::path path) -> fs::path {
+    LOG_F(INFO, "AsyncGlob::expandTilde called with path: {}", path.string());
     if (path.empty()) {
         return path;
     }
@@ -153,8 +173,11 @@ auto AsyncGlob::expandTilde(fs::path path) -> fs::path {
 #else
     const char* homeVariable = "USER";
 #endif
+    // Max: Here we can not use GlobalSharedPtrManager
     const char* home = getenv(homeVariable);
-    if (!home) {
+    if (home == nullptr) {
+        LOG_F(ERROR,
+              "Unable to expand `~` - HOME environment variable not set.");
         THROW_INVALID_ARGUMENT(
             "error: Unable to expand `~` - HOME environment variable not set.");
     }
@@ -162,28 +185,41 @@ auto AsyncGlob::expandTilde(fs::path path) -> fs::path {
     std::string pathStr = path.string();
     if (pathStr[0] == '~') {
         pathStr = std::string(home) + pathStr.substr(1, pathStr.size() - 1);
-        return fs::path(pathStr);
-    } else {
-        return path;
+        fs::path expandedPath(pathStr);
+        LOG_F(INFO, "Expanded path: {}", expandedPath.string());
+        return expandedPath;
     }
+    return path;
 }
 
 auto AsyncGlob::hasMagic(const std::string& pathname) -> bool {
+    LOG_F(INFO, "AsyncGlob::hasMagic called with pathname: {}", pathname);
     static const auto MAGIC_CHECK = std::regex("([*?[])");
-    return std::regex_search(pathname, MAGIC_CHECK);
+    bool result = std::regex_search(pathname, MAGIC_CHECK);
+    LOG_F(INFO, "AsyncGlob::hasMagic returning: {}", result);
+    return result;
 }
 
 auto AsyncGlob::isHidden(const std::string& pathname) -> bool {
-    return std::regex_match(pathname, std::regex(R"(^(.*\/)*\.[^\.\/]+\/*$)"));
+    LOG_F(INFO, "AsyncGlob::isHidden called with pathname: {}", pathname);
+    bool result =
+        std::regex_match(pathname, std::regex(R"(^(.*\/)*\.[^\.\/]+\/*$)"));
+    LOG_F(INFO, "AsyncGlob::isHidden returning: {}", result);
+    return result;
 }
 
 auto AsyncGlob::isRecursive(const std::string& pattern) -> bool {
-    return pattern == "**";
+    LOG_F(INFO, "AsyncGlob::isRecursive called with pattern: {}", pattern);
+    bool result = pattern == "**";
+    LOG_F(INFO, "AsyncGlob::isRecursive returning: {}", result);
+    return result;
 }
 
 void AsyncGlob::iterDirectory(
     const fs::path& dirname, bool dironly,
     const std::function<void(std::vector<fs::path>)>& callback) {
+    LOG_F(INFO, "AsyncGlob::iterDirectory called with dirname: {}, dironly: {}",
+          dirname.string(), dironly);
     io_context_.post([dirname, dironly, callback]() {
         std::vector<fs::path> result;
         auto currentDirectory = dirname;
@@ -205,9 +241,8 @@ void AsyncGlob::iterDirectory(
                         }
                     }
                 }
-            } catch (std::exception&) {
-                // not a directory
-                // do nothing
+            } catch (std::exception& e) {
+                LOG_F(ERROR, "Exception in iterDirectory: {}", e.what());
             }
         }
 
@@ -218,6 +253,8 @@ void AsyncGlob::iterDirectory(
 void AsyncGlob::rlistdir(
     const fs::path& dirname, bool dironly,
     const std::function<void(std::vector<fs::path>)>& callback) {
+    LOG_F(INFO, "AsyncGlob::rlistdir called with dirname: {}, dironly: {}",
+          dirname.string(), dironly);
     iterDirectory(
         dirname, dironly,
         [this, dironly, callback](std::vector<fs::path> names) {
@@ -239,6 +276,9 @@ void AsyncGlob::rlistdir(
 void AsyncGlob::glob2(
     const fs::path& dirname, const std::string& pattern, bool dironly,
     const std::function<void(std::vector<fs::path>)>& callback) {
+    LOG_F(INFO,
+          "AsyncGlob::glob2 called with dirname: {}, pattern: {}, dironly: {}",
+          dirname.string(), pattern, dironly);
     assert(isRecursive(pattern));
     rlistdir(dirname, dironly, callback);
 }
@@ -246,6 +286,9 @@ void AsyncGlob::glob2(
 void AsyncGlob::glob1(
     const fs::path& dirname, const std::string& pattern, bool dironly,
     const std::function<void(std::vector<fs::path>)>& callback) {
+    LOG_F(INFO,
+          "AsyncGlob::glob1 called with dirname: {}, pattern: {}, dironly: {}",
+          dirname.string(), pattern, dironly);
     iterDirectory(dirname, dironly,
                   [this, pattern, callback](std::vector<fs::path> names) {
                       std::vector<fs::path> filteredNames;
@@ -261,6 +304,9 @@ void AsyncGlob::glob1(
 void AsyncGlob::glob0(
     const fs::path& dirname, const fs::path& basename, bool dironly,
     const std::function<void(std::vector<fs::path>)>& callback) {
+    LOG_F(INFO,
+          "AsyncGlob::glob0 called with dirname: {}, basename: {}, dironly: {}",
+          dirname.string(), basename.string(), dironly);
     io_context_.post([dirname, basename, dironly, callback]() {
         std::vector<fs::path> result;
         if (basename.empty()) {
@@ -279,6 +325,10 @@ void AsyncGlob::glob0(
 void AsyncGlob::glob(const std::string& pathname,
                      const std::function<void(std::vector<fs::path>)>& callback,
                      bool recursive, bool dironly) {
+    LOG_F(
+        INFO,
+        "AsyncGlob::glob called with pathname: {}, recursive: {}, dironly: {}",
+        pathname, recursive, dironly);
     auto path = fs::path(pathname);
 
     if (pathname[0] == '~') {
@@ -337,7 +387,7 @@ void AsyncGlob::glob(const std::string& pathname,
     if (dirname != fs::path(pathname) && hasMagic(dirname.string())) {
         glob(
             dirname.string(),
-            [this, BASENAME, dironly, globInDir,
+            [BASENAME, dironly, globInDir,
              callback](std::vector<fs::path> dirs) {
                 std::vector<fs::path> result;
                 for (auto& dir : dirs) {
@@ -362,6 +412,7 @@ void AsyncGlob::glob(const std::string& pathname,
         }
         callback(result);
     }
+    LOG_F(INFO, "AsyncGlob::glob completed");
 }
 
 }  // namespace atom::io

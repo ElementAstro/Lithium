@@ -19,7 +19,7 @@ still some problems on Windows, especially the console.
 #include <ostream>
 #include <sstream>
 #include <thread>
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #ifndef _WIN32
 #include <unistd.h>

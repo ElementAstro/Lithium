@@ -19,7 +19,7 @@ Description: Simple wrapper for executing commands.
 #include <string>
 #include <unordered_map>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 
@@ -141,6 +141,15 @@ ATOM_NODISCARD auto executeCommandWithStatus(const std::string &command)
  * execute.
  */
 ATOM_NODISCARD auto executeCommandSimple(const std::string &command) -> bool;
+
+/**
+ * @brief Start a process and return the process ID and handle.
+ *
+ * @param command The command to execute.
+ * @return A pair containing the process ID as an integer and the process handle
+ * as a void pointer.
+ */
+auto startProcess(const std::string &command) -> std::pair<int, void *>;
 }  // namespace atom::system
 
 #endif

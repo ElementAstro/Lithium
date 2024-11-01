@@ -15,6 +15,7 @@ Description: A sandbox for isolated components, such as executables.
 #ifndef LITHIUM_ADDON_SANDBOX_HPP
 #define LITHIUM_ADDON_SANDBOX_HPP
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -45,6 +46,22 @@ public:
 
 private:
     std::unique_ptr<SandboxImpl> pimpl;  // Pointer to the implementation class
+};
+
+class MultiSandbox {
+public:
+    MultiSandbox();
+    ~MultiSandbox();
+
+    auto createSandbox(int id) -> bool;
+    auto removeSandbox(int id) -> bool;
+    auto runAll() -> bool;
+    auto getSandboxTimeUsed(int id) const -> int;
+    auto getSandboxMemoryUsed(int id) const -> long;
+
+private:
+    std::map<int, std::unique_ptr<Sandbox>>
+        sandboxes;  // Map of sandboxes by ID
 };
 
 }  // namespace lithium

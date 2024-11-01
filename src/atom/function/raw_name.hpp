@@ -11,7 +11,7 @@
 
 #include <string_view>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 #include "template_traits.hpp"
 
 namespace atom::meta {

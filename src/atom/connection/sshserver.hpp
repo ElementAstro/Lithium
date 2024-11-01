@@ -22,7 +22,7 @@ Description: SSH Server
 
 #include "atom/type/noncopyable.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::connection {
 /**

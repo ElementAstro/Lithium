@@ -18,7 +18,7 @@ Description: Component of Atom-System
 
 #include "command.hpp"
 #include "crash.hpp"
-#include "macro.hpp"
+#include "atom/macro.hpp"
 #include "pidwatcher.hpp"
 #include "platform.hpp"
 #include "user.hpp"

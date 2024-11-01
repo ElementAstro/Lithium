@@ -26,20 +26,17 @@ public:
         : oatpp::web::server::api::ApiController(objectMapper) {}
 
 public:
-    ENDPOINT_ASYNC("GET", m_appConfig->statisticsUrl, Stats){
+    ENDPOINT_ASYNC("GET", m_appConfig->statisticsUrl, Stats) {
+        ENDPOINT_ASYNC_INIT(Stats);
 
-        ENDPOINT_ASYNC_INIT(Stats)
-
-            Action act()
-                override{auto json = controller->m_statistics->getJsonData();
-    auto response = controller->createResponse(Status::CODE_200, json);
-    response->putHeader(Header::CONTENT_TYPE, "application/json");
-    return _return(response);
-}
-}
-;
-}
-;
+        Action act() override {
+            auto json = controller->m_statistics->getJsonData();
+            auto response = controller->createResponse(Status::CODE_200, json);
+            response->putHeader(Header::CONTENT_TYPE, "application/json");
+            return _return(response);
+        }
+    };
+};
 
 #include OATPP_CODEGEN_END(ApiController)  /// <-- End Code-Gen
 

@@ -1,103 +1,107 @@
 /*
- * stringutils.hpp
+ * to_string.hpp
  *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian
  */
 
 #ifndef ATOM_UTILS_TO_STRING_HPP
 #define ATOM_UTILS_TO_STRING_HPP
 
+#include <array>
+#include <iterator>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
-#include <vector>
-
-#include "atom/function/concept.hpp"
+#include <variant>
 
 namespace atom::utils {
 
-// -----------------------------------------------------------------------------
-// Concepts
-// -----------------------------------------------------------------------------
-
+/**
+ * @brief Concept for string types.
+ */
 template <typename T>
-concept StringType = String<T> || Char<T> || std::is_same_v<T, std::string>;
+concept StringType = std::is_same_v<std::decay_t<T>, std::string> ||
+                     std::is_same_v<std::decay_t<T>, const char*> ||
+                     std::is_same_v<std::decay_t<T>, char*>;
 
+/**
+ * @brief Concept for container types.
+ */
 template <typename T>
 concept Container = requires(T container) {
-    container.begin();
-    container.end();
-    container.size();
+    std::begin(container);
+    std::end(container);
 };
 
+/**
+ * @brief Concept for map types.
+ */
 template <typename T>
 concept MapType = requires(T map) {
     typename T::key_type;
     typename T::mapped_type;
-    requires Container<T>;
+    std::begin(map);
+    std::end(map);
 };
 
+/**
+ * @brief Concept for pointer types excluding string types.
+ */
 template <typename T>
-concept PointerType = std::is_pointer_v<T>;
+concept PointerType = std::is_pointer_v<T> && !StringType<T>;
 
+/**
+ * @brief Concept for enum types.
+ */
 template <typename T>
 concept EnumType = std::is_enum_v<T>;
 
-// -----------------------------------------------------------------------------
-// toString Implementation
-// -----------------------------------------------------------------------------
-
 /**
- * @brief Convert a non-container, non-map, non-pointer, non-enum type to a
- * string.
- * @tparam T The type of the value.
- * @param value The value to convert.
- * @return A string representation of the value.
+ * @brief Concept for smart pointer types.
  */
 template <typename T>
-    requires(!Container<T> && !MapType<T> && !StringType<T> &&
-             !PointerType<T> && !EnumType<T> && !SmartPointer<T>)
-auto toString(const T& value) -> std::string {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
+concept SmartPointer = requires(T smartPtr) {
+    *smartPtr;
+    smartPtr.get();
+};
 
 /**
- * @brief Convert a string type to a string.
- * @tparam T The type of the string (e.g., std::string, const char*).
- * @param value The string to convert.
- * @return The string itself.
+ * @brief Converts a string type to std::string.
+ *
+ * @tparam T The type of the string.
+ * @param value The string value.
+ * @return std::string The converted string.
  */
 template <StringType T>
-    requires(!Container<T>)
-auto toString(const T& value) -> std::string {
-    if constexpr (std::is_same_v<T, std::string>) {
+auto toString(T&& value) -> std::string {
+    if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
         return value;
-    } else if constexpr (std::is_same_v<T, const char*>) {
-        return std::string(value);
     } else {
-        return std::string(1, value);
+        return std::string(value);
     }
 }
 
 /**
- * @brief Convert an enum type to a string by casting to its underlying type.
- * @tparam Enum The enum type.
- * @param value The enum value to convert.
- * @return A string representation of the enum's underlying type.
+ * @brief Converts an enum type to std::string.
+ *
+ * @tparam T The enum type.
+ * @param value The enum value.
+ * @return std::string The converted string.
  */
-template <EnumType Enum>
-auto toString(const Enum& value) -> std::string {
-    return std::to_string(static_cast<std::underlying_type_t<Enum>>(value));
+template <EnumType T>
+auto toString(T value) -> std::string {
+    return std::to_string(static_cast<std::underlying_type_t<T>>(value));
 }
 
 /**
- * @brief Convert a pointer type to a string.
+ * @brief Converts a pointer type to std::string.
+ *
  * @tparam T The pointer type.
- * @param ptr The pointer to convert.
- * @return A string representation of the pointer address or value.
+ * @param ptr The pointer value.
+ * @return std::string The converted string.
  */
 template <PointerType T>
 auto toString(T ptr) -> std::string {
@@ -108,13 +112,14 @@ auto toString(T ptr) -> std::string {
 }
 
 /**
- * @brief Convert a smart pointer type (unique_ptr/shared_ptr) to a string.
- * @tparam SmartPtr The smart pointer type.
- * @param ptr The smart pointer to convert.
- * @return A string representation of the smart pointer.
+ * @brief Converts a smart pointer type to std::string.
+ *
+ * @tparam T The smart pointer type.
+ * @param ptr The smart pointer value.
+ * @return std::string The converted string.
  */
-template <SmartPointer SmartPtr>
-auto toString(const SmartPtr& ptr) -> std::string {
+template <SmartPointer T>
+auto toString(const T& ptr) -> std::string {
     if (ptr) {
         return "SmartPointer(" + toString(*ptr) + ")";
     }
@@ -122,130 +127,127 @@ auto toString(const SmartPtr& ptr) -> std::string {
 }
 
 /**
- * @brief Convert a key-value pair to a string.
- * @tparam Key The type of the key.
- * @tparam Value The type of the value.
- * @param keyValue The key-value pair to convert.
- * @return A string representation of the key-value pair.
+ * @brief Converts a container type to std::string.
+ *
+ * @tparam T The container type.
+ * @param container The container value.
+ * @param separator The separator between elements.
+ * @return std::string The converted string.
  */
-template <typename Key, typename Value>
-auto toString(const std::pair<Key, Value>& keyValue) -> std::string {
-    return "(" + toString(keyValue.first) + ", " + toString(keyValue.second) +
-           ")";
-}
-
-/**
- * @brief Convert a map (or unordered_map) to a string representation.
- * @tparam Map The map type.
- * @param map The map to convert.
- * @return A string representation of the map.
- */
-template <MapType Map>
-auto toString(const Map& map) -> std::string {
+template <Container T>
+auto toString(const T& container,
+              const std::string& separator = ", ") -> std::string {
     std::ostringstream oss;
-    oss << "{";
-    bool isFirst = true;
-    for (const auto& [key, value] : map) {
-        if (!isFirst) {
-            oss << ", ";
+    if constexpr (MapType<T>) {
+        oss << "{";
+        bool first = true;
+#pragma unroll
+        for (const auto& [key, value] : container) {
+            if (!first) {
+                oss << separator;
+            }
+            oss << toString(key) << ": " << toString(value);
+            first = false;
         }
-        oss << toString(key) << ": " << toString(value);
-        isFirst = false;
+        oss << "}";
+    } else {
+        oss << "[";
+        auto iter = std::begin(container);
+        auto end = std::end(container);
+#pragma unroll
+        while (iter != end) {
+            oss << toString(*iter);
+            ++iter;
+            if (iter != end) {
+                oss << separator;
+            }
+        }
+        oss << "]";
     }
-    oss << "}";
     return oss.str();
 }
 
 /**
- * @brief Convert a container (e.g., vector) to a string representation.
- * @tparam ContainerType The container type.
- * @param container The container to convert.
- * @return A string representation of the container.
+ * @brief Converts a general type to std::string.
+ *
+ * @tparam T The general type.
+ * @param value The value.
+ * @return std::string The converted string.
  */
-template <Container ContainerType>
-    requires(!MapType<ContainerType> &&
-             !StringType<typename ContainerType::value_type>)
-auto toString(const ContainerType& container) -> std::string {
-    std::ostringstream oss;
-    oss << "[";
-    auto iterator = container.begin();
-    while (iterator != container.end()) {
-        oss << toString(*iterator);
-        ++iterator;
-        if (iterator != container.end()) {
-            oss << ", ";
-        }
+template <typename T>
+    requires(!StringType<T> && !Container<T> && !PointerType<T> &&
+             !EnumType<T> && !SmartPointer<T>)
+auto toString(const T& value) -> std::string {
+    if constexpr (requires { std::to_string(value); }) {
+        return std::to_string(value);
+    } else {
+        std::ostringstream oss;
+        oss << value;
+        return oss.str();
     }
-    oss << "]";
-    return oss.str();
-}
-
-template <Container ContainerType>
-    requires(Container<ContainerType> &&
-             StringType<typename ContainerType::value_type>)
-auto toString(const ContainerType& container) -> std::string {
-    std::ostringstream oss;
-    oss << "[";
-    auto iterator = container.begin();
-    while (iterator != container.end()) {
-        oss << toString(*iterator);
-        ++iterator;
-        if (iterator != container.end()) {
-            oss << ", ";
-        }
-    }
-    oss << "]";
-    return oss.str();
 }
 
 /**
- * @brief Join multiple values into a single command line string.
+ * @brief Joins multiple arguments into a single command line string.
+ *
  * @tparam Args The types of the arguments.
- * @param args The arguments to join.
- * @return A string representation of the command line arguments.
+ * @param args The arguments.
+ * @return std::string The joined command line string.
  */
 template <typename... Args>
 auto joinCommandLine(const Args&... args) -> std::string {
     std::ostringstream oss;
-    bool isFirst = true;
-    ((oss << (isFirst ? (isFirst = false, "") : " ") << toString(args)), ...);
-    return oss.str();
+    ((oss << toString(args) << ' '), ...);
+    std::string result = oss.str();
+    if (!result.empty()) {
+        result.pop_back();  // Remove trailing space
+    }
+    return result;
 }
 
 /**
- * @brief Convert a vector to a space-separated string representation.
- * @tparam ContainerType The type of the elements in the vector.
- * @param array The vector to convert.
- * @return A space-separated string representation of the vector.
+ * @brief Converts an array to std::string.
+ *
+ * @tparam T The container type.
+ * @param array The array value.
+ * @param separator The separator between elements.
+ * @return std::string The converted string.
  */
-template <Container ContainerType>
-auto toStringArray(const ContainerType& array) -> std::string {
+template <Container T>
+auto toStringArray(const T& array,
+                   const std::string& separator = " ") -> std::string {
     std::ostringstream oss;
-    for (size_t index = 0; index < array.size(); ++index) {
-        oss << toString(array[index]);
-        if (index < array.size() - 1) {
-            oss << " ";
+    bool first = true;
+#pragma unroll
+    for (const auto& item : array) {
+        if (!first) {
+            oss << separator;
         }
+        oss << toString(item);
+        first = false;
     }
     return oss.str();
 }
 
 /**
- * @brief Convert an iterator range to a string representation.
- * @tparam Iterator The type of the iterator.
- * @param begin The beginning of the range.
- * @param end The end of the range.
- * @return A string representation of the range.
+ * @brief Converts a range to std::string.
+ *
+ * @tparam Iterator The iterator type.
+ * @param begin The beginning iterator.
+ * @param end The ending iterator.
+ * @param separator The separator between elements.
+ * @return std::string The converted string.
  */
 template <typename Iterator>
-auto toStringRange(Iterator begin, Iterator end) -> std::string {
+auto toStringRange(Iterator begin, Iterator end,
+                   const std::string& separator = ", ") -> std::string {
     std::ostringstream oss;
     oss << "[";
-    while (begin != end) {
-        oss << toString(*begin);
-        ++begin;
-        if (begin != end) {
-            oss << ", ";
+#pragma unroll
+    for (auto iter = begin; iter != end; ++iter) {
+        oss << toString(*iter);
+        if (std::next(iter) != end) {
+            oss << separator;
         }
     }
     oss << "]";
@@ -253,15 +255,80 @@ auto toStringRange(Iterator begin, Iterator end) -> std::string {
 }
 
 /**
- * @brief Convert an array to a string.
- * @tparam T The type of the array elements.
+ * @brief Converts a std::array to std::string.
+ *
+ * @tparam T The type of the elements.
  * @tparam N The size of the array.
- * @param array The array to convert.
- * @return A string representation of the array.
+ * @param array The array value.
+ * @return std::string The converted string.
  */
 template <typename T, std::size_t N>
 auto toString(const std::array<T, N>& array) -> std::string {
     return toStringRange(array.begin(), array.end());
+}
+
+/**
+ * @brief Converts a tuple to std::string.
+ *
+ * @tparam Tuple The tuple type.
+ * @tparam I The indices of the tuple elements.
+ * @param tpl The tuple value.
+ * @param separator The separator between elements.
+ * @return std::string The converted string.
+ */
+template <typename Tuple, std::size_t... I>
+auto tupleToStringImpl(const Tuple& tpl, std::index_sequence<I...>,
+                       const std::string& separator) -> std::string {
+    std::ostringstream oss;
+    oss << "(";
+    ((oss << toString(std::get<I>(tpl))
+          << (I < sizeof...(I) - 1 ? separator : "")),
+     ...);
+    oss << ")";
+    return oss.str();
+}
+
+/**
+ * @brief Converts a std::tuple to std::string.
+ *
+ * @tparam Args The types of the tuple elements.
+ * @param tpl The tuple value.
+ * @param separator The separator between elements.
+ * @return std::string The converted string.
+ */
+template <typename... Args>
+auto toString(const std::tuple<Args...>& tpl,
+              const std::string& separator = ", ") -> std::string {
+    return tupleToStringImpl(tpl, std::index_sequence_for<Args...>(),
+                             separator);
+}
+
+/**
+ * @brief Converts a std::optional to std::string.
+ *
+ * @tparam T The type of the optional value.
+ * @param opt The optional value.
+ * @return std::string The converted string.
+ */
+template <typename T>
+auto toString(const std::optional<T>& opt) -> std::string {
+    if (opt.has_value()) {
+        return "Optional(" + toString(*opt) + ")";
+    }
+    return "nullopt";
+}
+
+/**
+ * @brief Converts a std::variant to std::string.
+ *
+ * @tparam Ts The types of the variant alternatives.
+ * @param var The variant value.
+ * @return std::string The converted string.
+ */
+template <typename... Ts>
+auto toString(const std::variant<Ts...>& var) -> std::string {
+    return std::visit(
+        [](const auto& value) -> std::string { return toString(value); }, var);
 }
 
 }  // namespace atom::utils

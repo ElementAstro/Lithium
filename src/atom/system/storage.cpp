@@ -37,15 +37,21 @@ Description: Storage Monitor
 namespace fs = std::filesystem;
 
 namespace atom::system {
-StorageMonitor::~StorageMonitor() { stopMonitoring(); }
+StorageMonitor::~StorageMonitor() {
+    LOG_F(INFO, "StorageMonitor destructor called");
+    stopMonitoring();
+}
 
 void StorageMonitor::registerCallback(
     std::function<void(const std::string&)> callback) {
+    LOG_F(INFO, "registerCallback called");
     std::lock_guard lock(m_mutex);
     m_callbacks.push_back(std::move(callback));
+    LOG_F(INFO, "Callback registered successfully");
 }
 
 auto StorageMonitor::startMonitoring() -> bool {
+    LOG_F(INFO, "startMonitoring called");
     m_isRunning = true;
     std::thread([this] {
         try {
@@ -59,28 +65,36 @@ auto StorageMonitor::startMonitoring() -> bool {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         } catch (const std::exception& e) {
-            DLOG_F(ERROR, "Exception in storage monitor: {}", e.what());
+            LOG_F(ERROR, "Exception in storage monitor: {}", e.what());
             m_isRunning = false;
         }
     }).detach();
+    LOG_F(INFO, "Monitoring started successfully");
     return true;
 }
 
 void StorageMonitor::stopMonitoring() {
+    LOG_F(INFO, "stopMonitoring called");
     m_isRunning = false;
-    DLOG_F(INFO, "Storage monitor stopped.");
+    LOG_F(INFO, "Storage monitor stopped");
 }
 
-auto StorageMonitor::isRunning() const -> bool { return m_isRunning; }
+auto StorageMonitor::isRunning() const -> bool {
+    LOG_F(INFO, "isRunning called, returning: {}", m_isRunning);
+    return m_isRunning;
+}
 
 void StorageMonitor::triggerCallbacks(const std::string& path) {
+    LOG_F(INFO, "triggerCallbacks called with path: {}", path);
     std::lock_guard lock(m_mutex);
     for (const auto& callback : m_callbacks) {
         callback(path);
     }
+    LOG_F(INFO, "Callbacks triggered successfully for path: {}", path);
 }
 
 auto StorageMonitor::isNewMediaInserted(const std::string& path) -> bool {
+    LOG_F(INFO, "isNewMediaInserted called with path: {}", path);
     auto currentSpace = fs::space(path);
     std::lock_guard lock(m_mutex);
     auto& [lastCapacity, lastFree] = m_storageStats[path];
@@ -88,13 +102,15 @@ auto StorageMonitor::isNewMediaInserted(const std::string& path) -> bool {
         currentSpace.free != lastFree) {
         lastCapacity = currentSpace.capacity;
         lastFree = currentSpace.free;
+        LOG_F(INFO, "New media inserted at path: {}", path);
         return true;
     }
+    LOG_F(INFO, "No new media inserted at path: {}", path);
     return false;
 }
 
 void StorageMonitor::listAllStorage() {
-    DLOG_F(INFO, "List all storage devices.");
+    LOG_F(INFO, "listAllStorage called");
     for (const auto& entry : fs::directory_iterator("/")) {
         if (entry.is_directory()) {
             auto capacity = fs::space(entry).capacity;
@@ -105,17 +121,21 @@ void StorageMonitor::listAllStorage() {
             }
         }
     }
+    LOG_F(INFO, "listAllStorage completed with {} storage devices found",
+          m_storagePaths.size());
 }
 
 void StorageMonitor::listFiles(const std::string& path) {
-    DLOG_F(INFO, "List files in {}", path);
+    LOG_F(INFO, "listFiles called with path: {}", path);
     for (const auto& entry : fs::directory_iterator(path)) {
         LOG_F(INFO, "- {}", entry.path().filename().string());
     }
+    LOG_F(INFO, "listFiles completed for path: {}", path);
 }
 
 #ifdef _WIN32
 void monitorUdisk() {
+    LOG_F(INFO, "monitorUdisk called");
     DEV_BROADCAST_DEVICEINTERFACE devInterface{};
     devInterface.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
     devInterface.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
@@ -140,8 +160,8 @@ void monitorUdisk() {
                         if ((volume->dbcv_unitmask & 1) != 0U) {
                             std::string drivePath =
                                 std::format("{}:\\", driveLetter);
-                            DLOG_F(INFO, "U disk inserted. Drive path: {}",
-                                   drivePath);
+                            LOG_F(INFO, "U disk inserted. Drive path: {}",
+                                  drivePath);
                         }
                     }
                 } else if (volume->dbcv_flags == DBT_DEVICEREMOVECOMPLETE) {
@@ -150,8 +170,8 @@ void monitorUdisk() {
                         if ((volume->dbcv_unitmask & 1) != 0U) {
                             std::string drivePath =
                                 std::format("{}:\\", driveLetter);
-                            DLOG_F(INFO, "U disk removed. Drive path: {}",
-                                   drivePath);
+                            LOG_F(INFO, "U disk removed. Drive path: {}",
+                                  drivePath);
                         }
                     }
                 }
@@ -159,9 +179,11 @@ void monitorUdisk() {
         }
     }
     UnregisterDeviceNotification(hDevNotify);
+    LOG_F(INFO, "monitorUdisk completed");
 }
 #else
 void monitorUdisk(atom::system::StorageMonitor& monitor) {
+    LOG_F(INFO, "monitorUdisk called");
     struct udev* udev = udev_new();
     if (!udev) {
         LOG_F(ERROR, "Failed to initialize udev");
@@ -203,6 +225,7 @@ void monitorUdisk(atom::system::StorageMonitor& monitor) {
 
     udev_monitor_unref(udevMon);
     udev_unref(udev);
+    LOG_F(INFO, "monitorUdisk completed");
 }
 #endif
 }  // namespace atom::system

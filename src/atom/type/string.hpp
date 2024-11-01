@@ -25,7 +25,7 @@ Description: A super enhanced string class.
 #include <string_view>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 /**
  * @brief A super enhanced string class.
@@ -407,8 +407,7 @@ public:
     template <typename... Args>
     static auto format(std::string_view format_str,
                        Args &&...args) -> std::string {
-        return std::vformat(format_str,
-                            std::make_format_args(std::forward<Args>(args)...));
+        return std::vformat(format_str, std::make_format_args(args...));
     }
 
     static constexpr size_t NPOS = std::string::npos;

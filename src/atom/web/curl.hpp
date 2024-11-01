@@ -22,14 +22,11 @@ Description: Simple HTTP client using libcurl.
 #include <string>
 #include <vector>
 
-
 namespace atom::web {
+
 /**
- * @brief A wrapper class for performing HTTP requests using libcurl.
- *
- * This class provides functionality to set various options for the HTTP
- * request, perform synchronous and asynchronous requests, and handle response
- * callbacks. It uses libcurl library for making HTTP requests.
+ * @brief A comprehensive wrapper class for performing HTTP requests using
+ * libcurl.
  */
 class CurlWrapper {
 public:
@@ -43,121 +40,148 @@ public:
      */
     ~CurlWrapper();
 
-    /**
-     * @brief Set the URL to which the HTTP request will be sent.
-     *
-     * @param url The URL to set.
-     */
-    void setUrl(const std::string &url);
+    CurlWrapper(const CurlWrapper &other) = delete;
+    auto operator=(const CurlWrapper &other) -> CurlWrapper & = delete;
+    CurlWrapper(CurlWrapper &&other) noexcept = delete;
+    auto operator=(CurlWrapper &&other) noexcept -> CurlWrapper & = delete;
 
     /**
-     * @brief Set the request method for the HTTP request (e.g., GET, POST).
+     * @brief Set the URL for the HTTP request.
      *
-     * @param method The request method to set.
+     * @param url The target URL.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setRequestMethod(const std::string &method);
+    auto setUrl(const std::string &url) -> CurlWrapper &;
 
     /**
-     * @brief Set a header for the HTTP request.
+     * @brief Set the HTTP request method.
      *
-     * @param key The header key.
-     * @param value The header value.
+     * @param method HTTP method (e.g., GET, POST).
+     * @return Reference to the CurlWrapper instance.
      */
-    void setHeader(const std::string &key, const std::string &value);
+    auto setRequestMethod(const std::string &method) -> CurlWrapper &;
 
     /**
-     * @brief Set a callback function to handle errors that occur during the
-     * request.
+     * @brief Add a custom header to the HTTP request.
      *
-     * @param callback The callback function to set.
+     * @param key Header name.
+     * @param value Header value.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setOnErrorCallback(std::function<void(CURLcode)> callback);
+    auto addHeader(const std::string &key,
+                   const std::string &value) -> CurlWrapper &;
 
     /**
-     * @brief Set a callback function to handle the response data received from
-     * the server.
+     * @brief Set a callback for handling errors.
      *
-     * @param callback The callback function to set.
+     * @param callback Error handling callback.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setOnResponseCallback(
-        std::function<void(const std::string &)> callback);
+    auto onError(std::function<void(CURLcode)> callback) -> CurlWrapper &;
+
+    /**
+     * @brief Set a callback for handling the response data.
+     *
+     * @param callback Response handling callback.
+     * @return Reference to the CurlWrapper instance.
+     */
+    auto onResponse(std::function<void(const std::string &)> callback)
+        -> CurlWrapper &;
 
     /**
      * @brief Set the timeout for the HTTP request.
      *
-     * @param timeout The timeout value in seconds.
+     * @param timeout Timeout in seconds.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setTimeout(long timeout);
+    auto setTimeout(long timeout) -> CurlWrapper &;
 
     /**
-     * @brief Set whether to follow HTTP redirects automatically.
+     * @brief Enable or disable following redirects.
      *
-     * @param follow Boolean value indicating whether to follow redirects.
+     * @param follow True to follow redirects, false otherwise.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setFollowLocation(bool follow);
+    auto setFollowLocation(bool follow) -> CurlWrapper &;
 
     /**
-     * @brief Set the request body data for POST requests.
+     * @brief Set the request body for POST/PUT requests.
      *
-     * @param data The request body data to set.
+     * @param data Request body data.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setRequestBody(const std::string &data);
+    auto setRequestBody(const std::string &data) -> CurlWrapper &;
 
     /**
-     * @brief Set the file path for uploading a file in the request.
+     * @brief Set the file path for uploading a file.
      *
-     * @param filePath The file path to upload.
+     * @param filePath Path to the file to upload.
+     * @return Reference to the CurlWrapper instance.
      */
-    void setUploadFile(const std::string &filePath);
+    auto setUploadFile(const std::string &filePath) -> CurlWrapper &;
 
     /**
-     * @brief Perform a synchronous HTTP request and return the response data.
+     * @brief Set proxy settings for the HTTP request.
      *
-     * @return The response data received from the server.
+     * @param proxy Proxy URL.
+     * @return Reference to the CurlWrapper instance.
      */
-    std::string performRequest();
+    auto setProxy(const std::string &proxy) -> CurlWrapper &;
 
     /**
-     * @brief Perform an asynchronous HTTP request and invoke a callback
-     * function when the response is received.
+     * @brief Set SSL verification options.
      *
-     * @param callback The callback function to invoke with the response data.
+     * @param verifyPeer Enable peer verification.
+     * @param verifyHost Enable host verification.
+     * @return Reference to the CurlWrapper instance.
      */
-    void asyncPerform(std::function<void(const std::string &)> callback);
+    auto setSSLOptions(bool verifyPeer, bool verifyHost) -> CurlWrapper &;
+
+    /**
+     * @brief Perform a synchronous HTTP request.
+     *
+     * @return The response data.
+     */
+    auto perform() -> std::string;
+
+    /**
+     * @brief Perform an asynchronous HTTP request.
+     *
+     * @return Reference to the CurlWrapper instance.
+     */
+    auto performAsync() -> CurlWrapper &;
 
     /**
      * @brief Wait for all asynchronous requests to complete.
      */
     void waitAll();
 
+    /**
+     * @brief Set the maximum download speed.
+     *
+     * @param speed Maximum download speed in bytes per second.
+     * @return Reference to the CurlWrapper instance.
+     */
+    auto setMaxDownloadSpeed(size_t speed) -> CurlWrapper &;
+
 private:
-    CURL *handle;  ///< libcurl easy handle for individual requests
-    CURLM
-        *multiHandle;  ///< libcurl multi handle for managing multiple requests
-    std::vector<std::string>
-        headers;  ///< Vector to store custom headers for the request
-    std::function<void(CURLcode)>
-        onErrorCallback;  ///< Callback function for handling errors
+    CURL *handle_;                                   ///< libcurl easy handle
+    CURLM *multiHandle_;                             ///< libcurl multi handle
+    std::vector<std::string> headers_;               ///< Custom headers
+    std::function<void(CURLcode)> onErrorCallback_;  ///< Error callback
     std::function<void(const std::string &)>
-        onResponseCallback;  ///< Callback function for handling response data
-    std::mutex mutex;        ///< Mutex for thread safety
-    std::condition_variable cv;  ///< Condition variable for synchronization
-    std::string responseData;    ///< Response data received from the server
+        onResponseCallback_;      ///< Response callback
+    std::mutex mutex_;            ///< Mutex for thread safety
+    std::condition_variable cv_;  ///< Condition variable for synchronization
+    std::string responseData_;    ///< Response data
 
     /**
-     * @brief Callback function used by libcurl to write response data into
-     * responseData member variable.
-     *
-     * @param contents Pointer to the response data.
-     * @param size Size of each data element.
-     * @param nmemb Number of data elements.
-     * @param userp User pointer.
-     * @return Total size of the data written.
+     * @brief Callback function for writing received data.
      */
-    static size_t writeCallback(void *contents, size_t size, size_t nmemb,
-                                void *userp);
+    static auto writeCallback(void *contents, size_t size, size_t nmemb,
+                              void *userp) -> size_t;
 };
 
 }  // namespace atom::web
 
-#endif
+#endif  // ATOM_WEB_CURL_HPP

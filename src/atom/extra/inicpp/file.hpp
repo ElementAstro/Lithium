@@ -10,16 +10,28 @@
 
 namespace inicpp {
 
+/**
+ * @class IniFileBase
+ * @brief A class for handling INI files with customizable comparison.
+ * @tparam Comparator The comparator type for section names.
+ */
 template <typename Comparator>
 class IniFileBase
     : public std::map<std::string, IniSectionBase<Comparator>, Comparator> {
 private:
-    char fieldSep_ = '=';
-    char esc_ = '\\';
-    std::vector<std::string> commentPrefixes_ = {"#", ";"};
-    bool multiLineValues_ = false;
-    bool overwriteDuplicateFields_ = true;
+    char fieldSep_ = '=';  ///< The character used to separate fields.
+    char esc_ = '\\';      ///< The escape character.
+    std::vector<std::string> commentPrefixes_ = {
+        "#", ";"};                  ///< The prefixes for comments.
+    bool multiLineValues_ = false;  ///< Flag to enable multi-line values.
+    bool overwriteDuplicateFields_ =
+        true;  ///< Flag to allow overwriting duplicate fields.
 
+    /**
+     * @brief Erases comments from a line.
+     * @param str The line to process.
+     * @param startpos The position to start searching for comments.
+     */
     void eraseComment(std::string &str, std::string::size_type startpos = 0) {
         for (const auto &commentPrefix : commentPrefixes_) {
             auto pos = str.find(commentPrefix, startpos);
@@ -34,6 +46,11 @@ private:
         }
     }
 
+    /**
+     * @brief Writes a string to an output stream with escaping.
+     * @param oss The output stream.
+     * @param str The string to write.
+     */
     void writeEscaped(std::ostream &oss, const std::string &str) const {
         for (size_t i = 0; i < str.length(); ++i) {
             auto prefixpos = std::ranges::find_if(
@@ -54,29 +71,66 @@ private:
     }
 
 public:
+    /**
+     * @brief Default constructor.
+     */
     IniFileBase() = default;
 
+    /**
+     * @brief Constructs an IniFileBase from a file.
+     * @param filename The path to the INI file.
+     */
     explicit IniFileBase(const std::string &filename) { load(filename); }
 
+    /**
+     * @brief Constructs an IniFileBase from an input stream.
+     * @param iss The input stream.
+     */
     explicit IniFileBase(std::istream &iss) { decode(iss); }
 
+    /**
+     * @brief Destructor.
+     */
     ~IniFileBase() = default;
 
+    /**
+     * @brief Sets the field separator character.
+     * @param sep The field separator character.
+     */
     void setFieldSep(char sep) { fieldSep_ = sep; }
 
+    /**
+     * @brief Sets the comment prefixes.
+     * @param commentPrefixes The vector of comment prefixes.
+     */
     void setCommentPrefixes(const std::vector<std::string> &commentPrefixes) {
         commentPrefixes_ = commentPrefixes;
     }
 
+    /**
+     * @brief Sets the escape character.
+     * @param esc The escape character.
+     */
     void setEscapeChar(char esc) { esc_ = esc; }
 
+    /**
+     * @brief Enables or disables multi-line values.
+     * @param enable True to enable multi-line values, false to disable.
+     */
     void setMultiLineValues(bool enable) { multiLineValues_ = enable; }
 
+    /**
+     * @brief Allows or disallows overwriting duplicate fields.
+     * @param allowed True to allow overwriting, false to disallow.
+     */
     void allowOverwriteDuplicateFields(bool allowed) {
         overwriteDuplicateFields_ = allowed;
     }
 
-    /** Decodes a ini file from input stream. */
+    /**
+     * @brief Decodes an INI file from an input stream.
+     * @param iss The input stream.
+     */
     void decode(std::istream &iss) {
         this->clear();
         std::string line;
@@ -144,13 +198,19 @@ public:
         }
     }
 
-    /** Decodes an ini file from a string. */
+    /**
+     * @brief Decodes an INI file from a string.
+     * @param content The string content of the INI file.
+     */
     void decode(const std::string &content) {
         std::istringstream ss(content);
         decode(ss);
     }
 
-    /** Loads and decodes an ini file from a file path. */
+    /**
+     * @brief Loads and decodes an INI file from a file path.
+     * @param fileName The path to the INI file.
+     */
     void load(const std::string &fileName) {
         std::ifstream iss(fileName);
         if (!iss.is_open()) {
@@ -159,7 +219,10 @@ public:
         decode(iss);
     }
 
-    /** Encodes the ini file to the output stream. */
+    /**
+     * @brief Encodes the INI file to an output stream.
+     * @param oss The output stream.
+     */
     void encode(std::ostream &oss) const {
         for (const auto &sectionPair : *this) {
             oss << '[' << sectionPair.first << "]\n";
@@ -170,14 +233,20 @@ public:
         }
     }
 
-    /** Encodes the ini file to a string and returns it. */
+    /**
+     * @brief Encodes the INI file to a string and returns it.
+     * @return The encoded INI file as a string.
+     */
     [[nodiscard]] auto encode() const -> std::string {
         std::ostringstream sss;
         encode(sss);
         return sss.str();
     }
 
-    /** Saves the ini file to a given file path. */
+    /**
+     * @brief Saves the INI file to a given file path.
+     * @param fileName The path to the file.
+     */
     void save(const std::string &fileName) const {
         std::ofstream oss(fileName);
         if (!oss.is_open()) {
@@ -187,8 +256,9 @@ public:
     }
 };
 
-using IniFile = IniFileBase<std::less<>>;
-using IniFileCaseInsensitive = IniFileBase<StringInsensitiveLess>;
+using IniFile = IniFileBase<std::less<>>;  ///< Case-sensitive INI file.
+using IniFileCaseInsensitive =
+    IniFileBase<StringInsensitiveLess>;  ///< Case-insensitive INI file.
 
 }  // namespace inicpp
 

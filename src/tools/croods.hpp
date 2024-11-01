@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium::tools {
 struct CartesianCoordinates {

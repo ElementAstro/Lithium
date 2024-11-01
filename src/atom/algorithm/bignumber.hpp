@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::algorithm {
 

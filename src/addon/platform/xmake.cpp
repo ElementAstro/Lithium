@@ -14,269 +14,281 @@ using json = nlohmann::json;
 
 namespace lithium {
 
-class XMakeBuilderImpl {
-public:
-    std::unique_ptr<json> configOptions = std::make_unique<json>();
-    std::vector<std::string> dependencies;
+struct XMakeBuilder::Impl {
+    XMakeBuilderConfig config;
 };
 
-XMakeBuilder::XMakeBuilder() : pImpl_(std::make_unique<XMakeBuilderImpl>()) {}
+namespace {
+auto executeCommand(const std::string& command) -> BuildResult {
+    int ret = atom::system::executeCommandWithStatus(command).second;
+    if (ret != 0) {
+        LOG_F(ERROR, "Command failed with exit code {}", ret);
+        return BuildResult(false, "Command execution failed.", ret);
+    }
+    return BuildResult(true, "Command execution succeeded.", ret);
+}
+
+void logCommandExecution(const std::string& description,
+                         const std::string& command) {
+    LOG_F(INFO, "{}: {}", description, command);
+}
+}  // namespace
+
+XMakeBuilder::XMakeBuilder() : pImpl_(std::make_unique<Impl>()) {}
+
 XMakeBuilder::~XMakeBuilder() = default;
 
-auto XMakeBuilder::checkAndInstallDependencies() -> bool {
-    for (const auto& dep : pImpl_->dependencies) {
-        std::string checkCommand = "pkg-config --exists " + dep;
-        if (!atom::system::executeCommandSimple(checkCommand)) {
-            LOG_F(INFO, "Dependency {} not found, attempting to install...",
-                  dep);
-            std::string installCommand = "sudo apt-get install -y " + dep;
-            if (!atom::system::executeCommandSimple(installCommand)) {
-                LOG_F(ERROR, "Failed to install dependency: {}", dep);
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 auto XMakeBuilder::configureProject(
-    const fs::path& sourceDir, const fs::path& buildDir, BuildType buildType,
-    const std::vector<std::string>& options) -> BuildResult {
-    BuildResult result;
-    if (!fs::exists(buildDir)) {
-        fs::create_directories(buildDir);
-    }
+    const std::filesystem::path& sourceDir,
+    const std::filesystem::path& buildDir, BuildType buildType,
+    const std::vector<std::string>& options,
+    const std::map<std::string, std::string>& envVars) -> BuildResult {
+    LOG_F(INFO, "Configuring project: sourceDir={}, buildDir={}",
+          sourceDir.string(), buildDir.string());
 
-    if (!checkAndInstallDependencies()) {
-        result.success = false;
-        result.error = "Failed to install dependencies.";
-        return result;
-    }
+    std::ostringstream cmd;
+    cmd << "xmake project -k " << buildDir.string() << " -m "
+        << sourceDir.string();
 
-    std::string buildTypeStr;
+    // Append build type
     switch (buildType) {
-        case BuildType::Debug:
-            buildTypeStr = "debug";
+        case BuildType::DEBUG:
+            cmd << " -t debug";
             break;
-        case BuildType::Release:
-            buildTypeStr = "release";
+        case BuildType::RELEASE:
+            cmd << " -t release";
             break;
-        case BuildType::RelWithDebInfo:
-            buildTypeStr = "reldebug";
+        case BuildType::REL_WITH_DEB_INFO:
+            cmd << " -t debugoptimized";
             break;
-        case BuildType::MinSizeRel:
-            buildTypeStr = "minsizerel";
+        case BuildType::MIN_SIZE_REL:
+            cmd << " -t release -s";
             break;
     }
 
-    std::string opts;
+    // Append additional options
     for (const auto& opt : options) {
-        opts += " " + opt;
+        cmd << " " << opt;
     }
 
-    std::string command =
-        "xmake f -p " + buildTypeStr + " -o " + buildDir.string() + " " + opts;
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Configured successfully.";
-    } else {
-        result.success = false;
-        result.error = "Configuration failed.";
+    // Handle environment variables
+    std::string envPrefix;
+    for (const auto& [key, value] : envVars) {
+        envPrefix.append(key).append("=").append(value).append(" ");
     }
-    return result;
+
+    std::string fullCommand = envPrefix + cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::buildProject(const fs::path& buildDir,
+auto XMakeBuilder::buildProject(const std::filesystem::path& buildDir,
                                 std::optional<int> jobs) -> BuildResult {
-    BuildResult result;
-    std::string command = "xmake -C " + buildDir.string();
-    if (jobs && *jobs > 0) {
-        command += " -j" + std::to_string(*jobs);
+    LOG_F(INFO, "Building project: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "xmake -C " << buildDir.string();
+    if (jobs.has_value()) {
+        cmd << " -j " << jobs.value();
     }
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Build succeeded.";
-    } else {
-        result.success = false;
-        result.error = "Build failed.";
-    }
-    return result;
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::cleanProject(const fs::path& buildDir) -> BuildResult {
-    BuildResult result;
-    if (!fs::exists(buildDir)) {
-        result.success = false;
-        result.error = "Build directory does not exist: " + buildDir.string();
-        return result;
-    }
-    std::string command = "xmake clean -C " + buildDir.string();
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Clean succeeded.";
-    } else {
-        result.success = false;
-        result.error = "Clean failed.";
-    }
-    return result;
+auto XMakeBuilder::cleanProject(const std::filesystem::path& buildDir)
+    -> BuildResult {
+    LOG_F(INFO, "Cleaning project: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "xmake clean -C " << buildDir.string();
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::installProject(const fs::path& buildDir,
-                                  const fs::path& installDir) -> BuildResult {
-    BuildResult result;
-    std::string command =
-        "xmake install -o " + installDir.string() + " -C " + buildDir.string();
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Install succeeded.";
-    } else {
-        result.success = false;
-        result.error = "Install failed.";
-    }
-    return result;
+auto XMakeBuilder::installProject(const std::filesystem::path& buildDir,
+                                  const std::filesystem::path& installDir)
+    -> BuildResult {
+    LOG_F(INFO, "Installing project: buildDir={}, installDir={}",
+          buildDir.string(), installDir.string());
+
+    std::ostringstream cmd;
+    cmd << "xmake install -C " << buildDir.string() << " --install-dir "
+        << installDir.string();
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::runTests(const fs::path& buildDir,
+auto XMakeBuilder::runTests(const std::filesystem::path& buildDir,
                             const std::vector<std::string>& testNames)
     -> BuildResult {
-    BuildResult result;
-    std::string command = "xmake run test -C " + buildDir.string();
-    for (const auto& testName : testNames) {
-        command += " " + testName;
+    LOG_F(INFO, "Running tests: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "xmake run unittest -C " << buildDir.string();
+
+    for (const auto& test : testNames) {
+        cmd << " " << test;
     }
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Tests ran successfully.";
-    } else {
-        result.success = false;
-        result.error = "Tests failed.";
-    }
-    return result;
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::generateDocs(const fs::path& buildDir,
-                                const fs::path& outputDir) -> BuildResult {
-    BuildResult result;
-    std::string command =
-        "xmake doc -C " + buildDir.string() + " -o " + outputDir.string();
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Documentation generated successfully.";
-    } else {
-        result.success = false;
-        result.error = "Documentation generation failed.";
-    }
-    return result;
+auto XMakeBuilder::generateDocs(const std::filesystem::path& buildDir,
+                                const std::filesystem::path& outputDir)
+    -> BuildResult {
+    LOG_F(INFO, "Generating documentation: buildDir={}, outputDir={}",
+          buildDir.string(), outputDir.string());
+
+    std::ostringstream cmd;
+    cmd << "doxygen " << (buildDir / "Doxyfile").string();
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::loadConfig(const fs::path& configPath) -> bool {
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open()) {
-        LOG_F(ERROR, "Failed to open config file: {}", configPath.string());
-        return false;
-    }
+auto XMakeBuilder::loadConfig(const std::filesystem::path& configPath) -> bool {
+    LOG_F(INFO, "Loading configuration from {}", configPath.string());
 
     try {
-        configFile >> *(pImpl_->configOptions);
-        pImpl_->dependencies = pImpl_->configOptions->at("dependencies")
-                                   .get<std::vector<std::string>>();
-    } catch (const json::parse_error& e) {
-        LOG_F(ERROR, "Failed to parse config file: {} with {}",
-              configPath.string(), e.what());
-        return false;
-    } catch (const json::type_error& e) {
-        LOG_F(ERROR, "Failed to parse config file: {} with {}",
-              configPath.string(), e.what());
+        std::ifstream configFile(configPath);
+        if (!configFile.is_open()) {
+            LOG_F(ERROR, "Failed to open configuration file: {}",
+                  configPath.string());
+            return false;
+        }
+
+        nlohmann::json configJson;
+        configFile >> configJson;
+
+        // Example: Assuming the JSON contains a key "buildType"
+        if (configJson.contains("buildType")) {
+            std::string buildTypeStr = configJson["buildType"];
+            if (buildTypeStr == "Debug") {
+                pImpl_->config.buildType = BuildType::DEBUG;
+            } else if (buildTypeStr == "Release") {
+                pImpl_->config.buildType = BuildType::RELEASE;
+            } else if (buildTypeStr == "RelWithDebInfo") {
+                pImpl_->config.buildType = BuildType::REL_WITH_DEB_INFO;
+            } else if (buildTypeStr == "MinSizeRel") {
+                pImpl_->config.buildType = BuildType::MIN_SIZE_REL;
+            } else {
+                LOG_F(ERROR, "Unknown build type: {}", buildTypeStr);
+                return false;
+            }
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'buildType' key");
+            return false;
+        }
+
+        // Example: Assuming the JSON contains a key "options"
+        if (configJson.contains("options")) {
+            pImpl_->config.options =
+                configJson["options"].get<std::vector<std::string>>();
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'options' key");
+            return false;
+        }
+
+        // Example: Assuming the JSON contains a key "envVars"
+        if (configJson.contains("envVars")) {
+            pImpl_->config.envVars =
+                configJson["envVars"].get<std::map<std::string, std::string>>();
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'envVars' key");
+            return false;
+        }
+
+        LOG_F(INFO, "Configuration loaded successfully.");
+        return true;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Exception occurred while loading configuration: {}",
+              e.what());
         return false;
     }
-
-    configFile.close();
-    return true;
 }
 
-auto XMakeBuilder::setLogCallback(
-    std::function<void(const std::string&)> callback) -> void {
-    // loguru::add_callback("XMakeBuilder", callback, nullptr,
-    // loguru::Verbosity_INFO);
-}
-
-auto XMakeBuilder::getAvailableTargets(const fs::path& buildDir)
+auto XMakeBuilder::getAvailableTargets(const std::filesystem::path& buildDir)
     -> std::vector<std::string> {
+    LOG_F(INFO, "Retrieving available targets: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "xmake show -l -C " << buildDir.string();
+    auto output = atom::system::executeCommand(cmd.str());
+
     std::vector<std::string> targets;
-    std::string command = "xmake show -C " + buildDir.string();
-    std::string output;
-    if (const auto [output, status] =
-            atom::system::executeCommandWithStatus(command);
-        status == 0) {
-        // Assume that the output contains targets in a specific format, e.g.,
-        // each target on a new line
-        std::istringstream stream(output);
-        std::string line;
-        while (std::getline(stream, line)) {
+    std::istringstream stream(output);
+    std::string line;
+    while (std::getline(stream, line)) {
+        if (!line.empty()) {
             targets.push_back(line);
         }
-    } else {
-        LOG_F(ERROR, "Failed to retrieve available targets.");
     }
+
+    LOG_F(INFO, "Available targets retrieved: {}", targets.size());
     return targets;
 }
 
-auto XMakeBuilder::buildTarget(const fs::path& buildDir,
+auto XMakeBuilder::buildTarget(const std::filesystem::path& buildDir,
                                const std::string& target,
                                std::optional<int> jobs) -> BuildResult {
-    BuildResult result;
-    std::string command = "xmake build " + target + " -C " + buildDir.string();
-    if (jobs && *jobs > 0) {
-        command += " -j" + std::to_string(*jobs);
+    LOG_F(INFO, "Building target: buildDir={}, target={}", buildDir.string(),
+          target);
+
+    std::ostringstream cmd;
+    cmd << "xmake build " << target << " -C " << buildDir.string();
+    if (jobs.has_value()) {
+        cmd << " -j " << jobs.value();
     }
-    if (atom::system::executeCommandSimple(command)) {
-        result.success = true;
-        result.output = "Target " + target + " built successfully.";
-    } else {
-        result.success = false;
-        result.error = "Failed to build target: " + target;
-    }
-    return result;
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
-auto XMakeBuilder::getCacheVariables(const fs::path& buildDir)
+auto XMakeBuilder::getCacheVariables(const std::filesystem::path& buildDir)
     -> std::vector<std::pair<std::string, std::string>> {
-    std::vector<std::pair<std::string, std::string>> cacheVariables;
-    std::string command = "xmake config --show -C " + buildDir.string();
-    std::string output;
-    if (const auto& [output, status] =
-            atom::system::executeCommandWithStatus(command);
-        status == 0) {
-        // Parse the output to extract cache variables, assuming a key=value
-        // format
-        std::istringstream stream(output);
-        std::string line;
-        while (std::getline(stream, line)) {
-            auto pos = line.find('=');
-            if (pos != std::string::npos) {
-                std::string key = line.substr(0, pos);
-                std::string value = line.substr(pos + 1);
-                cacheVariables.emplace_back(key, value);
-            }
+    LOG_F(INFO, "Retrieving cache variables: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "xmake show -v -C " << buildDir.string();
+    auto output = atom::system::executeCommand(cmd.str());
+
+    std::vector<std::pair<std::string, std::string>> cacheVars;
+    std::istringstream stream(output);
+    std::string line;
+    while (std::getline(stream, line)) {
+        auto pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string name = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+            cacheVars.emplace_back(name, value);
         }
-    } else {
-        LOG_F(ERROR, "Failed to retrieve cache variables.");
     }
-    return cacheVariables;
+
+    LOG_F(INFO, "Cache variables retrieved.");
+    return cacheVars;
 }
 
-auto XMakeBuilder::setCacheVariable(const fs::path& buildDir,
+auto XMakeBuilder::setCacheVariable(const std::filesystem::path& buildDir,
                                     const std::string& name,
                                     const std::string& value) -> bool {
-    std::string command =
-        "xmake config " + name + "=" + value + " -C " + buildDir.string();
-    if (atom::system::executeCommandSimple(command)) {
-        LOG_F(INFO, "Cache variable {} set to {}.", name, value);
-        return true;
-    } else {
-        LOG_F(ERROR, "Failed to set cache variable: {}", name);
-        return false;
-    }
+    LOG_F(INFO, "Setting cache variable: buildDir={}, name={}, value={}",
+          buildDir.string(), name, value);
+
+    std::ostringstream cmd;
+    cmd << "xmake f --" << name << "=" << value << " -C " << buildDir.string();
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand).isSuccess();
 }
 
 }  // namespace lithium

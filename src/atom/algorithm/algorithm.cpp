@@ -15,7 +15,22 @@ auto KMP::search(std::string_view text) const -> std::vector<int> {
         return occurrences;
     }
 
-#ifdef USE_OPENMP
+#ifdef USE_SIMD
+    int i = 0;
+    int j = 0;
+    while (i <= n - m) {
+        __m256i text_chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&text[i]));
+        __m256i pattern_chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&pattern_[0]));
+        __m256i result = _mm256_cmpeq_epi8(text_chunk, pattern_chunk);
+        int mask = _mm256_movemask_epi8(result);
+        if (mask == 0xFFFFFFFF) {
+            occurrences.push_back(i);
+            i += m;
+        } else {
+            ++i;
+        }
+    }
+#elif defined(USE_OPENMP)
     std::vector<int> local_occurrences[omp_get_max_threads()];
 #pragma omp parallel
     {

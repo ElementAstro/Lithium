@@ -4,6 +4,9 @@
 #include <fstream>
 #include <stack>
 
+#include "atom/log/loguru.hpp"
+
+namespace atom::io {
 class DirectoryStackImpl {
 public:
     explicit DirectoryStackImpl(asio::io_context& io_context)
@@ -12,6 +15,8 @@ public:
     void asyncPushd(
         const std::filesystem::path& new_dir,
         const std::function<void(const std::error_code&)>& handler) {
+        LOG_F(INFO, "asyncPushd called with new_dir: %s",
+              new_dir.string().c_str());
         asio::post(strand_, [this, new_dir, handler]() {
             std::error_code errorCode;
             std::filesystem::path currentDir =
@@ -20,11 +25,14 @@ public:
                 dirStack_.push(currentDir);
                 std::filesystem::current_path(new_dir, errorCode);
             }
+            LOG_F(INFO, "asyncPushd completed with error code: %d",
+                  errorCode.value());
             handler(errorCode);
         });
     }
 
     void asyncPopd(const std::function<void(const std::error_code&)>& handler) {
+        LOG_F(INFO, "asyncPopd called");
         asio::post(strand_, [this, handler]() {
             std::error_code errorCode;
             if (!dirStack_.empty()) {
@@ -34,6 +42,8 @@ public:
             } else {
                 errorCode = std::make_error_code(std::errc::invalid_argument);
             }
+            LOG_F(INFO, "asyncPopd completed with error code: %d",
+                  errorCode.value());
             handler(errorCode);
         });
     }
@@ -53,6 +63,7 @@ public:
     void asyncGotoIndex(
         size_t index,
         const std::function<void(const std::error_code&)>& handler) {
+        LOG_F(INFO, "asyncGotoIndex called with index: %zu", index);
         asio::post(strand_, [this, index, handler]() {
             std::error_code errorCode;
             auto contents = getStackContents();
@@ -61,6 +72,8 @@ public:
             } else {
                 errorCode = std::make_error_code(std::errc::invalid_argument);
             }
+            LOG_F(INFO, "asyncGotoIndex completed with error code: %d",
+                  errorCode.value());
             handler(errorCode);
         });
     }
@@ -68,6 +81,8 @@ public:
     void asyncSaveStackToFile(
         const std::string& filename,
         const std::function<void(const std::error_code&)>& handler) {
+        LOG_F(INFO, "asyncSaveStackToFile called with filename: %s",
+              filename.c_str());
         asio::post(strand_, [this, filename, handler]() {
             std::error_code errorCode;
             std::ofstream file(filename);
@@ -79,6 +94,8 @@ public:
             } else {
                 errorCode = std::make_error_code(std::errc::io_error);
             }
+            LOG_F(INFO, "asyncSaveStackToFile completed with error code: %d",
+                  errorCode.value());
             handler(errorCode);
         });
     }
@@ -86,6 +103,8 @@ public:
     void asyncLoadStackFromFile(
         const std::string& filename,
         const std::function<void(const std::error_code&)>& handler) {
+        LOG_F(INFO, "asyncLoadStackFromFile called with filename: %s",
+              filename.c_str());
         asio::post(strand_, [this, filename, handler]() {
             std::error_code errorCode;
             std::ifstream file(filename);
@@ -99,6 +118,8 @@ public:
             } else {
                 errorCode = std::make_error_code(std::errc::io_error);
             }
+            LOG_F(INFO, "asyncLoadStackFromFile completed with error code: %d",
+                  errorCode.value());
             handler(errorCode);
         });
     }
@@ -106,8 +127,14 @@ public:
     void asyncGetCurrentDirectory(
         const std::function<void(const std::filesystem::path&)>& handler)
         const {
-        asio::post(strand_,
-                   [handler]() { handler(std::filesystem::current_path()); });
+        LOG_F(INFO, "asyncGetCurrentDirectory called");
+        asio::post(strand_, [handler]() {
+            auto currentPath = std::filesystem::current_path();
+            LOG_F(INFO,
+                  "asyncGetCurrentDirectory completed with current path: %s",
+                  currentPath.string().c_str());
+            handler(currentPath);
+        });
     }
 
     std::stack<std::filesystem::path> dirStack_;
@@ -198,3 +225,5 @@ void DirectoryStack::asyncGetCurrentDirectory(
     const std::function<void(const std::filesystem::path&)>& handler) const {
     impl_->asyncGetCurrentDirectory(handler);
 }
+
+}  // namespace atom::io

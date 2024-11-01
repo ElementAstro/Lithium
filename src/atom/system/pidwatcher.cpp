@@ -36,23 +36,32 @@ namespace fs = std::filesystem;
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
-PidWatcher::PidWatcher() : running_(false), monitoring_(false) {}
+PidWatcher::PidWatcher() : running_(false), monitoring_(false) {
+    LOG_F(INFO, "PidWatcher constructor called");
+}
 
-PidWatcher::~PidWatcher() { stop(); }
+PidWatcher::~PidWatcher() {
+    LOG_F(INFO, "PidWatcher destructor called");
+    stop();
+}
 
 void PidWatcher::setExitCallback(Callback callback) {
+    LOG_F(INFO, "Setting exit callback");
     std::lock_guard lock(mutex_);
     exit_callback_ = std::move(callback);
 }
 
 void PidWatcher::setMonitorFunction(Callback callback,
                                     std::chrono::milliseconds interval) {
+    LOG_F(INFO, "Setting monitor function with interval: {} ms",
+          interval.count());
     std::lock_guard lock(mutex_);
     monitor_callback_ = std::move(callback);
     monitor_interval_ = interval;
 }
 
 auto PidWatcher::getPidByName(const std::string &name) const -> pid_t {
+    LOG_F(INFO, "Getting PID by name: {}", name);
 #ifdef _WIN32
     DWORD pidList[1024];
     DWORD cbNeeded;
@@ -67,6 +76,8 @@ auto PidWatcher::getPidByName(const std::string &name) const -> pid_t {
                     std::string processName = strrchr(filename, '\\') + 1;
                     if (processName == name) {
                         CloseHandle(processHandle);
+                        LOG_F(INFO, "Found PID: {} for name: {}", pidList[i],
+                              name);
                         return pidList[i];
                     }
                 }
@@ -87,16 +98,19 @@ auto PidWatcher::getPidByName(const std::string &name) const -> pid_t {
         getline(cmdline_file, cmdline);
         if (cmdline == name) {
             closedir(dir);
+            LOG_F(INFO, "Found PID: {} for name: {}", entry->d_name, name);
             return atoi(entry->d_name);
         }
     }
     closedir(dir);
 #endif
+    LOG_F(WARNING, "PID not found for name: {}", name);
     return 0;
 }
 
 // 开始监视指定进程
 auto PidWatcher::start(const std::string &name) -> bool {
+    LOG_F(INFO, "Starting PidWatcher for process name: {}", name);
     std::lock_guard lock(mutex_);
 
     if (running_) {
@@ -117,18 +131,21 @@ auto PidWatcher::start(const std::string &name) -> bool {
     monitor_thread_ = std::jthread(&PidWatcher::monitorThread, this);
     exit_thread_ = std::jthread(&PidWatcher::exitThread, this);
 #else
-    monitor_thread_ = std::thread(&PidWatcher::MonitorThread, this);
-    exit_thread_ = std::thread(&PidWatcher::ExitThread, this);
+    monitor_thread_ = std::thread(&PidWatcher::monitorThread, this);
+    exit_thread_ = std::thread(&PidWatcher::exitThread, this);
 #endif
 
+    LOG_F(INFO, "PidWatcher started for process name: {}", name);
     return true;
 }
 
 // 停止监视进程
 void PidWatcher::stop() {
+    LOG_F(INFO, "Stopping PidWatcher");
     std::lock_guard lock(mutex_);
 
     if (!running_) {
+        LOG_F(INFO, "PidWatcher is not running");
         return;
     }
 
@@ -144,6 +161,8 @@ void PidWatcher::stop() {
     if (exit_thread_.joinable()) {
         exit_thread_.join();
     }
+
+    LOG_F(INFO, "PidWatcher stopped");
 }
 
 // 切换目标进程
@@ -163,10 +182,12 @@ bool PidWatcher::Switch(const std::string &name) {
 
     monitor_cv_.notify_one();
 
+    LOG_F(INFO, "PidWatcher switched to process name: {}", name);
     return true;
 }
 
 void PidWatcher::monitorThread() {
+    LOG_F(INFO, "Monitor thread started");
     while (true) {
         std::unique_lock lock(mutex_);
 
@@ -175,10 +196,12 @@ void PidWatcher::monitorThread() {
         }
 
         if (!running_) {
+            LOG_F(INFO, "Monitor thread exiting");
             break;
         }
 
         if (monitor_callback_) {
+            LOG_F(INFO, "Executing monitor callback");
             monitor_callback_();
         }
 
@@ -204,10 +227,12 @@ void PidWatcher::monitorThread() {
 #endif
 
         if (!running_) {
+            LOG_F(INFO, "Monitor thread exiting");
             break;
         }
 
         if (exit_callback_) {
+            LOG_F(INFO, "Executing exit callback");
             exit_callback_();
         }
 
@@ -219,19 +244,23 @@ void PidWatcher::monitorThread() {
 
         std::this_thread::sleep_for(monitor_interval_);
     }
+    LOG_F(INFO, "Monitor thread exited");
 }
 
 void PidWatcher::exitThread() {
+    LOG_F(INFO, "Exit thread started");
     while (true) {
         std::unique_lock lock(mutex_);
 
         if (!running_) {
+            LOG_F(INFO, "Exit thread exiting");
             break;
         }
 
         exit_cv_.wait(lock);
 
         if (!running_) {
+            LOG_F(INFO, "Exit thread exiting");
             break;
         }
 
@@ -250,10 +279,12 @@ void PidWatcher::exitThread() {
 
         if (waitResult != 0) {
             if (exit_callback_) {
+                LOG_F(INFO, "Executing exit callback");
                 exit_callback_();
             }
         }
     }
+    LOG_F(INFO, "Exit thread exited");
 }
 
 }  // namespace atom::system

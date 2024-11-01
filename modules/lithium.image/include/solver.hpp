@@ -4,7 +4,7 @@
 #include <libstellarsolver/stellarsolver.h>
 #include <cstdint>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 struct LoadFitsResult {
     bool success{};

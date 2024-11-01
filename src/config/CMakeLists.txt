@@ -29,6 +29,10 @@ set(PROJECT_LIBS
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
+if (WIN32)
+    list(APPEND PROJECT_LIBS ws2_32)
+endif()
+
 # Create object library
 add_library(${PROJECT_NAME}_OBJECT OBJECT ${PROJECT_SOURCES} ${PROJECT_HEADERS})
 

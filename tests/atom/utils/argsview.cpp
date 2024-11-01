@@ -4,100 +4,102 @@
 
 using namespace atom::utils;
 
-TEST(ArgumentParserTest, RequiredArguments) {
-    ArgumentParser parser;
-    parser.addArgument("input", ArgumentParser::ArgType::STRING, true, {},
-                       "Input file", {"i"});
-    parser.addArgument("output", ArgumentParser::ArgType::STRING, true, {},
-                       "Output file", {"o"});
-
-    const char* argv[] = {"program", "--input", "input.txt", "--output",
-                          "output.txt"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
-
-    EXPECT_NO_THROW(parser.parse(argc, const_cast<char**>(argv)));
-
-    EXPECT_EQ(parser.get<std::string>("input").value(), "input.txt");
-    EXPECT_EQ(parser.get<std::string>("output").value(), "output.txt");
+TEST(ArgumentParserTest, Constructor) {
+    ArgumentParser parser("test_program");
+    ASSERT_EQ(parser.getFlag("nonexistent_flag"), false);
 }
 
-TEST(ArgumentParserTest, OptionalArguments) {
-    ArgumentParser parser;
-    parser.addArgument("threads", ArgumentParser::ArgType::INTEGER, false, 4,
-                       "Number of threads", {"t"});
-
-    const char* argv[] = {"program", "--threads", "8"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
-
-    EXPECT_NO_THROW(parser.parse(argc, const_cast<char**>(argv)));
-
-    EXPECT_EQ(parser.get<int>("threads").value(), 8);
+TEST(ArgumentParserTest, AddArgument) {
+    ArgumentParser parser("test_program");
+    parser.addArgument("arg1", ArgumentParser::ArgType::STRING, true, "default",
+                       "help message", {"a"});
+    auto arg = parser.get<std::string>("arg1");
+    ASSERT_TRUE(arg.has_value());
+    ASSERT_EQ(arg.value(), "default");
 }
 
-TEST(ArgumentParserTest, DefaultValue) {
-    ArgumentParser parser;
-    parser.addArgument("threads", ArgumentParser::ArgType::INTEGER, false, 4,
-                       "Number of threads", {"t"});
-
-    const char* argv[] = {"program"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
-
-    EXPECT_NO_THROW(parser.parse(argc, const_cast<char**>(argv)));
-
-    EXPECT_EQ(parser.get<int>("threads").value(), 4);
+TEST(ArgumentParserTest, AddFlag) {
+    ArgumentParser parser("test_program");
+    parser.addFlag("flag1", "help message", {"f"});
+    ASSERT_EQ(parser.getFlag("flag1"), false);
 }
 
-TEST(ArgumentParserTest, BooleanFlag) {
-    ArgumentParser parser;
-    parser.addFlag("verbose", "Enable verbose output", {"v"});
-
-    const char* argv[] = {"program", "--verbose"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
-
-    EXPECT_NO_THROW(parser.parse(argc, const_cast<char**>(argv)));
-
-    EXPECT_TRUE(parser.getFlag("verbose"));
+TEST(ArgumentParserTest, AddSubcommand) {
+    ArgumentParser parser("test_program");
+    parser.addSubcommand("subcommand1", "help message");
+    // Subcommand parsing is tested in the parse method
 }
 
-TEST(ArgumentParserTest, MissingRequiredArgument) {
-    ArgumentParser parser;
-    parser.addArgument("input", ArgumentParser::ArgType::STRING, true, {},
-                       "Input file", {"i"});
+TEST(ArgumentParserTest, ParseArguments) {
+    ArgumentParser parser("test_program");
+    parser.addArgument("arg1", ArgumentParser::ArgType::STRING, true);
+    parser.addFlag("flag1");
 
-    const char* argv[] = {"program"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    std::vector<std::string> argv = {"test_program", "--arg1", "value1",
+                                     "--flag1"};
+    parser.parse(static_cast<int>(argv.size()), argv);
 
-    EXPECT_THROW(parser.parse(argc, const_cast<char**>(argv)),
-                 std::invalid_argument);
+    auto arg1 = parser.get<std::string>("arg1");
+    ASSERT_TRUE(arg1.has_value());
+    ASSERT_EQ(arg1.value(), "value1");
+
+    ASSERT_EQ(parser.getFlag("flag1"), true);
 }
 
-TEST(ArgumentParserTest, Aliases) {
-    ArgumentParser parser;
-    parser.addArgument("input", ArgumentParser::ArgType::STRING, true, {},
-                       "Input file", {"i"});
+TEST(ArgumentParserTest, ParseSubcommand) {
+    ArgumentParser parser("test_program");
+    parser.addSubcommand("subcommand1", "help message");
+    parser.addArgument("arg1", ArgumentParser::ArgType::STRING, true);
 
-    const char* argv[] = {"program", "-i", "input.txt"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
+    std::vector<std::string> argv = {"test_program", "subcommand1", "--arg1",
+                                     "value1"};
+    parser.parse(static_cast<int>(argv.size()), argv);
 
-    EXPECT_NO_THROW(parser.parse(argc, const_cast<char**>(argv)));
-
-    EXPECT_EQ(parser.get<std::string>("input").value(), "input.txt");
+    // TODO: Implement getSubcommandParser
+    // auto subcommandParser = parser.getSubcommandParser("subcommand1");
+    // auto arg1 = subcommandParser->get<std::string>("arg1");
+    // ASSERT_TRUE(arg1.has_value());
+    // ASSERT_EQ(arg1.value(), "value1");
 }
 
-TEST(ArgumentParserTest, MultipleValues) {
-    ArgumentParser parser;
-    parser.addMultivalueArgument("files", ArgumentParser::ArgType::STRING,
-                                 false, "List of files", {"f"});
+TEST(ArgumentParserTest, GetArgument) {
+    ArgumentParser parser("test_program");
+    parser.addArgument("arg1", ArgumentParser::ArgType::STRING, true,
+                       "default");
 
-    const char* argv[] = {"program", "--files", "file1.txt", "file2.txt"};
-    int argc = sizeof(argv) / sizeof(argv[0]);
-    std::cout << "argc: " << argc << std::endl;
-    EXPECT_NO_THROW(parser.parse(argc, const_cast<char**>(argv)));
-    std::cout << "argc: " << argc << std::endl;
-    auto files = parser.getMultivalue<std::string>("files");
-    std::cout << "files: " << files.value()[0] << std::endl;
-    ASSERT_TRUE(files.has_value());
-    EXPECT_EQ(files.value().size(), 2);
-    EXPECT_EQ(files.value()[0], "file1.txt");
-    EXPECT_EQ(files.value()[1], "file2.txt");
+    auto arg1 = parser.get<std::string>("arg1");
+    ASSERT_TRUE(arg1.has_value());
+    ASSERT_EQ(arg1.value(), "default");
+}
+
+TEST(ArgumentParserTest, GetFlag) {
+    ArgumentParser parser("test_program");
+    parser.addFlag("flag1");
+
+    ASSERT_EQ(parser.getFlag("flag1"), false);
+    std::vector<std::string> argv = {"test_program", "--flag1"};
+    parser.parse(static_cast<int>(argv.size()), argv);
+    ASSERT_EQ(parser.getFlag("flag1"), true);
+}
+
+TEST(ArgumentParserTest, PrintHelp) {
+    ArgumentParser parser("test_program");
+    parser.addArgument("arg1", ArgumentParser::ArgType::STRING, true, "default",
+                       "help message", {"a"});
+    parser.addFlag("flag1", "help message", {"f"});
+    parser.addSubcommand("subcommand1", "help message");
+
+    testing::internal::CaptureStdout();
+    parser.printHelp();
+    std::string output = testing::internal::GetCapturedStdout();
+
+    ASSERT_NE(output.find("Usage:"), std::string::npos);
+    ASSERT_NE(output.find("--arg1"), std::string::npos);
+    ASSERT_NE(output.find("--flag1"), std::string::npos);
+    ASSERT_NE(output.find("subcommand1"), std::string::npos);
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

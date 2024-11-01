@@ -10,17 +10,17 @@
 #ifndef ATOM_META_TYPE_CASTER_HPP
 #define ATOM_META_TYPE_CASTER_HPP
 
-#include <any>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <any>            // Includes for std::any
+#include <cstddef>        // Includes for std::size_t
+#include <functional>     // Includes for std::function
+#include <memory>         // Includes for std::shared_ptr
+#include <mutex>          // Includes for std::mutex
+#include <queue>          // Includes for std::queue
+#include <string>         // Includes for std::string
+#include <typeinfo>       // Includes for std::type_info
+#include <unordered_map>  // Includes for std::unordered_map
+#include <unordered_set>  // Includes for std::unordered_set
+#include <vector>         // Includes for std::vector
 
 #include "atom/error/exception.hpp"
 #include "type_info.hpp"
@@ -181,6 +181,68 @@ public:
         detail::getTypeRegistry()[typeid(T).name()] = userType<T>();
     }
 
+    /*!
+     * \brief Registers an enum value with a string mapping.
+     * \tparam EnumType The enum type.
+     * \param enum_name The name of the enum.
+     * \param string_value The string value of the enum.
+     * \param enum_value The corresponding enum value.
+     */
+    template <typename EnumType>
+    void registerEnumValue(const std::string& enum_name,
+                           const std::string& string_value,
+                           EnumType enum_value) {
+        if (!m_enumMaps_.contains(enum_name)) {
+            m_enumMaps_[enum_name] =
+                std::unordered_map<std::string, EnumType>();
+        }
+
+        auto& enumMap =
+            std::any_cast<std::unordered_map<std::string, EnumType>&>(
+                m_enumMaps_[enum_name]);
+
+        enumMap[string_value] = enum_value;
+    }
+
+    /*!
+     * \brief Converts an enum value to its string representation.
+     * \tparam EnumType The enum type.
+     * \param value The enum value to convert.
+     * \param enum_name The name of the enum.
+     * \return The string representation of the enum value.
+     * \throws std::invalid_argument if the enum value is invalid.
+     */
+    template <typename EnumType>
+    auto enumToString(EnumType value,
+                      const std::string& enum_name) -> std::string {
+        const auto& enumMap = getEnumMap<EnumType>(enum_name);
+        for (const auto& [key, enumValue] : enumMap) {
+            if (enumValue == value) {
+                return key;
+            }
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum value");
+    }
+
+    /*!
+     * \brief Converts a string to its corresponding enum value.
+     * \tparam EnumType The enum type.
+     * \param string_value The string value to convert.
+     * \param enum_name The name of the enum.
+     * \return The corresponding enum value.
+     * \throws std::invalid_argument if the string value is invalid.
+     */
+    template <typename EnumType>
+    auto stringToEnum(const std::string& string_value,
+                      const std::string& enum_name) -> EnumType {
+        const auto& enumMap = getEnumMap<EnumType>(enum_name);
+        auto iterator = enumMap.find(string_value);
+        if (iterator != enumMap.end()) {
+            return iterator->second;
+        }
+        THROW_INVALID_ARGUMENT("Invalid enum string");
+    }
+
 private:
     std::unordered_map<TypeInfo, ConvertMap> conversions_;
     mutable std::unordered_map<std::string, std::vector<TypeInfo>>
@@ -204,6 +266,8 @@ private:
         registerType<double>("double");
         registerType<char>("char");
         registerType<unsigned char>("unsigned char");
+        registerType<char>("char");
+        registerType<char *>("char *");
         registerType<const char*>("const char*");
         registerType<std::string>("std::string");
         registerType<std::string_view>("std::string_view");
@@ -283,6 +347,13 @@ private:
             return iterator->second;
         }
         return std::nullopt;
+    }
+
+    template <typename EnumType>
+    auto getEnumMap(const std::string& enum_name) const
+        -> const std::unordered_map<std::string, EnumType>& {
+        return std::any_cast<const std::unordered_map<std::string, EnumType>&>(
+            m_enumMaps_.at(enum_name));
     }
 };
 

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace lithium {
 
@@ -52,34 +52,52 @@ class PdbParser {
 public:
     explicit PdbParser(std::string_view pdbFile);
     ~PdbParser();
+    PdbParser(const PdbParser&) = delete;
+    PdbParser& operator=(const PdbParser&) = delete;
+    PdbParser(PdbParser&&) = default;
+    PdbParser& operator=(PdbParser&&) = default;
 
-    [[nodiscard]] bool initialize();
-    [[nodiscard]] std::span<const SymbolInfo> getSymbols() const;
-    [[nodiscard]] std::span<const TypeInfo> getTypes() const;
-    [[nodiscard]] std::span<const VariableInfo> getGlobalVariables() const;
-    [[nodiscard]] std::span<const FunctionInfo> getFunctions() const;
+    [[nodiscard]] auto initialize() -> bool;
+    [[nodiscard]] auto getSymbols() const -> std::span<const SymbolInfo>;
+    [[nodiscard]] auto getTypes() const -> std::span<const TypeInfo>;
+    [[nodiscard]] auto getGlobalVariables() const
+        -> std::span<const VariableInfo>;
+    [[nodiscard]] auto getFunctions() const -> std::span<const FunctionInfo>;
 
     template <std::invocable<const SymbolInfo&> Predicate>
-    [[nodiscard]] std::optional<SymbolInfo> findSymbol(Predicate&& pred) const;
+    [[nodiscard]] auto findSymbol(Predicate&& pred) const
+        -> std::optional<SymbolInfo>;
 
-    [[nodiscard]] std::optional<SymbolInfo> findSymbolByName(
-        std::string_view name) const;
-    [[nodiscard]] std::optional<SymbolInfo> findSymbolByAddress(
-        uint64_t address) const;
+    [[nodiscard]] auto findSymbolByName(std::string_view name) const
+        -> std::optional<SymbolInfo>;
+    [[nodiscard]] auto findSymbolByAddress(uint64_t address) const
+        -> std::optional<SymbolInfo>;
 
-    [[nodiscard]] std::optional<TypeInfo> findTypeByName(
-        std::string_view name) const;
-    [[nodiscard]] std::optional<FunctionInfo> findFunctionByName(
-        std::string_view name) const;
-    [[nodiscard]] std::vector<SourceLineInfo> getSourceLinesForAddress(
-        uint64_t address) const;
+    [[nodiscard]] auto findTypeByName(std::string_view name) const
+        -> std::optional<TypeInfo>;
+    [[nodiscard]] auto findFunctionByName(std::string_view name) const
+        -> std::optional<FunctionInfo>;
+    [[nodiscard]] auto getSourceLinesForAddress(uint64_t address) const
+        -> std::vector<SourceLineInfo>;
 
-    [[nodiscard]] std::string demangleName(std::string_view name) const;
+    [[nodiscard]] auto demangleName(std::string_view name) const -> std::string;
 
 private:
     class Impl;
-    std::unique_ptr<Impl> pImpl;
+    std::unique_ptr<Impl> pImpl_;  // Renamed to p_impl
 };
+
+template <std::invocable<const SymbolInfo&> Predicate>
+auto PdbParser::findSymbol(Predicate&& pred) const
+    -> std::optional<SymbolInfo> {
+    auto symbols = getSymbols();
+    if (auto iter =
+            std::ranges::find_if(symbols, std::forward<Predicate>(pred));
+        iter != symbols.end()) {
+        return *iter;
+    }
+    return std::nullopt;
+}
 
 }  // namespace lithium
 

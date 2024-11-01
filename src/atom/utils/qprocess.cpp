@@ -63,62 +63,88 @@ private:
 };
 
 // Implementation of QProcess
-QProcess::QProcess() : impl_(std::make_unique<Impl>()) {}
-QProcess::~QProcess() = default;
+QProcess::QProcess() : impl_(std::make_unique<Impl>()) {
+    LOG_F(INFO, "QProcess constructor called");
+}
+
+QProcess::~QProcess() { LOG_F(INFO, "QProcess destructor called"); }
 
 void QProcess::setWorkingDirectory(const std::string& dir) {
+    LOG_F(INFO, "QProcess::setWorkingDirectory called with dir: {}", dir);
     impl_->setWorkingDirectory(dir);
 }
 
 void QProcess::setEnvironment(const std::vector<std::string>& env) {
+    LOG_F(INFO, "QProcess::setEnvironment called");
     impl_->setEnvironment(env);
 }
 
 void QProcess::start(const std::string& program,
                      const std::vector<std::string>& args) {
+    LOG_F(INFO, "QProcess::start called with program: {}", program);
     impl_->start(program, args);
 }
 
 auto QProcess::waitForStarted(int timeoutMs) -> bool {
+    LOG_F(INFO, "QProcess::waitForStarted called with timeoutMs: {}",
+          timeoutMs);
     return impl_->waitForStarted(timeoutMs);
 }
 
 auto QProcess::waitForFinished(int timeoutMs) -> bool {
+    LOG_F(INFO, "QProcess::waitForFinished called with timeoutMs: {}",
+          timeoutMs);
     return impl_->waitForFinished(timeoutMs);
 }
 
-auto QProcess::isRunning() const -> bool { return impl_->isRunning(); }
+auto QProcess::isRunning() const -> bool {
+    LOG_F(INFO, "QProcess::isRunning called");
+    return impl_->isRunning();
+}
 
-void QProcess::write(const std::string& data) { impl_->write(data); }
+void QProcess::write(const std::string& data) {
+    LOG_F(INFO, "QProcess::write called with data: {}", data);
+    impl_->write(data);
+}
 
 auto QProcess::readAllStandardOutput() -> std::string {
+    LOG_F(INFO, "QProcess::readAllStandardOutput called");
     return impl_->readAllStandardOutput();
 }
 
 auto QProcess::readAllStandardError() -> std::string {
+    LOG_F(INFO, "QProcess::readAllStandardError called");
     return impl_->readAllStandardError();
 }
 
-void QProcess::terminate() { impl_->terminate(); }
+void QProcess::terminate() {
+    LOG_F(INFO, "QProcess::terminate called");
+    impl_->terminate();
+}
 
 // Implementation details of QProcess::Impl
 QProcess::Impl::~Impl() {
+    LOG_F(INFO, "QProcess::Impl destructor called");
     if (running_) {
         terminate();
     }
 }
 
 void QProcess::Impl::setWorkingDirectory(const std::string& dir) {
+    LOG_F(INFO, "QProcess::Impl::setWorkingDirectory called with dir: {}", dir);
     workingDirectory_ = dir;
 }
 
 void QProcess::Impl::setEnvironment(const std::vector<std::string>& env) {
+    LOG_F(INFO, "QProcess::Impl::setEnvironment called");
     environment_ = env;
 }
 
 void QProcess::Impl::start(const std::string& program,
                            const std::vector<std::string>& args) {
+    LOG_F(INFO, "QProcess::Impl::start called with program: {}", program);
     if (running_) {
+        LOG_F(ERROR, "Process already running");
         THROW_RUNTIME_ERROR("Process already running");
     }
 
@@ -137,28 +163,40 @@ void QProcess::Impl::start(const std::string& program,
         processStarted_ = true;
     }
     cv_.notify_all();
+    LOG_F(INFO, "QProcess::Impl::start completed");
 }
 
 auto QProcess::Impl::waitForStarted(int timeoutMs) -> bool {
+    LOG_F(INFO, "QProcess::Impl::waitForStarted called with timeoutMs: {}",
+          timeoutMs);
     std::unique_lock lock(mutex_);
     if (timeoutMs < 0) {
         cv_.wait(lock, [this] { return processStarted_; });
     } else {
         if (!cv_.wait_for(lock, std::chrono::milliseconds(timeoutMs),
                           [this] { return processStarted_; })) {
+            LOG_F(WARNING, "QProcess::Impl::waitForStarted timed out");
             return false;
         }
     }
+    LOG_F(INFO, "QProcess::Impl::waitForStarted completed");
     return true;
 }
 
 auto QProcess::Impl::waitForFinished(int timeoutMs) -> bool {
+    LOG_F(INFO, "QProcess::Impl::waitForFinished called with timeoutMs: {}",
+          timeoutMs);
 #ifdef _WIN32
     DWORD waitResult = WaitForSingleObject(
         procInfo_.hProcess, timeoutMs < 0 ? INFINITE : timeoutMs);
-    return waitResult == WAIT_OBJECT_0;
+    bool result = waitResult == WAIT_OBJECT_0;
+    LOG_F(INFO, "QProcess::Impl::waitForFinished completed with result: {}",
+          result ? "true" : "false");
+    return result;
 #else
     if (childPid_ == -1) {
+        LOG_F(WARNING,
+              "QProcess::Impl::waitForFinished called with invalid childPid");
         return false;
     }
 
@@ -173,6 +211,7 @@ auto QProcess::Impl::waitForFinished(int timeoutMs) -> bool {
                 std::chrono::duration_cast<std::chrono::milliseconds>(
                     currentTime - startTime);
             if (elapsed.count() >= timeoutMs) {
+                LOG_F(WARNING, "QProcess::Impl::waitForFinished timed out");
                 return false;
             }
             if (waitpid(childPid_, &status, WNOHANG) > 0) {
@@ -181,25 +220,36 @@ auto QProcess::Impl::waitForFinished(int timeoutMs) -> bool {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
+    LOG_F(INFO, "QProcess::Impl::waitForFinished completed");
     return true;
 #endif
 }
 
 auto QProcess::Impl::isRunning() const -> bool {
+    LOG_F(INFO, "QProcess::Impl::isRunning called");
 #ifdef _WIN32
     DWORD exitCode;
     GetExitCodeProcess(procInfo_.hProcess, &exitCode);
-    return exitCode == STILL_ACTIVE;
+    bool result = exitCode == STILL_ACTIVE;
+    LOG_F(INFO, "QProcess::Impl::isRunning returning: {}",
+          result ? "true" : "false");
+    return result;
 #else
     if (childPid_ == -1) {
+        LOG_F(WARNING,
+              "QProcess::Impl::isRunning called with invalid childPid");
         return false;
     }
     int status;
-    return waitpid(childPid_, &status, WNOHANG) == 0;
+    bool result = waitpid(childPid_, &status, WNOHANG) == 0;
+    LOG_F(INFO, "QProcess::Impl::isRunning returning: {}",
+          result ? "true" : "false");
+    return result;
 #endif
 }
 
 void QProcess::Impl::write(const std::string& data) {
+    LOG_F(INFO, "QProcess::Impl::write called with data: {}", data);
 #ifdef _WIN32
     DWORD written;
     WriteFile(childStdinWrite_, data.c_str(), data.size(), &written, nullptr);
@@ -208,9 +258,11 @@ void QProcess::Impl::write(const std::string& data) {
         ::write(childStdin_, data.c_str(), data.size());
     }
 #endif
+    LOG_F(INFO, "QProcess::Impl::write completed");
 }
 
 auto QProcess::Impl::readAllStandardOutput() -> std::string {
+    LOG_F(INFO, "QProcess::Impl::readAllStandardOutput called");
 #ifdef _WIN32
     std::string output;
     DWORD read;
@@ -221,6 +273,7 @@ auto QProcess::Impl::readAllStandardOutput() -> std::string {
            read > 0) {
         output.append(buffer.data(), read);
     }
+    LOG_F(INFO, "QProcess::Impl::readAllStandardOutput completed");
     return output;
 #else
     std::string output;
@@ -230,11 +283,13 @@ auto QProcess::Impl::readAllStandardOutput() -> std::string {
     while ((count = ::read(childStdout_, buffer.data(), buffer.size())) > 0) {
         output.append(buffer.data(), count);
     }
+    LOG_F(INFO, "QProcess::Impl::readAllStandardOutput completed");
     return output;
 #endif
 }
 
 auto QProcess::Impl::readAllStandardError() -> std::string {
+    LOG_F(INFO, "QProcess::Impl::readAllStandardError called");
 #ifdef _WIN32
     std::string output;
     DWORD read;
@@ -245,6 +300,7 @@ auto QProcess::Impl::readAllStandardError() -> std::string {
            read > 0) {
         output.append(buffer.data(), read);
     }
+    LOG_F(INFO, "QProcess::Impl::readAllStandardError completed");
     return output;
 #else
     std::string output;
@@ -254,11 +310,13 @@ auto QProcess::Impl::readAllStandardError() -> std::string {
     while ((count = ::read(childStderr_, buffer.data(), buffer.size())) > 0) {
         output.append(buffer.data(), count);
     }
+    LOG_F(INFO, "QProcess::Impl::readAllStandardError completed");
     return output;
 #endif
 }
 
 void QProcess::Impl::terminate() {
+    LOG_F(INFO, "QProcess::Impl::terminate called");
     if (running_) {
 #ifdef _WIN32
         TerminateProcess(procInfo_.hProcess, 0);
@@ -269,10 +327,12 @@ void QProcess::Impl::terminate() {
 #endif
         running_ = false;
     }
+    LOG_F(INFO, "QProcess::Impl::terminate completed");
 }
 
 #ifdef _WIN32
 void QProcess::Impl::startWindowsProcess() {
+    LOG_F(INFO, "QProcess::Impl::startWindowsProcess called");
     SECURITY_ATTRIBUTES saAttr;
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
@@ -284,16 +344,19 @@ void QProcess::Impl::startWindowsProcess() {
 
     if ((CreatePipe(&childStdoutRead_, &childStdoutWrite, &saAttr, 0) == 0) ||
         (SetHandleInformation(childStdoutRead_, HANDLE_FLAG_INHERIT, 0) == 0)) {
+        LOG_F(ERROR, "Failed to create stdout pipe");
         THROW_SYSTEM_COLLAPSE("Failed to create stdout pipe");
     }
 
     if ((CreatePipe(&childStdinRead, &childStdinWrite_, &saAttr, 0) == 0) ||
         (SetHandleInformation(childStdinWrite_, HANDLE_FLAG_INHERIT, 0) == 0)) {
+        LOG_F(ERROR, "Failed to create stdin pipe");
         THROW_SYSTEM_COLLAPSE("Failed to create stdin pipe");
     }
 
     if ((CreatePipe(&childStderrRead_, &childStderrWrite, &saAttr, 0) == 0) ||
         (SetHandleInformation(childStderrRead_, HANDLE_FLAG_INHERIT, 0) == 0)) {
+        LOG_F(ERROR, "Failed to create stderr pipe");
         THROW_SYSTEM_COLLAPSE("Failed to create stderr pipe");
     }
 
@@ -326,15 +389,18 @@ void QProcess::Impl::startWindowsProcess() {
                        envBlock,
                        workingDirectory_ ? workingDirectory_->c_str() : nullptr,
                        &siStartInfo, &procInfo_)) {
+        LOG_F(ERROR, "Failed to start process");
         THROW_SYSTEM_COLLAPSE("Failed to start process");
     }
 
     CloseHandle(childStdoutWrite);
     CloseHandle(childStdinRead);
     CloseHandle(childStderrWrite);
+    LOG_F(INFO, "QProcess::Impl::startWindowsProcess completed");
 }
 #else
 void QProcess::Impl::startPosixProcess() {
+    LOG_F(INFO, "QProcess::Impl::startPosixProcess called");
     int stdinPipe[2];
     int stdoutPipe[2];
     int stderrPipe[2];
@@ -342,6 +408,7 @@ void QProcess::Impl::startPosixProcess() {
     // Create pipes
     if (pipe(stdinPipe) == -1 || pipe(stdoutPipe) == -1 ||
         pipe(stderrPipe) == -1) {
+        LOG_F(ERROR, "Failed to create pipes");
         THROW_SYSTEM_COLLAPSE("Failed to create pipes");
     }
 
@@ -402,8 +469,10 @@ void QProcess::Impl::startPosixProcess() {
         childStdout_ = stdoutPipe[0];
         childStderr_ = stderrPipe[0];
     } else {
+        LOG_F(ERROR, "Failed to fork process");
         THROW_SYSTEM_COLLAPSE("Failed to fork process");
     }
+    LOG_F(INFO, "QProcess::Impl::startPosixProcess completed");
 }
 #endif
 

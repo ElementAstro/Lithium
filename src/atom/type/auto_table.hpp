@@ -40,6 +40,25 @@ public:
          * @param v The value to store in the entry.
          */
         explicit Entry(Value val) : value(std::move(val)) {}
+
+        /**
+         * @brief Move constructor.
+         */
+        Entry(Entry&& other) noexcept
+            : value(std::move(other.value)),
+              count(other.count.load(std::memory_order_relaxed)) {}
+
+        /**
+         * @brief Move assignment operator.
+         */
+        Entry& operator=(Entry&& other) noexcept {
+            if (this != &other) {
+                value = std::move(other.value);
+                count.store(other.count.load(std::memory_order_relaxed),
+                            std::memory_order_relaxed);
+            }
+            return *this;
+        }
     };
 
     /**

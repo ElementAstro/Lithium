@@ -12,13 +12,7 @@ add_library(${PROJECT_NAME} SHARED)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    _main.cpp
-    _component.cpp
-)
-
-# Headers
-set(${PROJECT_NAME}_HEADERS
-    _component.hpp
+    component.cpp
 )
 
 set(${PROJECT_NAME}_LIBS
@@ -28,6 +22,10 @@ set(${PROJECT_NAME}_LIBS
     loguru
     ${CMAKE_THREAD_LIBS_INIT}
 )
+
+if (WIN32)
+    list(APPEND ${PROJECT_NAME}_LIBS ws2_32)
+endif()
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)

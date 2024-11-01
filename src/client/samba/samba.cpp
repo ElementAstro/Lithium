@@ -9,7 +9,9 @@
 #include "atom/system/command.hpp"
 
 namespace lithium {
+
 auto SambaManager::addUser(const std::string& username) -> bool {
+    LOG_F(INFO, "addUser called with username: {}", username);
     std::string command = "sudo smbpasswd -a " + username;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
@@ -21,6 +23,7 @@ auto SambaManager::addUser(const std::string& username) -> bool {
 }
 
 auto SambaManager::deleteUser(const std::string& username) -> bool {
+    LOG_F(INFO, "deleteUser called with username: {}", username);
     std::string command = "sudo smbpasswd -x " + username;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
@@ -32,6 +35,7 @@ auto SambaManager::deleteUser(const std::string& username) -> bool {
 }
 
 auto SambaManager::changeUserPassword(const std::string& username) -> bool {
+    LOG_F(INFO, "changeUserPassword called with username: {}", username);
     std::string command = "sudo smbpasswd " + username;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
@@ -43,6 +47,7 @@ auto SambaManager::changeUserPassword(const std::string& username) -> bool {
 }
 
 auto SambaManager::enableUser(const std::string& username) -> bool {
+    LOG_F(INFO, "enableUser called with username: {}", username);
     std::string command = "sudo smbpasswd -e " + username;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
@@ -54,6 +59,7 @@ auto SambaManager::enableUser(const std::string& username) -> bool {
 }
 
 auto SambaManager::disableUser(const std::string& username) -> bool {
+    LOG_F(INFO, "disableUser called with username: {}", username);
     std::string command = "sudo smbpasswd -d " + username;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
@@ -65,8 +71,8 @@ auto SambaManager::disableUser(const std::string& username) -> bool {
 }
 
 auto SambaManager::createSharedDirectory(const std::string& path) -> bool {
-    std::string command =
-        "sudo mkdir -p " + path + " && sudo chmod 777 " + path;
+    LOG_F(INFO, "createSharedDirectory called with path: {}", path);
+    std::string command = "sudo mkdir -p " + path + " && sudo chmod 777 " + path;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
         LOG_F(ERROR, "Failed to create shared directory: {}", path);
@@ -77,6 +83,7 @@ auto SambaManager::createSharedDirectory(const std::string& path) -> bool {
 }
 
 auto SambaManager::deleteSharedDirectory(const std::string& path) -> bool {
+    LOG_F(INFO, "deleteSharedDirectory called with path: {}", path);
     std::string command = "sudo rm -rf " + path;
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {
@@ -87,8 +94,8 @@ auto SambaManager::deleteSharedDirectory(const std::string& path) -> bool {
     return true;
 }
 
-auto SambaManager::addSharedDirectoryConfig(const std::string& name,
-                                            const std::string& path) -> bool {
+auto SambaManager::addSharedDirectoryConfig(const std::string& name, const std::string& path) -> bool {
+    LOG_F(INFO, "addSharedDirectoryConfig called with name: {}, path: {}", name, path);
     std::ofstream smbConf("/etc/samba/smb.conf", std::ios::app);
     if (smbConf.is_open()) {
         smbConf << "\n[" << name << "]\n";
@@ -105,9 +112,8 @@ auto SambaManager::addSharedDirectoryConfig(const std::string& name,
     return false;
 }
 
-auto SambaManager::modifySharedDirectoryConfig(
-    const std::string& name, const std::string& path,
-    const std::string& newPath) -> bool {
+auto SambaManager::modifySharedDirectoryConfig(const std::string& name, const std::string& path, const std::string& newPath) -> bool {
+    LOG_F(INFO, "modifySharedDirectoryConfig called with name: {}, path: {}, newPath: {}", name, path, newPath);
     std::ifstream smbConfIn("/etc/samba/smb.conf");
     std::ofstream smbConfOut("/etc/samba/smb.conf.tmp");
     std::string line;
@@ -133,12 +139,10 @@ auto SambaManager::modifySharedDirectoryConfig(
         smbConfOut.close();
 
         if (found) {
-            std::string command =
-                "sudo mv /etc/samba/smb.conf.tmp /etc/samba/smb.conf";
+            std::string command = "sudo mv /etc/samba/smb.conf.tmp /etc/samba/smb.conf";
             auto res = atom::system::executeCommandWithStatus(command);
             if (res.second != 0) {
-                LOG_F(ERROR, "Failed to modify shared directory config: {}",
-                      name);
+                LOG_F(ERROR, "Failed to modify shared directory config: {}", name);
                 return false;
             }
             LOG_F(INFO, "Modified shared directory config: {}", name);
@@ -152,8 +156,8 @@ auto SambaManager::modifySharedDirectoryConfig(
     return false;
 }
 
-auto SambaManager::deleteSharedDirectoryConfig(const std::string& name)
-    -> bool {
+auto SambaManager::deleteSharedDirectoryConfig(const std::string& name) -> bool {
+    LOG_F(INFO, "deleteSharedDirectoryConfig called with name: {}", name);
     std::ifstream smbConfIn("/etc/samba/smb.conf");
     std::ofstream smbConfOut("/etc/samba/smb.conf.tmp");
     std::string line;
@@ -163,8 +167,7 @@ auto SambaManager::deleteSharedDirectoryConfig(const std::string& name)
         while (getline(smbConfIn, line)) {
             if (line == "[" + name + "]") {
                 found = true;
-                while (getline(smbConfIn, line) && !line.empty())
-                    ;
+                while (getline(smbConfIn, line) && !line.empty());
             } else {
                 smbConfOut << line << "\n";
             }
@@ -173,21 +176,17 @@ auto SambaManager::deleteSharedDirectoryConfig(const std::string& name)
         smbConfOut.close();
 
         if (found) {
-            std::string command =
-                "sudo mv /etc/samba/smb.conf.tmp /etc/samba/smb.conf";
+            std::string command = "sudo mv /etc/samba/smb.conf.tmp /etc/samba/smb.conf";
             auto res = atom::system::executeCommandWithStatus(command);
             if (res.second != 0) {
-                LOG_F(ERROR, "Failed to delete shared directory config: {}",
-                      name);
+                LOG_F(ERROR, "Failed to delete shared directory config: {}", name);
                 return false;
             }
             LOG_F(INFO, "Deleted shared directory config: {}", name);
-
             restartSamba();
             return true;
         }
         LOG_F(ERROR, "Shared directory config not found: {}", name);
-
     } else {
         LOG_F(ERROR, "Failed to open smb.conf for reading or writing");
     }
@@ -195,6 +194,7 @@ auto SambaManager::deleteSharedDirectoryConfig(const std::string& name)
 }
 
 auto SambaManager::listSambaUsers() -> bool {
+    LOG_F(INFO, "listSambaUsers called");
     std::string command = "sudo pdbedit -L";
     auto res = atom::system::executeCommand(command);
     if (res.empty()) {
@@ -206,6 +206,7 @@ auto SambaManager::listSambaUsers() -> bool {
 }
 
 auto SambaManager::listSharedDirectories() -> bool {
+    LOG_F(INFO, "listSharedDirectories called");
     std::ifstream smbConf("/etc/samba/smb.conf");
     std::string line;
     if (smbConf.is_open()) {
@@ -219,11 +220,11 @@ auto SambaManager::listSharedDirectories() -> bool {
         return true;
     }
     LOG_F(ERROR, "Failed to open smb.conf for reading");
-
     return false;
 }
 
 auto SambaManager::restartSamba() -> bool {
+    LOG_F(INFO, "restartSamba called");
     std::string command = "sudo systemctl restart smbd";
     auto res = atom::system::executeCommandWithStatus(command);
     if (res.second != 0) {

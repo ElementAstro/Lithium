@@ -22,7 +22,7 @@ Description: A collection of algorithms for C++
 
 #include "atom/type/static_string.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::algorithm {
 namespace detail {

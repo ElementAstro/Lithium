@@ -3,43 +3,43 @@
 
 namespace lithium {
 GitManager::GitManager(const std::string& repoPath)
-    : impl(new Impl(repoPath)) {}
+    : impl_(std::make_unique<Impl>(repoPath)) {}
 GitManager::~GitManager() = default;
 
-auto GitManager::initRepository() -> bool { return impl->initRepository(); }
+auto GitManager::initRepository() -> bool { return impl_->initRepository(); }
 
 auto GitManager::cloneRepository(const std::string& url) -> bool {
-    return impl->cloneRepository(url);
+    return impl_->cloneRepository(url);
 }
 
 auto GitManager::createBranch(const std::string& branchName) -> bool {
-    return impl->createBranch(branchName);
+    return impl_->createBranch(branchName);
 }
 
 auto GitManager::checkoutBranch(const std::string& branchName) -> bool {
-    return impl->checkoutBranch(branchName);
+    return impl_->checkoutBranch(branchName);
 }
 
 auto GitManager::mergeBranch(const std::string& branchName) -> bool {
-    return impl->mergeBranch(branchName);
+    return impl_->mergeBranch(branchName);
 }
 
 auto GitManager::addFile(const std::string& filePath) -> bool {
-    return impl->addFile(filePath);
+    return impl_->addFile(filePath);
 }
 
 auto GitManager::commitChanges(const std::string& message) -> bool {
-    return impl->commitChanges(message);
+    return impl_->commitChanges(message);
 }
 
 auto GitManager::pull(const std::string& remoteName,
                       const std::string& branchName) -> bool {
-    return impl->pull(remoteName, branchName);
+    return impl_->pull(remoteName, branchName);
 }
 
 auto GitManager::push(const std::string& remoteName,
                       const std::string& branchName) -> bool {
-    return impl->push(remoteName, branchName);
+    return impl_->push(remoteName, branchName);
 }
 
 }  // namespace lithium

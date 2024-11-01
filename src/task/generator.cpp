@@ -233,7 +233,7 @@ auto TaskGenerator::Impl::replaceMacros(const std::string& input) const
 }
 
 void TaskGenerator::Impl::preprocessJsonMacros(json& j) {
-    for (auto& [key, value] : j.items()) {
+    for (const auto& [key, value] : j.items()) {
         if (value.is_string()) {
             std::string strValue = value.get<std::string>();
             std::smatch match;
@@ -264,7 +264,7 @@ void TaskGenerator::Impl::processJsonWithJsonMacros(json& j) {
 
     static const std::regex MACRO_PATTERN(
         R"(\$\{([^\{\}]+(?:\([^\{\}]*\))*)\})");
-    for (auto& [key, value] : j.items()) {
+    for (const auto& [key, value] : j.items()) {
         if (value.is_string()) {
             std::string strValue = value.get<std::string>();
             std::smatch match;

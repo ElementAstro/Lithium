@@ -17,7 +17,7 @@ Description: System Information Module - OS Information
 
 #include <string>
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 /**

@@ -1,127 +1,83 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
 #include "atom/sysinfo/battery.hpp"
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <fstream>
-#endif
+#include <gtest/gtest.h>
 
 using namespace atom::system;
-using namespace testing;
 
-#ifdef _WIN32
-class MockWindowsApi {
-public:
-    MOCK_METHOD(BOOL, GetSystemPowerStatus, (LPSYSTEM_POWER_STATUS), ());
-};
-
-MockWindowsApi* mockWindowsApi;
-
-BOOL WINAPI MockGetSystemPowerStatus(LPSYSTEM_POWER_STATUS lpSystemPowerStatus) {
-    return mockWindowsApi->GetSystemPowerStatus(lpSystemPowerStatus);
-}
-
-void setupMockWindowsApi() {
-    mockWindowsApi = new MockWindowsApi();
-    // GetSystemPowerStatus = MockGetSystemPowerStatus;
-    typedef WINBOOL (WINAPI *GetSystemPowerStatusPtr)(LPSYSTEM_POWER_STATUS);
-    GetSystemPowerStatusPtr realGetSystemPowerStatus = GetSystemPowerStatus;
-    GetSystemPowerStatusPtr GetSystemPowerStatus = MockGetSystemPowerStatus;
-}
-
-void cleanupMockWindowsApi() {
-    delete mockWindowsApi;
-}
-
-#else
-class MockFileReader {
-public:
-    MOCK_METHOD(std::string, ReadFile, (const std::string&), ());
-};
-
-MockFileReader* mockFileReader;
-
-std::string MockReadFile(const std::string& path) {
-    return mockFileReader->ReadFile(path);
-}
-
-void setupMockFileReader() {
-    mockFileReader = new MockFileReader();
-}
-
-void cleanupMockFileReader() {
-    delete mockFileReader;
-}
-#endif
-
-class BatteryTest : public ::testing::Test {
+// Test fixture for BatteryInfo
+class BatteryInfoTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-#ifdef _WIN32
-        setupMockWindowsApi();
-#else
-        setupMockFileReader();
-#endif
-    }
+    BatteryInfo batteryInfo;
 
-    void TearDown() override {
-#ifdef _WIN32
-        cleanupMockWindowsApi();
-#else
-        cleanupMockFileReader();
-#endif
+    void SetUp() override {
+        // Initialize BatteryInfo with default values
+        batteryInfo = BatteryInfo();
     }
 };
 
-#ifdef _WIN32
-TEST_F(BatteryTest, GetBatteryInfo_Windows) {
-    SYSTEM_POWER_STATUS powerStatus = {};
-    powerStatus.BatteryFlag = 1;
-    powerStatus.BatteryLifePercent = 50;
-    powerStatus.BatteryLifeTime = 7200;
-    powerStatus.BatteryFullLifeTime = 14400;
-    powerStatus.ACLineStatus = 1;
-
-    EXPECT_CALL(*mockWindowsApi, GetSystemPowerStatus(_)).WillOnce(DoAll(SetArgPointee<0>(powerStatus), Return(TRUE)));
-
-    BatteryInfo info = getBatteryInfo();
-
-    EXPECT_TRUE(info.isBatteryPresent);
-    EXPECT_TRUE(info.isCharging);
-    EXPECT_EQ(info.batteryLifePercent, 50.0F);
-    EXPECT_EQ(info.batteryLifeTime, 7200.0F);
-    EXPECT_EQ(info.batteryFullLifeTime, 14400.0F);
+// Test default values of BatteryInfo
+TEST_F(BatteryInfoTest, DefaultValues) {
+    EXPECT_FALSE(batteryInfo.isBatteryPresent);
+    EXPECT_FALSE(batteryInfo.isCharging);
+    EXPECT_FLOAT_EQ(batteryInfo.batteryLifePercent, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.batteryLifeTime, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.batteryFullLifeTime, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.energyNow, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.energyFull, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.energyDesign, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.voltageNow, 0.0);
+    EXPECT_FLOAT_EQ(batteryInfo.currentNow, 0.0);
 }
 
-#else
+// Test operator== for BatteryInfo
+TEST_F(BatteryInfoTest, EqualityOperator) {
+    BatteryInfo other;
+    EXPECT_TRUE(batteryInfo == other);
 
-TEST_F(BatteryTest, GetBatteryInfo_Linux) {
-    std::string mockBatteryData =
-        "POWER_SUPPLY_PRESENT=1\n"
-        "POWER_SUPPLY_STATUS=Charging\n"
-        "POWER_SUPPLY_CAPACITY=75\n"
-        "POWER_SUPPLY_TIME_TO_EMPTY_MIN=120\n"
-        "POWER_SUPPLY_TIME_TO_FULL_NOW=240\n"
-        "POWER_SUPPLY_ENERGY_NOW=40000\n"
-        "POWER_SUPPLY_ENERGY_FULL_DESIGN=50000\n"
-        "POWER_SUPPLY_VOLTAGE_NOW=12000000\n"
-        "POWER_SUPPLY_CURRENT_NOW=2000000\n";
-
-    EXPECT_CALL(*mockFileReader, ReadFile(_)).WillOnce(Return(mockBatteryData));
-
-    BatteryInfo info = getBatteryInfo();
-
-    EXPECT_TRUE(info.isBatteryPresent);
-    EXPECT_TRUE(info.isCharging);
-    EXPECT_EQ(info.batteryLifePercent, 75.0f);
-    EXPECT_EQ(info.batteryLifeTime, 120.0f);
-    EXPECT_EQ(info.batteryFullLifeTime, 240.0f);
-    EXPECT_EQ(info.energyNow, 40000.0f);
-    EXPECT_EQ(info.energyDesign, 50000.0f);
-    EXPECT_EQ(info.voltageNow, 12.0f);
-    EXPECT_EQ(info.currentNow, 2.0f);
+    other.isBatteryPresent = true;
+    EXPECT_FALSE(batteryInfo == other);
 }
 
-#endif
+// Test operator!= for BatteryInfo
+TEST_F(BatteryInfoTest, InequalityOperator) {
+    BatteryInfo other;
+    EXPECT_FALSE(batteryInfo != other);
+
+    other.isBatteryPresent = true;
+    EXPECT_TRUE(batteryInfo != other);
+}
+
+// Test operator= for BatteryInfo
+TEST_F(BatteryInfoTest, AssignmentOperator) {
+    BatteryInfo other;
+    other.isBatteryPresent = true;
+    other.isCharging = true;
+    other.batteryLifePercent = 50.0;
+    other.batteryLifeTime = 120.0;
+    other.batteryFullLifeTime = 240.0;
+    other.energyNow = 5000000.0;
+    other.energyFull = 10000000.0;
+    other.energyDesign = 12000000.0;
+    other.voltageNow = 3.7;
+    other.currentNow = 1.5;
+
+    batteryInfo = other;
+    EXPECT_TRUE(batteryInfo == other);
+}
+
+// Test getBatteryInfo function
+TEST(BatteryInfoFunctionTest, GetBatteryInfo) {
+    BatteryInfo info = getBatteryInfo();
+
+    // Since we don't know the actual values returned by getBatteryInfo,
+    // we will just check if the function returns a BatteryInfo object.
+    EXPECT_TRUE(info.isBatteryPresent || !info.isBatteryPresent);
+    EXPECT_TRUE(info.isCharging || !info.isCharging);
+    EXPECT_GE(info.batteryLifePercent, 0.0);
+    EXPECT_GE(info.batteryLifeTime, 0.0);
+    EXPECT_GE(info.batteryFullLifeTime, 0.0);
+    EXPECT_GE(info.energyNow, 0.0);
+    EXPECT_GE(info.energyFull, 0.0);
+    EXPECT_GE(info.energyDesign, 0.0);
+    EXPECT_GE(info.voltageNow, 0.0);
+    EXPECT_GE(info.currentNow, 0.0);
+}

@@ -2,6 +2,7 @@
 #define ATOM_IMAGE_BLOB_HPP
 
 #include <algorithm>
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstring>
@@ -10,9 +11,9 @@
 
 #include "atom/error/exception.hpp"
 
-// Max: Here we need to include opencv2/core.hpp and opencv2/imgproc.hpp to use cv::Mat.
 #if __has_include(<opencv2/core.hpp>)
 #include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #endif
 
@@ -27,6 +28,8 @@ concept BlobValueType = std::is_trivially_copyable_v<T>;
 
 enum class BlobMode { NORMAL, FAST };
 
+constexpr int DEFAULT_DEPTH = 8;
+
 template <BlobType T, BlobMode Mode = BlobMode::NORMAL>
 class Blob {
 private:
@@ -36,34 +39,36 @@ private:
     int cols_ = 0;
     int channels_ = 1;
 #if __has_include(<opencv2/core.hpp>)
-    int depth = CV_8U;
+    int depth_ = CV_8U;
 #else
-    int depth_ = 8;
+    int depth_ = DEFAULT_DEPTH;
 #endif
+
 public:
     Blob() noexcept = default;
     Blob(const Blob&) = default;
     Blob(Blob&&) noexcept = default;
     auto operator=(const Blob&) -> Blob& = default;
     auto operator=(Blob&&) noexcept -> Blob& = default;
+    ~Blob() = default;
 
     template <class U>
         requires(std::is_const_v<T> && std::same_as<const U, T>)
     explicit Blob(const Blob<U, Mode>& that) noexcept
-        : storage_(that.storage),
-          rows_(that.rows),
-          cols_(that.cols),
-          channels_(that.channels),
-          depth_(that.depth) {}
+        : storage_(that.storage_),
+          rows_(that.rows_),
+          cols_(that.cols_),
+          channels_(that.channels_),
+          depth_(that.depth_) {}
 
     template <class U>
         requires(std::is_const_v<T> && std::same_as<const U, T>)
     explicit Blob(Blob<U, Mode>&& that) noexcept
-        : storage_(std::move(that.storage)),
-          rows_(that.rows),
-          cols_(that.cols),
-          channels_(that.channels),
-          depth_(that.depth) {}
+        : storage_(std::move(that.storage_)),
+          rows_(that.rows_),
+          cols_(that.cols_),
+          channels_(that.channels_),
+          depth_(that.depth_) {}
 
     Blob(void* ptr, size_t n) noexcept
         requires(Mode == BlobMode::FAST)
@@ -83,37 +88,38 @@ public:
                              reinterpret_cast<T*>(ptr) + n * sizeof(U))) {}
 
     template <BlobValueType U, size_t N>
-    explicit Blob(U (&arr)[N])
+    explicit Blob(std::array<U, N>& arr)
         : storage_(Mode == BlobMode::FAST
-                       ? std::span<T>(reinterpret_cast<T*>(arr), sizeof(U) * N)
-                       : std::vector<T>(
-                             reinterpret_cast<T*>(arr),
-                             reinterpret_cast<T*>(arr) + sizeof(U) * N)) {}
+                       ? std::span<T>(reinterpret_cast<T*>(arr.data()),
+                                      sizeof(U) * N)
+                       : std::vector<T>(reinterpret_cast<T*>(arr.data()),
+                                        reinterpret_cast<T*>(arr.data()) +
+                                            sizeof(U) * N)) {}
 
 #if __has_include(<opencv2/core.hpp>)
-    explicit blob_(const cv::Mat& mat)
-        : rows(mat.rows),
-          cols(mat.cols),
-          channels(mat.channels()),
-          depth(mat.depth()) {
+    explicit Blob(const cv::Mat& mat)
+        : rows_(mat.rows),
+          cols_(mat.cols),
+          channels_(mat.channels()),
+          depth_(mat.depth()) {
         if (mat.isContinuous()) {
-            if constexpr (Mode == BlobMode::Fast) {
-                storage = std::span<T>(reinterpret_cast<T*>(mat.data),
-                                       mat.total() * mat.elemSize());
+            if constexpr (Mode == BlobMode::FAST) {
+                storage_ = std::span<T>(reinterpret_cast<T*>(mat.data),
+                                        mat.total() * mat.elemSize());
             } else {
-                storage.assign(reinterpret_cast<T*>(mat.data),
-                               reinterpret_cast<T*>(mat.data) +
-                                   mat.total() * mat.elemSize());
+                storage_.assign(reinterpret_cast<T*>(mat.data),
+                                reinterpret_cast<T*>(mat.data) +
+                                    mat.total() * mat.elemSize());
             }
         } else {
-            if constexpr (Mode == BlobMode::Fast) {
+            if constexpr (Mode == BlobMode::FAST) {
                 THROW_RUNTIME_ERROR(
                     "Cannot create fast blob from non-continuous cv::Mat");
             } else {
-                storage.reserve(mat.total() * mat.elemSize());
+                storage_.reserve(mat.total() * mat.elemSize());
                 for (int i = 0; i < mat.rows; ++i) {
-                    storage.insert(storage.end(), mat.ptr<T>(i),
-                                   mat.ptr<T>(i) + mat.cols * mat.elemSize());
+                    storage_.insert(storage_.end(), mat.ptr<T>(i),
+                                    mat.ptr<T>(i) + mat.cols * mat.elemSize());
                 }
             }
         }
@@ -162,7 +168,6 @@ public:
         } else {
             storage_.insert(storage_.end(), other.storage_.begin(),
                             other.storage_.end());
-            // Update properties (assuming appending along rows)
             rows_ += other.rows_;
         }
     }
@@ -173,8 +178,8 @@ public:
         } else {
             const auto* bytePtr = reinterpret_cast<const T*>(ptr);
             storage_.insert(storage_.end(), bytePtr, bytePtr + n);
-            // Update properties (assuming appending along rows)
-            rows_ += n / (cols_ * channels_);
+            rows_ += static_cast<size_t>(n) / (static_cast<size_t>(cols_) *
+                                               static_cast<size_t>(channels_));
         }
     }
 
@@ -203,11 +208,12 @@ public:
         std::transform(begin(), end(), other.begin(), begin(), std::bit_xor());
     }
 
-    auto compress() const -> Blob {
+    [[nodiscard]] auto compress() const -> Blob {
         Blob compressed;
         for (size_t i = 0; i < size(); ++i) {
             T current = storage_[i];
             size_t count = 1;
+#pragma unroll
             while (i + 1 < size() && storage_[i + 1] == current) {
                 ++count;
                 ++i;
@@ -218,13 +224,14 @@ public:
         return compressed;
     }
 
-    auto decompress() const -> Blob {
+    [[nodiscard]] auto decompress() const -> Blob {
         Blob decompressed;
         for (size_t i = 0; i < size(); i += sizeof(T) + sizeof(size_t)) {
             T value;
             size_t count;
             std::memcpy(&value, &storage_[i], sizeof(T));
             std::memcpy(&count, &storage_[i + sizeof(T)], sizeof(size_t));
+#pragma unroll
             for (size_t j = 0; j < count; ++j) {
                 decompressed.append(&value, sizeof(T));
             }
@@ -232,7 +239,7 @@ public:
         return decompressed;
     }
 
-    auto serialize() const -> std::vector<std::byte> {
+    [[nodiscard]] auto serialize() const -> std::vector<std::byte> {
         std::vector<std::byte> serialized;
         size_t size = storage_.size();
         serialized.insert(
@@ -260,9 +267,9 @@ public:
 
 #if __has_include(<opencv2/core.hpp>)
     cv::Mat to_mat() const {
-        int type = CV_MAKETYPE(depth, channels);
-        cv::Mat mat(rows, cols, type);
-        std::memcpy(mat.data, storage.data(), size());
+        int type = CV_MAKETYPE(depth_, channels_);
+        cv::Mat mat(rows_, cols_, type);
+        std::memcpy(mat.data, storage_.data(), size());
         return mat;
     }
 
@@ -270,49 +277,78 @@ public:
         cv::Mat src = to_mat();
         cv::Mat dst;
         cv::filter2D(src, dst, -1, kernel);
-        *this = blob_(dst);
+        *this = Blob(dst);
     }
 
     void resize(int new_rows, int new_cols) {
         cv::Mat src = to_mat();
         cv::Mat dst;
         cv::resize(src, dst, cv::Size(new_cols, new_rows));
-        *this = blob_(dst);
+        *this = Blob(dst);
     }
 
     void convert_color(int code) {
         cv::Mat src = to_mat();
         cv::Mat dst;
         cv::cvtColor(src, dst, code);
-        *this = blob_(dst);
+        *this = Blob(dst);
     }
 
-    std::vector<blob_> split_channels() const {
+    void rotate(double angle) {
+        cv::Mat src = to_mat();
+        cv::Mat dst;
+        cv::Point2f center(src.cols / 2.0, src.rows / 2.0);
+        cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
+        cv::warpAffine(src, dst, rot, src.size());
+        *this = Blob(dst);
+    }
+
+    void flip(int flipCode) {
+        cv::Mat src = to_mat();
+        cv::Mat dst;
+        cv::flip(src, dst, flipCode);
+        *this = Blob(dst);
+    }
+
+    void save(const std::string& filename) const {
+        cv::Mat mat = to_mat();
+        cv::imwrite(filename, mat);
+    }
+
+    static Blob load(const std::string& filename) {
+        cv::Mat mat = cv::imread(filename, cv::IMREAD_UNCHANGED);
+        if (mat.empty()) {
+            THROW_RUNTIME_ERROR("Failed to load image from file");
+        }
+        return Blob(mat);
+    }
+
+    std::vector<Blob> split_channels() const {
         cv::Mat src = to_mat();
         std::vector<cv::Mat> channels;
         cv::split(src, channels);
-        std::vector<blob_> channel_blobs;
+        std::vector<Blob> channel_blobs;
         for (const auto& channel : channels) {
             channel_blobs.emplace_back(channel);
         }
         return channel_blobs;
     }
 
-    static blob_ merge_channels(const std::vector<blob_>& channel_blobs) {
+    static Blob merge_channels(const std::vector<Blob>& channel_blobs) {
         std::vector<cv::Mat> channels;
         for (const auto& blob : channel_blobs) {
             channels.push_back(blob.to_mat());
         }
         cv::Mat merged;
         cv::merge(channels, merged);
-        return blob_(merged);
+        return Blob(merged);
     }
 #endif
 
-    [[nodiscard]] auto get_rows() const -> int { return rows_; }
-    [[nodiscard]] auto get_cols() const -> int { return cols_; }
-    [[nodiscard]] auto get_channels() const -> int { return channels_; }
-    [[nodiscard]] auto get_depth() const -> int { return depth_; }
+    [[nodiscard]] auto getRows() const -> int { return rows_; }
+    [[nodiscard]] auto getCols() const -> int { return cols_; }
+    [[nodiscard]] auto getChannels() const -> int { return channels_; }
+    [[nodiscard]] auto getDepth() const -> int { return depth_; }
 };
 
 using cblob = Blob<const std::byte>;

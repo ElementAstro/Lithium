@@ -65,6 +65,7 @@ using IF_ADDRS_UNICAST = struct ifaddrs*;
 
 namespace atom::system {
 bool isConnectedToInternet() {
+    LOG_F(INFO, "Checking internet connection");
     bool connected = false;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock != -1) {
@@ -78,6 +79,9 @@ bool isConnectedToInternet() {
 #endif
         if (connect(sock, (struct sockaddr*)&server, sizeof(server)) != -1) {
             connected = true;
+            LOG_F(INFO, "Successfully connected to 8.8.8.8");
+        } else {
+            LOG_F(ERROR, "Failed to connect to 8.8.8.8");
         }
 #ifdef _WIN32
         closesocket(sock);
@@ -85,12 +89,15 @@ bool isConnectedToInternet() {
             close(sock);
         }
 #endif
+    } else {
+        LOG_F(ERROR, "Failed to create socket");
     }
     return connected;
 }
 
 // 获取当前连接的WIFI
 auto getCurrentWifi() -> std::string {
+    LOG_F(INFO, "Getting current WiFi connection");
     std::string wifiName;
 
 #ifdef _WIN32
@@ -116,16 +123,19 @@ auto getCurrentWifi() -> std::string {
                         wifiName = reinterpret_cast<const char*>(
                             connectionAttributes->wlanAssociationAttributes
                                 .dot11Ssid.ucSSID);
+                        LOG_F(INFO, "Connected to WiFi: {}", wifiName);
                         break;
+                    } else {
+                        LOG_F(ERROR, "WlanQueryInterface failed");
                     }
                 }
             }
         } else {
-            LOG_F(ERROR, "Error: WlanEnumInterfaces failed");
+            LOG_F(ERROR, "WlanEnumInterfaces failed");
         }
         WlanCloseHandle(handle, nullptr);
     } else {
-        LOG_F(ERROR, "Error: WlanOpenHandle failed");
+        LOG_F(ERROR, "WlanOpenHandle failed");
     }
 #elif defined(__linux__)
     std::ifstream file("/proc/net/wireless");
@@ -139,6 +149,7 @@ auto getCurrentWifi() -> std::string {
             if (tokens.size() >= 2 && tokens[1] != "off/any" &&
                 tokens[1] != "any") {
                 wifiName = tokens[0].substr(0, tokens[0].find(':'));
+                LOG_F(INFO, "Connected to WiFi: {}", wifiName);
                 break;
             }
         }
@@ -156,12 +167,13 @@ auto getCurrentWifi() -> std::string {
                 CFStringGetCString(ssid, buffer, sizeof(buffer),
                                    kCFStringEncodingUTF8);
                 wifiName = buffer;
+                LOG_F(INFO, "Connected to WiFi: {}", wifiName);
             }
             CFRelease(info);
         }
         CFRelease(interfaces);
     } else {
-        LOG_F(ERROR, "Error: CNCopySupportedInterfaces failed");
+        LOG_F(ERROR, "CNCopySupportedInterfaces failed");
     }
 #else
     LOG_F(ERROR, "Unsupported operating system");
@@ -172,6 +184,7 @@ auto getCurrentWifi() -> std::string {
 
 // 获取当前连接的有线网络
 auto getCurrentWiredNetwork() -> std::string {
+    LOG_F(INFO, "Getting current wired network connection");
     std::string wiredNetworkName;
 
 #ifdef _WIN32
@@ -186,13 +199,17 @@ auto getCurrentWiredNetwork() -> std::string {
                  adapter = adapter->Next) {
                 if (adapter->Type == MIB_IF_TYPE_ETHERNET) {
                     wiredNetworkName = adapter->AdapterName;
+                    LOG_F(INFO, "Connected to wired network: {}",
+                          wiredNetworkName);
                     break;
                 }
             }
+        } else {
+            LOG_F(ERROR, "GetAdaptersInfo failed");
         }
         delete[] reinterpret_cast<char*>(adapterInfo);
     } else {
-        LOG_F(ERROR, "Error: GetAdaptersInfo failed");
+        LOG_F(ERROR, "GetAdaptersInfo failed");
     }
 #elif defined(__linux__)
     std::ifstream file("/sys/class/net");
@@ -206,6 +223,8 @@ auto getCurrentWiredNetwork() -> std::string {
                 std::getline(operStateFile, operState);
                 if (operState == "up") {
                     wiredNetworkName = line;
+                    LOG_F(INFO, "Connected to wired network: {}",
+                          wiredNetworkName);
                     break;
                 }
             }
@@ -213,6 +232,7 @@ auto getCurrentWiredNetwork() -> std::string {
     }
 #elif defined(__APPLE__)
     // macOS下暂不支持获取当前连接的有线网络
+    LOG_F(WARNING, "Getting current wired network is not supported on macOS");
 #else
     LOG_F(ERROR, "Unsupported operating system");
 #endif
@@ -222,6 +242,7 @@ auto getCurrentWiredNetwork() -> std::string {
 
 // 检查是否连接到热点
 auto isHotspotConnected() -> bool {
+    LOG_F(INFO, "Checking if connected to a hotspot");
     bool isConnected = false;
 
 #ifdef _WIN32
@@ -250,15 +271,20 @@ auto isHotspotConnected() -> bool {
                                     .dot11BssType ==
                                 dot11_BSS_type_independent) {
                             isConnected = true;
+                            LOG_F(INFO, "Connected to a hotspot");
                             break;
                         }
+                    } else {
+                        LOG_F(ERROR, "WlanQueryInterface failed");
                     }
                 }
             }
+        } else {
+            LOG_F(ERROR, "WlanEnumInterfaces failed");
         }
         WlanCloseHandle(handle, nullptr);
     } else {
-        LOG_F(ERROR, "Error: WlanOpenHandle failed");
+        LOG_F(ERROR, "WlanOpenHandle failed");
     }
 #elif defined(__linux__)
     std::ifstream file("/proc/net/dev");
@@ -273,12 +299,15 @@ auto isHotspotConnected() -> bool {
             if (tokens.size() >= 17 &&
                 tokens[1].substr(0, WIFI_INDEX) == "wlx00") {
                 isConnected = true;
+                LOG_F(INFO, "Connected to a hotspot");
                 break;
             }
         }
     }
 #elif defined(__APPLE__)
     // macOS下暂不支持检查是否连接到热点
+    LOG_F(WARNING,
+          "Checking if connected to a hotspot is not supported on macOS");
 #else
     LOG_F(ERROR, "Unsupported operating system");
 #endif
@@ -287,18 +316,19 @@ auto isHotspotConnected() -> bool {
 }
 
 auto getHostIPs() -> std::vector<std::string> {
+    LOG_F(INFO, "Getting host IP addresses");
     std::vector<std::string> hostIPs;
 
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        LOG_F(ERROR, "Error: WSAStartup failed");
+        LOG_F(ERROR, "WSAStartup failed");
         return hostIPs;
     }
 
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) == SOCKET_ERROR) {
-        LOG_F(ERROR, "Error: gethostname failed");
+        LOG_F(ERROR, "gethostname failed");
         WSACleanup();
         return hostIPs;
     }
@@ -310,7 +340,7 @@ auto getHostIPs() -> std::vector<std::string> {
     hints.ai_protocol = IPPROTO_TCP;
 
     if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
-        LOG_F(ERROR, "Error: getaddrinfo failed");
+        LOG_F(ERROR, "getaddrinfo failed");
         WSACleanup();
         return hostIPs;
     }
@@ -327,6 +357,7 @@ auto getHostIPs() -> std::vector<std::string> {
         }
         inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
         hostIPs.push_back(std::string(ipstr));
+        LOG_F(INFO, "Found IP address: {}", ipstr);
     }
 
     freeaddrinfo(res);
@@ -335,7 +366,7 @@ auto getHostIPs() -> std::vector<std::string> {
     ifaddrs* ifaddr;
 
     if (getifaddrs(&ifaddr) == -1) {
-        LOG_F(ERROR, "Error: getifaddrs failed");
+        LOG_F(ERROR, "getifaddrs failed");
         return hostIPs;
     }
 
@@ -359,6 +390,7 @@ auto getHostIPs() -> std::vector<std::string> {
 
             inet_ntop(family, addr, ipstr.data(), ipstr.size());
             hostIPs.emplace_back(ipstr.data());
+            LOG_F(INFO, "Found IP address: {}", ipstr.data());
         }
     }
 
@@ -370,6 +402,7 @@ auto getHostIPs() -> std::vector<std::string> {
 
 template <typename AddressType>
 auto getIPAddresses(int addressFamily) -> std::vector<std::string> {
+    LOG_F(INFO, "Getting IP addresses for address family: {}", addressFamily);
     std::vector<std::string> addresses;
 
 #ifdef _WIN32
@@ -402,6 +435,7 @@ auto getIPAddresses(int addressFamily) -> std::vector<std::string> {
                 if (inet_ntop(addressFamily, addrPtr, addressBuffer,
                               sizeof(addressBuffer))) {
                     addresses.emplace_back(addressBuffer);
+                    LOG_F(INFO, "Found IP address: {}", addressBuffer);
                 }
             }
         }
@@ -410,6 +444,7 @@ auto getIPAddresses(int addressFamily) -> std::vector<std::string> {
     struct ifaddrs* ifAddrList = nullptr;
 
     if (getifaddrs(&ifAddrList) == -1) {
+        LOG_F(ERROR, "getifaddrs failed");
         return addresses;
     }
 
@@ -437,6 +472,7 @@ auto getIPAddresses(int addressFamily) -> std::vector<std::string> {
             if (inet_ntop(addressFamily, addrPtr, addressBuffer.data(),
                           addressBuffer.size())) {
                 addresses.emplace_back(addressBuffer.data());
+                LOG_F(INFO, "Found IP address: {}", addressBuffer.data());
             }
         }
     }
@@ -447,10 +483,12 @@ auto getIPAddresses(int addressFamily) -> std::vector<std::string> {
 }
 
 auto getIPv4Addresses() -> std::vector<std::string> {
+    LOG_F(INFO, "Getting IPv4 addresses");
     return getIPAddresses<sockaddr_in>(AF_INET);
 }
 
 auto getIPv6Addresses() -> std::vector<std::string> {
+    LOG_F(INFO, "Getting IPv6 addresses");
     return getIPAddresses<sockaddr_in6>(AF_INET6);
 }
 
@@ -471,6 +509,7 @@ auto getAddresses(int family, IF_ADDRS* addrs) -> int {
     do {
         *addrs = (IP_ADAPTER_ADDRESSES*)HeapAlloc(GetProcessHeap(), 0, bufLen);
         if (*addrs == nullptr) {
+            LOG_F(ERROR, "HeapAlloc failed");
             return -1;
         }
 
@@ -486,6 +525,7 @@ auto getAddresses(int family, IF_ADDRS* addrs) -> int {
         iter++;
     } while ((rv == ERROR_BUFFER_OVERFLOW) && (iter < 3));
     if (rv != NO_ERROR) {
+        LOG_F(ERROR, "GetAdaptersAddresses failed");
         return -1;
     }
     return 0;
@@ -496,10 +536,12 @@ auto getAddresses(int family, IF_ADDRS* addrs) -> int {
 }
 
 auto getInterfaceNames() -> std::vector<std::string> {
+    LOG_F(INFO, "Getting interface names");
     std::vector<std::string> interfaceNames;
     IF_ADDRS allAddrs = nullptr;
 
     if (getAddresses(AF_UNSPEC, &allAddrs) != 0) {
+        LOG_F(ERROR, "getAddresses failed");
         return interfaceNames;
     }
 
@@ -512,12 +554,14 @@ auto getInterfaceNames() -> std::vector<std::string> {
                 : "";
         if (!interfaceName.empty()) {
             interfaceNames.push_back(interfaceName);
+            LOG_F(INFO, "Found interface: {}", interfaceName);
         }
     }
 #else
     for (auto* addr = allAddrs; addr != nullptr; addr = addr->ifa_next) {
         if (addr->ifa_name != nullptr) {
             interfaceNames.emplace_back(addr->ifa_name);
+            LOG_F(INFO, "Found interface: {}", addr->ifa_name);
         }
     }
 #endif

@@ -153,6 +153,11 @@ private:
 
     static auto parsePackageXml(const Node& path)
         -> std::pair<Node, std::unordered_map<Node, Version>>;
+
+    static auto parsePackageYaml(const std::string& path)
+        -> std::pair<std::string, std::unordered_map<std::string, Version>>;
+
+    void generatePackageYaml(const std::string& path) const;
 };
 }  // namespace lithium
 #endif  // LITHIUM_ADDON_DEPENDENCY_HPP

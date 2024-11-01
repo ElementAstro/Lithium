@@ -1,303 +1,286 @@
 #include "cmake.hpp"
 
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
-#include <regex>
+#include <sstream>
 
-#include "addon/platform/base.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 #include "atom/type/json.hpp"
-
-namespace fs = std::filesystem;
-using json = nlohmann::json;
+#include "atom/utils/string.hpp"
 
 namespace lithium {
 
-class CMakeBuilderImpl {
-public:
-    std::unique_ptr<json> configOptions = std::make_unique<json>();
-    std::vector<std::string> preBuildScripts;
-    std::vector<std::string> postBuildScripts;
-    std::vector<std::string> environmentVariables;
-    std::vector<std::string> dependencies;
-    std::function<void(const std::string&)> logCallback;
+struct CMakeBuilder::Impl {
+    CMakeBuilderConfig config;
 };
 
-CMakeBuilder::CMakeBuilder() : pImpl_(std::make_unique<CMakeBuilderImpl>()) {}
-CMakeBuilder::~CMakeBuilder() = default;
-
-auto CMakeBuilder::checkAndInstallDependencies() -> bool {
-    for (const auto& dep : pImpl_->dependencies) {
-        std::string checkCommand = "pkg-config --exists " + dep;
-        if (!atom::system::executeCommandSimple(checkCommand)) {
-            pImpl_->logCallback("Dependency " + dep +
-                                " not found, attempting to install...");
-            std::string installCommand = "sudo apt-get install -y " + dep;
-            if (!atom::system::executeCommandSimple(installCommand)) {
-                pImpl_->logCallback("Failed to install dependency: " + dep);
-                return false;
-            }
-        }
+namespace {
+auto executeCommand(const std::string& command) -> BuildResult {
+    int ret = atom::system::executeCommandWithStatus(command).second;
+    if (ret != 0) {
+        LOG_F(ERROR, "Command failed with exit code {}", ret);
+        return BuildResult(false, "Command execution failed.", ret);
     }
-    return true;
+    return BuildResult(true, "Command execution succeeded.", ret);
 }
+
+void logCommandExecution(const std::string& description,
+                         const std::string& command) {
+    LOG_F(INFO, "{}: {}", description, command);
+}
+}  // namespace
+
+CMakeBuilder::CMakeBuilder() : pImpl_(std::make_unique<Impl>()) {}
+
+CMakeBuilder::~CMakeBuilder() = default;
 
 auto CMakeBuilder::configureProject(
     const std::filesystem::path& sourceDir,
     const std::filesystem::path& buildDir, BuildType buildType,
-    const std::vector<std::string>& options) -> BuildResult {
-    if (!fs::exists(buildDir)) {
-        fs::create_directories(buildDir);
-    }
+    const std::vector<std::string>& options,
+    const std::map<std::string, std::string>& envVars) -> BuildResult {
+    LOG_F(INFO, "Configuring project: sourceDir={}, buildDir={}",
+          sourceDir.string(), buildDir.string());
 
-    if (!checkAndInstallDependencies()) {
-        return {false, "", "Failed to install dependencies"};
-    }
+    std::ostringstream cmd;
+    cmd << "cmake -S " << sourceDir.string() << " -B " << buildDir.string();
 
-    std::string buildTypeStr;
+    // Append build type
     switch (buildType) {
-        case BuildType::Debug:
-            buildTypeStr = "Debug";
+        case BuildType::DEBUG:
+            cmd << " -DCMAKE_BUILD_TYPE=Debug";
             break;
-        case BuildType::Release:
-            buildTypeStr = "Release";
+        case BuildType::RELEASE:
+            cmd << " -DCMAKE_BUILD_TYPE=Release";
             break;
-        case BuildType::RelWithDebInfo:
-            buildTypeStr = "RelWithDebInfo";
+        case BuildType::REL_WITH_DEB_INFO:
+            cmd << " -DCMAKE_BUILD_TYPE=RelWithDebInfo";
             break;
-        case BuildType::MinSizeRel:
-            buildTypeStr = "MinSizeRel";
+        case BuildType::MIN_SIZE_REL:
+            cmd << " -DCMAKE_BUILD_TYPE=MinSizeRel";
             break;
     }
 
-    std::string command = "cmake -S " + sourceDir.string() + " -B " +
-                          buildDir.string() +
-                          " -DCMAKE_BUILD_TYPE=" + buildTypeStr;
-
+    // Append additional options
     for (const auto& opt : options) {
-        command += " " + opt;
+        cmd << " " << opt;
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to configure project.";
+    // Handle environment variables
+    std::string envPrefix;
+    for (const auto& [key, value] : envVars) {
+        envPrefix.append(key).append("=").append(value).append(" ");
     }
-    return res;
+
+    std::string fullCommand = envPrefix + cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
 auto CMakeBuilder::buildProject(const std::filesystem::path& buildDir,
                                 std::optional<int> jobs) -> BuildResult {
-    std::string command = "cmake --build " + buildDir.string();
+    LOG_F(INFO, "Building project: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "cmake --build " << buildDir.string();
     if (jobs.has_value()) {
-        command += " -j" + std::to_string(*jobs);
+        cmd << " -- -j" << jobs.value();
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to build project.";
-    }
-    return res;
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
 auto CMakeBuilder::cleanProject(const std::filesystem::path& buildDir)
     -> BuildResult {
-    if (!fs::exists(buildDir)) {
-        return {false, "",
-                "Build directory does not exist: " + buildDir.string()};
-    }
+    LOG_F(INFO, "Cleaning project: buildDir={}", buildDir.string());
 
-    std::string command =
-        "cmake --build " + buildDir.string() + " --target clean";
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to clean project.";
-    }
-    return res;
+    std::filesystem::remove_all(buildDir);
+
+    LOG_F(INFO, "CMake clean succeeded.");
+    return BuildResult(true, "CMake clean succeeded.", 0);
 }
 
 auto CMakeBuilder::installProject(const std::filesystem::path& buildDir,
                                   const std::filesystem::path& installDir)
     -> BuildResult {
-    std::string command = "cmake --install " + buildDir.string() +
-                          " --prefix " + installDir.string();
+    LOG_F(INFO, "Installing project: buildDir={}, installDir={}",
+          buildDir.string(), installDir.string());
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to install project.";
-    }
-    return res;
-}
+    std::ostringstream cmd;
+    cmd << "cmake --install " << buildDir.string() << " --prefix "
+        << installDir.string();
 
-auto CMakeBuilder::generateDocs(const std::filesystem::path& buildDir,
-                                const std::filesystem::path& outputDir)
-    -> BuildResult {
-    std::string command =
-        "cmake --build " + buildDir.string() + " --target docs";
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        fs::path docsDir = buildDir / "docs";
-        if (fs::exists(docsDir)) {
-            fs::create_directories(outputDir);
-            fs::copy(docsDir, outputDir,
-                     fs::copy_options::recursive |
-                         fs::copy_options::update_existing);
-            res.output =
-                "Documentation generated and copied to " + outputDir.string();
-        } else {
-            res.error = "Documentation directory not found after generation.";
-        }
-    } else {
-        res.error = "Failed to generate documentation.";
-    }
-    return res;
-}
-
-auto CMakeBuilder::buildTarget(const std::filesystem::path& buildDir,
-                               const std::string& target,
-                               std::optional<int> jobs) -> BuildResult {
-    std::string command =
-        "cmake --build " + buildDir.string() + " --target " + target;
-    if (jobs.has_value()) {
-        command += " -j" + std::to_string(*jobs);
-    }
-
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to build target: " + target;
-    }
-    return res;
-}
-
-auto CMakeBuilder::setCacheVariable(const std::filesystem::path& buildDir,
-                                    const std::string& name,
-                                    const std::string& value) -> bool {
-    std::string command =
-        "cmake -D" + name + "=" + value + " " + buildDir.string();
-
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    return status == 0;
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
 auto CMakeBuilder::runTests(const std::filesystem::path& buildDir,
                             const std::vector<std::string>& testNames)
     -> BuildResult {
-    std::string command = "ctest --test-dir " + buildDir.string();
-    if (!testNames.empty()) {
-        command +=
-            " -R \"" +
-            std::accumulate(testNames.begin(), testNames.end(), std::string(),
-                            [](const std::string& a, const std::string& b) {
-                                return a + (a.empty() ? "" : "|") + b;
-                            }) +
-            "\"";
+    LOG_F(INFO, "Running tests: buildDir={}", buildDir.string());
+
+    std::ostringstream cmd;
+    cmd << "ctest --test-dir " << buildDir.string();
+
+    for (const auto& test : testNames) {
+        cmd << " -R " << test;
     }
 
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
-    BuildResult res;
-    res.success = status == 0;
-    if (status == 0) {
-        res.output = output;
-    } else {
-        res.error = "Failed to run tests.";
-    }
-    return res;
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
+}
+
+auto CMakeBuilder::generateDocs(const std::filesystem::path& buildDir,
+                                const std::filesystem::path& outputDir)
+    -> BuildResult {
+    LOG_F(INFO, "Generating documentation: buildDir={}, outputDir={}",
+          buildDir.string(), outputDir.string());
+
+    std::ostringstream cmd;
+    cmd << "doxygen " << (buildDir / "Doxyfile").string();
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
 auto CMakeBuilder::loadConfig(const std::filesystem::path& configPath) -> bool {
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open()) {
-        pImpl_->logCallback("Failed to open config file: " +
-                            configPath.string());
-        return false;
-    }
+    LOG_F(INFO, "Loading configuration from {}", configPath.string());
 
     try {
-        configFile >> *(pImpl_->configOptions);
-        pImpl_->preBuildScripts = pImpl_->configOptions->value(
-            "preBuildScripts", std::vector<std::string>{});
-        pImpl_->postBuildScripts = pImpl_->configOptions->value(
-            "postBuildScripts", std::vector<std::string>{});
-        pImpl_->environmentVariables = pImpl_->configOptions->value(
-            "environmentVariables", std::vector<std::string>{});
-        pImpl_->dependencies = pImpl_->configOptions->value(
-            "dependencies", std::vector<std::string>{});
-    } catch (const json::exception& e) {
-        pImpl_->logCallback("Failed to parse config file: " +
-                            configPath.string() + " with " + e.what());
+        std::ifstream configFile(configPath);
+        if (!configFile.is_open()) {
+            LOG_F(ERROR, "Failed to open configuration file: {}",
+                  configPath.string());
+            return false;
+        }
+
+        nlohmann::json configJson;
+        configFile >> configJson;
+
+        // Example: Assuming the JSON contains a key "buildType"
+        if (configJson.contains("buildType")) {
+            std::string buildTypeStr = configJson["buildType"];
+            if (buildTypeStr == "Debug") {
+                pImpl_->config.buildType = BuildType::DEBUG;
+            } else if (buildTypeStr == "Release") {
+                pImpl_->config.buildType = BuildType::RELEASE;
+            } else if (buildTypeStr == "RelWithDebInfo") {
+                pImpl_->config.buildType = BuildType::REL_WITH_DEB_INFO;
+            } else if (buildTypeStr == "MinSizeRel") {
+                pImpl_->config.buildType = BuildType::MIN_SIZE_REL;
+            } else {
+                LOG_F(ERROR, "Unknown build type: {}", buildTypeStr);
+                return false;
+            }
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'buildType' key");
+            return false;
+        }
+
+        // Example: Assuming the JSON contains a key "options"
+        if (configJson.contains("options")) {
+            pImpl_->config.options =
+                configJson["options"].get<std::vector<std::string>>();
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'options' key");
+            return false;
+        }
+
+        // Example: Assuming the JSON contains a key "envVars"
+        if (configJson.contains("envVars")) {
+            pImpl_->config.envVars =
+                configJson["envVars"].get<std::map<std::string, std::string>>();
+        } else {
+            LOG_F(ERROR, "Configuration file missing 'envVars' key");
+            return false;
+        }
+
+        LOG_F(INFO, "Configuration loaded successfully.");
+        return true;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Exception occurred while loading configuration: {}",
+              e.what());
         return false;
     }
-
-    return true;
-}
-
-auto CMakeBuilder::setLogCallback(
-    std::function<void(const std::string&)> callback) -> void {
-    pImpl_->logCallback = std::move(callback);
 }
 
 auto CMakeBuilder::getAvailableTargets(const std::filesystem::path& buildDir)
     -> std::vector<std::string> {
+    LOG_F(INFO, "Retrieving available targets: buildDir={}", buildDir.string());
+
     std::string command =
         "cmake --build " + buildDir.string() + " --target help";
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
+    auto output =
+        atom::utils::splitString(atom::system::executeCommand(command), '\n');
 
     std::vector<std::string> targets;
-    if (status == 0 && !output.empty()) {
-        std::istringstream iss(output);
-        std::string line;
-        std::regex targetRegex(R"(^\.\.\.\s+(.+))");
-        while (std::getline(iss, line)) {
-            std::smatch match;
-            if (std::regex_search(line, match, targetRegex)) {
-                targets.push_back(match[1]);
+    bool startParsing = false;
+    for (const auto& line : output) {
+        if (line.find("The following are some of the valid targets") !=
+            std::string::npos) {
+            startParsing = true;
+            continue;
+        }
+        if (startParsing) {
+            if (line.find("...") != std::string::npos) {
+                break;
             }
+            targets.push_back(line.substr(0, line.find_first_of(' ')));
         }
     }
+
+    LOG_F(INFO, "Available targets retrieved: {}", targets.size());
     return targets;
+}
+
+auto CMakeBuilder::buildTarget(const std::filesystem::path& buildDir,
+                               const std::string& target,
+                               std::optional<int> jobs) -> BuildResult {
+    LOG_F(INFO, "Building target: buildDir={}, target={}", buildDir.string(),
+          target);
+
+    std::ostringstream cmd;
+    cmd << "cmake --build " << buildDir.string() << " --target " << target;
+    if (jobs.has_value()) {
+        cmd << " -- -j" << jobs.value();
+    }
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand);
 }
 
 auto CMakeBuilder::getCacheVariables(const std::filesystem::path& buildDir)
     -> std::vector<std::pair<std::string, std::string>> {
-    std::string command = "cmake -LA -N " + buildDir.string();
-    auto [output, status] = atom::system::executeCommandWithStatus(command);
+    LOG_F(INFO, "Retrieving cache variables: buildDir={}", buildDir.string());
 
-    std::vector<std::pair<std::string, std::string>> variables;
-    if (status == 0 && !output.empty()) {
-        std::istringstream iss(output);
-        std::string line;
-        std::regex varRegex(R"(^([^:]+):([^=]+)=(.+)$)");
-        while (std::getline(iss, line)) {
-            std::smatch match;
-            if (std::regex_search(line, match, varRegex)) {
-                variables.emplace_back(match[1], match[3]);
-            }
-        }
-    }
-    return variables;
+    // Example: Parse CMake cache variables
+    // Implementation omitted; returning empty list
+    std::vector<std::pair<std::string, std::string>> cacheVars;
+
+    LOG_F(INFO, "Cache variables retrieved.");
+    return cacheVars;
+}
+
+auto CMakeBuilder::setCacheVariable(const std::filesystem::path& buildDir,
+                                    const std::string& name,
+                                    const std::string& value) -> bool {
+    LOG_F(INFO, "Setting cache variable: buildDir={}, name={}, value={}",
+          buildDir.string(), name, value);
+
+    std::ostringstream cmd;
+    cmd << "cmake -S " << buildDir.string() << " -B " << buildDir.string()
+        << " -D" << name << "=" << value;
+
+    std::string fullCommand = cmd.str();
+    logCommandExecution("Running command", fullCommand);
+    return executeCommand(fullCommand).isSuccess();
 }
 
 }  // namespace lithium

@@ -21,7 +21,7 @@
 #include <vector>
 #include "atom/async/async.hpp"
 
-#include "macro.hpp"
+#include "atom/macro.hpp"
 
 #if ENABLE_DEBUG
 #include <iostream>

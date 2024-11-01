@@ -1,30 +1,39 @@
-#ifndef LITHIUM_ADDON_CMAKEBUILDER_HPP
-#define LITHIUM_ADDON_CMAKEBUILDER_HPP
+#ifndef LITHIUM_ADDON_CMAKE_BUILDER_HPP
+#define LITHIUM_ADDON_CMAKE_BUILDER_HPP
 
-#include <filesystem>
 #include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 #include "base.hpp"
 
 namespace lithium {
 
-class CMakeBuilderImpl;
+/**
+ * @struct CMakeBuilderConfig
+ * @brief Stores configuration for CMakeBuilder.
+ */
+struct alignas(128) CMakeBuilderConfig {
+    BuildType buildType;
+    std::vector<std::string> options;
+    std::map<std::string, std::string> envVars;
+};
 
+/**
+ * @class CMakeBuilder
+ * @brief Implementation of the BuildSystem interface for CMake.
+ */
 class CMakeBuilder : public BuildSystem {
 public:
     CMakeBuilder();
     ~CMakeBuilder() override;
 
-    auto configureProject(
-        const std::filesystem::path& sourceDir,
-        const std::filesystem::path& buildDir, BuildType buildType,
-        const std::vector<std::string>& options) -> BuildResult override;
+    auto configureProject(const std::filesystem::path& sourceDir,
+                          const std::filesystem::path& buildDir,
+                          BuildType buildType,
+                          const std::vector<std::string>& options,
+                          const std::map<std::string, std::string>& envVars)
+        -> BuildResult override;
 
     auto buildProject(const std::filesystem::path& buildDir,
-                      std::optional<int> jobs = std::nullopt)
-        -> BuildResult override;
+                      std::optional<int> jobs) -> BuildResult override;
 
     auto cleanProject(const std::filesystem::path& buildDir)
         -> BuildResult override;
@@ -34,7 +43,7 @@ public:
         -> BuildResult override;
 
     auto runTests(const std::filesystem::path& buildDir,
-                  const std::vector<std::string>& testNames = {})
+                  const std::vector<std::string>& testNames)
         -> BuildResult override;
 
     auto generateDocs(const std::filesystem::path& buildDir,
@@ -43,15 +52,12 @@ public:
 
     auto loadConfig(const std::filesystem::path& configPath) -> bool override;
 
-    auto setLogCallback(std::function<void(const std::string&)> callback)
-        -> void override;
-
     auto getAvailableTargets(const std::filesystem::path& buildDir)
         -> std::vector<std::string> override;
 
-    auto buildTarget(
-        const std::filesystem::path& buildDir, const std::string& target,
-        std::optional<int> jobs = std::nullopt) -> BuildResult override;
+    auto buildTarget(const std::filesystem::path& buildDir,
+                     const std::string& target,
+                     std::optional<int> jobs) -> BuildResult override;
 
     auto getCacheVariables(const std::filesystem::path& buildDir)
         -> std::vector<std::pair<std::string, std::string>> override;
@@ -60,12 +66,19 @@ public:
                           const std::string& name,
                           const std::string& value) -> bool override;
 
-private:
-    std::unique_ptr<CMakeBuilderImpl> pImpl_;
+    // Deleted copy constructor and copy assignment operator
+    CMakeBuilder(const CMakeBuilder&) = delete;
+    CMakeBuilder& operator=(const CMakeBuilder&) = delete;
 
-    auto checkAndInstallDependencies() -> bool;
+    // Defaulted move constructor and move assignment operator
+    CMakeBuilder(CMakeBuilder&&) noexcept = default;
+    CMakeBuilder& operator=(CMakeBuilder&&) noexcept = default;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> pImpl_;
 };
 
 }  // namespace lithium
 
-#endif  // LITHIUM_ADDON_CMAKEBUILDER_HPP
+#endif  // LITHIUM_ADDON_CMAKE_BUILDER_HPP

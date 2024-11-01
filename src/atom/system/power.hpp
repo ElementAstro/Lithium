@@ -56,6 +56,19 @@ auto logout() -> bool;
  *         如果发生错误，则返回 false
  */
 auto lockScreen() -> bool;
+
+/**
+ * @brief Set the screen brightness level.
+ * 设置屏幕亮度级别
+ *
+ * @param level The brightness level to set.
+ *              要设置的亮度级别
+ * @return true if the brightness level is successfully set.
+ *         如果成功设置亮度级别，则返回 true
+ * @return false if an error occurred.
+ *         如果发生错误，则返回 false
+ */
+auto setScreenBrightness(int level) -> bool;
 }  // namespace atom::system
 
 #endif

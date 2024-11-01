@@ -1,8 +1,5 @@
 /**
  * @file suggestion.cpp
- * @author Max Qian <lightapt.com>
- * @copyright Copyright (C) 2023-2024 Max Qian
- * @date 2024-5-15
  * @brief Command suggestion engine
  */
 
@@ -27,12 +24,16 @@ auto SuggestionEngine::suggest(std::string_view input, MatchType matchType)
     std::transform(input.begin(), input.end(), inputLower.begin(), ::tolower);
 
     std::priority_queue<std::pair<int, std::string>> priorityQueue;
-    for (const auto& [lowerItem, originalItem] : index_) {
-        if (matches(inputLower, lowerItem, matchType)) {
-            int score = calculateScore(inputLower, lowerItem);
-            priorityQueue.emplace(score, originalItem);
-            if (priorityQueue.size() > static_cast<size_t>(maxSuggestions_)) {
-                priorityQueue.pop();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (const auto& [lowerItem, originalItem] : index_) {
+            if (matches(inputLower, lowerItem, matchType)) {
+                int score = calculateScore(inputLower, lowerItem);
+                priorityQueue.emplace(score, originalItem);
+                if (priorityQueue.size() >
+                    static_cast<size_t>(maxSuggestions_)) {
+                    priorityQueue.pop();
+                }
             }
         }
     }
@@ -45,7 +46,14 @@ auto SuggestionEngine::suggest(std::string_view input, MatchType matchType)
     return suggestions;
 }
 
+void SuggestionEngine::updateDataset(const std::vector<std::string>& newItems) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    dataset_.insert(dataset_.end(), newItems.begin(), newItems.end());
+    buildIndex();
+}
+
 void SuggestionEngine::buildIndex() {
+    index_.clear();
     for (const auto& item : dataset_) {
         std::string itemLower(item.size(), '\0');
         std::transform(item.begin(), item.end(), itemLower.begin(), ::tolower);

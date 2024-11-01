@@ -9,8 +9,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "atom/error/exception.hpp"
 #include "atom/macro.hpp"
-#include "exception.hpp"
 
 namespace atom::utils {
 

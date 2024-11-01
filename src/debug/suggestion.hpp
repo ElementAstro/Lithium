@@ -1,8 +1,5 @@
 /**
  * @file suggestion.hpp
- * @author Max Qian <lightapt.com>
- * @copyright Copyright (C) 2023-2024 Max Qian
- * @date 2024-5-15
  * @brief Command suggestion engine
  */
 
@@ -13,6 +10,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
 
 namespace lithium::debug {
 /**
@@ -62,6 +60,13 @@ public:
                  MatchType matchType = MatchType::Prefix)
         -> std::vector<std::string>;
 
+    /**
+     * @brief Updates the dataset with new items.
+     *
+     * @param newItems The new items to be added to the dataset.
+     */
+    void updateDataset(const std::vector<std::string>& newItems);
+
 private:
     /**
      * @brief Builds an index for faster suggestion generation.
@@ -101,6 +106,7 @@ private:
     std::vector<std::string>
         dataset_;        /**< The dataset used for generating suggestions. */
     int maxSuggestions_; /**< The maximum number of suggestions to return. */
+    std::mutex mutex_;   /**< Mutex for thread-safe operations. */
 };
 }  // namespace lithium::debug
 

@@ -49,17 +49,16 @@ auto getSystemInfo() -> std::string {
     std::stringstream sss;
 
     auto osInfo = getOperatingSystemInfo();
-    sss << "System Information:\n";
-    sss << "-------------------\n";
-    sss << std::format("Operating system: {} {}\n", osInfo.osName, osInfo.osVersion);
+    sss << "==================== System Information ====================\n";
+    sss << std::format("Operating System: {} {}\n", osInfo.osName,
+                       osInfo.osVersion);
     sss << std::format("Architecture: {}\n", osInfo.architecture);
-    sss << std::format("Kernel version: {}\n", osInfo.kernelVersion);
-    sss << std::format("Computer name: {}\n", osInfo.computerName);
+    sss << std::format("Kernel Version: {}\n", osInfo.kernelVersion);
+    sss << std::format("Computer Name: {}\n", osInfo.computerName);
     sss << std::format("Compiler: {}\n", osInfo.compiler);
     sss << std::format("GUI: {}\n\n", ATOM_HAS_GUI() ? "Yes" : "No");
 
-    sss << "CPU Information:\n";
-    sss << "----------------\n";
+    sss << "==================== CPU Information ====================\n";
     sss << std::format("Usage: {}%\n", getCurrentCpuUsage());
     sss << std::format("Model: {}\n", getCPUModel());
     sss << std::format("Frequency: {} GHz\n", getProcessorFrequency());
@@ -67,14 +66,12 @@ auto getSystemInfo() -> std::string {
     sss << std::format("Cores: {}\n", getNumberOfPhysicalCPUs());
     sss << std::format("Packages: {}\n\n", getNumberOfPhysicalPackages());
 
-    sss << "Memory Status:\n";
-    sss << "--------------\n";
+    sss << "==================== Memory Status ====================\n";
     sss << std::format("Usage: {}%\n", getMemoryUsage());
     sss << std::format("Total: {} MB\n", getTotalMemorySize());
     sss << std::format("Free: {} MB\n\n", getAvailableMemorySize());
 
-    sss << "Disk Usage:\n";
-    sss << "-----------\n";
+    sss << "==================== Disk Usage ====================\n";
     for (const auto &[drive, usage] : getDiskUsage()) {
         sss << std::format("{}: {}%\n", drive, usage);
     }
@@ -92,14 +89,15 @@ void saveCrashLog(std::string_view error_msg) {
     }
 
     std::stringstream sss;
-    sss << std::format("Program crashed at: {}\n", utils::getChinaTimestampString());
+    sss << "==================== Crash Report ====================\n";
+    sss << std::format("Program crashed at: {}\n",
+                       utils::getChinaTimestampString());
     sss << std::format("Error message: {}\n\n", error_msg);
 
     sss << "==================== Stack Trace ====================\n";
     atom::error::StackTrace stackTrace;
     sss << stackTrace.toString() << "\n\n";
 
-    sss << "==================== System Information ====================\n";
     sss << systemInfo << "\n";
 
     sss << "================= Environment Variables ===================\n";
@@ -111,13 +109,18 @@ void saveCrashLog(std::string_view error_msg) {
 
     QuoteManager quotes;
     quotes.loadQuotesFromJson("./quotes.json");
-    sss << std::format("============ Famous Saying: {} ============\n", quotes.getRandomQuote());
+    sss << std::format("============ Famous Saying: {} ============\n",
+                       quotes.getRandomQuote());
 
     std::stringstream ssss;
     auto now = std::chrono::system_clock::now();
     std::time_t nowC = std::chrono::system_clock::to_time_t(now);
     std::tm localTime;
+#ifdef _WIN32
     if (localtime_s(&localTime, &nowC) != 0) {
+#else
+    if (localtime_r(&nowC, &localTime) == nullptr) {
+#endif
         LOG_F(ERROR, "Failed to get local time.");
         THROW_RUNTIME_ERROR("Failed to get local time.");
     }

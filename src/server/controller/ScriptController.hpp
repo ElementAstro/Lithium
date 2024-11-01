@@ -29,6 +29,16 @@
 
 #include "utils/constant.hpp"
 
+#if __has_include(<yaml-cpp/yaml.h>)
+#include <yaml-cpp/yaml.h>
+#endif
+
+#if __has_include(<tinyxml2/tinyxml2.h>)
+#include <tinyxml2/tinyxml2.h>
+#elif __has_include(<tinyxml2.h>)
+#include <tinyxml2.h>
+#endif
+
 #include <fstream>
 #include <regex>
 #include <string>
@@ -479,6 +489,372 @@ public:
                         continue;
                     }
                 }
+
+#if __has_include(<yaml-cpp/yaml.h>)
+                auto yamlScriptDes = atom::io::checkFileTypeInFolder(
+                    scriptPath, "yaml", atom::io::FileOption::PATH);
+                for (const auto& script : yamlScriptDes) {
+                    LOG_F(INFO, "Trying to load script descriptor: {}", script);
+                    auto scriptDto = ScriptDto::createShared();
+                    try {
+                        YAML::Node node = YAML::LoadFile(script);
+                        if (node["name"] && node["name"].IsScalar()) {
+                            scriptDto->name = node["name"].as<std::string>();
+                        }
+                        if (node["type"] && node["type"].IsScalar()) {
+                            scriptDto->type = node["type"].as<std::string>();
+                            if (!atom::utils::contains(
+                                    "shell, powershell, python"_vec,
+                                    *scriptDto->type)) {
+                                LOG_F(ERROR, "Invalid script type: {}",
+                                      *scriptDto->type);
+                                continue;
+                            }
+                        }
+                        if (node["description"] &&
+                            node["description"].IsScalar()) {
+                            scriptDto->description =
+                                node["description"].as<std::string>();
+                        }
+                        if (node["author"] && node["author"].IsScalar()) {
+                            scriptDto->author =
+                                node["author"].as<std::string>();
+                        }
+                        if (node["version"] && node["version"].IsScalar()) {
+                            scriptDto->version =
+                                node["version"].as<std::string>();
+                        }
+                        if (node["license"] && node["license"].IsScalar()) {
+                            scriptDto->license =
+                                node["license"].as<std::string>();
+                        }
+                        if (node["interpreter"] &&
+                            node["interpreter"].IsMap()) {
+                            auto interpreter = node["interpreter"];
+                            if (interpreter["path"] &&
+                                interpreter["path"].IsScalar()) {
+                                scriptDto->interpreter->path =
+                                    interpreter["path"].as<std::string>();
+                                if (!atom::io::isExecutableFile(
+                                        scriptDto->interpreter->path, "")) {
+                                    LOG_F(ERROR,
+                                          "Interpreter is not executable: {}",
+                                          scriptDto->interpreter->path);
+                                    continue;
+                                }
+                            }
+                            if (interpreter["name"] &&
+                                interpreter["name"].IsScalar()) {
+                                scriptDto->interpreter->interpreter =
+                                    interpreter["name"].as<std::string>();
+                                if (scriptDto->interpreter->path->empty()) {
+                                    scriptDto->interpreter->path =
+                                        atom::system::getAppPath(
+                                            scriptDto->interpreter->interpreter)
+                                            .string();
+                                    if (scriptDto->interpreter->path->empty()) {
+                                        LOG_F(ERROR,
+                                              "Unable to get interpreter path: "
+                                              "{}",
+                                              scriptDto->interpreter
+                                                  ->interpreter);
+                                        continue;
+                                    }
+                                }
+                            }
+                            if (interpreter["version"] &&
+                                interpreter["version"].IsScalar()) {
+                                scriptDto->interpreter->version =
+                                    interpreter["version"].as<std::string>();
+                                auto interpreterVersion =
+                                    atom::system::getAppVersion(
+                                        *scriptDto->interpreter->path);
+                                if (interpreterVersion.empty()) {
+                                    LOG_F(
+                                        ERROR,
+                                        "Unable to get interpreter version: {}",
+                                        scriptDto->interpreter->path);
+                                    continue;
+                                }
+                                if (!lithium::checkVersion(
+                                        lithium::Version::parse(
+                                            interpreterVersion),
+                                        *scriptDto->interpreter->version)) {
+                                    LOG_F(ERROR,
+                                          "Interpreter version is lower than "
+                                          "required: {}",
+                                          scriptDto->interpreter->version);
+                                    continue;
+                                }
+                            }
+                        }
+                        if (node["platform"] && node["platform"].IsScalar()) {
+                            scriptDto->platform =
+                                node["platform"].as<std::string>();
+                            if (!atom::utils::contains(
+                                    "windows, linux, macos"_vec,
+                                    *scriptDto->platform)) {
+                                LOG_F(ERROR, "Invalid platform: {}",
+                                      *scriptDto->platform);
+                                continue;
+                            }
+                        }
+                        if (node["permission"] &&
+                            node["permission"].IsScalar()) {
+                            scriptDto->permission =
+                                node["permission"].as<std::string>();
+                            if (!atom::utils::contains(
+                                    "user, admin"_vec,
+                                    *scriptDto->permission)) {
+                                LOG_F(ERROR, "Invalid permission: {}",
+                                      *scriptDto->permission);
+                                continue;
+                            }
+                            if (*scriptDto->permission == "admin" &&
+                                !atom::system::isRoot()) {
+                                LOG_F(ERROR, "User is not admin");
+                                continue;
+                            }
+                        }
+
+                        auto lineOpt = atom::io::countLinesInFile(script);
+                        if (lineOpt.has_value()) {
+                            scriptDto->line = lineOpt.value();
+                        }
+
+                        if (node["args"] && node["args"].IsSequence()) {
+                            for (const auto& arg : node["args"]) {
+                                if (arg.IsMap()) {
+                                    auto argDto =
+                                        ArgumentRequirementDto::createShared();
+                                    if (arg["name"] && arg["name"].IsScalar()) {
+                                        argDto->name =
+                                            arg["name"].as<std::string>();
+                                    }
+                                    if (arg["type"] && arg["type"].IsScalar()) {
+                                        argDto->type =
+                                            arg["type"].as<std::string>();
+                                        if (!atom::utils::contains(
+                                                "string, int, float, bool"_vec,
+                                                *argDto->type)) {
+                                            LOG_F(ERROR,
+                                                  "Invalid argument type: {}",
+                                                  *argDto->type);
+                                            continue;
+                                        }
+                                    }
+                                    if (arg["description"] &&
+                                        arg["description"].IsScalar()) {
+                                        argDto->description =
+                                            arg["description"]
+                                                .as<std::string>();
+                                    }
+                                    if (arg["defaultValue"] &&
+                                        arg["defaultValue"].IsScalar()) {
+                                        argDto->defaultValue =
+                                            arg["defaultValue"]
+                                                .as<std::string>();
+                                    }
+                                    if (arg["required"] &&
+                                        arg["required"].IsScalar()) {
+                                        argDto->required =
+                                            arg["required"].as<bool>();
+                                    }
+                                    scriptDto->args->emplace_back(argDto);
+                                }
+                            }
+                        }
+                    } catch (const YAML::ParserException& e) {
+                        LOG_F(ERROR, "Unable to parse script descriptor: {}",
+                              e.what());
+                        continue;
+                    }
+#endif
+#if __has_include(<tinyxml2/tinyxml2.h>) || __has_include(<tinyxml2.h>)
+                    auto xmlScriptDes = atom::io::checkFileTypeInFolder(
+                        scriptPath, "xml", atom::io::FileOption::PATH);
+
+                    for (const auto& script : xmlScriptDes) {
+                        LOG_F(INFO, "Trying to load script descriptor: {}",
+                              script);
+                        tinyxml2::XMLDocument doc;
+                        if (doc.LoadFile(script.c_str()) !=
+                            tinyxml2::XML_SUCCESS) {
+                            LOG_F(ERROR, "Unable to load script descriptor: {}",
+                                  script);
+                            continue;
+                        }
+
+                        auto scriptDto = ScriptDto::createShared();
+                        auto *root = doc.FirstChildElement("script");
+                        if (root == nullptr) {
+                            LOG_F(ERROR, "Invalid script descriptor: {}",
+                                  script);
+                            continue;
+                        }
+
+                        if (auto *name = root->FirstChildElement("name")) {
+                            scriptDto->name = name->GetText();
+                        }
+                        if (auto *type = root->FirstChildElement("type")) {
+                            scriptDto->type = type->GetText();
+                            if (!atom::utils::contains(
+                                    "shell, powershell, python"_vec,
+                                    *scriptDto->type)) {
+                                LOG_F(ERROR, "Invalid script type: {}",
+                                      *scriptDto->type);
+                                continue;
+                            }
+                        }
+                        if (auto *description =
+                                root->FirstChildElement("description")) {
+                            scriptDto->description = description->GetText();
+                        }
+                        if (auto *author = root->FirstChildElement("author")) {
+                            scriptDto->author = author->GetText();
+                        }
+                        if (auto *version = root->FirstChildElement("version")) {
+                            scriptDto->version = version->GetText();
+                        }
+                        if (auto *license = root->FirstChildElement("license")) {
+                            scriptDto->license = license->GetText();
+                        }
+                        if (auto *interpreter =
+                                root->FirstChildElement("interpreter")) {
+                            if (auto *path =
+                                    interpreter->FirstChildElement("path")) {
+                                scriptDto->interpreter->path = path->GetText();
+                                if (!atom::io::isExecutableFile(
+                                        scriptDto->interpreter->path, "")) {
+                                    LOG_F(ERROR,
+                                          "Interpreter is not executable: {}",
+                                          scriptDto->interpreter->path);
+                                    continue;
+                                }
+                            }
+                            if (auto *name =
+                                    interpreter->FirstChildElement("name")) {
+                                scriptDto->interpreter->interpreter =
+                                    name->GetText();
+                                if (scriptDto->interpreter->path->empty()) {
+                                    scriptDto->interpreter->path =
+                                        atom::system::getAppPath(
+                                            scriptDto->interpreter->interpreter)
+                                            .string();
+                                    if (scriptDto->interpreter->path == "") {
+                                        LOG_F(ERROR,
+                                              "Unable to get interpreter path: "
+                                              "{}",
+                                              scriptDto->interpreter
+                                                  ->interpreter);
+                                        continue;
+                                    }
+                                }
+                            }
+                            if (auto *version =
+                                    interpreter->FirstChildElement("version")) {
+                                scriptDto->interpreter->version =
+                                    version->GetText();
+                                auto interpreterVersion =
+                                    atom::system::getAppVersion(
+                                        *scriptDto->interpreter->path);
+                                if (interpreterVersion.empty()) {
+                                    LOG_F(
+                                        ERROR,
+                                        "Unable to get interpreter version: {}",
+                                        scriptDto->interpreter->path);
+                                    continue;
+                                }
+                                if (!lithium::checkVersion(
+                                        lithium::Version::parse(
+                                            interpreterVersion),
+                                        *scriptDto->interpreter->version)) {
+                                    LOG_F(ERROR,
+                                          "Interpreter version is lower than "
+                                          "required: {}",
+                                          scriptDto->interpreter->version);
+                                    continue;
+                                }
+                            }
+                        }
+                        if (auto *platform =
+                                root->FirstChildElement("platform")) {
+                            scriptDto->platform = platform->GetText();
+                            if (!atom::utils::contains(
+                                    "windows, linux, macos"_vec,
+                                    *scriptDto->platform)) {
+                                LOG_F(ERROR, "Invalid platform: {}",
+                                      *scriptDto->platform);
+                                continue;
+                            }
+                        }
+                        if (auto *permission =
+                                root->FirstChildElement("permission")) {
+                            scriptDto->permission = permission->GetText();
+                            if (!atom::utils::contains(
+                                    "user, admin"_vec,
+                                    *scriptDto->permission)) {
+                                LOG_F(ERROR, "Invalid permission: {}",
+                                      *scriptDto->permission);
+                                continue;
+                            }
+                            if (*scriptDto->permission == "admin" &&
+                                !atom::system::isRoot()) {
+                                LOG_F(ERROR, "User is not admin");
+                                continue;
+                            }
+                        }
+
+                        auto lineOpt = atom::io::countLinesInFile(script);
+                        if (lineOpt.has_value()) {
+                            scriptDto->line = lineOpt.value();
+                        }
+
+                        if (auto *args = root->FirstChildElement("args")) {
+                            for (auto *arg = args->FirstChildElement("arg");
+                                 arg != nullptr;
+                                 arg = arg->NextSiblingElement("arg")) {
+                                auto argDto =
+                                    ArgumentRequirementDto::createShared();
+                                if (auto *name =
+                                        arg->FirstChildElement("name")) {
+                                    argDto->name = name->GetText();
+                                }
+                                if (auto *type =
+                                        arg->FirstChildElement("type")) {
+                                    argDto->type = type->GetText();
+                                    if (!atom::utils::contains(
+                                            "string, int, float, bool"_vec,
+                                            *argDto->type)) {
+                                        LOG_F(ERROR,
+                                              "Invalid argument type: {}",
+                                              *argDto->type);
+                                        continue;
+                                    }
+                                }
+                                if (auto *description =
+                                        arg->FirstChildElement("description")) {
+                                    argDto->description =
+                                        description->GetText();
+                                }
+                                if (auto *defaultValue = arg->FirstChildElement(
+                                        "defaultValue")) {
+                                    argDto->defaultValue =
+                                        defaultValue->GetText();
+                                }
+                                if (auto *required =
+                                        arg->FirstChildElement("required")) {
+                                    argDto->required =
+                                        required->GetText() == "true";
+                                }
+                                scriptDto->args->emplace_back(argDto);
+                            }
+                        }
+                    }
+#endif
+                    res->scripts->emplace_back(scriptDto);
+                }
+
                 return _return(
                     controller->createDtoResponse(Status::CODE_200, res));
             } catch (const std::exception& e) {

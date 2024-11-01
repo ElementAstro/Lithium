@@ -1,5 +1,6 @@
 #include "terminal.hpp"
 
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <regex>
@@ -11,6 +12,7 @@
 #elif __has_include(<ncurses/ncurses.h>)
 #include <ncurses/ncurses.h>
 #else
+#include <readline/history.h>
 #include <readline/readline.h>
 #endif
 
@@ -25,6 +27,23 @@
 #include "utils/constant.hpp"
 
 namespace lithium::debug {
+
+auto ctermid() -> std::string {
+#ifdef _WIN32
+    const int BUFFER_SIZE = 256;
+    char buffer[BUFFER_SIZE];
+    DWORD length = GetConsoleTitleA(buffer, BUFFER_SIZE);
+    if (length > 0) {
+        return std::string(buffer, length);
+    }
+#else
+    char buffer[L_ctermid];
+    if (::ctermid(buffer) != nullptr) {
+        return buffer;
+    }
+#endif
+    return "";
+}
 
 class ConsoleTerminal::ConsoleTerminalImpl {
 public:
@@ -104,11 +123,11 @@ ConsoleTerminal::ConsoleTerminalImpl::ConsoleTerminalImpl()
         },
         "main", "Show command history");
 
-    component_->def("load_component", &loadSharedCompoennt, "component",
+    component_->def("load_component", &loadSharedComponent, "component",
                     "Load a shared component");
-    component_->def("unload_component", &unloadSharedCompoennt, "component",
+    component_->def("unload_component", &unloadSharedComponent, "component",
                     "Unload a shared component");
-    component_->def("reload_component", &reloadSharedCompoennt, "component",
+    component_->def("reload_component", &reloadSharedComponent, "component",
                     "Reload a shared component");
     component_->def("scan_component", &scanComponents, "component",
                     "Scan a path");
@@ -207,7 +226,7 @@ void ConsoleTerminal::ConsoleTerminalImpl::run() {
 #if __has_include(<ncurses.h>) || __has_include(<ncurses/ncurses.h>)
             clear();
 #else
-            clearScreen();
+            std::cout << "\033[2J\033[1;1H";  // Clear screen for non-ncurses
 #endif
             continue;
         }

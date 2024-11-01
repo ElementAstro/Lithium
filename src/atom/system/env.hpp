@@ -16,10 +16,10 @@ Description: Environment variable management
 #define ATOM_UTILS_ENV_HPP
 
 #include <memory>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 #include "atom/macro.hpp"
 
 namespace atom::utils {
@@ -90,26 +90,6 @@ public:
         -> std::string;
 
     /**
-     * @brief Adds a command-line argument and its description to the help
-     * information list.
-     * @param key The argument name.
-     * @param desc The argument description.
-     */
-    void addHelp(const std::string& key, const std::string& desc);
-
-    /**
-     * @brief Removes a command-line argument from the help information list.
-     * @param key The argument name.
-     */
-    void removeHelp(const std::string& key);
-
-    /**
-     * @brief Prints the program's help information, including all added
-     * command-line arguments and their descriptions.
-     */
-    void printHelp();
-
-    /**
      * @brief Sets the value of an environment variable.
      * @param key The key name.
      * @param val The value to set.
@@ -131,51 +111,10 @@ public:
         -> std::string;
 
     /**
-     * @brief Gets the absolute path of a given path.
-     * @param path The path to convert to an absolute path.
-     * @return The absolute path.
+     * @brief Unsets an environment variable.
+     * @param name The name of the environment variable to unset.
      */
-    ATOM_NODISCARD auto getAbsolutePath(const std::string& path) const
-        -> std::string;
-
-    /**
-     * @brief Gets the absolute path of a given path relative to the working
-     * directory.
-     * @param path The path to convert to an absolute path relative to the
-     * working directory.
-     * @return The absolute path.
-     */
-    ATOM_NODISCARD auto getAbsoluteWorkPath(const std::string& path) const
-        -> std::string;
-
-    /**
-     * @brief Gets the path of the configuration file. By default, the
-     * configuration file is in the same directory as the program.
-     * @return The configuration file path.
-     */
-    ATOM_NODISCARD auto getConfigPath() -> std::string;
-
-    /**
-     * @brief Sets an environment variable.
-     * @param name The variable name.
-     * @param value The variable value.
-     * @param overwrite Whether to overwrite the variable if it already exists.
-     */
-    static void setVariable(const std::string& name, const std::string& value,
-                            bool overwrite = true);
-
-    /**
-     * @brief Gets the value of an environment variable.
-     * @param name The variable name.
-     * @return The variable value.
-     */
-    static auto getVariable(const std::string& name) -> std::string;
-
-    /**
-     * @brief Unsets (deletes) an environment variable.
-     * @param name The variable name.
-     */
-    static void unsetVariable(const std::string& name);
+    void unsetEnv(const std::string& name);
 
     /**
      * @brief Lists all environment variables.
@@ -183,21 +122,15 @@ public:
      */
     static auto listVariables() -> std::vector<std::string>;
 
+#if ATOM_ENABLE_DEBUG
     /**
      * @brief Prints all environment variables.
      */
     static void printAllVariables();
-
+#endif
 private:
-    std::string m_exe;      ///< Full path of the executable file.
-    std::string m_cwd;      ///< Working directory.
-    std::string m_program;  ///< Program name.
-
-    std::unordered_map<std::string, std::string>
-        m_args;  ///< List of command-line arguments.
-    std::vector<std::pair<std::string, std::string>>
-        m_helps;                 ///< List of help information.
-    mutable std::mutex m_mutex;  ///< Mutex to protect member variables.
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace atom::utils

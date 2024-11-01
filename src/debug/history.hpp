@@ -2,10 +2,9 @@
 #define LITHIUM_DEBUG_COMMAND_HISTORY_HPP
 
 #include <ctime>
-#include <deque>
+#include <memory>
 #include <string>
-#include <unordered_map>
-#include "atom/macro.hpp"
+#include <vector>
 
 namespace lithium::debug {
 /**
@@ -73,6 +72,12 @@ public:
     void deleteCommand(size_t index);
 
     /**
+     * @brief Deletes multiple commands by their indices in the history.
+     * @param indices The indices of the commands to delete.
+     */
+    void deleteCommands(const std::vector<size_t>& indices);
+
+    /**
      * @brief Sorts the command history by timestamp.
      */
     void sortHistoryByTime();
@@ -94,38 +99,24 @@ public:
      */
     void clearHistory();
 
+    /**
+     * @brief Exports the command history to a file.
+     * @param filePath The path to the file to export to.
+     */
+    void exportHistory(const std::string& filePath) const;
+
+    /**
+     * @brief Gets the frequency of a specific command.
+     * @param command The command to get the frequency of.
+     * @return The frequency of the command.
+     */
+    int getCommandFrequency(const std::string& command) const;
+
 private:
-    struct CommandEntry {
-        std::string command;    ///< The command string.
-        std::time_t timestamp;  ///< The time when the command was added.
-    } ATOM_ALIGNAS(64);
-
-    size_t maxSize_;        ///< Maximum number of commands to keep in history.
-    std::string userName_;  ///< The user name for file storage.
-    std::deque<CommandEntry> history_;  ///< The command history.
-    std::deque<CommandEntry>
-        redoStack_;  ///< The stack of undone commands for redo functionality.
-    std::unordered_map<std::string, std::string>
-        aliases_;  ///< Aliases for commands.
-    std::unordered_map<std::string, int>
-        frequency_;  ///< Frequency of each command.
-
-    /**
-     * @brief Updates the frequency count of a command.
-     * @param command The command to update.
-     */
-    void updateFrequency(const std::string& command);
-
-    /**
-     * @brief Saves the command history, aliases, and frequency to a file.
-     */
-    void saveToFile() const;
-
-    /**
-     * @brief Loads the command history, aliases, and frequency from a file.
-     */
-    void loadFromFile();
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
 };
+
 }  // namespace lithium::debug
 
 #endif  // LITHIUM_DEBUG_COMMAND_HISTORY_HPP

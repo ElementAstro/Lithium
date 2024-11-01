@@ -1,5 +1,5 @@
-#ifndef PRIORITY_MANAGER_H
-#define PRIORITY_MANAGER_H
+#ifndef ATOM_SYSTEM_PRIORITY_HPP
+#define ATOM_SYSTEM_PRIORITY_HPP
 
 #include <chrono>
 #include <functional>
@@ -17,6 +17,7 @@
 #include <unistd.h>
 #endif
 
+namespace atom::system {
 /**
  * @class PriorityManager
  * @brief Manages process and thread priorities and affinities.
@@ -117,13 +118,7 @@ public:
         std::chrono::milliseconds interval = std::chrono::seconds(1));
 
 private:
-    /**
-     * @brief Converts a vector of integers to a string.
-     * @param vec The vector to convert.
-     * @return The string representation of the vector.
-     */
-    static auto vectorToString(const std::vector<int>& vec) -> std::string;
-
+#ifdef _WIN32
     /**
      * @brief Converts a priority level to a platform-specific priority value.
      * @param level The priority level to convert.
@@ -137,7 +132,10 @@ private:
      * @return The corresponding priority level.
      */
     static auto getLevelFromPriority(DWORD priority) -> PriorityLevel;
-
+#else
+    static auto getPriorityFromLevel(PriorityLevel level) -> int;
+    static auto getLevelFromPriority(int priority) -> PriorityLevel;
+#endif
     /**
      * @brief Converts a priority level to a platform-specific thread priority
      * value.
@@ -154,5 +152,6 @@ private:
      */
     static auto getLevelFromThreadPriority(int priority) -> PriorityLevel;
 };
+}  // namespace atom::system
 
-#endif  // PRIORITY_MANAGER_H
+#endif  // ATOM_SYSTEM_PRIORITY_HPP

@@ -9,6 +9,7 @@
 #include <cstdlib>
 #else  // Unix-like systems
 #include <cstdlib>
+#include <fstream>
 #endif
 
 namespace atom::system {
@@ -78,4 +79,39 @@ auto lockScreen() -> bool {
 #endif
 }
 
+auto setScreenBrightness(int level) -> bool {
+#ifdef _WIN32
+    // Windows implementation for setting screen brightness
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hConsole == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    CONSOLE_SCREEN_BUFFER_INFOEX csbi;
+    csbi.cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
+    if (!GetConsoleScreenBufferInfoEx(hConsole, &csbi)) {
+        return false;
+    }
+
+    csbi.wAttributes = (csbi.wAttributes & 0xFFF0) | (level & 0x000F);
+    if (!SetConsoleScreenBufferInfoEx(hConsole, &csbi)) {
+        return false;
+    }
+
+    return true;
+#elif defined(__APPLE__)
+    // macOS implementation for setting screen brightness
+    std::string command = "brightness " + std::to_string(level / 100.0);
+    return std::system(command.c_str()) == 0;
+#else  // Unix-like systems
+    // Unix-like systems implementation for setting screen brightness
+    std::ofstream brightnessFile(
+        "/sys/class/backlight/intel_backlight/brightness");
+    if (brightnessFile.is_open()) {
+        brightnessFile << level;
+        return true;
+    }
+    return false;
+#endif
+}
 }  // namespace atom::system

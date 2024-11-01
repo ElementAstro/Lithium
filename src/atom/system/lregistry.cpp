@@ -139,11 +139,11 @@ void Registry::restoreRegistryData(const std::string& backupFile) {
         std::string line;
         std::string currentKey;
         while (std::getline(backup, line)) {
-            if (!line.empty() && line.find('=') == std::string::npos) {
+            if (!line.empty() && line.contains('=')) {
                 currentKey = line;
                 pImpl_->registryData[currentKey] =
                     std::unordered_map<std::string, std::string>();
-            } else if (line.find('=') != std::string::npos) {
+            } else if (line.contains('=')) {
                 size_t splitPos = line.find('=');
                 std::string valueName = line.substr(0, splitPos);
                 std::string data = line.substr(splitPos + 1);

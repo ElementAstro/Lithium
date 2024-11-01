@@ -1,8 +1,12 @@
 #include "priority.hpp"
 
+#include <cstring>
+
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/utils/to_string.hpp"
 
+namespace atom::system {
 void PriorityManager::setProcessPriority(PriorityLevel level, int pid) {
     LOG_F(INFO, "Setting process priority to {} for PID {}",
           static_cast<int>(level), pid);
@@ -175,7 +179,7 @@ void PriorityManager::setThreadSchedulingPolicy(
 void PriorityManager::setProcessAffinity(const std::vector<int>& cpus,
                                          int pid) {
     LOG_F(INFO, "Setting process affinity to CPUs: {} for PID {}",
-          vectorToString(cpus), pid);
+          atom::utils::toString(cpus), pid);
 #ifdef _WIN32
     HANDLE hProcess = pid == 0
                           ? GetCurrentProcess()
@@ -211,7 +215,7 @@ void PriorityManager::setProcessAffinity(const std::vector<int>& cpus,
     }
 #endif
     LOG_F(INFO, "Set process affinity to CPUs: {} for PID {}",
-          vectorToString(cpus), pid);
+          atom::utils::toString(cpus), pid);
 }
 
 auto PriorityManager::getProcessAffinity(int pid) -> std::vector<int> {
@@ -257,7 +261,7 @@ auto PriorityManager::getProcessAffinity(int pid) -> std::vector<int> {
     }
 #endif
     LOG_F(INFO, "Got process affinity for PID {}: {}", pid,
-          vectorToString(cpus));
+          atom::utils::toString(cpus));
     return cpus;
 }
 
@@ -284,18 +288,7 @@ void PriorityManager::startPriorityMonitor(
     LOG_F(INFO, "Started priority monitor for PID {}", pid);
 }
 
-auto PriorityManager::vectorToString(const std::vector<int>& vec)
-    -> std::string {
-    std::string result = "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-        result += std::to_string(vec[i]);
-        if (i < vec.size() - 1) {
-            result += ", ";
-        }
-    }
-    result += "]";
-    return result;
-}
+#ifdef _WIN32
 
 auto PriorityManager::getPriorityFromLevel(PriorityLevel level) -> DWORD {
     LOG_F(INFO, "Getting priority from level {}", static_cast<int>(level));
@@ -314,7 +307,7 @@ auto PriorityManager::getPriorityFromLevel(PriorityLevel level) -> DWORD {
             return REALTIME_PRIORITY_CLASS;
         default:
             LOG_F(ERROR, "Invalid priority level: {}", static_cast<int>(level));
-            THROW_INVALID_ARGUMENT("Invalid priority level");
+            throw std::invalid_argument("Invalid priority level");
     }
 }
 
@@ -335,7 +328,7 @@ auto PriorityManager::getLevelFromPriority(DWORD priority) -> PriorityLevel {
             return PriorityLevel::REALTIME;
         default:
             LOG_F(ERROR, "Invalid priority value: {}", priority);
-            THROW_INVALID_ARGUMENT("Invalid priority value");
+            throw std::invalid_argument("Invalid priority value");
     }
 }
 
@@ -357,7 +350,7 @@ auto PriorityManager::getThreadPriorityFromLevel(PriorityLevel level) -> int {
             return THREAD_PRIORITY_TIME_CRITICAL;
         default:
             LOG_F(ERROR, "Invalid priority level: {}", static_cast<int>(level));
-            THROW_INVALID_ARGUMENT("Invalid priority level");
+            throw std::invalid_argument("Invalid priority level");
     }
 }
 
@@ -379,6 +372,95 @@ auto PriorityManager::getLevelFromThreadPriority(int priority)
             return PriorityLevel::REALTIME;
         default:
             LOG_F(ERROR, "Unknown thread priority value: {}", priority);
-            THROW_RUNTIME_ERROR("Unknown thread priority value");
+            throw std::runtime_error("Unknown thread priority value");
     }
 }
+
+#else
+
+auto PriorityManager::getPriorityFromLevel(PriorityLevel level) -> int {
+    LOG_F(INFO, "Getting priority from level {}", static_cast<int>(level));
+    switch (level) {
+        case PriorityLevel::LOWEST:
+            return 19;  // Lowest nice value
+        case PriorityLevel::BELOW_NORMAL:
+            return 10;
+        case PriorityLevel::NORMAL:
+            return 0;
+        case PriorityLevel::ABOVE_NORMAL:
+            return -10;
+        case PriorityLevel::HIGHEST:
+            return -20;  // Highest nice value
+        case PriorityLevel::REALTIME:
+            return sched_get_priority_max(SCHED_FIFO);  // Real-time priority
+        default:
+            LOG_F(ERROR, "Invalid priority level: {}", static_cast<int>(level));
+            throw std::invalid_argument("Invalid priority level");
+    }
+}
+
+auto PriorityManager::getLevelFromPriority(int priority) -> PriorityLevel {
+    LOG_F(INFO, "Getting level from priority {}", priority);
+    if (priority == 19) {
+        return PriorityLevel::LOWEST;
+    } else if (priority == 10) {
+        return PriorityLevel::BELOW_NORMAL;
+    } else if (priority == 0) {
+        return PriorityLevel::NORMAL;
+    } else if (priority == -10) {
+        return PriorityLevel::ABOVE_NORMAL;
+    } else if (priority == -20) {
+        return PriorityLevel::HIGHEST;
+    } else if (priority == sched_get_priority_max(SCHED_FIFO)) {
+        return PriorityLevel::REALTIME;
+    } else {
+        LOG_F(ERROR, "Invalid priority value: {}", priority);
+        throw std::invalid_argument("Invalid priority value");
+    }
+}
+
+auto PriorityManager::getThreadPriorityFromLevel(PriorityLevel level) -> int {
+    LOG_F(INFO, "Getting thread priority from level {}",
+          static_cast<int>(level));
+    switch (level) {
+        case PriorityLevel::LOWEST:
+            return 19;  // Lowest nice value
+        case PriorityLevel::BELOW_NORMAL:
+            return 10;
+        case PriorityLevel::NORMAL:
+            return 0;
+        case PriorityLevel::ABOVE_NORMAL:
+            return -10;
+        case PriorityLevel::HIGHEST:
+            return -20;  // Highest nice value
+        case PriorityLevel::REALTIME:
+            return sched_get_priority_max(SCHED_FIFO);  // Real-time priority
+        default:
+            LOG_F(ERROR, "Invalid priority level: {}", static_cast<int>(level));
+            throw std::invalid_argument("Invalid priority level");
+    }
+}
+
+auto PriorityManager::getLevelFromThreadPriority(int priority)
+    -> PriorityLevel {
+    LOG_F(INFO, "Getting level from thread priority {}", priority);
+    if (priority == 19) {
+        return PriorityLevel::LOWEST;
+    } else if (priority == 10) {
+        return PriorityLevel::BELOW_NORMAL;
+    } else if (priority == 0) {
+        return PriorityLevel::NORMAL;
+    } else if (priority == -10) {
+        return PriorityLevel::ABOVE_NORMAL;
+    } else if (priority == -20) {
+        return PriorityLevel::HIGHEST;
+    } else if (priority == sched_get_priority_max(SCHED_FIFO)) {
+        return PriorityLevel::REALTIME;
+    } else {
+        LOG_F(ERROR, "Unknown thread priority value: {}", priority);
+        throw std::runtime_error("Unknown thread priority value");
+    }
+}
+
+#endif
+}  // namespace atom::system

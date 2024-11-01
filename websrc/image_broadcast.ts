@@ -1,15 +1,29 @@
 import { v4 as uuidv4 } from "uuid"; // Import UUID library for generating unique client IDs
-import WebSocket from "ws"; // Import WebSocket library for real-time communication
+import WebSocket, { WebSocketServer } from "ws"; // Import WebSocket library for real-time communication
 import dgram from "dgram"; // Import dgram library for UDP communication
-import express from "express"; // Import Express library for creating HTTP server
+import express, { Request, Response, NextFunction } from "express"; // Import Express library for creating HTTP server
 import { createServer } from "http"; // Import HTTP library for creating HTTP server
 import os from "os"; // Import OS library for network interface information
+
+// Define types for client and message
+interface Client {
+  username: string;
+  isAlive: boolean;
+}
+
+interface Message {
+  type: string;
+  content?: string;
+  username?: string;
+  to?: string;
+  command?: string;
+}
 
 // Create Express application
 const app = express();
 
 // Enable CORS (Cross-Origin Resource Sharing) for all routes
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE");
   res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -23,7 +37,7 @@ app.use("/images", express.static("/dev/shm"));
 const server = createServer(app);
 
 // Create WebSocket server associated with the HTTP server
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 // Start HTTP server on a specific port
 server.listen(8600, () => {
@@ -31,16 +45,16 @@ server.listen(8600, () => {
 });
 
 // Global state for connected clients and chat history
-const clients = {}; // Object to store connected clients
-const chatHistory = []; // Array to store chat history
+const clients: { [key: string]: Client } = {}; // Object to store connected clients
+const chatHistory: { user: string; message: string; timestamp: string }[] = []; // Array to store chat history
 const MAX_HISTORY = 10; // Maximum number of chat messages to store
 
 // Function to get the broadcast address
-const getBroadcastAddress = () => {
+const getBroadcastAddress = (): string | null => {
   const interfaces = os.networkInterfaces(); // Get network interfaces
 
   for (const netInterface of Object.values(interfaces)) {
-    for (const net of netInterface) {
+    for (const net of netInterface!) {
       if (net.family === "IPv4" && !net.internal) {
         // Check for IPv4 and non-internal addresses
         const ipParts = net.address.split(".").map(Number); // Split IP address into parts
@@ -97,15 +111,15 @@ setInterval(() => {
 udpSocket.bind(BROADCAST_PORT); // Bind UDP socket to port
 
 const noop = () => {}; // No-operation function
-const heartbeat = function () {
+const heartbeat = function (this: WebSocket) {
   this.isAlive = true; // Set client as alive
 };
 
 // Handle new WebSocket connections
-wss.on("connection", (ws) => {
+wss.on("connection", (ws: WebSocket & { id?: string }) => {
   const clientId = uuidv4(); // Generate unique client ID
   ws.id = clientId; // Assign ID to WebSocket connection
-  clients[clientId] = { username: `User${clientId.substring(0, 6)}` }; // Default username
+  clients[clientId] = { username: `User${clientId.substring(0, 6)}`, isAlive: true }; // Default username
 
   console.log(`Client ${clientId} connected`);
   ws.isAlive = true; // Set client as alive
@@ -116,7 +130,7 @@ wss.on("connection", (ws) => {
 
   // Notify all clients of the new connection
   const newClientMessage = {
-    type: "Server_msg",
+    type: "SERVER_MSG",
     message: `${clients[clientId].username} connected`,
   };
   wss.clients.forEach((client) => {
@@ -126,15 +140,15 @@ wss.on("connection", (ws) => {
   });
 
   // Handle incoming messages from clients
-  ws.on("message", (data) => {
-    const message = JSON.parse(data); // Parse incoming message
+  ws.on("message", (data: WebSocket.Data) => {
+    const message: Message = JSON.parse(data.toString()); // Parse incoming message
     const timestamp = new Date().toLocaleString(); // Get current timestamp
 
     if (message.type === "MESSAGE") {
       // Save to chat history
       chatHistory.push({
         user: clients[clientId].username,
-        message: message.content,
+        message: message.content!,
         timestamp,
       });
       if (chatHistory.length > MAX_HISTORY) chatHistory.shift(); // Limit history
@@ -154,7 +168,7 @@ wss.on("connection", (ws) => {
       });
     } else if (message.type === "SET_USERNAME") {
       // Set username for the client
-      clients[clientId].username = message.username;
+      clients[clientId].username = message.username!;
       ws.send(
         JSON.stringify({
           type: "SERVER_MSG",
@@ -168,7 +182,7 @@ wss.on("connection", (ws) => {
       );
       if (recipient) {
         wss.clients.forEach((client) => {
-          if (client.id === recipient && client.readyState === WebSocket.OPEN) {
+          if ((client as WebSocket & { id?: string }).id === recipient && client.readyState === WebSocket.OPEN) {
             client.send(
               JSON.stringify({
                 type: "PRIVATE_MESSAGE",
@@ -182,7 +196,7 @@ wss.on("connection", (ws) => {
     } else if (message.type === "TYPING") {
       // Notify others that the user is typing
       wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN && client.id !== ws.id) {
+        if (client.readyState === WebSocket.OPEN && (client as WebSocket & { id?: string }).id !== ws.id) {
           client.send(
             JSON.stringify({ type: "TYPING", user: clients[clientId].username })
           );
@@ -219,7 +233,7 @@ wss.on("connection", (ws) => {
     delete clients[clientId]; // Remove client from list
 
     const messageObj = {
-      type: "Server_msg",
+      type: "SERVER_MSG",
       message: `${username} disconnected`,
     };
 
@@ -237,11 +251,11 @@ wss.on("connection", (ws) => {
 // Periodic health check for clients
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
-    if (ws.isAlive === false) {
-      console.log(`Client ${ws.id} did not respond to a ping, terminating.`);
+    if ((ws as WebSocket & { isAlive?: boolean }).isAlive === false) {
+      console.log(`Client ${(ws as WebSocket & { id?: string }).id} did not respond to a ping, terminating.`);
       return ws.terminate(); // Terminate unresponsive clients
     }
-    ws.isAlive = false;
+    (ws as WebSocket & { isAlive?: boolean }).isAlive = false;
     ws.ping(noop); // Send ping to clients
   });
 }, 3000);

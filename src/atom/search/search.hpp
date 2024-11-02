@@ -2,6 +2,7 @@
 #define ATOM_SEARCH_SEARCH_HPP
 
 #include <cmath>
+#include <exception>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -9,6 +10,19 @@
 #include <vector>
 
 namespace atom::search {
+
+/**
+ * @brief Exception thrown when a document is not found.
+ */
+class DocumentNotFoundException : public std::exception {
+public:
+    explicit DocumentNotFoundException(const std::string& docId)
+        : message_("Document not found: " + docId) {}
+    const char* what() const noexcept override { return message_.c_str(); }
+
+private:
+    std::string message_;
+};
 
 /**
  * @brief Represents a document with an ID, content, tags, and click count.
@@ -46,8 +60,23 @@ public:
     /**
      * @brief Adds a document to the search engine.
      * @param doc The document to add.
+     * @throws std::invalid_argument if the document ID already exists.
      */
     void addDocument(const Document& doc);
+
+    /**
+     * @brief Removes a document from the search engine.
+     * @param docId The ID of the document to remove.
+     * @throws DocumentNotFoundException if the document does not exist.
+     */
+    void removeDocument(const std::string& docId);
+
+    /**
+     * @brief Updates an existing document in the search engine.
+     * @param doc The updated document.
+     * @throws DocumentNotFoundException if the document does not exist.
+     */
+    void updateDocument(const Document& doc);
 
     /**
      * @brief Adds the content of a document to the content index.
@@ -101,6 +130,20 @@ public:
      */
     auto autoComplete(const std::string& prefix) -> std::vector<std::string>;
 
+    /**
+     * @brief Saves the current index to a file.
+     * @param filename The file to save the index.
+     * @throws std::ios_base::failure if the file cannot be written.
+     */
+    void saveIndex(const std::string& filename) const;
+
+    /**
+     * @brief Loads the index from a file.
+     * @param filename The file to load the index from.
+     * @throws std::ios_base::failure if the file cannot be read.
+     */
+    void loadIndex(const std::string& filename);
+
 private:
     /**
      * @brief Computes the Levenshtein distance between two strings.
@@ -121,10 +164,11 @@ private:
 
     /**
      * @brief Finds a document by its ID.
-     * @param id The ID of the document.
+     * @param docId The ID of the document.
      * @return The document with the specified ID.
+     * @throws DocumentNotFoundException if the document does not exist.
      */
-    auto findDocumentById(const std::string& id) -> Document;
+    auto findDocumentById(const std::string& docId) -> Document;
 
     /**
      * @brief Comparator for ranking documents by their scores.

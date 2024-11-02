@@ -38,8 +38,8 @@ class ScriptManagerImpl;
  *
  * This class supports registering, updating, and deleting scripts. It can run
  * scripts sequentially or concurrently and retrieve the output or status of a
- * script. Additional features include script versioning and conditional
- * execution.
+ * script. Additional features include script versioning, conditional
+ * execution, logging, and retry mechanisms.
  */
 class ScriptManager {
     std::unique_ptr<ScriptManagerImpl>
@@ -103,13 +103,15 @@ public:
      * (default: true).
      * @param timeoutMs An optional timeout in milliseconds for the script
      * execution.
+     * @param retryCount The number of times to retry the script execution on
+     * failure.
      * @return An optional pair containing the script output and exit status.
      */
-    auto runScript(std::string_view name,
-                   const std::unordered_map<std::string, std::string>& args,
-                   bool safe = true,
-                   std::optional<int> timeoutMs = std::nullopt)
-        -> std::optional<std::pair<std::string, int>>;
+    auto runScript(
+        std::string_view name,
+        const std::unordered_map<std::string, std::string>& args,
+        bool safe = true, std::optional<int> timeoutMs = std::nullopt,
+        int retryCount = 0) -> std::optional<std::pair<std::string, int>>;
 
     /**
      * @brief Retrieves the output of a script.
@@ -135,6 +137,7 @@ public:
      * sequentially.
      * @param safe A flag indicating whether to run the scripts in a safe mode
      * (default: true).
+     * @param retryCount The number of times to retry each script on failure.
      * @return A vector of optional pairs containing the script output and exit
      * status for each script.
      */
@@ -142,7 +145,7 @@ public:
         const std::vector<std::pair<
             std::string, std::unordered_map<std::string, std::string>>>&
             scripts,
-        bool safe = true)
+        bool safe = true, int retryCount = 0)
         -> std::vector<std::optional<std::pair<std::string, int>>>;
 
     /**
@@ -152,6 +155,7 @@ public:
      * concurrently.
      * @param safe A flag indicating whether to run the scripts in a safe mode
      * (default: true).
+     * @param retryCount The number of times to retry each script on failure.
      * @return A vector of optional pairs containing the script output and exit
      * status for each script.
      */
@@ -159,7 +163,7 @@ public:
         const std::vector<std::pair<
             std::string, std::unordered_map<std::string, std::string>>>&
             scripts,
-        bool safe = true)
+        bool safe = true, int retryCount = 0)
         -> std::vector<std::optional<std::pair<std::string, int>>>;
 
     /**
@@ -198,6 +202,22 @@ public:
      */
     void setExecutionEnvironment(std::string_view name,
                                  const std::string& environment);
+
+    /**
+     * @brief Sets the maximum number of script versions to keep.
+     *
+     * @param maxVersions The maximum number of versions to retain for each
+     * script.
+     */
+    void setMaxScriptVersions(int maxVersions);
+
+    /**
+     * @brief Retrieves the execution logs for a script.
+     *
+     * @param name The name of the script.
+     * @return A vector of log entries.
+     */
+    [[nodiscard]] auto getScriptLogs(std::string_view name) const -> std::vector<std::string>;
 };
 
 }  // namespace lithium

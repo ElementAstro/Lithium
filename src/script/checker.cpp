@@ -13,8 +13,8 @@
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/type/json.hpp"
 #include "atom/macro.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
@@ -31,25 +31,36 @@ struct DangerItem {
 class ScriptAnalyzerImpl {
 public:
     explicit ScriptAnalyzerImpl(const std::string& config_file) {
-        config_ = loadConfig(config_file);
+        try {
+            config_ = loadConfig(config_file);
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Failed to initialize ScriptAnalyzerImpl: {}",
+                  e.what());
+            throw;
+        }
     }
 
-    void analyze(const std::string& script, bool output_json = false) {
-        std::vector<DangerItem> dangers;
-        detectScriptTypeAndAnalyze(script, dangers);
-        suggestSafeReplacements(script, dangers);
-        int complexity = calculateComplexity(script);
-        generateReport(dangers, complexity, output_json);
+    void analyze(const std::string& script, bool output_json,
+                 ReportFormat format) {
+        try {
+            std::vector<DangerItem> dangers;
+            detectScriptTypeAndAnalyze(script, dangers);
+            suggestSafeReplacements(script, dangers);
+            int complexity = calculateComplexity(script);
+            generateReport(dangers, complexity, output_json, format);
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Analysis failed: {}", e.what());
+            throw;
+        }
     }
 
 private:
     json config_;
     mutable std::shared_mutex config_mutex_;
 
-    auto loadConfig(const std::string& config_file) -> json {
+    static auto loadConfig(const std::string& config_file) -> json {
         if (!atom::io::isFileExists(config_file)) {
             THROW_FILE_NOT_FOUND("Config file not found: " + config_file);
-            return json::object();
         }
         std::ifstream file(config_file);
         if (!file.is_open()) {
@@ -57,15 +68,19 @@ private:
                                     config_file);
         }
         json config;
-        file >> config;
+        try {
+            file >> config;
+        } catch (const json::parse_error& e) {
+            THROW_INVALID_FORMAT("Invalid JSON format in config file: " +
+                                 config_file);
+        }
         return config;
     }
 
     static auto isSkippableLine(const std::string& line) -> bool {
         return line.empty() ||
                std::regex_match(line, std::regex(R"(^\s*#.*)")) ||
-               std::regex_match(
-                   line, std::regex(R"(^\s*//.*)"));  // 支持PowerShell注释
+               std::regex_match(line, std::regex(R"(^\s*//.*)"));
     }
 
     void detectScriptTypeAndAnalyze(const std::string& script,
@@ -88,18 +103,14 @@ private:
     }
 
     static bool detectPowerShell(const std::string& script) {
-        return script.find("param(") !=
-                   std::string::npos ||  // PowerShell 参数化的典型特征
-               script.find("$PSVersionTable") !=
-                   std::string::npos;  // 检测PowerShell的版本信息
+        return script.contains("param(") || script.contains("$PSVersionTable");
     }
 
     void suggestSafeReplacements(const std::string& script,
                                  std::vector<DangerItem>& dangers) {
         std::unordered_map<std::string, std::string> replacements = {
 #ifdef _WIN32
-            {"Remove-Item -Recurse -Force",
-             "Remove-Item -Recurse"},  // PowerShell危险命令替换
+            {"Remove-Item -Recurse -Force", "Remove-Item -Recurse"},
             {"Stop-Process -Force", "Stop-Process"},
 #else
             {"rm -rf /", "find . -type f -delete"},
@@ -125,37 +136,61 @@ private:
     }
 
     static void generateReport(const std::vector<DangerItem>& dangers,
-                               int complexity, bool output_json) {
-        if (output_json) {
-            json report = json::object();
-            report["complexity"] = complexity;
-            report["issues"] = json::array();
+                               int complexity, bool output_json,
+                               ReportFormat format) {
+        switch (format) {
+            case ReportFormat::JSON:
+                if (output_json) {
+                    json report = json::object();
+                    report["complexity"] = complexity;
+                    report["issues"] = json::array();
 
-            for (const auto& item : dangers) {
-                report["issues"].push_back(
-                    {{"category", item.category},
-                     {"line", item.line},
-                     {"command", item.command},
-                     {"reason", item.reason},
-                     {"context", item.context.value_or("")}});
-            }
-            LOG_F(INFO, "Generating JSON report: {}", report.dump(4));
-        } else {
-            LOG_F(INFO, "Shell Script Analysis Report");
-            LOG_F(INFO, "============================");
-            LOG_F(INFO, "Code Complexity: {}", complexity);
-
-            if (dangers.empty()) {
-                LOG_F(INFO, "No potential dangers found.");
-            } else {
-                for (const auto& item : dangers) {
-                    LOG_F(INFO,
-                          "Category: {}\n Line: {}\n Command: {}\n Reason: "
-                          "{}\n Context: {}",
-                          item.category, item.line, item.command, item.reason,
-                          item.context.value_or(""));
+                    for (const auto& item : dangers) {
+                        report["issues"].push_back(
+                            {{"category", item.category},
+                             {"line", item.line},
+                             {"command", item.command},
+                             {"reason", item.reason},
+                             {"context", item.context.value_or("")}});
+                    }
+                    LOG_F(INFO, "Generating JSON report: {}", report.dump(4));
                 }
-            }
+                break;
+            case ReportFormat::XML:
+                LOG_F(INFO, "<Report>");
+                LOG_F(INFO, "  <Complexity>{}</Complexity>", complexity);
+                LOG_F(INFO, "  <Issues>");
+                for (const auto& item : dangers) {
+                    LOG_F(INFO, "    <Issue>");
+                    LOG_F(INFO, "      <Category>{}</Category>", item.category);
+                    LOG_F(INFO, "      <Line>{}</Line>", item.line);
+                    LOG_F(INFO, "      <Command>{}</Command>", item.command);
+                    LOG_F(INFO, "      <Reason>{}</Reason>", item.reason);
+                    LOG_F(INFO, "      <Context>{}</Context>",
+                          item.context.value_or(""));
+                    LOG_F(INFO, "    </Issue>");
+                }
+                LOG_F(INFO, "  </Issues>");
+                LOG_F(INFO, "</Report>");
+                break;
+            case ReportFormat::TEXT:
+            default:
+                LOG_F(INFO, "Shell Script Analysis Report");
+                LOG_F(INFO, "============================");
+                LOG_F(INFO, "Code Complexity: {}", complexity);
+
+                if (dangers.empty()) {
+                    LOG_F(INFO, "No potential dangers found.");
+                } else {
+                    for (const auto& item : dangers) {
+                        LOG_F(INFO,
+                              "Category: {}\nLine: {}\nCommand: {}\nReason: "
+                              "{}\nContext: {}\n",
+                              item.category, item.line, item.command,
+                              item.reason, item.context.value_or(""));
+                    }
+                }
+                break;
         }
     }
 
@@ -180,8 +215,8 @@ private:
                 if (std::regex_search(line, pattern)) {
                     std::string key = std::to_string(lineNum) + ":" + reason;
                     if (!detectedIssues.contains(key)) {
-                        dangers.push_back(
-                            {category, line, reason, lineNum, {}});
+                        dangers.emplace_back(
+                            DangerItem{category, line, reason, lineNum, {}});
                         detectedIssues.insert(key);
                     }
                 }
@@ -209,12 +244,12 @@ private:
                     std::string key =
                         std::to_string(lineNum) + ":" + unsafe_command;
                     if (!detectedIssues.contains(key)) {
-                        dangers.push_back(
-                            {"Suggestion",
-                             line,
-                             "Consider replacing with: " + safe_command,
-                             lineNum,
-                             {}});
+                        dangers.emplace_back(DangerItem{
+                            "Suggestion",
+                            line,
+                            "Consider replacing with: " + safe_command,
+                            lineNum,
+                            {}});
                         detectedIssues.insert(key);
                     }
                 }
@@ -226,8 +261,11 @@ private:
 ScriptAnalyzer::ScriptAnalyzer(const std::string& config_file)
     : impl_(std::make_unique<ScriptAnalyzerImpl>(config_file)) {}
 
-void ScriptAnalyzer::analyze(const std::string& script, bool output_json) {
-    impl_->analyze(script, output_json);
+ScriptAnalyzer::~ScriptAnalyzer() = default;
+
+void ScriptAnalyzer::analyze(const std::string& script, bool output_json,
+                             ReportFormat format) {
+    impl_->analyze(script, output_json, format);
 }
 
 }  // namespace lithium

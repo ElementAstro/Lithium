@@ -6,9 +6,11 @@
 
 /*************************************************
 
-Date: 2024-4-5
+Date: 2024-04-05
 
-Description: A simple implementation of object pool
+Description: An enhanced implementation of object pool with
+automatic object release, better exception handling, and additional
+functionalities.
 
 **************************************************/
 
@@ -30,6 +32,7 @@ Description: A simple implementation of object pool
 template <typename T>
 concept Resettable = requires(T& obj) { obj.reset(); };
 
+namespace atom::memory {
 /**
  * @brief A thread-safe object pool for managing reusable objects.
  *
@@ -46,32 +49,39 @@ public:
      * optional custom object creator.
      *
      * @param max_size The maximum number of objects the pool can hold.
+     * @param initial_size The initial number of objects to prefill the pool
+     * with.
      * @param creator A function to create new objects. Defaults to
      * std::make_shared<T>().
      */
     explicit ObjectPool(
-        size_t max_size,
+        size_t max_size, size_t initial_size = 0,
         CreateFunc creator = []() { return std::make_shared<T>(); })
         : max_size_(max_size),
           available_(max_size),
           creator_(std::move(creator)) {
         assert(max_size_ > 0 && "ObjectPool size must be greater than zero.");
-        pool_.reserve(max_size_);
+        prefill(initial_size);
     }
+
+    // 禁用拷贝和赋值
+    ObjectPool(const ObjectPool&) = delete;
+    ObjectPool& operator=(const ObjectPool&) = delete;
 
     /**
      * @brief Acquires an object from the pool. Blocks if no objects are
      * available.
      *
-     * @return A shared pointer to the acquired object.
+     * @return A shared pointer to the acquired object with a custom deleter.
      * @throw std::runtime_error If the pool is full and no object is available.
      */
-    [[nodiscard]] auto acquire() -> std::shared_ptr<T> {
+    [[nodiscard]] std::shared_ptr<T> acquire() {
         std::unique_lock lock(mutex_);
 
         if (available_ == 0 && pool_.empty()) {
-            THROW_INVALID_ARGUMENT("ObjectPool is full.");
+            THROW_RUNTIME_ERROR("ObjectPool is full.");
         }
+
         cv_.wait(lock, [this] { return !pool_.empty() || available_ > 0; });
 
         return acquireImpl();
@@ -84,16 +94,17 @@ public:
      * object.
      * @return A shared pointer to the acquired object or nullptr if the timeout
      * expires.
+     * @throw std::runtime_error If the pool is full and no object is available.
      */
     template <typename Rep, typename Period>
-    [[nodiscard]] auto acquireFor(
-        const std::chrono::duration<Rep, Period>& timeout_duration)
-        -> std::optional<std::shared_ptr<T>> {
+    [[nodiscard]] std::optional<std::shared_ptr<T>> tryAcquireFor(
+        const std::chrono::duration<Rep, Period>& timeout_duration) {
         std::unique_lock lock(mutex_);
 
         if (available_ == 0 && pool_.empty()) {
-            THROW_INVALID_ARGUMENT("ObjectPool is full.");
+            THROW_RUNTIME_ERROR("ObjectPool is full.");
         }
+
         if (!cv_.wait_for(lock, timeout_duration, [this] {
                 return !pool_.empty() || available_ > 0;
             })) {
@@ -105,6 +116,9 @@ public:
 
     /**
      * @brief Releases an object back to the pool.
+     *
+     * Note: This method is now private and managed automatically via the custom
+     * deleter.
      *
      * @param obj The shared pointer to the object to release.
      */
@@ -124,7 +138,7 @@ public:
      *
      * @return The number of available objects.
      */
-    [[nodiscard]] auto available() const -> size_t {
+    [[nodiscard]] size_t available() const {
         std::lock_guard lock(mutex_);
         return available_ + pool_.size();
     }
@@ -134,7 +148,7 @@ public:
      *
      * @return The current number of objects in the pool.
      */
-    [[nodiscard]] auto size() const -> size_t {
+    [[nodiscard]] size_t size() const {
         std::lock_guard lock(mutex_);
         return max_size_ - available_ + pool_.size();
     }
@@ -143,11 +157,16 @@ public:
      * @brief Prefills the pool with a specified number of objects.
      *
      * @param count The number of objects to prefill the pool with.
+     * @throw std::runtime_error If prefill exceeds the maximum pool size.
      */
     void prefill(size_t count) {
         std::unique_lock lock(mutex_);
-        for (size_t i = pool_.size(); i < count && i < max_size_; ++i) {
-            pool_.push_back(creator_());
+        if (count > max_size_) {
+            THROW_RUNTIME_ERROR("Prefill count exceeds maximum pool size.");
+        }
+        for (size_t i = pool_.size(); i < count; ++i) {
+            pool_.emplace_back(creator_());
+            --available_;
         }
     }
 
@@ -164,15 +183,20 @@ public:
      * @brief Resizes the pool to a new maximum size.
      *
      * @param new_max_size The new maximum size for the pool.
+     * @throw std::runtime_error If the new size is smaller than the number of
+     * prefilled objects.
      */
     void resize(size_t new_max_size) {
         std::unique_lock lock(mutex_);
-        if (new_max_size < max_size_) {
-            pool_.erase(pool_.begin() + new_max_size, pool_.end());
+        if (new_max_size < (max_size_ - available_)) {
+            THROW_RUNTIME_ERROR(
+                "New maximum size is smaller than the number of in-use "
+                "objects.");
         }
         max_size_ = new_max_size;
         available_ = std::max(available_, max_size_ - pool_.size());
         pool_.reserve(max_size_);
+        cv_.notify_all();
     }
 
     /**
@@ -182,20 +206,48 @@ public:
      */
     void applyToAll(const std::function<void(T&)>& func) {
         std::unique_lock lock(mutex_);
-        std::for_each(pool_, [&func](const auto& obj) { func(*obj); });
+        for (auto& objPtr : pool_) {
+            func(*objPtr);
+        }
+    }
+
+    /**
+     * @brief Gets the current number of in-use objects.
+     *
+     * @return The number of in-use objects.
+     */
+    [[nodiscard]] size_t inUseCount() const {
+        std::lock_guard lock(mutex_);
+        return max_size_ - available_;
     }
 
 private:
-    [[nodiscard]] auto acquireImpl() -> std::shared_ptr<T> {
+    /**
+     * @brief Acquires an object from the pool and wraps it with a custom
+     * deleter.
+     *
+     * @return A shared pointer to the acquired object with a custom deleter.
+     */
+    std::shared_ptr<T> acquireImpl() {
+        std::shared_ptr<T> obj;
         if (!pool_.empty()) {
-            auto obj = std::move(pool_.back());
+            obj = std::move(pool_.back());
             pool_.pop_back();
-            return obj;
+        } else {
+            --available_;
+            obj = creator_();
         }
 
-        assert(available_ > 0);
-        --available_;
-        return creator_();
+        // 创建自定义删除器，确保对象在shared_ptr销毁时返回到对象池
+        auto deleter = [this](T* ptr) {
+            std::shared_ptr<T> sharedPtrObj(ptr, [](T*) {
+                // 自定义删除器为空，防止shared_ptr尝试删除对象
+            });
+            release(sharedPtrObj);
+        };
+
+        // 返回带有自定义删除器的shared_ptr
+        return std::shared_ptr<T>(obj.get(), deleter);
     }
 
     size_t max_size_;
@@ -205,5 +257,7 @@ private:
     std::vector<std::shared_ptr<T>> pool_;
     CreateFunc creator_;
 };
+
+}  // namespace atom::memory
 
 #endif  // ATOM_MEMORY_OBJECT_POOL_HPP

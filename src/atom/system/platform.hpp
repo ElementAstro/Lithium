@@ -16,7 +16,6 @@
 #ifndef ATOM_SYSTEM_PLATFORM_HPP
 #define ATOM_SYSTEM_PLATFORM_HPP
 
-namespace atom::system {
 #if defined(_WIN32)
 #if defined(__MINGW32__) || defined(__MINGW64__)
 #define ATOM_PLATFORM "Windows MinGW"
@@ -343,6 +342,5 @@ namespace atom::system {
 #define ATOM_LITTLE_ENDIAN (ATOM_BYTE_ORDER == ATOM_EL)
 #define ATOM_BIG_ENDIAN (ATOM_BYTE_ORDER == ATOM_EB)
 #define ATOM_MIXED_ENDIAN (ATOM_BYTE_ORDER == ATOM_EM)
-}  // namespace atom::system
 
 #endif

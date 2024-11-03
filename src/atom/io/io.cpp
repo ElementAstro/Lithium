@@ -23,10 +23,11 @@ Description: IO
 #include <string_view>
 #include <thread>
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
-#include "error/exception.hpp"
+#include "atom/utils/to_string.hpp"
 
 #ifdef __linux
 #include <dirent.h>
@@ -537,20 +538,24 @@ auto getFileTimes(const std::string &filePath)
 }
 
 auto checkFileTypeInFolder(const std::string &folderPath,
-                           const std::string &fileType,
+                           const std::vector<std::string> &fileTypes,
                            FileOption fileOption) -> std::vector<std::string> {
     LOG_F(INFO,
-          "checkFileTypeInFolder called with folderPath: {}, fileType: {}, "
+          "checkFileTypeInFolder called with folderPath: {}, fileTypes: {}, "
           "fileOption: {}",
-          folderPath, fileType, static_cast<int>(fileOption));
+          folderPath, atom::utils::toString(fileTypes),
+          static_cast<int>(fileOption));
     std::vector<std::string> files;
     try {
         for (const auto &entry : fs::directory_iterator(folderPath)) {
-            if (entry.is_regular_file() &&
-                entry.path().extension() == fileType) {
-                files.push_back(fileOption == FileOption::PATH
-                                    ? entry.path().string()
-                                    : entry.path().filename().string());
+            if (entry.is_regular_file()) {
+                auto extension = entry.path().extension().string();
+                if (std::find(fileTypes.begin(), fileTypes.end(), extension) !=
+                    fileTypes.end()) {
+                    files.push_back(fileOption == FileOption::PATH
+                                        ? entry.path().string()
+                                        : entry.path().filename().string());
+                }
             }
         }
     } catch (const fs::filesystem_error &ex) {
@@ -783,5 +788,22 @@ auto countLinesInFile(const std::string &filePath) -> std::optional<int> {
         return std::nullopt;
     }
     return lineCount;
+}
+
+auto searchExecutableFiles(const fs::path &dir, const std::string &searchStr)
+    -> std::vector<fs::path> {
+    std::vector<fs::path> matchedFiles;
+
+    for (const auto &entry : fs::directory_iterator(dir)) {
+        if (entry.is_regular_file() &&
+            isExecutableFile(entry.path().string(), "")) {
+            const auto &fileName = entry.path().filename().string();
+            if (fileName.find(searchStr) != std::string::npos) {
+                matchedFiles.push_back(entry.path());
+            }
+        }
+    }
+
+    return matchedFiles;
 }
 }  // namespace atom::io

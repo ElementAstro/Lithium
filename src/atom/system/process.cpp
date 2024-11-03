@@ -1,32 +1,15 @@
-/*
- * process.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2023-7-19
-
-Description: Process Manager
-
-**************************************************/
-
 #include "process.hpp"
+#include "command.hpp"
 
 #include <algorithm>
-#include <condition_variable>
 #include <fstream>
-#include <mutex>
 #include <optional>
-#include <shared_mutex>
-#include <sstream>
+#include <regex>
 
 #if defined(_WIN32)
 // clang-format off
 #include <windows.h>
 #include <tlhelp32.h>
-#include <iprtrmib.h>
 #include <iphlpapi.h>
 #include <tchar.h>
 #include <psapi.h>
@@ -54,177 +37,9 @@ Description: Process Manager
 #error "Unknown platform"
 #endif
 
-#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/system/command.hpp"
-#include "atom/utils/convert.hpp"
-#include "atom/utils/string.hpp"
 
 namespace atom::system {
-
-constexpr size_t BUFFER_SIZE = 256;
-
-class ProcessManager::ProcessManagerImpl {
-public:
-    int m_maxProcesses;
-    std::condition_variable cv;
-    std::vector<Process> processes;
-    mutable std::shared_timed_mutex mtx;
-
-    ProcessManagerImpl(int maxProcess) : m_maxProcesses(maxProcess) {}
-
-    ~ProcessManagerImpl() {
-        // Ensure all processes are cleaned up
-        waitForCompletion();
-    }
-
-    auto createProcess(const std::string &command,
-                       const std::string &identifier) -> bool {
-        pid_t pid;
-
-#ifdef _WIN32
-        STARTUPINFO si;
-        PROCESS_INFORMATION pi;
-        ZeroMemory(&si, sizeof(si));
-        si.cb = sizeof(si);
-        ZeroMemory(&pi, sizeof(pi));
-
-        // Convert command to wide string
-        std::wstring wcommand(command.begin(), command.end());
-
-        // Start the child process.
-        // TODO: Use CreateProcessW instead of CreateProcessA, but some programs
-        // occured
-        /*
-        if (CreateProcessW(wcommand.c_str(),  // Command line
-                NULL,          // 命令行参数，可以传 NULL
-                NULL,          // 进程安全属性
-                NULL,          // 线程安全属性
-                FALSE,         // 不继承句柄
-                0,             // 创建标志
-                NULL,          // 使用父进程的环境
-                NULL,          // 使用父进程的当前目录
-                &si,  // 启动信息
-                &si   // 进程信息
-            == 0)) {
-            return false;
-        }
-        */
-
-        pid = pi.dwProcessId;
-#else
-        pid = fork();
-        if (pid == 0) {
-            // Child process code
-            execlp(command.c_str(), command.c_str(), nullptr);
-            exit(0);
-        } else if (pid < 0) {
-            return false;
-        }
-#endif
-        std::unique_lock lock(mtx);
-        Process process;
-        process.pid = pid;
-        process.name = identifier;
-#ifdef _WIN32
-        process.handle = pi.hProcess;
-#endif
-        processes.push_back(process);
-        return true;
-    }
-
-    auto terminateProcess(int pid, int signal) -> bool {
-        std::unique_lock lock(mtx);
-        auto it =
-            std::find_if(processes.begin(), processes.end(),
-                         [pid](const Process &p) { return p.pid == pid; });
-
-        if (it != processes.end()) {
-#ifdef _WIN32
-            // Windows-specific logic to terminate the process
-            if (!TerminateProcess(it->handle, signal)) {
-                return false;
-            }
-            CloseHandle(it->handle);
-#else
-            kill(pid, signal);
-#endif
-            processes.erase(it);
-            return true;
-        }
-        return false;
-    }
-
-    void waitForCompletion() {
-        for (const auto &process : processes) {
-#ifdef _WIN32
-            // Windows-specific process waiting logic
-            WaitForSingleObject(process.handle, INFINITE);
-            CloseHandle(process.handle);
-#else
-            waitpid(process.pid, nullptr, 0);
-#endif
-        }
-        processes.clear();
-    }
-};
-
-ProcessManager::ProcessManager(int maxProcess)
-    : impl(std::make_unique<ProcessManagerImpl>(maxProcess)) {}
-
-ProcessManager::~ProcessManager() = default;
-
-auto ProcessManager::createShared(int maxProcess)
-    -> std::shared_ptr<ProcessManager> {
-    return std::make_shared<ProcessManager>(maxProcess);
-}
-
-auto ProcessManager::createProcess(const std::string &command,
-                                   const std::string &identifier) -> bool {
-    return impl->createProcess(command, identifier);
-}
-
-auto ProcessManager::terminateProcess(int pid, int signal) -> bool {
-    return impl->terminateProcess(pid, signal);
-}
-
-auto ProcessManager::hasProcess(const std::string &identifier) -> bool {
-    std::shared_lock lock(impl->mtx);
-    for (const auto &process : impl->processes) {
-        if (process.name == identifier) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void ProcessManager::waitForCompletion() { impl->waitForCompletion(); }
-
-auto ProcessManager::getRunningProcesses() const -> std::vector<Process> {
-    std::shared_lock lock(impl->mtx);
-    return impl->processes;
-}
-
-auto ProcessManager::getProcessOutput(const std::string &identifier)
-    -> std::vector<std::string> {
-    auto it = std::find_if(
-        impl->processes.begin(), impl->processes.end(),
-        [&identifier](const Process &p) { return p.name == identifier; });
-
-    if (it != impl->processes.end()) {
-        std::vector<std::string> outputLines;
-        std::stringstream sss(it->output);
-        std::string line;
-
-        while (getline(sss, line)) {
-            outputLines.push_back(line);
-        }
-
-        return outputLines;
-    }
-    return {};
-}
-
 #ifdef _WIN32
 
 auto getAllProcesses() -> std::vector<std::pair<int, std::string>> {
@@ -585,7 +400,7 @@ auto getParentProcessId(int processId) -> int {
 #endif
 }
 
-auto CreateProcessAsUser(const std::string &command, const std::string &user,
+auto createProcessAsUser(const std::string &command, const std::string &user,
                          [[maybe_unused]] const std::string &domain,
                          [[maybe_unused]] const std::string &password) -> bool {
 #ifdef _WIN32
@@ -685,123 +500,6 @@ auto CreateProcessAsUser(const std::string &command, const std::string &user,
 #endif
 }
 
-#ifdef _WIN32
-auto ProcessManager::getProcessHandle(int pid) const -> HANDLE {
-    return OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-}
-#else
-auto ProcessManager::getProcFilePath(int pid,
-                                     const std::string &file) -> std::string {
-    return "/proc/" + std::to_string(pid) + "/" + file;
-}
-#endif
-
-auto parseAddressPort(const std::string &addressPort)
-    -> std::pair<std::string, int> {
-    size_t colonPos = addressPort.find_last_of(':');
-    if (colonPos != std::string::npos) {
-        std::string address = addressPort.substr(0, colonPos);
-        int port = std::stoi(addressPort.substr(colonPos + 1));
-        return {address, port};
-    }
-    return {"", 0};
-}
-
-auto getNetworkConnections(int pid) -> std::vector<NetworkConnection> {
-    std::vector<NetworkConnection> connections;
-
-#ifdef _WIN32
-    // Windows: Use GetExtendedTcpTable to get TCP connections.
-    MIB_TCPTABLE_OWNER_PID *pTCPInfo = nullptr;
-    DWORD dwSize = 0;
-    GetExtendedTcpTable(nullptr, &dwSize, false, AF_INET,
-                        TCP_TABLE_OWNER_PID_ALL, 0);
-    pTCPInfo = (MIB_TCPTABLE_OWNER_PID *)malloc(dwSize);
-    if (GetExtendedTcpTable(pTCPInfo, &dwSize, false, AF_INET,
-                            TCP_TABLE_OWNER_PID_ALL, 0) == NO_ERROR) {
-        for (DWORD i = 0; i < pTCPInfo->dwNumEntries; ++i) {
-            if (pTCPInfo->table[i].dwOwningPid == pid) {
-                NetworkConnection conn;
-                conn.protocol = "TCP";
-                conn.localAddress =
-                    inet_ntoa(*(in_addr *)&pTCPInfo->table[i].dwLocalAddr);
-                conn.localPort = ntohs((u_short)pTCPInfo->table[i].dwLocalPort);
-                conn.remoteAddress =
-                    inet_ntoa(*(in_addr *)&pTCPInfo->table[i].dwRemoteAddr);
-                conn.remotePort =
-                    ntohs((u_short)pTCPInfo->table[i].dwRemotePort);
-                connections.push_back(conn);
-                LOG_F(INFO, "Found TCP connection: Local {}:{} -> Remote {}:{}",
-                      conn.localAddress, conn.localPort, conn.remoteAddress,
-                      conn.remotePort);
-            }
-        }
-    } else {
-        LOG_F(ERROR, "Failed to get TCP table. Error: {}", GetLastError());
-    }
-    free(pTCPInfo);
-
-#elif __APPLE__
-    // macOS: Use `lsof` to get network connections.
-    std::array<char, 128> buffer;
-    std::string command = "lsof -i -n -P | grep " + std::to_string(pid);
-    FILE *pipe = popen(command.c_str(), "r");
-    if (!pipe) {
-        LOG_F(ERROR, "Failed to run lsof command.");
-        return connections;
-    }
-
-    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-        std::istringstream iss(buffer.data());
-        std::string proto, local, remote, ignore;
-        iss >> ignore >> ignore >> ignore >> proto >> local >> remote;
-
-        auto [localAddr, localPort] = parseAddressPort(local);
-        auto [remoteAddr, remotePort] = parseAddressPort(remote);
-
-        connections.push_back(
-            {proto, localAddr, remoteAddr, localPort, remotePort});
-        LOG_F(INFO, "Found {} connection: Local {}:{} -> Remote {}:{}", proto,
-              localAddr, localPort, remoteAddr, remotePort);
-    }
-    pclose(pipe);
-
-#elif __linux__ || __ANDROID__
-    // Linux/Android: Parse /proc/<pid>/net/tcp and /proc/<pid>/net/udp.
-    for (const auto &[protocol, path] :
-         {std::pair{"TCP", "net/tcp"}, {"UDP", "net/udp"}}) {
-        std::ifstream netFile("/proc/" + std::to_string(pid) + "/" + path);
-        if (!netFile.is_open()) {
-            LOG_F(ERROR, "Failed to open: /proc/{}/{}", pid, path);
-            continue;
-        }
-
-        std::string line;
-        std::getline(netFile, line);  // Skip header line.
-
-        while (std::getline(netFile, line)) {
-            std::istringstream iss(line);
-            std::string localAddress, remoteAddress, ignore;
-            int state, inode;
-
-            // Parse the fields from the /proc file.
-            iss >> ignore >> localAddress >> remoteAddress >> std::hex >>
-                state >> ignore >> ignore >> ignore >> inode;
-
-            auto [localAddr, localPort] = parseAddressPort(localAddress);
-            auto [remoteAddr, remotePort] = parseAddressPort(remoteAddress);
-
-            connections.push_back(
-                {protocol, localAddr, remoteAddr, localPort, remotePort});
-            LOG_F(INFO, "Found {} connection: Local {}:{} -> Remote {}:{}",
-                  protocol, localAddr, localPort, remoteAddr, remotePort);
-        }
-    }
-#endif
-
-    return connections;
-}
-
 auto getProcessIdByName(const std::string &processName) -> std::vector<int> {
     std::vector<int> pids;
 #ifdef _WIN32
@@ -824,28 +522,26 @@ auto getProcessIdByName(const std::string &processName) -> std::vector<int> {
 
     CloseHandle(hSnapshot);
 #elif defined(__linux__)
-    DIR *dir = opendir("/proc");
-    if (!dir) {
-        LOG_F(ERROR, "Failed to open /proc directory.");
-        return pids;
-    }
-
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != nullptr) {
-        if (isdigit(entry->d_name[0])) {
-            std::string pid_dir = std::string("/proc/") + entry->d_name;
-            std::ifstream cmd_file(pid_dir + "/comm");
-            if (cmd_file) {
-                std::string cmd_name;
-                std::getline(cmd_file, cmd_name);
-                if (cmd_name == processName) {
-                    pids.push_back(
-                        static_cast<pid_t>(std::stoi(entry->d_name)));
+    try {
+        for (const auto &entry : fs::directory_iterator("/proc")) {
+            if (entry.is_directory()) {
+                const std::string DIR_NAME = entry.path().filename().string();
+                if (std::all_of(DIR_NAME.begin(), DIR_NAME.end(), ::isdigit)) {
+                    std::ifstream cmdFile(entry.path() / "comm");
+                    if (cmdFile) {
+                        std::string cmdName;
+                        std::getline(cmdFile, cmdName);
+                        if (cmdName == processName) {
+                            pids.push_back(
+                                static_cast<pid_t>(std::stoi(DIR_NAME)));
+                        }
+                    }
                 }
             }
         }
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Error reading /proc directory: {}", e.what());
     }
-    closedir(dir);
 #elif defined(__APPLE__)
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
     struct kinfo_proc *processList = nullptr;
@@ -971,23 +667,47 @@ auto getWindowsPrivileges(int pid) -> PrivilegesInfo {
 
 #else
 // Get current user and group privileges on POSIX systems
-auto get_posix_privileges() -> PrivilegesInfo {
+auto getPosixPrivileges(pid_t pid) -> PrivilegesInfo {
     PrivilegesInfo info;
-    uid_t uid = getuid();    // Real user ID
-    gid_t gid = getgid();    // Real group ID
-    uid_t euid = geteuid();  // Effective user ID
-    gid_t egid = getegid();  // Effective group ID
+    std::string procPath = "/proc/" + std::to_string(pid);
+
+    // Read UID and GID from /proc/[pid]/status
+    std::ifstream statusFile(procPath + "/status");
+    if (!statusFile) {
+        LOG_F(ERROR, "Failed to open /proc/{}/status", pid);
+        return info;
+    }
+
+    std::string line;
+    uid_t uid = -1;
+    uid_t euid = -1;
+    gid_t gid = -1;
+    gid_t egid = -1;
+    
+    std::regex uidRegex(R"(Uid:\s+(\d+)\s+(\d+))");
+    std::regex gidRegex(R"(Gid:\s+(\d+)\s+(\d+))");
+    std::smatch match;
+
+    while (std::getline(statusFile, line)) {
+        if (std::regex_search(line, match, uidRegex)) {
+            uid = std::stoi(match[1]);
+            euid = std::stoi(match[2]);
+        } else if (std::regex_search(line, match, gidRegex)) {
+            gid = std::stoi(match[1]);
+            egid = std::stoi(match[2]);
+        }
+    }
 
     struct passwd *pw = getpwuid(uid);
     struct group *gr = getgrgid(gid);
 
-    if (pw) {
+    if (pw != nullptr) {
         info.username = pw->pw_name;
         LOG_F(INFO, "User: {} (UID: {})", info.username, uid);
     } else {
         LOG_F(ERROR, "Failed to get user information for UID: {}", uid);
     }
-    if (gr) {
+    if (gr != nullptr) {
         info.groupname = gr->gr_name;
         LOG_F(INFO, "Group: {} (GID: {})", info.groupname, gid);
     } else {
@@ -1000,36 +720,39 @@ auto get_posix_privileges() -> PrivilegesInfo {
         if (epw != nullptr) {
             LOG_F(INFO, "Effective User: {} (EUID: {})", epw->pw_name, euid);
         } else {
-            LOG_F(ERROR,
-                  "Failed to get effective user information for EUID: {}",
+            LOG_F(ERROR, "Failed to get effective user information for EUID: {}",
                   euid);
         }
     }
 
     if (gid != egid) {
         struct group *egr = getgrgid(egid);
-        if (egr) {
+        if (egr != nullptr) {
             LOG_F(INFO, "Effective Group: {} (EGID: {})", egr->gr_name, egid);
         } else {
-            LOG_F(ERROR,
-                  "Failed to get effective group information for EGID: {}",
+            LOG_F(ERROR, "Failed to get effective group information for EGID: {}",
                   egid);
         }
     }
 
 #if defined(__linux__) && __has_include(<sys/capability.h>)
     // Check process capabilities on Linux systems
-    cap_t caps = cap_get_proc();
-    if (caps) {
-        info.privileges.push_back(cap_to_text(caps, nullptr));
-        LOG_F(INFO, "Capabilities: {}", cap_to_text(caps, nullptr));
-        cap_free(caps);
+    std::ifstream capFile(procPath + "/status");
+    if (capFile) {
+        std::string capLine;
+        while (std::getline(capFile, capLine)) {
+            if (capLine.find("CapEff:") == 0) {
+                info.privileges.push_back(capLine);
+                LOG_F(INFO, "Capabilities: {}", capLine);
+            }
+        }
     } else {
-        LOG_F(ERROR, "Failed to get capabilities.");
+        LOG_F(ERROR, "Failed to open /proc/{}/status", pid);
     }
 #endif
 
     return info;
 }
 #endif
+
 }  // namespace atom::system

@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <future>
+#include <optional>
 
 #include "atom/error/exception.hpp"
 
@@ -133,6 +134,26 @@ public:
             THROW_OBJ_NOT_EXIST("Future has been cancelled");
         }
         return future_.get();
+    }
+
+    template <typename F>
+    auto catching(F &&func) {
+        using ResultType = T;
+        auto sharedFuture = std::make_shared<std::shared_future<T>>(future_);
+        return EnhancedFuture<ResultType>(
+            std::async(std::launch::async, [sharedFuture,
+                                            func = std::forward<F>(
+                                                func)]() mutable {
+                try {
+                    if (sharedFuture->valid()) {
+                        return sharedFuture->get();
+                    }
+                    THROW_INVALID_FUTURE_EXCEPTION(
+                        "Future is invalid or cancelled");
+                } catch (...) {
+                    return func(std::current_exception());
+                }
+            }).share());
     }
 
     /**

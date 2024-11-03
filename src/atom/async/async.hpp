@@ -22,6 +22,7 @@ Description: A simple but useful async worker manager
 #include <memory>
 #include <vector>
 
+#include "atom/async/future.hpp"
 #include "atom/error/exception.hpp"
 
 class TimeoutException : public atom::error::RuntimeError {
@@ -342,13 +343,13 @@ enum class BackoffStrategy { FIXED, LINEAR, EXPONENTIAL };
  */
 template <typename Func, typename Callback, typename ExceptionHandler,
           typename CompleteHandler, typename... Args>
-auto asyncRetry(Func &&func, int attemptsLeft,
-                std::chrono::milliseconds initialDelay,
-                BackoffStrategy strategy,
-                std::chrono::milliseconds maxTotalDelay, Callback &&callback,
-                ExceptionHandler &&exceptionHandler,
-                CompleteHandler &&completeHandler, Args &&...args)
-    -> std::future<typename std::invoke_result_t<Func, Args...>> {
+auto asyncRetryImpl(Func &&func, int attemptsLeft,
+                    std::chrono::milliseconds initialDelay,
+                    BackoffStrategy strategy,
+                    std::chrono::milliseconds maxTotalDelay,
+                    Callback &&callback, ExceptionHandler &&exceptionHandler,
+                    CompleteHandler &&completeHandler, Args &&...args) ->
+    typename std::invoke_result_t<Func, Args...> {
     using ReturnType = typename std::invoke_result_t<Func, Args...>;
 
     auto attempt = std::async(std::launch::async, std::forward<Func>(func),
@@ -359,15 +360,12 @@ auto asyncRetry(Func &&func, int attemptsLeft,
             attempt.get();
             callback();
             completeHandler();
-            return std::async(std::launch::async, [] {});
+            return;
         } else {
             auto result = attempt.get();
             callback();
             completeHandler();
-            return std::async(std::launch::async,
-                              [result = std::move(result)]() mutable {
-                                  return std::move(result);
-                              });
+            return result;
         }
     } catch (const std::exception &e) {
         exceptionHandler(e);  // Call custom exception handler
@@ -395,12 +393,62 @@ auto asyncRetry(Func &&func, int attemptsLeft,
         // attempt
         maxTotalDelay -= initialDelay;
 
-        return asyncRetry(std::forward<Func>(func), attemptsLeft - 1,
-                          initialDelay, strategy, maxTotalDelay,
-                          std::forward<Callback>(callback),
-                          std::forward<ExceptionHandler>(exceptionHandler),
-                          std::forward<CompleteHandler>(completeHandler),
-                          std::forward<Args>(args)...);
+        return asyncRetryImpl(std::forward<Func>(func), attemptsLeft - 1,
+                              initialDelay, strategy, maxTotalDelay,
+                              std::forward<Callback>(callback),
+                              std::forward<ExceptionHandler>(exceptionHandler),
+                              std::forward<CompleteHandler>(completeHandler),
+                              std::forward<Args>(args)...);
+    }
+}
+
+template <typename Func, typename Callback, typename ExceptionHandler,
+          typename CompleteHandler, typename... Args>
+auto asyncRetry(Func &&func, int attemptsLeft,
+                std::chrono::milliseconds initialDelay,
+                BackoffStrategy strategy,
+                std::chrono::milliseconds maxTotalDelay, Callback &&callback,
+                ExceptionHandler &&exceptionHandler,
+                CompleteHandler &&completeHandler, Args &&...args)
+    -> std::future<typename std::invoke_result_t<Func, Args...>> {
+    using ReturnType = typename std::invoke_result_t<Func, Args...>;
+
+    return std::async(std::launch::async, [=]() mutable {
+        return asyncRetryImpl(std::forward<Func>(func), attemptsLeft,
+                              initialDelay, strategy, maxTotalDelay,
+                              std::forward<Callback>(callback),
+                              std::forward<ExceptionHandler>(exceptionHandler),
+                              std::forward<CompleteHandler>(completeHandler),
+                              std::forward<Args>(args)...);
+    });
+}
+
+template <typename Func, typename Callback, typename ExceptionHandler,
+          typename CompleteHandler, typename... Args>
+auto asyncRetryE(Func &&func, int attemptsLeft,
+                std::chrono::milliseconds initialDelay,
+                BackoffStrategy strategy,
+                std::chrono::milliseconds maxTotalDelay, Callback &&callback,
+                ExceptionHandler &&exceptionHandler,
+                CompleteHandler &&completeHandler, Args &&...args)
+    -> EnhancedFuture<typename std::invoke_result_t<Func, Args...>> {
+    using ReturnType = typename std::invoke_result_t<Func, Args...>;
+
+    auto future =
+        std::async(std::launch::async, [=]() mutable {
+            return asyncRetryImpl(
+                std::forward<Func>(func), attemptsLeft, initialDelay, strategy,
+                maxTotalDelay, std::forward<Callback>(callback),
+                std::forward<ExceptionHandler>(exceptionHandler),
+                std::forward<CompleteHandler>(completeHandler),
+                std::forward<Args>(args)...);
+        }).share();
+
+    if constexpr (std::is_same_v<ReturnType, void>) {
+        return EnhancedFuture<void>(std::shared_future<void>(future));
+    } else {
+        return EnhancedFuture<ReturnType>(
+            std::shared_future<ReturnType>(future));
     }
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cassert>
 #include <filesystem>
 #include <functional>
@@ -8,14 +9,12 @@
 #include <vector>
 
 #include "atom/error/exception.hpp"
-
 #include "atom/macro.hpp"
 
 namespace atom::io {
 
 namespace fs = std::filesystem;
 
-namespace {
 ATOM_INLINE auto stringReplace(std::string &str, const std::string &from,
                                const std::string &toStr) -> bool {
     std::size_t startPos = str.find(from);
@@ -35,9 +34,9 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
         auto currentChar = pattern[index];
         index += 1;
         if (currentChar == '*') {
-            resultString += ".*";
+            resultString.append(".*");
         } else if (currentChar == '?') {
-            resultString += ".";
+            resultString.append(".");
         } else if (currentChar == '[') {
             auto innerIndex = index;
             if (innerIndex < patternSize && pattern[innerIndex] == '!') {
@@ -50,14 +49,14 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
                 innerIndex += 1;
             }
             if (innerIndex >= patternSize) {
-                resultString += "\\[";
+                resultString.append("\\[");
             } else {
                 auto stuff = std::string(pattern.begin() + index,
                                          pattern.begin() + innerIndex);
 #if USE_ABSL
                 if (!absl::StrContains(stuff, "--")) {
 #else
-                if (stuff.find("--") == std::string::npos) {
+                if (stuff.contains("--")) {
 #endif
                     stringReplace(stuff, std::string{"\\"},
                                   std::string{R"(\\)"});
@@ -83,8 +82,6 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
 
                     chunks.emplace_back(pattern.begin() + index,
                                         pattern.begin() + innerIndex);
-                    // Escape backslashes and hyphens for set difference (--).
-                    // Hyphens that create ranges shouldn't be escaped.
                     bool first = false;
                     for (auto &chunk : chunks) {
                         stringReplace(chunk, std::string{"\\"},
@@ -92,15 +89,14 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
                         stringReplace(chunk, std::string{"-"},
                                       std::string{R"(\-)"});
                         if (first) {
-                            stuff += chunk;
+                            stuff.append(chunk);
                             first = false;
                         } else {
-                            stuff += "-" + chunk;
+                            stuff.append("-").append(chunk);
                         }
                     }
                 }
 
-                // Escape set operations (&&, ~~ and ||).
                 std::string result;
                 std::regex_replace(
                     std::back_inserter(result),           // result
@@ -114,14 +110,9 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
                 } else if (stuff[0] == '^' || stuff[0] == '[') {
                     stuff = "\\\\" + stuff;
                 }
-                resultString += "[" + stuff + "]";
+                resultString.append("[").append(stuff).append("]");
             }
         } else {
-            // SPECIAL_CHARS
-            // closing ')', '}' and ']'
-            // '-' (a range in character set)
-            // '&', '~', (extended character set operations)
-            // '#' (comment) and WHITESPACE (ignored) in verbose mode
             static std::string specialCharacters =
                 "()[]{}?*+-|^$\\.&~# \t\n\r\v\f";
             static std::map<int, std::string> specialCharactersMap;
@@ -136,12 +127,12 @@ ATOM_INLINE auto translate(const std::string &pattern) -> std::string {
 #if USE_ABSL
             if (absl::StrContains(specialCharacters, currentChar)) {
 #else
-            if (specialCharacters.find(currentChar) != std::string::npos) {
+            if (specialCharacters.contains(currentChar)) {
 #endif
-                resultString +=
-                    specialCharactersMap[static_cast<int>(currentChar)];
+                resultString.append(
+                    specialCharactersMap[static_cast<int>(currentChar)]);
             } else {
-                resultString += currentChar;
+                resultString.append(1, currentChar);
             }
         }
     }
@@ -159,10 +150,8 @@ ATOM_INLINE auto fnmatch(const fs::path &name,
 
 ATOM_INLINE auto filter(const std::vector<fs::path> &names,
                         const std::string &pattern) -> std::vector<fs::path> {
-    // std::cout << "Pattern: " << pattern << "\n";
     std::vector<fs::path> result;
     for (const auto &name : names) {
-        // std::cout << "Checking for " << name.string() << "\n";
         if (fnmatch(name, pattern)) {
             result.push_back(name);
         }
@@ -180,23 +169,32 @@ ATOM_INLINE auto expandTilde(fs::path path) -> fs::path {
 #else
     const char *homeVariable = "USER";
 #endif
-    char *home = nullptr;
+    std::string home;
+#ifdef _WIN32
     size_t len = 0;
-    _dupenv_s(&home, &len, homeVariable);
-    if (home == nullptr) {
+    char *homeCStr = nullptr;
+    _dupenv_s(&homeCStr, &len, homeVariable);
+    if (homeCStr) {
+        home = homeCStr;
+        free(homeCStr);
+    }
+#else
+    const char *homeCStr = getenv(homeVariable);
+    if (homeCStr) {
+        home = homeCStr;
+    }
+#endif
+    if (home.empty()) {
         THROW_INVALID_ARGUMENT(
             "error: Unable to expand `~` - HOME environment variable not set.");
     }
 
     std::string pathStr = path.string();
     if (pathStr[0] == '~') {
-        pathStr = std::string(home) + pathStr.substr(1, pathStr.size() - 1);
-        free(home);
+        pathStr = home + pathStr.substr(1, pathStr.size() - 1);
         return fs::path(pathStr);
-    } else {
-        free(home);
-        return path;
     }
+    return path;
 }
 
 ATOM_INLINE auto hasMagic(const std::string &pathname) -> bool {
@@ -244,7 +242,6 @@ ATOM_INLINE auto iterDirectory(const fs::path &dirname,
     return result;
 }
 
-// Recursively yields relative pathnames inside a literal directory.
 ATOM_INLINE auto rlistdir(const fs::path &dirname,
                           bool dironly) -> std::vector<fs::path> {
     std::vector<fs::path> result;
@@ -260,12 +257,9 @@ ATOM_INLINE auto rlistdir(const fs::path &dirname,
     return result;
 }
 
-// This helper function recursively yields relative pathnames inside a literal
-// directory.
 ATOM_INLINE auto glob2(const fs::path &dirname,
                        [[maybe_unused]] const std::string &pattern,
                        bool dironly) -> std::vector<fs::path> {
-    // std::cout << "In glob2\n";
     std::vector<fs::path> result;
     assert(isRecursive(pattern));
     for (auto &dir : rlistdir(dirname, dironly)) {
@@ -274,12 +268,8 @@ ATOM_INLINE auto glob2(const fs::path &dirname,
     return result;
 }
 
-// These 2 helper functions non-recursively glob inside a literal directory.
-// They return a list of basenames.  _glob1 accepts a pattern while _glob0
-// takes a literal basename (so it only has to check for its existence).
 ATOM_INLINE auto glob1(const fs::path &dirname, const std::string &pattern,
                        bool dironly) -> std::vector<fs::path> {
-    // std::cout << "In glob1\n";
     auto names = iterDirectory(dirname, dironly);
     std::vector<fs::path> filteredNames;
     for (auto &name : names) {
@@ -292,10 +282,8 @@ ATOM_INLINE auto glob1(const fs::path &dirname, const std::string &pattern,
 
 ATOM_INLINE auto glob0(const fs::path &dirname, const fs::path &basename,
                        bool /*dironly*/) -> std::vector<fs::path> {
-    // std::cout << "In glob0\n";
     std::vector<fs::path> result;
     if (basename.empty()) {
-        // 'q*x/' should match only directories.
         if (fs::is_directory(dirname)) {
             result = {basename};
         }
@@ -314,7 +302,6 @@ ATOM_INLINE auto glob(const std::string &pathname, bool recursive = false,
     auto path = fs::path(pathname);
 
     if (pathname[0] == '~') {
-        // expand tilde
         path = expandTilde(path);
     }
 
@@ -328,7 +315,6 @@ ATOM_INLINE auto glob(const std::string &pathname, bool recursive = false,
                 result.push_back(path);
             }
         } else {
-            // Patterns ending with a slash should match only directories
             if (fs::is_directory(dirname)) {
                 result.push_back(path);
             }
@@ -375,8 +361,6 @@ ATOM_INLINE auto glob(const std::string &pathname, bool recursive = false,
 
     return result;
 }
-
-}  // namespace
 
 static ATOM_INLINE auto glob(const std::string &pathname)
     -> std::vector<fs::path> {

@@ -15,6 +15,7 @@ Description: Some useful string functions
 #ifndef ATOM_UTILS_STRING_HPP
 #define ATOM_UTILS_STRING_HPP
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -176,6 +177,62 @@ auto stringToWString(const std::string& str) -> std::wstring;
  */
 [[nodiscard("the result of wstringToString is not used")]]
 auto wstringToString(const std::wstring& wstr) -> std::string;
+
+/**
+ * @brief Converts a string to a long integer.
+ *
+ * @param str The string to convert.
+ * @param idx A pointer to the index of the first character after the number.
+ * @param base The base of the number (default is 10).
+ * @return The converted long integer.
+ */
+[[nodiscard("the result of stol is not used")]]
+auto stod(std::string_view str, std::size_t* idx = nullptr) -> double;
+
+/**
+ * @brief Converts a string to a float.
+ *
+ * @param str The string to convert.
+ * @param idx A pointer to the index of the first character after the number.
+ * @return The converted float.
+ */
+[[nodiscard("the result of stof is not used")]]
+auto stof(std::string_view str, std::size_t* idx = nullptr) -> float;
+
+/**
+ * @brief Converts a string to an integer.
+ *
+ * @param str The string to convert.
+ * @param idx A pointer to the index of the first character after the number.
+ * @param base The base of the number (default is 10).
+ * @return The converted integer.
+ */
+[[nodiscard("the result of stoi is not used")]]
+auto stoi(std::string_view str, std::size_t* idx = nullptr,
+          int base = 10) -> int;
+
+/**
+ * @brief Converts a string to a long integer.
+ *
+ * @param str The string to convert.
+ * @param idx A pointer to the index of the first character after the number.
+ * @param base The base of the number (default is 10).
+ * @return The converted long integer.
+ */
+[[nodiscard("the result of stol is not used")]]
+auto stol(std::string_view str, std::size_t* idx = nullptr,
+          int base = 10) -> long;
+
+/**
+ * @brief Splits a string into multiple strings.
+ *
+ * @param str The input string.
+ * @param delimiter The delimiter.
+ * @return The array of split strings.
+ */
+[[nodiscard("the result of nstrtok is not used")]]
+auto nstrtok(std::string_view& str,
+             const std::string_view& delims) -> std::optional<std::string_view>;
 }  // namespace atom::utils
 
 #endif

@@ -446,7 +446,7 @@ enum class FileOption { PATH, NAME };
  * @remark The file type is checked by the file extension.
  */
 [[nodiscard]] auto checkFileTypeInFolder(
-    const std::string &folderPath, const std::string &fileType,
+    const std::string &folderPath, const std::vector<std::string> &fileTypes,
     FileOption fileOption) -> std::vector<std::string>;
 
 /**
@@ -576,6 +576,9 @@ auto getExecutableNameFromPath(const std::string &path) -> std::string;
 auto checkPathType(const fs::path &path) -> PathType;
 
 auto countLinesInFile(const std::string &filePath) -> std::optional<int>;
+
+auto searchExecutableFiles(const fs::path &dir, const std::string &searchStr)
+    -> std::vector<fs::path>;
 }  // namespace atom::io
 
 #endif

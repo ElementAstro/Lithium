@@ -162,7 +162,14 @@ public:
      */
     auto setValue(const std::string& key_path, const json& value) -> bool;
 
+    /**
+     * @brief Appends a value to an array at the specified key path.
+     * @param key_path The path to the array.
+     * @param value The JSON value to append.
+     * @return bool True if the value was successfully appended, false otherwise.
+     */
     auto appendValue(const std::string& key_path, const json& value) -> bool;
+
 
     /**
      * @brief Deletes the value associated with the given key path.

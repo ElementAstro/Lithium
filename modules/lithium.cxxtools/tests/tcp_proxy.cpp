@@ -12,7 +12,7 @@ Description: Unit tests for Tcp proxy server
 
 *************************************************/
 
-#include "tcp_proxy.cpp"
+#include "tcp_proxy.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

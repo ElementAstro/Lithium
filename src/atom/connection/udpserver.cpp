@@ -27,6 +27,7 @@ Description: A simple UDP server.
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <cstring>
 #endif
 
 #include "atom/log/loguru.hpp"
@@ -34,7 +35,7 @@ Description: A simple UDP server.
 namespace atom::connection {
 class UdpSocketHub::Impl {
 public:
-    Impl() : running_(false), socket_(INVALID_SOCKET) {}
+    Impl() : running_(false), socket_(-1) {}  // Use -1 for Linux
 
     ~Impl() { stop(); }
 
@@ -49,7 +50,7 @@ public:
         }
 
         socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (socket_ == INVALID_SOCKET) {
+        if (socket_ == -1) {  // Use -1 for Linux
             LOG_F(ERROR, "Failed to create socket.");
             cleanupNetworking();
             return;
@@ -61,7 +62,7 @@ public:
         serverAddr.sin_addr.s_addr = INADDR_ANY;
 
         if (bind(socket_, reinterpret_cast<sockaddr*>(&serverAddr),
-                 sizeof(serverAddr)) == SOCKET_ERROR) {
+                 sizeof(serverAddr)) < 0) {  // Use < 0 for Linux
             LOG_F(ERROR, "Bind failed with error.");
             closeSocket();
             cleanupNetworking();
@@ -122,7 +123,7 @@ public:
 
         if (sendto(socket_, message.data(), message.size(), 0,
                    reinterpret_cast<sockaddr*>(&targetAddr),
-                   sizeof(targetAddr)) == SOCKET_ERROR) {
+                   sizeof(targetAddr)) < 0) {  // Use < 0 for Linux
             LOG_F(ERROR, "Failed to send message.");
         }
     }
@@ -133,7 +134,7 @@ private:
         WSADATA wsaData;
         return WSAStartup(MAKEWORD(2, 2), &wsaData) == 0;
 #else
-        return true;
+        return true;  // On Linux, no initialization needed
 #endif
     }
 
@@ -147,9 +148,11 @@ private:
 #ifdef _WIN32
         closesocket(socket_);
 #else
-        close(socket_);
+        if (socket_ != -1) {
+            close(socket_);
+        }
 #endif
-        socket_ = INVALID_SOCKET;
+        socket_ = -1;  // Use -1 for Linux
     }
 
     void receiveMessages() {
@@ -161,7 +164,7 @@ private:
             const auto bytesReceived = recvfrom(
                 socket_, buffer, sizeof(buffer), 0,
                 reinterpret_cast<sockaddr*>(&clientAddr), &clientAddrSize);
-            if (bytesReceived == SOCKET_ERROR) {
+            if (bytesReceived < 0) {  // Use < 0 for Linux
                 LOG_F(ERROR, "recvfrom failed with error.");
                 continue;
             }
@@ -178,7 +181,7 @@ private:
     }
 
     std::atomic<bool> running_;
-    SOCKET socket_;
+    int socket_;  // Use int for Linux
     std::jthread receiverThread_;
     std::vector<MessageHandler> handlers_;
     std::mutex handlersMutex_;

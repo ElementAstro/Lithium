@@ -107,7 +107,7 @@ void LoggerManager::Impl::uploadFile(const std::string &filePath) {
     atom::web::CurlWrapper curl;
     curl.setUrl("https://lightapt.com/upload");
     curl.setRequestMethod("POST");
-    curl.setHeader("Content-Type", "application/octet-stream");
+    curl.addHeader("Content-Type", "application/octet-stream");
     curl.setRequestBody(encryptedContent);
 
     curl.setOnErrorCallback([](CURLcode error) {
@@ -119,7 +119,7 @@ void LoggerManager::Impl::uploadFile(const std::string &filePath) {
                response);
     });
 
-    curl.performRequest();
+    curl.perform();
 }
 
 auto LoggerManager::Impl::extractErrorMessages() -> std::vector<std::string> {

@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "atom/atom/macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::system {
 // Define a structure to hold locale information

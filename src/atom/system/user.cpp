@@ -36,6 +36,22 @@ Description: Some system functions to get user information.
 
 #include "atom/log/loguru.hpp"
 
+namespace std {
+template <>
+struct formatter<std::wstring> {
+    constexpr auto parse(format_parse_context &ctx) {
+        return ctx.end();
+    }
+
+    // 格式化输出
+    template <typename FormatContext>
+    auto format(const std::wstring &wstr, FormatContext &ctx) {
+        return format_to(ctx.out(), "{}",
+                         std::wstring_view(wstr.data(), wstr.size()));
+    }
+};
+}  // namespace std
+
 namespace atom::system {
 auto isRoot() -> bool {
     LOG_F(INFO, "isRoot called");
@@ -146,12 +162,11 @@ auto getUserGroups() -> std::vector<std::wstring> {
     for (int i = 0; i < groupCount; i++) {
         struct group *grp = getgrgid(groupsArray[i]);
         if (grp != nullptr) {
-            std::wstring groupName = L"";
+            std::wstring groupName;
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > converter;
             std::wstring nameStr = converter.from_bytes(grp->gr_name);
             groupName += nameStr;
             groups.push_back(groupName);
-            LOG_F(INFO, "Found group: {}", nameStr);
         }
     }
 

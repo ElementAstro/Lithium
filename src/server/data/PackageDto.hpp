@@ -144,7 +144,7 @@ class PackageJsonDto : public oatpp::DTO {
     DTO_FIELD_INFO(dependencies) {
         info->description = "Package dependencies";
     }
-    DTO_FIELD(List<DependenceDto>, dependencies);
+    DTO_FIELD(List<Object<DependenceDto>>, dependencies);
 };
 
 #include OATPP_CODEGEN_END(DTO)

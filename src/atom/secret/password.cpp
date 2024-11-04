@@ -12,8 +12,13 @@
 #elif defined(__APPLE__)
 #include <Security/Security.h>
 #elif defined(__linux__)
-#include <glib.h>
+#if __has_include(<libsecret-1/secrets.h>)
+#include <libsecret-1/secrets.h>
+#elif __has_include(<libsecret/secret.h>)
 #include <libsecret/secret.h>
+#elif __has_include(<secrets.h>)
+#include <secrets.h>
+#endif
 #endif
 
 #include "atom/error/exception.hpp"
@@ -228,7 +233,7 @@ void PasswordManager::deleteFromMacKeychain(const std::string& service,
     }
 }
 
-#elif defined(__linux__)
+#elif defined(__linux__) && (defined(__has_include) && __has_include(<libsecret-1/secrets.h>))
 void PasswordManager::storeToLinuxKeyring(
     const std::string& schema_name, const std::string& attribute_name,
     const std::string& encryptedPassword) {

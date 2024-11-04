@@ -64,7 +64,8 @@ ImageComponent::ImageComponent(const std::string& name) : Component(name) {
 
     def("stretch_wb", &Stretch_WhiteBalance, "utils",
         "Stretch white balance of a cv::Mat");
-    def("stretch_gray", &StretchGray, "utils", "Stretch gray of a cv::Mat");
+    // TODO: How th handle reference argument?
+    // def("stretch_gray", &StretchGray, "utils", "Stretch gray of a cv::Mat");
 }
 
 ImageComponent::~ImageComponent() {

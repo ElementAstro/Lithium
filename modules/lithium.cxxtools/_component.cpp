@@ -22,6 +22,7 @@ Description: Some useful tools written in c++
 #include "json2xml.hpp"
 #include "pci_generator.hpp"
 #include "xml2json.hpp"
+#include "yaml2json.hpp"
 
 using namespace lithium::cxxtools;
 
@@ -33,6 +34,8 @@ ToolsComponent::ToolsComponent(const std::string& name) : Component(name) {
     def("json_to_ini", &jsonToIni, "lithium.cxxtools", "Convert json to ini");
     def("json_to_xml", &jsonToXml, "lithium.cxxtools", "Convert json to xml");
     def("xml_to_json", &xmlToJson, "lithium.cxxtools", "Convert xml to json");
+    def("yaml_to_json", &yamlToJson, "lithium.cxxtools",
+        "Convert yaml to json");
     def("pci_generator", &parseAndGeneratePCIInfo, "lithium.cxxtools",
         "Generate pci id");
 }

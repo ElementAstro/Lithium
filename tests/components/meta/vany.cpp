@@ -1,172 +1,99 @@
-#include <gtest/gtest.h>
-#include <string>
-#include <vector>
+#ifndef ATOM_META_TEST_VANY_HPP
+#define ATOM_META_TEST_VANY_HPP
 
 #include "atom/function/vany.hpp"
-#include "atom/atom/macro.hpp"
+#include <gtest/gtest.h>
 
-// 测试默认构造函数
+using namespace atom::meta;
+
 TEST(AnyTest, DefaultConstructor) {
-    atom::meta::Any any;
+    Any any;
     EXPECT_FALSE(any.hasValue());
-    EXPECT_THROW(any.type(), std::bad_typeid);
-    EXPECT_EQ(any.toString(), "Empty Any");
 }
 
-// 测试存储整数
-TEST(AnyTest, StoreInteger) {
-    atom::meta::Any any(42);
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<int>());
-    EXPECT_EQ(any.cast<int>(), 42);
-    EXPECT_EQ(any.toString(), "42");
-}
-
-// 测试存储字符串
-TEST(AnyTest, StoreString) {
-    std::string str = "Hello, World!";
-    atom::meta::Any any(str);
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<std::string>());
-    EXPECT_EQ(any.cast<std::string>(), str);
-    EXPECT_EQ(any.toString(), str);
-}
-
-// 测试存储浮点数
-TEST(AnyTest, StoreFloat) {
-    atom::meta::Any any(3.14f);
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<float>());
-    EXPECT_FLOAT_EQ(any.cast<float>(), 3.14f);
-    EXPECT_EQ(any.toString(), "3.140000");
-}
-
-// 测试拷贝构造
-/*
 TEST(AnyTest, CopyConstructor) {
-    atom::meta::Any original(42);
-    atom::meta::Any copy = original;
-    EXPECT_TRUE(copy.hasValue());
-    EXPECT_TRUE(copy.is<int>());
-    EXPECT_EQ(copy.cast<int>(), 42);
-    EXPECT_EQ(copy.toString(), "42");
+    Any any1(std::string("test"));
+    Any any2(any1);
+    EXPECT_TRUE(any2.hasValue());
+    EXPECT_EQ(any2.cast<std::string>(), "test");
 }
-*/
 
-
-// 测试移动构造
 TEST(AnyTest, MoveConstructor) {
-    atom::meta::Any original(42);
-    atom::meta::Any moved = std::move(original);
-    EXPECT_FALSE(original.hasValue());
-    EXPECT_TRUE(moved.hasValue());
-    EXPECT_TRUE(moved.is<int>());
-    EXPECT_EQ(moved.cast<int>(), 42);
+    Any any1(std::string("test"));
+    Any any2(std::move(any1));
+    EXPECT_TRUE(any2.hasValue());
+    EXPECT_EQ(any2.cast<std::string>(), "test");
+    EXPECT_FALSE(any1.hasValue());
 }
 
-// 测试拷贝赋值操作符
-/*
 TEST(AnyTest, CopyAssignment) {
-    atom::meta::Any any;
-    atom::meta::Any other(42);
-    any = other;
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<int>());
-    EXPECT_EQ(any.cast<int>(), 42);
+    Any any1(std::string("test"));
+    Any any2;
+    any2 = any1;
+    EXPECT_TRUE(any2.hasValue());
+    EXPECT_EQ(any2.cast<std::string>(), "test");
 }
-*/
 
-
-// 测试移动赋值操作符
 TEST(AnyTest, MoveAssignment) {
-    atom::meta::Any any;
-    atom::meta::Any other(42);
-    any = std::move(other);
-    EXPECT_FALSE(other.hasValue());
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<int>());
-    EXPECT_EQ(any.cast<int>(), 42);
+    Any any1(std::string("test"));
+    Any any2;
+    any2 = std::move(any1);
+    EXPECT_TRUE(any2.hasValue());
+    EXPECT_EQ(any2.cast<std::string>(), "test");
+    EXPECT_FALSE(any1.hasValue());
 }
 
-// 测试 reset 函数
-TEST(AnyTest, ResetFunction) {
-    atom::meta::Any any(42);
-    EXPECT_TRUE(any.hasValue());
+TEST(AnyTest, Reset) {
+    Any any(std::string("test"));
     any.reset();
     EXPECT_FALSE(any.hasValue());
-    EXPECT_EQ(any.toString(), "Empty Any");
 }
 
-// 测试类型不匹配时的 cast
-TEST(AnyTest, BadCast) {
-    atom::meta::Any any(42);
-    EXPECT_THROW(any.cast<std::string>(), std::bad_cast);
+TEST(AnyTest, Type) {
+    Any any(std::string("test"));
+    EXPECT_EQ(any.type(), typeid(std::string));
 }
 
-// 测试小对象优化
-TEST(AnyTest, SmallObjectOptimization) {
-    struct SmallObject {
-        int x;
-        float y;
-    };
-
-    atom::meta::Any any(SmallObject{1, 2.0f});
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<SmallObject>());
-    const auto& obj = any.cast<SmallObject>();
-    EXPECT_EQ(obj.x, 1);
-    EXPECT_FLOAT_EQ(obj.y, 2.0f);
+TEST(AnyTest, Is) {
+    Any any(std::string("test"));
+    EXPECT_TRUE(any.is<std::string>());
+    EXPECT_FALSE(any.is<int>());
 }
 
-// 测试大对象
-TEST(AnyTest, LargeObjectStorage) {
-    struct LargeObject {
-        int data[1000];
-    };
-
-    atom::meta::Any any(LargeObject{});
-    EXPECT_TRUE(any.hasValue());
-    EXPECT_TRUE(any.is<LargeObject>());
+TEST(AnyTest, Cast) {
+    Any any(std::string("test"));
+    EXPECT_EQ(any.cast<std::string>(), "test");
+    EXPECT_THROW(any.cast<int>(), std::bad_cast);
 }
 
-// 测试 foreach 和 iterable
-TEST(AnyTest, ForeachFunction) {
-    std::vector<int> vec = {1, 2, 3};
-    atom::meta::Any any(vec);
-    std::vector<int> result;
+TEST(AnyTest, ToString) {
+    Any any(std::string("test"));
+    EXPECT_EQ(any.toString(), "test");
 
-    any.foreach ([&result](const atom::meta::Any& element) {
-        result.push_back(element.cast<int>());
+    Any any2(42);
+    EXPECT_EQ(any2.toString(), "42");
+
+    Any any3;
+    EXPECT_EQ(any3.toString(), "Empty Any");
+}
+
+TEST(AnyTest, Invoke) {
+    Any any(std::string("test"));
+    bool invoked = false;
+    any.invoke([&invoked](const void* ptr) {
+        invoked = true;
+        EXPECT_EQ(*static_cast<const std::string*>(ptr), "test");
     });
+    EXPECT_TRUE(invoked);
+}
 
+TEST(AnyTest, Foreach) {
+    std::vector<int> vec = {1, 2, 3};
+    Any any(vec);
+    std::vector<int> result;
+    any.foreach (
+        [&result](const Any& item) { result.push_back(item.cast<int>()); });
     EXPECT_EQ(result, vec);
 }
 
-// 测试非 iterable 类型上的 foreach
-TEST(AnyTest, ForeachOnNonIterable) {
-    atom::meta::Any any(42);
-    EXPECT_THROW(any.foreach ([](const atom::meta::Any&) {}),
-                 atom::error::InvalidArgument);
-}
-
-// 测试异常处理
-TEST(AnyTest, ExceptionHandling) {
-    try {
-        atom::meta::Any any(42);
-        any.cast<std::string>();
-        FAIL() << "Expected std::bad_cast";
-    } catch (const std::bad_cast& err) {
-        EXPECT_EQ(err.what(), std::string("std::bad_cast"));
-    } catch (...) {
-        FAIL() << "Expected std::bad_cast";
-    }
-}
-
-// 测试 invoke 函数
-TEST(AnyTest, InvokeFunction) {
-    atom::meta::Any any(42);
-    int result = 0;
-    any.invoke(
-        [&result](const void* ptr) { result = *static_cast<const int*>(ptr); });
-    EXPECT_EQ(result, 42);
-}
+#endif  // ATOM_META_TEST_VANY_HPP

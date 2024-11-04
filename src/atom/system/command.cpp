@@ -87,7 +87,7 @@ auto executeCommandInternal(
     std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
 
     if (!username.empty() && !domain.empty() && !password.empty()) {
-        if (!_CreateProcessAsUser(command, username, domain, password)) {
+        if (!createProcessAsUser(command, username, domain, password)) {
             LOG_F(ERROR, "Failed to run command '{}' as user '{}\\{}'.",
                   command, domain, username);
             THROW_RUNTIME_ERROR("Failed to run command as user.");

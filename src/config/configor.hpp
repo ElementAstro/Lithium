@@ -166,10 +166,10 @@ public:
      * @brief Appends a value to an array at the specified key path.
      * @param key_path The path to the array.
      * @param value The JSON value to append.
-     * @return bool True if the value was successfully appended, false otherwise.
+     * @return bool True if the value was successfully appended, false
+     * otherwise.
      */
     auto appendValue(const std::string& key_path, const json& value) -> bool;
-
 
     /**
      * @brief Deletes the value associated with the given key path.
@@ -184,6 +184,19 @@ public:
      * @return bool True if a value exists for the key path, false otherwise.
      */
     [[nodiscard]] auto hasValue(const std::string& key_path) const -> bool;
+
+    /**
+     * @brief Retrieves all keys in the configuration.
+     * @return std::vector<std::string> A vector of keys in the configuration.
+     */
+    [[nodiscard]] auto getKeys() const -> std::vector<std::string>;
+
+    /**
+     * @brief Lists all configuration files in specified directory.
+     * @return std::vector<std::string> A vector of paths to configuration
+     * files.
+     */
+    [[nodiscard]] auto listPaths() const -> std::vector<std::string>;
 
     /**
      * @brief Loads configuration data from a file.

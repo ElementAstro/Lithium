@@ -20,6 +20,12 @@
 
 #include "utils/constant.hpp"
 
+template <typename T,
+          typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
+auto operator<<(std::ostream& os, const T& value) -> std::ostream& {
+    return os << static_cast<int>(value);
+}
+
 // Toolchain implementation
 class Toolchain::Impl {
 public:
@@ -106,7 +112,10 @@ auto Toolchain::getPath() const -> const std::string& {
 }
 
 auto Toolchain::getType() const -> Type {
-    LOG_F(INFO, "Getting type: {}", impl_->type);
+    LOG_F(INFO, "Getting type: {}",
+          (impl_->type == Type::Compiler
+               ? "Compiler"
+               : (impl_->type == Type::BuildTool ? "Build Tool" : "Unknown")));
     return impl_->type;
 }
 
@@ -121,7 +130,10 @@ void Toolchain::setPath(const std::string& path) {
 }
 
 void Toolchain::setType(Type type) {
-    LOG_F(INFO, "Setting type: {} -> {}", impl_->type, type);
+    LOG_F(INFO, "Setting type: {} -> {}", static_cast<int>(impl_->type),
+          type == Type::Compiler
+              ? "Compiler"
+              : (type == Type::BuildTool ? "Build Tool" : "Unknown"));
     impl_->type = type;
 }
 

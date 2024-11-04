@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "atom/atom/macro.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::meta {
 /*!

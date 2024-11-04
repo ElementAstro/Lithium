@@ -411,7 +411,6 @@ auto asyncRetry(Func &&func, int attemptsLeft,
                 ExceptionHandler &&exceptionHandler,
                 CompleteHandler &&completeHandler, Args &&...args)
     -> std::future<typename std::invoke_result_t<Func, Args...>> {
-    using ReturnType = typename std::invoke_result_t<Func, Args...>;
 
     return std::async(std::launch::async, [=]() mutable {
         return asyncRetryImpl(std::forward<Func>(func), attemptsLeft,

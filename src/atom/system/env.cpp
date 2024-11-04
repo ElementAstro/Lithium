@@ -42,8 +42,17 @@ public:
 
 Env::Env() : Env(0, nullptr) { LOG_F(INFO, "Env default constructor called"); }
 
-Env::Env(int argc, char **argv) {
-    LOG_F(INFO, "Env constructor called with argc: {}, argv: {}", argc, argv);
+Env::Env(int argc, char **argv) : impl_(std::make_shared<Impl>()) {
+    std::ostringstream oss;
+    oss << "Env constructor called with argc: " << argc << ", argv: [";
+    for (int i = 0; i < argc; ++i) {
+        oss << "\"" << argv[i] << "\"";
+        if (i < argc - 1) {
+            oss << ", ";
+        }
+    }
+    oss << "]";
+    LOG_F(INFO, "{}", oss.str());
     fs::path exePath;
 
 #ifdef _WIN32
@@ -99,7 +108,6 @@ Env::Env(int argc, char **argv) {
 }
 
 auto Env::createShared(int argc, char **argv) -> std::shared_ptr<Env> {
-    LOG_F(INFO, "Env::createShared called with argc: {}, argv: {}", argc, argv);
     return std::make_shared<Env>(argc, argv);
 }
 

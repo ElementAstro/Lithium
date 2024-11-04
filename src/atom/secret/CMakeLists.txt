@@ -45,6 +45,13 @@ target_sources(atom-secret-object
 add_library(atom-secret STATIC)
 
 target_link_libraries(atom-secret atom-secret-object ${ATOM_SECRET_LIBS})
+if (LINUX) 
+    find_package(Glib REQUIRED)
+    find_package(LibSecret REQUIRED)
+    target_link_libraries(atom-secret ${GLIB_LIBRARIES} ${LIBSECRET_LIBRARIES})
+    target_include_directories(atom-secret PUBLIC ${GLIB_INCLUDE_DIRS} ${LIBSECRET_INCLUDE_DIRS})
+    include_directories(${GLIB_INCLUDE_DIRS} ${LIBSECRET_INCLUDE_DIRS})
+endif()
 target_include_directories(atom-secret PUBLIC .)
 
 # Set library properties

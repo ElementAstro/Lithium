@@ -1,8 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "symbol.hpp"  // Include the implementation file
 
-#include "symbol.cpp"  // Include the implementation file
+#include <fstream>
 
 using ::testing::_;
 using ::testing::Return;
@@ -27,6 +28,9 @@ public:
 
 class AnalyzeLibraryTest : public ::testing::Test {
 protected:
+    using ExecFunction = std::string (*)(const char*);
+    ExecFunction exec;
+
     void SetUp() override {
         // Redirect exec to mock_exec
         exec = mock_exec;

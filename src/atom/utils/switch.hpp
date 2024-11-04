@@ -26,8 +26,8 @@ Description: Smart Switch just like javascript
 #include <vector>
 
 #include "atom/error/exception.hpp"
-#include "atom/type/noncopyable.hpp"
 #include "atom/macro.hpp"
+#include "atom/type/noncopyable.hpp"
 
 namespace atom::utils {
 
@@ -173,11 +173,13 @@ public:
     auto matchWithSpan(const std::string &str, std::span<Args...> args)
         -> std::optional<std::variant<std::monostate, int, std::string>> {
         if (auto iter = cases_.find(str); iter != cases_.end()) {
-            return std::apply(iter->second, std::tuple(args.begin(), args.end()));
+            return std::apply(iter->second,
+                              std::tuple(args.begin(), args.end()));
         }
 
-        if (defaultFunc_) {W
-            return std::apply(*defaultFunc_, std::tuple(args.begin(), args.end()));
+        if (defaultFunc_) {
+            return std::apply(*defaultFunc_,
+                              std::tuple(args.begin(), args.end()));
         }
 
         return std::nullopt;
@@ -190,7 +192,11 @@ public:
      * string keys.
      */
     ATOM_NODISCARD auto getCasesWithRanges() const -> std::vector<std::string> {
-        return cases_ | std::views::keys | std::ranges::to<std::vector>();
+        std::vector<std::string> result;
+        for (const auto &[key, value] : cases_) {
+            result.push_back(key);
+        }
+        return result;
     }
 
 private:

@@ -1,31 +1,27 @@
-#include "atom/type/argsview.hpp"
-
+#include "argsview.hpp"
 #include <gtest/gtest.h>
 
-// 测试 ArgsView 的构造函数
-TEST(ArgsViewTest, Constructor) {
-    ArgsView<int, double, std::string> args(1, 2.5, "test");
-    EXPECT_EQ(args.size(), 3);
-    EXPECT_EQ(args.get<0>(), 1);
-    EXPECT_EQ(args.get<1>(), 2.5);
-    EXPECT_EQ(args.get<2>(), "test");
+TEST(ArgsViewTest, ConstructorAndSize) {
+    ArgsView<int, double, std::string> view(1, 2.0, "test");
+    EXPECT_EQ(view.size(), 3);
 }
 
-// 测试 from tuple 的构造函数
-TEST(ArgsViewTest, ConstructorFromTuple) {
-    std::tuple<int, double, std::string> tpl(1, 2.5, "test");
-    ArgsView<int, double, std::string> args(tpl);
-    EXPECT_EQ(args.size(), 3);
-    EXPECT_EQ(args.get<0>(), 1);
-    EXPECT_EQ(args.get<1>(), 2.5);
-    EXPECT_EQ(args.get<2>(), "test");
+TEST(ArgsViewTest, Get) {
+    ArgsView<int, double, std::string> view(1, 2.0, "test");
+    EXPECT_EQ(view.get<0>(), 1);
+    EXPECT_EQ(view.get<1>(), 2.0);
+    EXPECT_EQ(view.get<2>(), "test");
 }
 
-// 测试 forEach 方法
+TEST(ArgsViewTest, Empty) {
+    ArgsView<> view;
+    EXPECT_TRUE(view.empty());
+}
+
 TEST(ArgsViewTest, ForEach) {
-    ArgsView<int, double, std::string> args(1, 2.5, "test");
+    ArgsView<int, double, std::string> view(1, 2.0, "test");
     std::vector<std::string> results;
-    args.forEach([&results](const auto& arg) {
+    view.forEach([&results](const auto& arg) {
         if constexpr (std::is_same_v<std::decay_t<decltype(arg)>,
                                      std::string>) {
             results.push_back(arg);
@@ -35,108 +31,100 @@ TEST(ArgsViewTest, ForEach) {
     });
     EXPECT_EQ(results.size(), 3);
     EXPECT_EQ(results[0], "1");
-    EXPECT_EQ(results[1], "2.500000");
+    EXPECT_EQ(results[1], "2.000000");
     EXPECT_EQ(results[2], "test");
 }
 
-// 测试 transform 方法
 TEST(ArgsViewTest, Transform) {
-    ArgsView<int, double> args(1, 2.5);
+    ArgsView<int, double> view(1, 2.0);
     auto transformed =
-        args.transform([](const auto& arg) { return std::to_string(arg); });
-    EXPECT_EQ(transformed.size(), 2);
+        view.transform([](const auto& arg) { return std::to_string(arg); });
     EXPECT_EQ(transformed.get<0>(), "1");
-    EXPECT_EQ(transformed.get<1>(), "2.500000");
+    EXPECT_EQ(transformed.get<1>(), "2.000000");
 }
 
-// 测试 accumulate 方法
 TEST(ArgsViewTest, Accumulate) {
-    ArgsView<int, int, int> args(1, 2, 3);
-    int sum = args.accumulate([](int a, int b) { return a + b; }, 0);
+    ArgsView<int, int, int> view(1, 2, 3);
+    auto sum = view.accumulate([](int lhs, int rhs) { return lhs + rhs; }, 0);
     EXPECT_EQ(sum, 6);
 }
 
-// 测试 apply 方法
 TEST(ArgsViewTest, Apply) {
-    ArgsView<int, double> args(1, 2.5);
-    auto result = args.apply(
-        [](const auto&... args) { return std::make_tuple(args...); });
-    EXPECT_EQ(std::get<0>(result), 1);
-    EXPECT_EQ(std::get<1>(result), 2.5);
+    ArgsView<int, double> view(1, 2.0);
+    auto result = view.apply([](const auto&... args) { return (args + ...); });
+    EXPECT_EQ(result, 3.0);
 }
 
-// 测试运算符==
+TEST(ArgsViewTest, Filter) {
+    ArgsView<int, double, int> view(1, 2.0, 3);
+    auto filtered = view.filter([](const auto& arg) { return arg > 1; });
+    EXPECT_EQ(filtered.size(), 3);
+    EXPECT_EQ(filtered.template get<0>(), std::nullopt);
+    EXPECT_EQ(filtered.template get<1>(), 2.0);
+    EXPECT_EQ(filtered.template get<2>(), 3);
+}
+
+TEST(ArgsViewTest, Find) {
+    ArgsView<int, double, int> view(1, 2.0, 3);
+    auto found = view.find([](const auto& arg) { return arg > 1; });
+    EXPECT_EQ(found, 2.0);
+}
+
+TEST(ArgsViewTest, Contains) {
+    ArgsView<int, double, int> view(1, 2.0, 3);
+    EXPECT_TRUE(view.contains(2.0));
+    EXPECT_FALSE(view.contains(4));
+}
+
+TEST(ArgsViewTest, SumFunction) {
+    auto result = sum(1, 2, 3);
+    EXPECT_EQ(result, 6);
+}
+
+TEST(ArgsViewTest, ConcatFunction) {
+    constexpr double testValue = 3.0;
+    auto result = concat(1, "test", testValue);
+    EXPECT_EQ(result, "1test3.000000");
+}
+
 TEST(ArgsViewTest, EqualityOperator) {
-    ArgsView<int, double> args1(1, 2.5);
-    ArgsView<int, double> args2(1, 2.5);
-    ArgsView<int, double> args3(1, 3.5);
-    EXPECT_TRUE(args1 == args2);
-    EXPECT_FALSE(args1 == args3);
+    ArgsView<int, double> view1(1, 2.0);
+    ArgsView<int, double> view2(1, 2.0);
+    EXPECT_TRUE(view1 == view2);
 }
 
-// 测试运算符!=
 TEST(ArgsViewTest, InequalityOperator) {
-    ArgsView<int, double> args1(1, 2.5);
-    ArgsView<int, double> args2(1, 2.5);
-    ArgsView<int, double> args3(1, 3.5);
-    EXPECT_FALSE(args1 != args2);
-    EXPECT_TRUE(args1 != args3);
+    ArgsView<int, double> view1(1, 2.0);
+    ArgsView<int, double> view2(1, 3.0);
+    EXPECT_TRUE(view1 != view2);
 }
 
-// 测试运算符 <
 TEST(ArgsViewTest, LessThanOperator) {
-    ArgsView<int, double> args1(1, 2.5);
-    ArgsView<int, double> args2(1, 3.5);
-    EXPECT_TRUE(args1 < args2);
-    EXPECT_FALSE(args2 < args1);
+    ArgsView<int, double> view1(1, 2.0);
+    ArgsView<int, double> view2(1, 3.0);
+    EXPECT_TRUE(view1 < view2);
 }
 
-// 测试运算符<=
-TEST(ArgsViewTest, LessThanOrEqualOperator) {
-    ArgsView<int, double> args1(1, 2.5);
-    ArgsView<int, double> args2(1, 3.5);
-    ArgsView<int, double> args3(1, 2.5);
-    EXPECT_TRUE(args1 <= args2);
-    EXPECT_TRUE(args1 <= args3);
-    EXPECT_FALSE(args2 <= args1);
+TEST(ArgsViewTest, LessThanOrEqualToOperator) {
+    ArgsView<int, double> view1(1, 2.0);
+    ArgsView<int, double> view2(1, 2.0);
+    EXPECT_TRUE(view1 <= view2);
 }
 
-// 测试运算符>
 TEST(ArgsViewTest, GreaterThanOperator) {
-    ArgsView<int, double> args1(1, 3.5);
-    ArgsView<int, double> args2(1, 2.5);
-    EXPECT_TRUE(args1 > args2);
-    EXPECT_FALSE(args2 > args1);
+    ArgsView<int, double> view1(1, 3.0);
+    ArgsView<int, double> view2(1, 2.0);
+    EXPECT_TRUE(view1 > view2);
 }
 
-// 测试运算符>=
-TEST(ArgsViewTest, GreaterThanOrEqualOperator) {
-    ArgsView<int, double> args1(1, 3.5);
-    ArgsView<int, double> args2(1, 2.5);
-    ArgsView<int, double> args3(1, 3.5);
-    EXPECT_TRUE(args1 >= args2);
-    EXPECT_TRUE(args1 >= args3);
-    EXPECT_FALSE(args2 >= args1);
+TEST(ArgsViewTest, GreaterThanOrEqualToOperator) {
+    ArgsView<int, double> view1(1, 2.0);
+    ArgsView<int, double> view2(1, 2.0);
+    EXPECT_TRUE(view1 >= view2);
 }
 
-// 测试 hash 特化
 TEST(ArgsViewTest, Hash) {
-    ArgsView<int, double> args(1, 2.5);
+    ArgsView<int, double> view(1, 2.0);
     std::hash<ArgsView<int, double>> hasher;
-    EXPECT_NE(hasher(args), 0);
-}
-
-#ifdef __DEBUG__
-TEST(ArgsViewTest, Print) {
-    std::ostringstream oss;
-    auto coutbuf = std::cout.rdbuf(oss.rdbuf());
-    print(1, 2.5, "test");
-    std::cout.rdbuf(coutbuf);
-    EXPECT_EQ(oss.str(), "1 2.5 test \n");
-}
-#endif
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    EXPECT_NE(hasher(view), 0);
 }

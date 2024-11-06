@@ -19,6 +19,7 @@ Description: Enhanced Address class for IPv4, IPv6, and Unix domain sockets.
 #include <string>
 #include <vector>
 
+namespace atom::web {
 /**
  * @class Address
  * @brief 基础类，表示通用的网络地址。
@@ -231,5 +232,6 @@ public:
         const Address& other, const std::string& mask) const -> bool override;
     [[nodiscard]] auto toHex() const -> std::string override;
 };
+}  // namespace atom::web
 
 #endif  // ATOM_WEB_ADDRESS_HPP

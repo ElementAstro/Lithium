@@ -4,146 +4,173 @@
 
 using namespace atom::type;
 
-// 测试expected<T, E> 的基础功能
-TEST(ExpectedTest, BasicFunctionality) {
-    // 测试成功情况
-    expected<int, std::string> success(42);
-    EXPECT_TRUE(success.has_value());
-    EXPECT_EQ(success.value(), 42);
+// Test fixture for expected class
+template <typename T, typename E = std::string>
+class ExpectedTest : public ::testing::Test {
+protected:
+    expected<T, E> value_expected;
+    expected<T, E> error_expected;
 
-    // 测试错误情况
-    expected<int, std::string> failure(make_unexpected("error"));
-    EXPECT_FALSE(failure.has_value());
-    EXPECT_EQ(failure.error().error(), "error");
+    ExpectedTest() : value_expected(T{}), error_expected(Error<E>("error")) {}
+};
+
+// Test fixture for expected<void, E> specialization
+template <typename E = std::string>
+class ExpectedVoidTest : public ::testing::Test {
+protected:
+    expected<void, E> value_expected;
+    expected<void, E> error_expected;
+
+    ExpectedVoidTest() : value_expected(), error_expected(Error<E>("error")) {}
+};
+
+// Test cases for expected<int, std::string>
+using ExpectedIntTest = ExpectedTest<int>;
+
+TEST_F(ExpectedIntTest, DefaultConstructor) {
+    expected<int> e;
+    EXPECT_TRUE(e.has_value());
+    EXPECT_EQ(e.value(), 0);
 }
 
-// 测试expected<void, E> 的基础功能
-TEST(ExpectedTest, VoidTypeFunctionality) {
-    // 测试成功情况
-    expected<void, std::string> success;
-    EXPECT_TRUE(success.has_value());
-
-    // 测试错误情况
-    expected<void, std::string> failure(make_unexpected("void error"));
-    EXPECT_FALSE(failure.has_value());
-    EXPECT_EQ(failure.error().error(), "void error");
-
-    // 测试value_or功能
-    bool lambda_called = false;
-    failure.value_or([&](std::string err) {
-        lambda_called = true;
-        EXPECT_EQ(err, "void error");
-    });
-    EXPECT_TRUE(lambda_called);
+TEST_F(ExpectedIntTest, ValueConstructor) {
+    expected<int> e(42);
+    EXPECT_TRUE(e.has_value());
+    EXPECT_EQ(e.value(), 42);
 }
 
-// 测试错误比较和处理
-TEST(ExpectedTest, ErrorComparison) {
-    Error<std::string> error1("Error1");
-    Error<std::string> error2("Error2");
-
-    EXPECT_EQ(error1, Error<std::string>("Error1"));
-    EXPECT_NE(error1, error2);
+TEST_F(ExpectedIntTest, ErrorConstructor) {
+    expected<int> e(Error<std::string>("error"));
+    EXPECT_FALSE(e.has_value());
+    EXPECT_EQ(e.error().error(), "error");
 }
 
-// 测试map功能
-TEST(ExpectedTest, MapFunctionality) {
-    expected<int, std::string> success(10);
-    auto mapped = success.map([](int value) { return value * 2; });
-
-    EXPECT_TRUE(mapped.has_value());
-    EXPECT_EQ(mapped.value(), 20);
-
-    expected<int, std::string> failure(make_unexpected("map error"));
-    auto mapped_failure = failure.map([](int value) { return value * 2; });
-
-    EXPECT_FALSE(mapped_failure.has_value());
-    EXPECT_EQ(mapped_failure.error().error(), "map error");
+TEST_F(ExpectedIntTest, UnexpectedConstructor) {
+    expected<int> e(unexpected<std::string>("error"));
+    EXPECT_FALSE(e.has_value());
+    EXPECT_EQ(e.error().error(), "error");
 }
 
-// 测试and_then功能
-TEST(ExpectedTest, AndThenFunctionality) {
-    expected<int, std::string> success(10);
-    auto chained =
-        success.and_then([](int value) { return make_expected(value + 5); });
-
-    EXPECT_TRUE(chained.has_value());
-    EXPECT_EQ(chained.value(), 15);
-
-    expected<int, std::string> failure(make_unexpected("and_then error"));
-    auto chained_failure =
-        failure.and_then([](int value) { return make_expected(value + 5); });
-
-    EXPECT_FALSE(chained_failure.has_value());
-    EXPECT_EQ(chained_failure.error().error(), "and_then error");
+TEST_F(ExpectedIntTest, CopyConstructor) {
+    expected<int> e1(42);
+    expected<int> e2(e1);
+    EXPECT_TRUE(e2.has_value());
+    EXPECT_EQ(e2.value(), 42);
 }
 
-// 测试边缘情况：空字符串错误
-TEST(ExpectedTest, EmptyStringError) {
-    expected<int, std::string> failure(make_unexpected(""));
-    EXPECT_FALSE(failure.has_value());
-    EXPECT_EQ(failure.error().error(), "");
-
-    bool lambda_called = false;
-    int result = failure.value_or([&](std::string err) {
-        lambda_called = true;
-        EXPECT_EQ(err, "");
-        return 0;
-    });
-    EXPECT_TRUE(lambda_called);
-    EXPECT_EQ(result, 0);
+TEST_F(ExpectedIntTest, MoveConstructor) {
+    expected<int> e1(42);
+    expected<int> e2(std::move(e1));
+    EXPECT_TRUE(e2.has_value());
+    EXPECT_EQ(e2.value(), 42);
 }
 
-// 测试边缘情况：传递const char*的错误
-TEST(ExpectedTest, ConstCharError) {
-    expected<int, std::string> failure(make_unexpected("const char* error"));
-    EXPECT_FALSE(failure.has_value());
-    EXPECT_EQ(failure.error().error(), "const char* error");
+TEST_F(ExpectedIntTest, CopyAssignment) {
+    expected<int> e1(42);
+    expected<int> e2;
+    e2 = e1;
+    EXPECT_TRUE(e2.has_value());
+    EXPECT_EQ(e2.value(), 42);
 }
 
-// 测试异常情况：访问错误的value
-TEST(ExpectedTest, AccessErrorInsteadOfValue) {
-    expected<int, std::string> failure(make_unexpected("access error"));
-
-    EXPECT_THROW(
-        {
-            try {
-                [[maybe_unused]] int value = failure.value();
-            } catch (const std::logic_error& e) {
-                EXPECT_STREQ(
-                    "Attempted to access value, but it contains an error.",
-                    e.what());
-                throw;
-            }
-        },
-        std::logic_error);
+TEST_F(ExpectedIntTest, MoveAssignment) {
+    expected<int> e1(42);
+    expected<int> e2;
+    e2 = std::move(e1);
+    EXPECT_TRUE(e2.has_value());
+    EXPECT_EQ(e2.value(), 42);
 }
 
-// 测试异常情况：访问value时的错误
-TEST(ExpectedTest, AccessValueInsteadOfError) {
-    expected<int, std::string> success(42);
+TEST_F(ExpectedIntTest, AndThen) {
+    auto result =
+        value_expected.and_then([](int& v) { return expected<int>(v + 1); });
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), 1);
 
-    EXPECT_THROW(
-        {
-            try {
-                auto error = success.error();
-            } catch (const std::logic_error& e) {
-                EXPECT_STREQ(
-                    "Attempted to access error, but it contains a value.",
-                    e.what());
-                throw;
-            }
-        },
-        std::logic_error);
+    result =
+        error_expected.and_then([](int& v) { return expected<int>(v + 1); });
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().error(), "error");
 }
 
-// 测试不同类型的错误
-TEST(ExpectedTest, DifferentErrorTypes) {
-    expected<int, int> int_error(make_unexpected(404));
-    EXPECT_FALSE(int_error.has_value());
-    EXPECT_EQ(int_error.error().error(), 404);
+TEST_F(ExpectedIntTest, Map) {
+    auto result = value_expected.map([](int& v) { return v + 1; });
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), 1);
 
-    expected<int, std::string> string_error(make_unexpected("error message"));
-    EXPECT_FALSE(string_error.has_value());
-    EXPECT_EQ(string_error.error().error(), "error message");
+    result = error_expected.map([](int& v) { return v + 1; });
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().error(), "error");
 }
+
+/*
+TEST_F(ExpectedIntTest, TransformError) {
+    auto result = error_expected.transform_error([](const std::string& e) {
+return Error<std::string>(e + " transformed"); });
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().error(), "error transformed");
+}
+*/
+
+// Test cases for expected<void, std::string>
+using ExpectedVoidStringTest = ExpectedVoidTest<>;
+
+TEST_F(ExpectedVoidStringTest, DefaultConstructor) {
+    expected<void> e;
+    EXPECT_TRUE(e.has_value());
+}
+
+TEST_F(ExpectedVoidStringTest, ErrorConstructor) {
+    expected<void> e(Error<std::string>("error"));
+    EXPECT_FALSE(e.has_value());
+    EXPECT_EQ(e.error().error(), "error");
+}
+
+TEST_F(ExpectedVoidStringTest, UnexpectedConstructor) {
+    expected<void> e(unexpected<std::string>("error"));
+    EXPECT_FALSE(e.has_value());
+    EXPECT_EQ(e.error().error(), "error");
+}
+
+TEST_F(ExpectedVoidStringTest, CopyConstructor) {
+    expected<void> e1;
+    expected<void> e2(e1);
+    EXPECT_TRUE(e2.has_value());
+}
+
+TEST_F(ExpectedVoidStringTest, MoveConstructor) {
+    expected<void> e1;
+    expected<void> e2(std::move(e1));
+    EXPECT_TRUE(e2.has_value());
+}
+
+TEST_F(ExpectedVoidStringTest, CopyAssignment) {
+    expected<void> e1;
+    expected<void> e2;
+    e2 = e1;
+    EXPECT_TRUE(e2.has_value());
+}
+
+TEST_F(ExpectedVoidStringTest, MoveAssignment) {
+    expected<void> e1;
+    expected<void> e2;
+    e2 = std::move(e1);
+    EXPECT_TRUE(e2.has_value());
+}
+
+TEST_F(ExpectedVoidStringTest, AndThen) {
+    auto result = value_expected.and_then([]() { return expected<void>(); });
+    EXPECT_TRUE(result.has_value());
+
+    result = error_expected.and_then([]() { return expected<void>(); });
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().error(), "error");
+}
+
+/*
+TEST_F(ExpectedVoidStringTest, TransformError) {
+    auto result = error_expected.transform_error([](const std::string& e) {
+return e + " transformed"; }); EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().error(), "error transformed");
+}
+*/

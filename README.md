@@ -69,3 +69,6 @@ Alternatively, utilize the provided quick-build scripts to streamline the proces
 ### Intellectual Inspiration
 
 Embarking on the journey with Lithium, we embrace curiosity and an unwavering pursuit of knowledge, echoing the adapted verse which reminds us that every attempt, though fraught with challenges and setbacks, is a necessary step toward wisdom and understanding. Together, let us navigate the vast cosmos of astronomical imaging, our technology the vessel, innovation our sail, advancing relentlessly forward.
+
+<figure><embed src="https://wakatime.com/share/@018d39f0-57c9-4a13-aedb-90454b61e6cc/e1b2b694-2ecc-4cfd-9c75-2d01b8581e4d.svg"></embed></figure>
+<figure><embed src="https://wakatime.com/share/@018d39f0-57c9-4a13-aedb-90454b61e6cc/d6c29fb7-c5b3-4ffc-8e17-16634c7b669a.svg"></embed></figure>

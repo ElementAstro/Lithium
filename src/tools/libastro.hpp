@@ -4,7 +4,7 @@
 #include <numbers>
 #include <tuple>
 
-namespace lithium {
+namespace lithium::tools {
 
 constexpr double JD2000 = 2451545.0;
 constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;

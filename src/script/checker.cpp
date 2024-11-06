@@ -46,6 +46,9 @@ public:
             std::vector<DangerItem> dangers;
             detectScriptTypeAndAnalyze(script, dangers);
             suggestSafeReplacements(script, dangers);
+            detectExternalCommands(script, dangers);
+            detectEnvironmentVariables(script, dangers);
+            detectFileOperations(script, dangers);
             int complexity = calculateComplexity(script);
             generateReport(dangers, complexity, output_json, format);
         } catch (const std::exception& e) {
@@ -77,6 +80,24 @@ private:
         return config;
     }
 
+    static auto loadConfigFromDatabase(const std::string& db_file) -> json {
+        if (!atom::io::isFileExists(db_file)) {
+            THROW_FILE_NOT_FOUND("Database file not found: " + db_file);
+        }
+        std::ifstream file(db_file);
+        if (!file.is_open()) {
+            THROW_FAIL_TO_OPEN_FILE("Unable to open database file: " + db_file);
+        }
+        json db;
+        try {
+            file >> db;
+        } catch (const json::parse_error& e) {
+            THROW_INVALID_FORMAT("Invalid JSON format in database file: " +
+                                 db_file);
+        }
+        return db;
+    }
+
     static auto isSkippableLine(const std::string& line) -> bool {
         return line.empty() ||
                std::regex_match(line, std::regex(R"(^\s*#.*)")) ||
@@ -97,13 +118,29 @@ private:
                          "CMD Security Issue", dangers);
         }
 #else
-        checkPattern(script, config_["bash_danger_patterns"],
-                     "Shell Script Security Issue", dangers);
+        if (detectPython(script)) {
+            checkPattern(script, config_["python_danger_patterns"],
+                         "Python Script Security Issue", dangers);
+        } else if (detectRuby(script)) {
+            checkPattern(script, config_["ruby_danger_patterns"],
+                         "Ruby Script Security Issue", dangers);
+        } else {
+            checkPattern(script, config_["bash_danger_patterns"],
+                         "Shell Script Security Issue", dangers);
+        }
 #endif
     }
 
     static bool detectPowerShell(const std::string& script) {
         return script.contains("param(") || script.contains("$PSVersionTable");
+    }
+
+    static bool detectPython(const std::string& script) {
+        return script.contains("import ") || script.contains("def ");
+    }
+
+    static bool detectRuby(const std::string& script) {
+        return script.contains("require ") || script.contains("def ");
     }
 
     void suggestSafeReplacements(const std::string& script,
@@ -118,6 +155,34 @@ private:
 #endif
         };
         checkReplacements(script, replacements, dangers);
+    }
+
+    void detectExternalCommands(const std::string& script,
+                                std::vector<DangerItem>& dangers) {
+        std::unordered_set<std::string> externalCommands = {
+#ifdef _WIN32
+            "Invoke-WebRequest",
+            "Invoke-RestMethod",
+#else
+            "curl",
+            "wget",
+#endif
+        };
+        checkExternalCommands(script, externalCommands, dangers);
+    }
+
+    void detectEnvironmentVariables(const std::string& script,
+                                    std::vector<DangerItem>& dangers) {
+        std::regex envVarPattern(R"(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)");
+        checkPattern(script, envVarPattern, "Environment Variable Usage",
+                     dangers);
+    }
+
+    void detectFileOperations(const std::string& script,
+                              std::vector<DangerItem>& dangers) {
+        std::regex fileOpPattern(
+            R"(\b(open|read|write|close|unlink|rename)\b)");
+        checkPattern(script, fileOpPattern, "File Operation", dangers);
     }
 
     static auto calculateComplexity(const std::string& script) -> int {
@@ -217,6 +282,64 @@ private:
                     if (!detectedIssues.contains(key)) {
                         dangers.emplace_back(
                             DangerItem{category, line, reason, lineNum, {}});
+                        detectedIssues.insert(key);
+                    }
+                }
+            }
+        }
+    }
+
+    static void checkPattern(const std::string& script,
+                             const std::regex& pattern,
+                             const std::string& category,
+                             std::vector<DangerItem>& dangers) {
+        std::unordered_set<std::string> detectedIssues;
+        std::istringstream scriptStream(script);
+        std::string line;
+        int lineNum = 0;
+
+        while (std::getline(scriptStream, line)) {
+            lineNum++;
+            if (isSkippableLine(line)) {
+                continue;
+            }
+
+            if (std::regex_search(line, pattern)) {
+                std::string key = std::to_string(lineNum) + ":" + category;
+                if (!detectedIssues.contains(key)) {
+                    dangers.emplace_back(DangerItem{
+                        category, line, "Detected usage", lineNum, {}});
+                    detectedIssues.insert(key);
+                }
+            }
+        }
+    }
+
+    static void checkExternalCommands(
+        const std::string& script,
+        const std::unordered_set<std::string>& externalCommands,
+        std::vector<DangerItem>& dangers) {
+        std::istringstream scriptStream(script);
+        std::string line;
+        int lineNum = 0;
+        std::unordered_set<std::string> detectedIssues;
+
+        while (std::getline(scriptStream, line)) {
+            lineNum++;
+            if (isSkippableLine(line)) {
+                continue;
+            }
+
+            for (const auto& command : externalCommands) {
+                if (line.find(command) != std::string::npos) {
+                    std::string key = std::to_string(lineNum) + ":" + command;
+                    if (!detectedIssues.contains(key)) {
+                        dangers.emplace_back(DangerItem{
+                            "External Command",
+                            line,
+                            "Detected usage of external command: " + command,
+                            lineNum,
+                            {}});
                         detectedIssues.insert(key);
                     }
                 }

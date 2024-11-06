@@ -799,11 +799,11 @@ public:
         }                                                                     \
     };
 
-        DEFINE_SCRIPT_GET_COROUTINE(ScriptJsonGetCoroutine, "json",
+        DEFINE_SCRIPT_GET_COROUTINE(ScriptJsonGetCoroutine, {"json"},
                                     GetScriptJsonCoroutine)
-        DEFINE_SCRIPT_GET_COROUTINE(ScriptYamlGetCoroutine, "yaml",
+        DEFINE_SCRIPT_GET_COROUTINE(ScriptYamlGetCoroutine, {"yaml"},
                                     GetScriptYamlCoroutine)
-        DEFINE_SCRIPT_GET_COROUTINE(ScriptXmlGetCoroutine, "xml",
+        DEFINE_SCRIPT_GET_COROUTINE(ScriptXmlGetCoroutine, {"xml"},
                                     GetScriptXmlCoroutine)
 
     public:

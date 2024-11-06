@@ -1,7 +1,9 @@
 #ifndef ATOM_EXTRA_BOOST_SYSTEM_HPP
 #define ATOM_EXTRA_BOOST_SYSTEM_HPP
 
+#if __has_include(<boost/system/error_category.hpp>)
 #include <boost/system/error_category.hpp>
+#endif
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 

@@ -1,116 +1,80 @@
 {
-    "danger_patterns": [
+    "powershell_danger_patterns": [
         {
-            "pattern": "\\brm\\s+-rf\\b",
-            "reason": "Potentially destructive operation"
+            "pattern": "Remove-Item -Recurse -Force",
+            "reason": "Potentially dangerous command that can delete files recursively and forcefully."
         },
         {
-            "pattern": "\\bsudo\\b",
-            "reason": "Elevated permissions, dangerous"
-        },
-        {
-            "pattern": "\\bmkfs\\b",
-            "reason": "Filesystem creation, dangerous operation"
-        },
-        {
-            "pattern": "\\|",
-            "reason": "Pipeline usage might lead to unintended consequences"
-        },
-        {
-            "pattern": "2>&1\\s*>\\s*/dev/null",
-            "reason": "Redirection might hide errors"
-        },
-        {
-            "pattern": "\\bkill\\s+-9\\b",
-            "reason": "Forcefully killing processes, consider using safer signal"
-        },
-        {
-            "pattern": "eval\\s+",
-            "reason": "Using eval can lead to security vulnerabilities"
-        },
-        {
-            "pattern": "\\bshutdown\\b",
-            "reason": "Potentially shuts down or restarts the system"
-        },
-        {
-            "pattern": "\\bdd\\s+iflag=fullblock",
-            "reason": "Low-level data copying can lead to data loss or corruption"
-        },
-        {
-            "pattern": "\\bchmod\\s+([0-7]{3,4}|[ugoa]+\\+?)\\s+[^/].*",
-            "reason": "Changing file permissions may lead to security issues"
-        },
-        {
-            "pattern": "\\bchown\\s+[^:]+:[^/]+\\s+[^/].*",
-            "reason": "Changing file ownership may lead to access issues"
-        },
-        {
-            "pattern": "\\bssh\\s+root@[^\\s]+",
-            "reason": "SSH access as root user can be risky"
-        },
-        {
-            "pattern": "\\bwget\\s+[^\\s]+",
-            "reason": "Downloading files might lead to unintended consequences"
-        },
-        {
-            "pattern": "\\bcurl\\s+[^\\s]+",
-            "reason": "Fetching data from the internet can be risky"
+            "pattern": "Stop-Process -Force",
+            "reason": "Forcefully stopping a process can lead to data loss."
         }
     ],
-    "sensitive_patterns": [
+    "windows_cmd_danger_patterns": [
         {
-            "pattern": "password\\s*=\\s*['\"].*['\"]",
-            "reason": "Possible plaintext password"
+            "pattern": "del /s /q",
+            "reason": "Potentially dangerous command that can delete files recursively and quietly."
         },
         {
-            "pattern": "AWS_SECRET_ACCESS_KEY",
-            "reason": "AWS secret key detected"
-        },
-        {
-            "pattern": "GITHUB_TOKEN",
-            "reason": "GitHub token detected"
-        },
-        {
-            "pattern": "PRIVATE_KEY",
-            "reason": "Private key detected"
-        },
-        {
-            "pattern": "DB_PASSWORD\\s*=\\s*['\"].*['\"]",
-            "reason": "Database password detected"
-        },
-        {
-            "pattern": "SECRET_KEY\\s*=\\s*['\"].*['\"]",
-            "reason": "Application secret key detected"
-        },
-        {
-            "pattern": "API_KEY\\s*=\\s*['\"].*['\"]",
-            "reason": "API key detected"
-        },
-        {
-            "pattern": "TOKEN\\s*=\\s*['\"].*['\"]",
-            "reason": "Authorization token detected"
-        },
-        {
-            "pattern": "PASSWORD\\s*=\\s*['\"].*['\"]",
-            "reason": "Password detected"
+            "pattern": "taskkill /F",
+            "reason": "Forcefully killing a task can lead to data loss."
         }
     ],
-    "environment_patterns": [
+    "bash_danger_patterns": [
         {
-            "pattern": "\\$\\{?\\w+\\}?",
-            "reason": "Environment variable dependency detected"
+            "pattern": "rm -rf /",
+            "reason": "Potentially dangerous command that can delete all files recursively and forcefully."
         },
         {
-            "pattern": "\\$\\{[^\\}]+\\}",
-            "reason": "Environment variable with braces detected"
-        },
-        {
-            "pattern": "\\$\\w+",
-            "reason": "Environment variable placeholder detected"
-        },
-        {
-            "pattern": "\\${HOME|USER|SHELL|PATH}",
-            "reason": "Common environment variables detected"
+            "pattern": "kill -9",
+            "reason": "Forcefully killing a process can lead to data loss."
         }
-    ]
+    ],
+    "python_danger_patterns": [
+        {
+            "pattern": "os.system",
+            "reason": "Using os.system can be dangerous as it allows execution of arbitrary commands."
+        },
+        {
+            "pattern": "subprocess.call",
+            "reason": "Using subprocess.call can be dangerous as it allows execution of arbitrary commands."
+        }
+    ],
+    "ruby_danger_patterns": [
+        {
+            "pattern": "system",
+            "reason": "Using system can be dangerous as it allows execution of arbitrary commands."
+        },
+        {
+            "pattern": "exec",
+            "reason": "Using exec can be dangerous as it allows execution of arbitrary commands."
+        }
+    ],
+    "replacements": {
+        "Remove-Item -Recurse -Force": "Remove-Item -Recurse",
+        "Stop-Process -Force": "Stop-Process",
+        "rm -rf /": "find . -type f -delete",
+        "kill -9": "kill -TERM"
+    },
+    "external_commands": {
+        "powershell": [
+            "Invoke-WebRequest",
+            "Invoke-RestMethod"
+        ],
+        "cmd": [
+            "curl",
+            "wget"
+        ],
+        "bash": [
+            "curl",
+            "wget"
+        ],
+        "python": [
+            "os.system",
+            "subprocess.call"
+        ],
+        "ruby": [
+            "system",
+            "exec"
+        ]
+    }
 }

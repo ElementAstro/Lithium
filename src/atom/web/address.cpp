@@ -22,6 +22,7 @@ Description: Enhanced Address class for IPv4, IPv6, and Unix domain sockets.
 
 #include "atom/log/loguru.hpp"
 
+namespace atom::web {
 constexpr int IPV4_BIT_LENGTH = 32;
 constexpr int IPV6_SEGMENT_COUNT = 8;
 constexpr int IPV6_SEGMENT_BIT_LENGTH = 16;
@@ -62,9 +63,7 @@ auto IPv4::parseCIDR(const std::string& cidr) -> bool {
     return true;
 }
 
-void IPv4::printAddressType() const {
-    LOG_F(INFO, "Address type: IPv4");
-}
+void IPv4::printAddressType() const { LOG_F(INFO, "Address type: IPv4"); }
 
 auto IPv4::isInRange(const std::string& start, const std::string& end) -> bool {
     uint32_t startIp = ipToInteger(start);
@@ -170,9 +169,7 @@ auto IPv6::parseCIDR(const std::string& cidr) -> bool {
     return true;
 }
 
-void IPv6::printAddressType() const {
-    LOG_F(INFO, "Address type: IPv6");
-}
+void IPv6::printAddressType() const { LOG_F(INFO, "Address type: IPv6"); }
 
 auto IPv6::isInRange(const std::string& start, const std::string& end) -> bool {
     auto startIp = ipToVector(start);
@@ -320,3 +317,4 @@ auto UnixDomain::isSameSubnet([[maybe_unused]] const Address& other,
     // 不适用
     return false;
 }
+}  // namespace atom::web

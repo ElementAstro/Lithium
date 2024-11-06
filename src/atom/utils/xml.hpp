@@ -15,7 +15,12 @@ Description: A XML reader class using tinyxml2.
 #ifndef ATOM_UTILS_XML_HPP
 #define ATOM_UTILS_XML_HPP
 
+#if __has_include(<tinyxml2.h>)
 #include <tinyxml2.h>
+#elif __has_include(<tinyxml2/tinyxml2.h>)
+#include <tinyxml2/tinyxml2.h>
+#endif
+
 #include <string>
 #include <vector>
 

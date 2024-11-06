@@ -186,13 +186,15 @@ public:
      * @brief Returns the minimum value that can be generated.
      * @return The minimum value.
      */
-    static constexpr auto min() -> result_type;
+    static constexpr auto min() -> result_type { return 0; }
 
     /**
      * @brief Returns the maximum value that can be generated.
      * @return The maximum value.
      */
-    static constexpr auto max() -> result_type;
+    static constexpr auto max() -> result_type {
+        return std::numeric_limits<result_type>::max();
+    }
 
 private:
     result_type current_;  ///< The current state of the generator.

@@ -5,6 +5,7 @@
 #include "atom/web/curl.hpp"
 #include "atom/web/downloader.hpp"
 #include "atom/web/httpparser.hpp"
+#include "atom/web/minetype.hpp"
 #include "atom/web/time.hpp"
 #include "atom/web/utils.hpp"
 
@@ -200,6 +201,17 @@ PYBIND11_MODULE(web, m) {
              "Check if a specific header field exists", py::arg("key"))
         .def("clear_headers", &HttpHeaderParser::clearHeaders,
              "Clear all the parsed headers");
+
+    py::class_<MimeTypes>(m, "MimeTypes")
+        .def(py::init<const std::vector<std::string>&, bool>(),
+             py::arg("knownFiles"), py::arg("lenient") = false)
+        .def("read_json", &MimeTypes::readJson)
+        .def("guess_type", &MimeTypes::guessType)
+        .def("guess_all_extensions", &MimeTypes::guessAllExtensions)
+        .def("guess_extension", &MimeTypes::guessExtension)
+        .def("add_type", &MimeTypes::addType)
+        .def("list_all_types", &MimeTypes::listAllTypes)
+        .def("guess_type_by_content", &MimeTypes::guessTypeByContent);
 
     py::class_<TimeManager>(m, "TimeManager")
         .def(py::init<>())

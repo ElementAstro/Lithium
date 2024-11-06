@@ -23,7 +23,7 @@ class HotspotManager:
                           '802-11-wireless.cloned-mac-address', 'stable'])
         self._run_command(['nmcli', 'connection', 'modify', 'Hotspot',
                           '802-11-wireless.mac-address-randomization', 'no'])
-        print(f"Hotspot {name} is now running with password {password}")
+        print(f"Hotspot {name} is now running")
 
     def stop(self):
         self._run_command(['nmcli', 'connection', 'down', 'Hotspot'])

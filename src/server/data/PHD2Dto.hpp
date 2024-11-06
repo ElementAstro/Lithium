@@ -147,7 +147,7 @@ class RequestPHD2StartDto : public RequestDto {
     DTO_FIELD_INFO(workingDir) {
         info->description = "The working directory of the PHD2 server";
     }
-    DTO_FIELD(String, workingDir);    
+    DTO_FIELD(String, workingDir);
 };
 
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section

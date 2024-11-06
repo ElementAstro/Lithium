@@ -1,9 +1,9 @@
 # Oat++ 中的协程
 
-Oat++ 中的协程不是普通的协程。  
+Oat++ 中的协程不是普通的协程。
 Oat++ 实现了自定义的无状态协程，并带有调度功能。调度提供了优化的空间，并更好地利用了 CPU 资源。
 
-Oat++ 中的协程通过 [oatpp::async::Executor](/api/latest/oatpp/core/async/Executor/) 执行。在每次迭代中，协程返回一个 [oatpp::async::Action](/api/latest/oatpp/core/async/Coroutine/#action)，告诉执行器下一步该做什么。  
+Oat++ 中的协程通过 [oatpp::async::Executor](/api/latest/oatpp/core/async/Executor/) 执行。在每次迭代中，协程返回一个 [oatpp::async::Action](/api/latest/oatpp/core/async/Coroutine/#action)，告诉执行器下一步该做什么。
 根据 Action，Oat++ 异步处理器将协程重新调度到相应的 worker。
 
 ## 异步执行器
@@ -33,12 +33,12 @@ oatpp::async::Executor executor(
 - kqueue 实现 - 适用于 Mac/BSD 系统。
 - epoll 实现 - 适用于 Linux 系统。
 
-当协程返回类型为 [TYPE_IO_WAIT](/api/latest/oatpp/core/async/Coroutine/#action-type-io-wait) 的 Action 时，它将被重新调度到 I/O worker，并将文件描述符提供的 Action 放置到 kqueue/epoll 中。  
+当协程返回类型为 [TYPE_IO_WAIT](/api/latest/oatpp/core/async/Coroutine/#action-type-io-wait) 的 Action 时，它将被重新调度到 I/O worker，并将文件描述符提供的 Action 放置到 kqueue/epoll 中。
 **因此，oatpp 协程不会浪费 CPU 资源来旋转和轮询长时间等待的连接。**
 
 ## API
 
-在 oatpp 中，协程是从 [oatpp::async::Coroutine](/api/latest/oatpp/core/async/Coroutine/#coroutine) 或 [oatpp::async::CoroutineWithResult](/api/latest/oatpp/core/async/Coroutine/#coroutinewithresult) 扩展的类。  
+在 oatpp 中，协程是从 [oatpp::async::Coroutine](/api/latest/oatpp/core/async/Coroutine/#coroutine) 或 [oatpp::async::CoroutineWithResult](/api/latest/oatpp/core/async/Coroutine/#coroutinewithresult) 扩展的类。
 协程在 [oatpp::async::Executor](/api/latest/oatpp/core/async/Executor/) 中处理。
 
 ```cpp

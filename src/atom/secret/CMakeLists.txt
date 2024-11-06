@@ -45,7 +45,7 @@ target_sources(atom-secret-object
 add_library(atom-secret STATIC)
 
 target_link_libraries(atom-secret atom-secret-object ${ATOM_SECRET_LIBS})
-if (LINUX) 
+if (LINUX)
     find_package(Glib REQUIRED)
     find_package(LibSecret REQUIRED)
     target_link_libraries(atom-secret ${GLIB_LIBRARIES} ${LIBSECRET_LIBRARIES})

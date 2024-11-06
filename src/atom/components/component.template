@@ -1,5 +1,5 @@
 if constexpr (Traits::arity == 0) {
-    
+
     m_CommandDispatcher_->def(
         name, group, description,
         std::function<ReturnType()>(std::forward<Callable>(func)));

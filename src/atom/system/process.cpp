@@ -683,7 +683,7 @@ auto getPosixPrivileges(pid_t pid) -> PrivilegesInfo {
     uid_t euid = -1;
     gid_t gid = -1;
     gid_t egid = -1;
-    
+
     std::regex uidRegex(R"(Uid:\s+(\d+)\s+(\d+))");
     std::regex gidRegex(R"(Gid:\s+(\d+)\s+(\d+))");
     std::smatch match;

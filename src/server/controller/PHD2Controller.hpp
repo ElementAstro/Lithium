@@ -286,7 +286,7 @@ public:
                         "No PHD2 configuration found", Status::CODE_404));
                 }
                 for (const auto& config : configPath) {
-                    
+
                 }
 #endif
             } catch (const std::exception& e) {

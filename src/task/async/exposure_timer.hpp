@@ -1,13 +1,18 @@
 #ifndef EXPOSURE_TIMER_H
 #define EXPOSURE_TIMER_H
 
-#include <asio.hpp>
 #include <chrono>
 #include <functional>
+#include <memory>
+
+namespace asio {
+class io_context;
+}
 
 class ExposureTimer {
 public:
     ExposureTimer(asio::io_context& io_context);
+    ~ExposureTimer();
 
     void start(std::chrono::milliseconds exposure_time,
                std::function<void()> on_complete,
@@ -32,22 +37,8 @@ public:
     float progress() const;
 
 private:
-    void start_delay();
-    void run_timer();
-
-    asio::steady_timer timer_;
-    std::chrono::milliseconds total_exposure_time_;
-    std::chrono::milliseconds remaining_time_;
-    std::chrono::milliseconds delay_time_;
-    bool is_running_;
-    std::chrono::high_resolution_clock::time_point last_tick_time_;
-
-    std::function<void()> on_complete_;
-    std::function<void()> on_tick_;
-    std::function<void()> on_stop_;
-    std::function<void()> on_resume_;
-    std::function<void()> on_start_;
-    std::function<void()> on_pause_;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 #endif  // EXPOSURE_TIMER_H

@@ -1,6 +1,7 @@
 #ifndef FOCUS_CURVE_FITTER_H
 #define FOCUS_CURVE_FITTER_H
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,10 +28,12 @@ public:
     void preprocessData();
     void realTimeFitAndPredict(double new_position);
     void parallelFitting();
+    void saveFittedCurve(const std::string& filename);
+    void loadFittedCurve(const std::string& filename);
 
 private:
-    class Impl;   // Forward declaration of the implementation class
-    Impl* impl_;  // Pointer to implementation (Pimpl idiom)
+    class Impl;                   // Forward declaration
+    std::unique_ptr<Impl> impl_;  // Smart pointer for Pimpl
 };
 
 #endif  // FOCUS_CURVE_FITTER_H

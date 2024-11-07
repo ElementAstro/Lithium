@@ -1,10 +1,16 @@
+// checker.cpp
 #include "checker.hpp"
 
 #include <fstream>
-#include <regex>
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
+
+#ifdef ATOM_USE_BOOST_REGEX
+#include <boost/regex.hpp>
+#else
+#include <regex>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -25,7 +31,11 @@ struct DangerItem {
     std::string command;
     std::string reason;
     int line;
+#ifdef ATOM_USE_BOOST_REGEX
+    boost::optional<std::string> context;
+#else
     std::optional<std::string> context;
+#endif
 } ATOM_ALIGNAS(128);
 
 class ScriptAnalyzerImpl {
@@ -98,10 +108,15 @@ private:
         return db;
     }
 
+#ifdef ATOM_USE_BOOST_REGEX
+    using Regex = boost::regex;
+#else
+    using Regex = std::regex;
+#endif
+
     static auto isSkippableLine(const std::string& line) -> bool {
-        return line.empty() ||
-               std::regex_match(line, std::regex(R"(^\s*#.*)")) ||
-               std::regex_match(line, std::regex(R"(^\s*//.*)"));
+        return line.empty() || std::regex_match(line, Regex(R"(^\s*#.*)")) ||
+               std::regex_match(line, Regex(R"(^\s*//.*)"));
     }
 
     void detectScriptTypeAndAnalyze(const std::string& script,
@@ -132,15 +147,18 @@ private:
     }
 
     static bool detectPowerShell(const std::string& script) {
-        return script.contains("param(") || script.contains("$PSVersionTable");
+        return script.find("param(") != std::string::npos ||
+               script.find("$PSVersionTable") != std::string::npos;
     }
 
     static bool detectPython(const std::string& script) {
-        return script.contains("import ") || script.contains("def ");
+        return script.find("import ") != std::string::npos ||
+               script.find("def ") != std::string::npos;
     }
 
     static bool detectRuby(const std::string& script) {
-        return script.contains("require ") || script.contains("def ");
+        return script.find("require ") != std::string::npos ||
+               script.find("def ") != std::string::npos;
     }
 
     void suggestSafeReplacements(const std::string& script,
@@ -173,20 +191,33 @@ private:
 
     void detectEnvironmentVariables(const std::string& script,
                                     std::vector<DangerItem>& dangers) {
+#ifdef ATOM_USE_BOOST_REGEX
+        boost::regex envVarPattern(R"(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)");
+#else
         std::regex envVarPattern(R"(\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)");
+#endif
         checkPattern(script, envVarPattern, "Environment Variable Usage",
                      dangers);
     }
 
     void detectFileOperations(const std::string& script,
                               std::vector<DangerItem>& dangers) {
+#ifdef ATOM_USE_BOOST_REGEX
+        boost::regex fileOpPattern(
+            R"(\b(open|read|write|close|unlink|rename)\b)");
+#else
         std::regex fileOpPattern(
             R"(\b(open|read|write|close|unlink|rename)\b)");
+#endif
         checkPattern(script, fileOpPattern, "File Operation", dangers);
     }
 
     static auto calculateComplexity(const std::string& script) -> int {
+#ifdef ATOM_USE_BOOST_REGEX
+        boost::regex complexityPatterns(R"(if\b|while\b|for\b|case\b|&&|\|\|)");
+#else
         std::regex complexityPatterns(R"(if\b|while\b|for\b|case\b|&&|\|\|)");
+#endif
         std::istringstream scriptStream(script);
         std::string line;
         int complexity = 0;
@@ -274,7 +305,11 @@ private:
             }
 
             for (const auto& item : patterns) {
+#ifdef ATOM_USE_BOOST_REGEX
+                boost::regex pattern(item["pattern"]);
+#else
                 std::regex pattern(item["pattern"]);
+#endif
                 std::string reason = item["reason"];
 
                 if (std::regex_search(line, pattern)) {
@@ -289,8 +324,7 @@ private:
         }
     }
 
-    static void checkPattern(const std::string& script,
-                             const std::regex& pattern,
+    static void checkPattern(const std::string& script, const Regex& pattern,
                              const std::string& category,
                              std::vector<DangerItem>& dangers) {
         std::unordered_set<std::string> detectedIssues;
@@ -334,12 +368,12 @@ private:
                 if (line.find(command) != std::string::npos) {
                     std::string key = std::to_string(lineNum) + ":" + command;
                     if (!detectedIssues.contains(key)) {
-                        dangers.emplace_back(DangerItem{
-                            "External Command",
-                            line,
-                            "Detected usage of external command: " + command,
-                            lineNum,
-                            {}});
+                        dangers.emplace_back(
+                            DangerItem{"External Command",
+                                       command,
+                                       "Use of external command",
+                                       lineNum,
+                                       {}});
                         detectedIssues.insert(key);
                     }
                 }
@@ -367,12 +401,12 @@ private:
                     std::string key =
                         std::to_string(lineNum) + ":" + unsafe_command;
                     if (!detectedIssues.contains(key)) {
-                        dangers.emplace_back(DangerItem{
-                            "Suggestion",
-                            line,
-                            "Consider replacing with: " + safe_command,
-                            lineNum,
-                            {}});
+                        dangers.emplace_back(
+                            DangerItem{"Unsafe Command",
+                                       unsafe_command,
+                                       "Suggested replacement: " + safe_command,
+                                       lineNum,
+                                       {}});
                         detectedIssues.insert(key);
                     }
                 }

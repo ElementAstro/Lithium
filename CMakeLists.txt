@@ -142,8 +142,10 @@ find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Readline REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
 
 find_package(Python COMPONENTS Interpreter REQUIRED)
+include_directories(${pybind11_INCLUDE_DIRS} ${Python_INCLUDE_DIRS})
 
 # Specify the path to requirements.txt
 set(REQUIREMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt")
@@ -308,12 +310,13 @@ set(debug_module
 
 set(device_module
     ${lithium_src_dir}/device/manager.cpp
-
     ${lithium_src_dir}/device/template/device.cpp
 )
 
 set(script_module
     ${lithium_src_dir}/script/manager.cpp
+    ${lithium_src_dir}/script/pycaller.cpp
+    ${lithium_src_dir}/script/pycaller.hpp
     ${lithium_src_dir}/script/sheller.cpp
 )
 
@@ -364,6 +367,7 @@ target_link_libraries(lithium_server
         tinyxml2
         pocketpy
         ${Readline_LIBRARIES}
+        pybind11::embed
 )
 
 if(WIN32)

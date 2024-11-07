@@ -3,8 +3,8 @@
 
 #include <exception>
 #include <functional>
+#include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace lithium {
@@ -26,7 +26,7 @@ private:
 };
 
 // 依赖项信息结构
-struct alignas(64) DependencyInfo {
+struct DependencyInfo {
     std::string name;
     std::string version;  // 可选
 };
@@ -35,6 +35,11 @@ struct alignas(64) DependencyInfo {
 class DependencyManager {
 public:
     explicit DependencyManager(std::vector<DependencyInfo> dependencies);
+    ~DependencyManager();
+
+    // 禁用拷贝和赋值
+    DependencyManager(const DependencyManager&) = delete;
+    DependencyManager& operator=(const DependencyManager&) = delete;
 
     // 设置日志回调函数，包含日志级别
     void setLogCallback(
@@ -56,66 +61,15 @@ public:
     // 获取当前支持的平台类型
     auto getCurrentPlatform() const -> std::string;
 
+    // 异步安装依赖项
+    void installDependencyAsync(const DependencyInfo& dep);
+
+    // 取消安装操作
+    void cancelInstallation(const std::string& dep);
+
 private:
-    std::vector<DependencyInfo> dependencies_;
-    std::function<void(LogLevel, const std::string&)> logCallback_;
-    std::unordered_map<std::string, bool> installedCache_;
-    std::unordered_map<std::string, std::string> customInstallCommands_;
-
-    // 系统发行版类型
-    enum class DistroType {
-        DEBIAN,
-        FEDORA,
-        ARCH,
-        OPENSUSE,
-        GENTOO,
-        MACOS,
-        WINDOWS,
-        UNKNOWN
-    };
-
-    DistroType distroType_ = DistroType::UNKNOWN;
-
-    // 检测当前的操作系统和发行版
-    void detectPlatform();
-
-    // 检查依赖项是否已安装
-    auto isDependencyInstalled(const DependencyInfo& dep) -> bool;
-
-    // 安装依赖项
-    void installDependency(const DependencyInfo& dep);
-
-    // 卸载依赖项
-    void uninstallDependencyInternal(const std::string& dep);
-
-    // 根据平台获取检查、安装和卸载命令
-    auto getCheckCommand(const DependencyInfo& dep) const -> std::string;
-    auto getInstallCommand(const DependencyInfo& dep) const -> std::string;
-    auto getUninstallCommand(const DependencyInfo& dep) const -> std::string;
-
-    // 检查命令是否可用
-    auto isCommandAvailable(const std::string& command) const -> bool;
-
-    // 从文件加载缓存
-    void loadCacheFromFile();
-
-    // 保存缓存到文件
-    void saveCacheToFile() const;
-
-    // 日志记录函数
-    void log(LogLevel level, const std::string& message) const;
-
-    // 包管理器接口
-    struct alignas(128) PackageManager {
-        std::function<std::string(const DependencyInfo&)> getCheckCommand;
-        std::function<std::string(const DependencyInfo&)> getInstallCommand;
-        std::function<std::string(const DependencyInfo&)> getUninstallCommand;
-    };
-
-    PackageManager packageManager_;
-
-    // 根据发行版设置包管理器命令
-    void configurePackageManager();
+    class Impl;
+    std::unique_ptr<Impl> pImpl_;
 };
 
 }  // namespace lithium

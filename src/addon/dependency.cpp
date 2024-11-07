@@ -12,6 +12,12 @@
 #if __has_include(<yaml-cpp/yaml.h>)
 #include <yaml-cpp/yaml.h>
 #endif
+#if __has_include(<tinyxml2.h>)
+#include <tinyxml2.h>
+#elif __has_include(<tinyxml2/tinyxml2.h>)
+#include <tinyxml2/tinyxml2.h>
+using namespace tinyxml2;
+#endif
 
 namespace lithium {
 

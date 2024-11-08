@@ -23,7 +23,7 @@ using namespace boost::system;
 PYBIND11_MODULE(extra, m) {
     m.doc() = "Python bindings for Atom Extra Module";
 
-    
+
 
 /*
      py::class_<error_category>(m, "ErrorCategory")
@@ -190,7 +190,7 @@ PYBIND11_MODULE(extra, m) {
              "Asynchronously receives a JSON object from the WebSocket server");
 
 */
-   
+
 #if __has_include(<boost/charconv.hpp>)
     py::enum_<atom::extra::boost::NumberFormat>(m, "NumberFormat")
         .value("GENERAL", atom::extra::boost::NumberFormat::GENERAL)

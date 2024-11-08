@@ -1,0 +1,28 @@
+name: atom.async
+version: 1.0.0
+description: Atom Async Module
+license: GPL-3.0-or-later
+author: Max Qian
+repository:
+  type: git
+  url: https://github.com/ElementAstro/Lithium
+bugs:
+  url: https://github.com/ElementAstro/Lithium/issues
+homepage: https://github.com/ElementAstro/Lithium
+keywords:
+  - atom
+  - async
+  - python
+  - cpp
+platforms:
+  - windows
+  - linux
+  - macos
+scripts:
+  build: cmake --build . --config Release -- -j 4
+  lint: clang-format -i src/*.cpp src/*.h
+modules:
+  - name: async
+    entry: getInstance
+pymodule:
+  - name: atom_async_py

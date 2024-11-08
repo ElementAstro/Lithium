@@ -19,12 +19,13 @@ void bind_message_queue(py::module &m, const std::string &name) {
     py::class_<MessageQueue<T>>(m, name.c_str())
         .def(py::init<asio::io_context &>(), "Constructor",
              py::arg("io_context"))
-        .def("subscribe", &MessageQueue<T>::subscribe,
-             "Subscribe to messages with a callback and optional filter and "
-             "timeout",
-             py::arg("callback"), py::arg("subscriber_name"),
-             py::arg("priority") = 0, py::arg("filter") = nullptr,
-             py::arg("timeout") = std::chrono::milliseconds::zero())
+        // TODO: Implement MessageQueue::subscribe
+        //.def("subscribe", &MessageQueue<T>::subscribe,
+        //     "Subscribe to messages with a callback and optional filter and "
+        //     "timeout",
+        //     py::arg("callback"), py::arg("subscriber_name"),
+        //     py::arg("priority") = 0, py::arg("filter") = nullptr,
+        //     py::arg("timeout") = std::chrono::milliseconds::zero())
         .def("unsubscribe", &MessageQueue<T>::unsubscribe,
              "Unsubscribe from messages using the given callback",
              py::arg("callback"))
@@ -216,9 +217,10 @@ PYBIND11_MODULE(async, m) {
              "Pop a task from the back of the queue")
         .def("steal", &ThreadSafeQueue<std::function<void()>>::steal,
              "Steal a task from the back of the queue")
-        .def("rotate_to_front",
-             &ThreadSafeQueue<std::function<void()>>::rotateToFront,
-             "Rotate a task to the front of the queue", py::arg("item"))
+        // TODO: Implement rotateToFront
+        // .def("rotate_to_front",
+        //      &ThreadSafeQueue<std::function<void()>>::rotateToFront,
+        //      "Rotate a task to the front of the queue", py::arg("item"))
         .def("copy_front_and_rotate_to_back",
              &ThreadSafeQueue<std::function<void()>>::copyFrontAndRotateToBack,
              "Copy the front task and rotate it to the back of the queue")
@@ -266,11 +268,12 @@ PYBIND11_MODULE(async, m) {
 
     py::class_<Timer>(m, "Timer")
         .def(py::init<>())
-        .def("setTimeout", &Timer::setTimeout<std::function<void()>>,
-             py::arg("func"), py::arg("delay"))
-        .def("setInterval", &Timer::setInterval<std::function<void()>>,
-             py::arg("func"), py::arg("interval"), py::arg("repeatCount"),
-             py::arg("priority"))
+        // TODO: Implement setTimeout and setInterval
+        // .def("setTimeout", &Timer::setTimeout<std::function<void()>>,
+        //      py::arg("func"), py::arg("delay"))
+        // .def("setInterval", &Timer::setInterval<std::function<void()>>,
+        //      py::arg("func"), py::arg("interval"), py::arg("repeatCount"),
+        //      py::arg("priority"))
         .def("now", &Timer::now)
         .def("cancelAllTasks", &Timer::cancelAllTasks)
         .def("pause", &Timer::pause)
@@ -285,10 +288,11 @@ PYBIND11_MODULE(async, m) {
     bind_trigger<double>(m, "TriggerDouble");
     bind_trigger<std::function<void()>>(m, "TriggerFunction");
 
-    bind_safe_type<int>(m, "Int");
-    bind_safe_type<std::string>(m, "String");
-    bind_safe_type<double>(m, "Double");
-    bind_safe_type<float>(m, "Float");
+    // TODO: Implement SafeType
+    // bind_safe_type<int>(m, "Int");
+    // bind_safe_type<std::string>(m, "String");
+    // bind_safe_type<double>(m, "Double");
+    // bind_safe_type<float>(m, "Float");
 
     py::class_<RateLimiter::Settings>(m, "RateLimiterSettings")
         .def(py::init<size_t, std::chrono::seconds>(),

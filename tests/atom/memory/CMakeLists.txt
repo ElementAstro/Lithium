@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(atom.memory.test)
+project(atom_iomemory.test)
 
 find_package(GTest QUIET)
 

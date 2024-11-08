@@ -17,11 +17,56 @@
 #include "atom/extra/inicpp/inicpp.hpp"
 
 namespace py = pybind11;
+using namespace boost::numeric::ublas;
+using namespace boost::system;
 
-PYBIND11_MODULE(math, m) {
+PYBIND11_MODULE(extra, m) {
     m.doc() = "Python bindings for Atom Extra Module";
 
-    py::class_<HttpClient>(m, "HttpClient")
+    
+
+/*
+     py::class_<error_category>(m, "ErrorCategory")
+        .def("name", &error_category::name)
+        .def("default_error_condition",
+             &error_category::default_error_condition)
+        .def("equivalent", py::overload_cast<int, const error_condition &>(
+                               &error_category::equivalent, py::const_))
+        .def("equivalent", py::overload_cast<const error_code &, int>(
+                               &error_category::equivalent, py::const_))
+        .def("message",
+             py::overload_cast<int>(&error_category::message, py::const_))
+        .def("message", py::overload_cast<int, char *, std::size_t>(
+                            &error_category::message, py::const_))
+        .def("failed", &error_category::failed);
+
+    py::class_<error_condition>(m, "ErrorCondition")
+        .def(py::init<>())
+        .def(py::init<int, const error_category &>())
+        .def("assign", &error_condition::assign)
+        .def("clear", &error_condition::clear)
+        .def("value", &error_condition::value)
+        .def("category", &error_condition::category)
+        .def("message",
+             py::overload_cast<>(&error_condition::message, py::const_))
+        .def("message", py::overload_cast<char *, std::size_t>(
+                            &error_condition::message, py::const_))
+        .def("failed", &error_condition::failed);
+
+    py::class_<error_code>(m, "ErrorCode")
+        .def(py::init<>())
+        .def(py::init<int, const error_category &>())
+        .def("assign", &error_code::assign)
+        .def("clear", &error_code::clear)
+        .def("value", &error_code::value)
+        .def("category", &error_code::category)
+        .def("default_error_condition", &error_code::default_error_condition)
+        .def("message", py::overload_cast<>(&error_code::message, py::const_))
+        .def("message", py::overload_cast<char *, std::size_t>(
+                            &error_code::message, py::const_))
+        .def("failed", &error_code::failed);
+
+      py::class_<HttpClient>(m, "HttpClient")
         .def(py::init<net::io_context &>(), py::arg("ioc"),
              "Constructs an HttpClient with the given I/O context")
         .def("set_default_header", &HttpClient::setDefaultHeader,
@@ -116,10 +161,11 @@ PYBIND11_MODULE(math, m) {
         .def("receive", &WSClient::receive,
              "Receives a message from the WebSocket server")
         .def("close", &WSClient::close, "Closes the WebSocket connection")
-        .def("async_connect",
-             &WSClient::asyncConnect<std::function<void(beast::error_code)>>,
-             py::arg("host"), py::arg("port"), py::arg("handler"),
-             "Asynchronously connects to the WebSocket server")
+        // TODO: Implement async_connect
+        //.def("async_connect",
+        //     &WSClient::asyncConnect<std::function<void(beast::error_code)>>,
+        //     py::arg("host"), py::arg("port"), py::arg("handler"),
+        //     "Asynchronously connects to the WebSocket server")
         .def("async_send",
              &WSClient::asyncSend<
                  std::function<void(beast::error_code, std::size_t)>>,
@@ -143,6 +189,8 @@ PYBIND11_MODULE(math, m) {
              py::arg("handler"),
              "Asynchronously receives a JSON object from the WebSocket server");
 
+*/
+   
 #if __has_include(<boost/charconv.hpp>)
     py::enum_<atom::extra::boost::NumberFormat>(m, "NumberFormat")
         .value("GENERAL", atom::extra::boost::NumberFormat::GENERAL)
@@ -234,15 +282,100 @@ PYBIND11_MODULE(math, m) {
         .def_static("format_currency",
                     &atom::extra::boost::LocaleWrapper::formatCurrency,
                     py::arg("amount"), py::arg("currency"),
-                    "Formats a currency amount")
-        .def_static("regex_replace",
-                    &atom::extra::boost::LocaleWrapper::regexReplace,
-                    py::arg("str"), py::arg("regex"), py::arg("format"),
-                    "Replaces occurrences of a regex pattern in a string with "
-                    "a format string")
-        .def("format", &atom::extra::boost::LocaleWrapper::format<std::string>,
-             py::arg("format_string"), py::kwargs(),
-             "Formats a string with named arguments");
+                    "Formats a currency amount");
+    // TODO: Implement regex_replace
+    //.def_static("regex_replace",
+    //            &atom::extra::boost::LocaleWrapper::regexReplace,
+    //            py::arg("str"), py::arg("regex"), py::arg("format"),
+    //            "Replaces occurrences of a regex pattern in a string with
+    //            " "a format string")
+    //.def("format", &atom::extra::boost::LocaleWrapper::format<std::string>,
+    //     py::arg("format_string"), py::kwargs(),
+    //     "Formats a string with named arguments");
+
+    /*
+    TODO: Uncomment this after fixing the Boost.Python issue
+         py::class_<unbounded_array<int, std::allocator<int>>>(m,
+                                                              "UnboundedArrayInt")
+            .def(py::init<>())
+            .def(py::init<size_t>())
+            .def(py::init<size_t, int>())
+            .def("resize",
+                 (void(unbounded_array<int, std::allocator<int>>::*)(size_t)) &
+                     unbounded_array<int, std::allocator<int>>::resize)
+            .def("resize",
+                 (void(unbounded_array<int, std::allocator<int>>::*)(size_t,
+    int)) & unbounded_array<int, std::allocator<int>>::resize) .def("size",
+    &unbounded_array<int, std::allocator<int>>::size) .def("__getitem__",
+                 [](const unbounded_array<int, std::allocator<int>> &a, size_t
+    i) { if (i >= a.size()) throw py::index_error(); return a[i];
+                 })
+            .def("__setitem__",
+                 [](unbounded_array<int, std::allocator<int>> &a, size_t i, int
+    v) { if (i >= a.size()) throw py::index_error(); a[i] = v;
+                 })
+            .def("__len__", &unbounded_array<int, std::allocator<int>>::size);
+
+        py::class_<matrix<double, row_major, unbounded_array<double>>>(m,
+    "Matrix") .def(py::init<>()) .def(py::init<size_t, size_t>())
+            .def(py::init<size_t, size_t, double>())
+            .def("size1",
+                 &matrix<double, row_major, unbounded_array<double>>::size1)
+            .def("size2",
+                 &matrix<double, row_major, unbounded_array<double>>::size2)
+            .def("resize",
+                 &matrix<double, row_major, unbounded_array<double>>::resize)
+            .def("clear",
+                 &matrix<double, row_major, unbounded_array<double>>::clear)
+            .def(
+                "insert_element",
+                &matrix<double, row_major,
+    unbounded_array<double>>::insert_element) .def("erase_element",
+                 &matrix<double, row_major,
+    unbounded_array<double>>::erase_element) .def("__getitem__",
+                 [](const matrix<double, row_major, unbounded_array<double>> &m,
+                    std::pair<size_t, size_t> index) {
+                     return m(index.first, index.second);
+                 })
+            .def("__setitem__",
+                 [](matrix<double, row_major, unbounded_array<double>> &m,
+                    std::pair<size_t, size_t> index,
+                    double value) { m(index.first, index.second) = value; });
+
+        py::class_<vector<double, unbounded_array<double>>>(m, "Vector")
+            .def(py::init<>())
+            .def(py::init<vector<double, unbounded_array<double>>::size_type>())
+            .def(py::init<
+                 vector<double, unbounded_array<double>>::size_type,
+                 const vector<double, unbounded_array<double>>::value_type &>())
+            .def("size", &vector<double, unbounded_array<double>>::size)
+            .def("resize", &vector<double, unbounded_array<double>>::resize)
+            .def("clear", &vector<double, unbounded_array<double>>::clear)
+            .def("__getitem__",
+                 [](const vector<double, unbounded_array<double>> &v,
+                    vector<double, unbounded_array<double>>::size_type i) {
+                     if (i >= v.size())
+                         throw py::index_error();
+                     return v[i];
+                 })
+            .def("__setitem__",
+                 [](vector<double, unbounded_array<double>> &v,
+                    vector<double, unbounded_array<double>>::size_type i,
+                    double val) {
+                     if (i >= v.size())
+                         throw py::index_error();
+                     v[i] = val;
+                 })
+            .def("__len__", &vector<double, unbounded_array<double>>::size)
+            .def("__repr__", [](const vector<double, unbounded_array<double>>
+    &v) { std::ostringstream oss; oss << "Vector(["; for (size_t i = 0; i <
+    v.size(); ++i) { if (i > 0) oss << ", "; oss << v[i];
+                }
+                oss << "])";
+                return oss.str();
+            });
+
+    */
 
     py::class_<atom::extra::boost::SpecialFunctions<double>>(m,
                                                              "SpecialFunctions")
@@ -354,20 +487,23 @@ PYBIND11_MODULE(math, m) {
             &atom::extra::boost::Optimization<double>::newtonRaphson,
             "Perform Newton-Raphson method to find the root of a function");
 
+    /*
     py::class_<atom::extra::boost::LinearAlgebra<double>>(m, "LinearAlgebra")
-        .def_static(
-            "solve_linear_system",
-            &atom::extra::boost::LinearAlgebra<double>::solveLinearSystem,
-            "Solve a linear system of equations Ax = b")
-        .def_static("determinant",
-                    &atom::extra::boost::LinearAlgebra<double>::determinant,
-                    "Compute the determinant of a matrix")
-        .def_static("multiply",
-                    &atom::extra::boost::LinearAlgebra<double>::multiply,
-                    "Multiply two matrices")
+            .def_static(
+                "solve_linear_system",
+                &atom::extra::boost::LinearAlgebra<double>::solveLinearSystem,
+                "Solve a linear system of equations Ax = b")
+            .def_static("determinant",
+                        &atom::extra::boost::LinearAlgebra<double>::determinant,
+                        "Compute the determinant of a matrix")
+            .def_static("multiply",
+                        &atom::extra::boost::LinearAlgebra<double>::multiply,
+                        "Multiply two matrices")
         .def_static("transpose",
                     &atom::extra::boost::LinearAlgebra<double>::transpose,
                     "Compute the transpose of a matrix");
+
+    */
 
     py::class_<atom::extra::boost::ODESolver<double>>(m, "ODESolver")
         .def_static("runge_kutta4",
@@ -414,16 +550,17 @@ PYBIND11_MODULE(math, m) {
              py::arg("str"), py::arg("replacement"))
         .def("split", &atom::extra::boost::RegexWrapper::split<std::string>,
              "Split the given string by the regex pattern", py::arg("str"))
-        .def("match_groups",
-             &atom::extra::boost::RegexWrapper::matchGroups<std::string>,
-             "Match the given string and return the groups of each match",
-             py::arg("str"))
-        .def("for_each_match",
-             &atom::extra::boost::RegexWrapper::forEachMatch<
-                 std::string, std::function<void(const ::boost::smatch &)>>,
-             "Apply a function to each match of the regex pattern in the given "
-             "string",
-             py::arg("str"), py::arg("func"))
+        // TODO: Uncomment this after fixing the issue
+        // .def("match_groups",
+        //      &atom::extra::boost::RegexWrapper::matchGroups<std::string>,
+        //      "Match the given string and return the groups of each match",
+        //      py::arg("str"))
+        //.def("for_each_match",
+        //     &atom::extra::boost::RegexWrapper::forEachMatch<
+        //         std::string, std::function<void(const ::boost::smatch &)>>,
+        //     "Apply a function to each match of the regex pattern in the given "
+        //     "string",
+        //     py::arg("str"), py::arg("func"))
         .def("get_pattern", &atom::extra::boost::RegexWrapper::getPattern,
              "Get the regex pattern as a string")
         .def("set_pattern", &atom::extra::boost::RegexWrapper::setPattern,

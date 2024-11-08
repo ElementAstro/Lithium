@@ -7,7 +7,7 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom.system C CXX)
+project(atom_iosystem C CXX)
 
 set(CMAKE_ATOM_SYSTEM_BUILTIN_VERSION_MAJOR 1)
 set(CMAKE_ATOM_SYSTEM_BUILTIN_VERSION_MINOR 0)

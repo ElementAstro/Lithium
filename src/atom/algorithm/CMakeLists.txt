@@ -19,6 +19,7 @@ set(${PROJECT_NAME}_SOURCES
     fraction.cpp
     huffman.cpp
     math.cpp
+    matrix_compress.cpp
     md5.cpp
     mhash.cpp
     tea.cpp
@@ -35,6 +36,7 @@ set(${PROJECT_NAME}_HEADERS
     hash.hpp
     huffman.hpp
     math.hpp
+    matrix_compress.hpp
     md5.hpp
     mhash.hpp
     tea.hpp

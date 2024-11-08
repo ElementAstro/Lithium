@@ -141,7 +141,7 @@ public:
     [[nodiscard]] auto compare(const std::string& str1,
                                const std::string& str2) const -> int {
         return static_cast<int>(::boost::locale::comparator<
-                                char, ::boost::locale::collate_level::primary>(
+                                char, ::boost::locale::collator_base::primary>(
             locale_)(str1, str2));
     }
 

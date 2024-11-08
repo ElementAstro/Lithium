@@ -45,7 +45,7 @@ target_sources(${PROJECT_NAME}_OBJECT
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
-add_library(${PROJECT_NAME} STATIC)
+add_library(${PROJECT_NAME} SHARED)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 target_include_directories(${PROJECT_NAME} PUBLIC .)

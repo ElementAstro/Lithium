@@ -15,6 +15,7 @@
 #include "atom/algorithm/matrix_compress.hpp"
 #include "atom/algorithm/mhash.hpp"
 #include "atom/algorithm/perlin.hpp"
+#include "atom/algorithm/snowflake.hpp"
 #include "atom/algorithm/tea.hpp"
 #include "atom/algorithm/weight.hpp"
 
@@ -407,6 +408,33 @@ PYBIND11_MODULE(algorithm, m) {
              py::arg("lacunarity"),
              py::arg("seed") = std::default_random_engine::default_seed);
 
+    constexpr uint64_t TWEPOCH = 1580504900000;
+    using SnowflakeType = Snowflake<TWEPOCH>;
+
+    py::class_<SnowflakeType>(m, "Snowflake")
+        .def(py::init<>(),
+             "Constructs a new Snowflake instance with a random secret key.")
+        .def("init", &SnowflakeType::init, py::arg("worker_id"),
+             py::arg("datacenter_id"),
+             "Initializes the Snowflake generator with worker and datacenter "
+             "IDs.")
+        .def("nextid", &SnowflakeType::nextid, "Generates the next unique ID.")
+        .def(
+            "parse_id",
+            [](const SnowflakeType &self, uint64_t encrypted_id) {
+                uint64_t timestamp;
+                uint64_t datacenterId;
+                uint64_t workerId;
+                uint64_t sequence;
+                self.parseId(encrypted_id, timestamp, datacenterId, workerId,
+                             sequence);
+                return py::make_tuple(timestamp, datacenterId, workerId,
+                                      sequence);
+            },
+            py::arg("encrypted_id"),
+            "Parses an encrypted ID into its components: timestamp, datacenter "
+            "ID, worker ID, and sequence.");
+
     m.def("tea_encrypt", &teaEncrypt,
           "Encrypt two 32-bit values using TEA algorithm", py::arg("value0"),
           py::arg("value1"), py::arg("key"));
@@ -432,5 +460,6 @@ PYBIND11_MODULE(algorithm, m) {
           "Convert vector of 32-bit unsigned integers back to byte array",
           py::arg("data"));
 
-    bind_weight_selector<double>(m, "WeightSelectorDouble");
+    // TODO: Uncomment this after fixing the issue with std::span
+    // bind_weight_selector<double>(m, "WeightSelectorDouble");
 }

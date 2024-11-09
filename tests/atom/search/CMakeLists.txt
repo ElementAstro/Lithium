@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(atom.search.test)
+project(atom_iosearch.test)
 
 file(GLOB_RECURSE TEST_SOURCES ${PROJECT_SOURCE_DIR}/*.cpp)
 

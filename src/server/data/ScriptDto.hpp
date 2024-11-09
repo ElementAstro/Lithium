@@ -155,6 +155,35 @@ class ReturnScriptListDto : public StatusDto {
     DTO_FIELD(List<ScriptDto>, scripts);
 };
 
+class RequestScriptRunDto : public RequestDto {
+    DTO_INIT(RequestScriptRunDto, RequestDto)
+
+    DTO_FIELD_INFO(name) { info->description = "Name of the script"; }
+    DTO_FIELD(String, name);
+
+    DTO_FIELD_INFO(args) { info->description = "Arguments of the script"; }
+    DTO_FIELD(List<String>, args);
+
+    DTO_FIELD_INFO(env) { info->description = "Environment variables"; }
+    DTO_FIELD(UnorderedFields<String>, env);
+};
+
+class ReturnScriptRunDto : public StatusDto {
+    DTO_INIT(ReturnScriptRunDto, StatusDto)
+
+    DTO_FIELD_INFO(output) {
+        info->description = "Output of the script";
+        info->required = true;
+    }
+    DTO_FIELD(String, output);
+
+    DTO_FIELD_INFO(status_code) {
+        info->description = "Status code of the script";
+        info->required = true;
+    }
+    DTO_FIELD(Int32, status_code);
+};
+
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section
 
 #endif  // INDIDTO_HPP

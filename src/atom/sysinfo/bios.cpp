@@ -9,6 +9,9 @@
 #endif
 #endif
 
+#include <memory>
+#include <sstream>
+
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
@@ -146,12 +149,6 @@ auto getBiosInfo() -> BiosInfoData {
 }
 
 #elif __linux__
-
-#include <array>
-#include <cstdlib>
-#include <memory>
-#include <sstream>
-
 BiosInfoData getBiosInfo() {
     LOG_F(INFO, "Starting getBiosInfo function");
     BiosInfoData biosInfo = {"", "", ""};

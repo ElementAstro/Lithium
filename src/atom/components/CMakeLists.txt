@@ -35,6 +35,8 @@ set(${PROJECT_NAME}_LIBS
 # Include directories
 include_directories(.)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Object library for headers and sources with project prefix
 add_library(${PROJECT_NAME}_OBJECT OBJECT ${${PROJECT_NAME}_HEADERS} ${${PROJECT_NAME}_SOURCES})
 # set_target_properties(${PROJECT_NAME}_OBJECT PROPERTIES LINKER_LANGUAGE CXX)

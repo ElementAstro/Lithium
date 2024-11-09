@@ -1,7 +1,7 @@
 #include "libastro.hpp"
 #include <cmath>
 
-namespace lithium {
+namespace lithium::tools {
 
 namespace {
 

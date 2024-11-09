@@ -142,6 +142,11 @@ public:
     void stop();
 
     /**
+     * @brief Blocks the calling thread until all tasks are completed.
+     */
+    void wait();
+
+    /**
      * @brief Sets a callback function to be called when a task is executed.
      *
      * @tparam Function The type of the callback function.

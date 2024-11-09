@@ -20,28 +20,72 @@ endif()
 # Project sources
 set(PROJECT_SOURCES
     addons.cpp
+    build_manager.cpp
+    compile_command_generator.cpp
+    compiler_output_parser.cpp
     compiler.cpp
     dependency.cpp
+    generator.cpp
     loader.cpp
     manager.cpp
     sandbox.cpp
+    system_dependency.cpp
     toolchain.cpp
+    tracker.cpp
     version.cpp
 
+    debug/dump.cpp
+    debug/dynamic.cpp
+    debug/elf.cpp
+    debug/pdb.cpp
+
+    platform/cmake.cpp
+    platform/meson.cpp
+    platform/xmake.cpp
+
+    project/git_impl.cpp
+    project/git.cpp
+
+    remote/github_impl.cpp
+    remote/github.cpp
+
+    template/remote.cpp
     template/standalone.cpp
 )
 
 # Project headers
 set(PROJECT_HEADERS
     addons.hpp
+    build_manager.hpp
+    compile_command_generator.hpp
+    compiler_output_parser.hpp
     compiler.hpp
     dependency.hpp
+    generator.hpp
     loader.hpp
     manager.hpp
     sandbox.hpp
+    system_dependency.hpp
     toolchain.hpp
+    tracker.hpp
     version.hpp
 
+    debug/dump.hpp
+    debug/dynamic.hpp
+    debug/elf.hpp
+    debug/pdb.hpp
+
+    platform/cmake.hpp
+    platform/meson.hpp
+    platform/xmake.hpp
+
+    project/git_impl.hpp
+    project/git.hpp
+
+    remote/github_impl.hpp
+    remote/github.hpp
+
+    template/remote.hpp
     template/standalone.hpp
 )
 

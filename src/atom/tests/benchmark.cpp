@@ -19,7 +19,11 @@
 #endif
 // clang-format on
 #elif defined(__unix__) || defined(__APPLE__)
+#include <linux/hw_breakpoint.h> /* Definition of HW_* constants */
+#include <linux/perf_event.h>    /* Definition of PERF_* constants */
+#include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <sys/syscall.h> /* Definition of SYS_* constants */
 #include <unistd.h>
 #endif
 

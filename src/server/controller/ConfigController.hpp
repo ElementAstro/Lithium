@@ -17,6 +17,7 @@
 #include "atom/type/json.hpp"
 #include "config/configor.hpp"
 #include "data/ConfigDto.hpp"
+#include "data/RequestDto.hpp"
 #include "data/StatusDto.hpp"
 
 #include "atom/log/loguru.hpp"
@@ -31,10 +32,11 @@ private:
     static auto handleConfigAction(auto controller,
                                    const oatpp::Object<DtoType>& body,
                                    const std::string& command, Func func) {
-        OATPP_ASSERT_HTTP(
-            !body->path->empty(), Status::CODE_400,
-            "The 'path' parameter is required and cannot be empty.");
-
+        if constexpr (!std::is_same_v<DtoType, RequestDto>) {
+            OATPP_ASSERT_HTTP(
+                !body->path->empty(), Status::CODE_400,
+                "The 'path' parameter is required and cannot be empty.");
+        }
         auto res = StatusDto::createShared();
         res->command = command;
 
@@ -54,17 +56,29 @@ private:
                 if (success) {
                     res->status = "success";
                     res->code = Status::CODE_200.code;
-                    LOG_F(INFO,
-                          "Successfully executed command: {} for path: {}",
-                          command, body->path->c_str());
+                    if constexpr (std::is_same_v<DtoType, RequestDto>) {
+                        LOG_F(INFO, "Successfully executed command: {}",
+                              command);
+                    } else {
+                        LOG_F(INFO,
+                              "Successfully executed command: {} for path: {}",
+                              command, *body->path);
+                    }
+
                 } else {
                     res->status = "error";
                     res->code = Status::CODE_404.code;
                     res->error =
                         "Not Found: The specified path could not be found or "
                         "the operation failed.";
-                    LOG_F(WARNING, "Failed to execute command: {} for path: {}",
-                          command, body->path->c_str());
+                    if constexpr (std::is_same_v<DtoType, RequestDto>) {
+                        LOG_F(WARNING, "Failed to execute command: {}",
+                              command);
+                    } else {
+                        LOG_F(WARNING,
+                              "Failed to execute command: {} for path: {}",
+                              command, *body->path);
+                    }
                 }
             }
         } catch (const std::exception& e) {
@@ -206,6 +220,7 @@ public:
         }
     };
 
+    // Endpoint to reload configuration from file
     ENDPOINT_INFO(getUIReloadConfig) {
         info->summary = "Reload config from file";
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
@@ -213,16 +228,13 @@ public:
     }
     ENDPOINT_ASYNC("GET", "/api/config/reload", getUIReloadConfig) {
         ENDPOINT_ASYNC_INIT(getUIReloadConfig);
-        /*
-         auto act() -> Action override {
-            return _return(handleConfigAction(
-                this->controller, {}, "reloadConfig",
-                [&](auto configManager) {
-                    return configManager->reloadFromFile();
+
+        auto act() -> Action override {
+            return _return(handleConfigAction<RequestDto>(
+                this->controller, {}, "reloadConfig", [&](auto configManager) {
+                    return configManager->loadFromFile("config/config.json");
                 }));
         }
-        */
-
     };
 
     ENDPOINT_INFO(getUISaveConfig) {

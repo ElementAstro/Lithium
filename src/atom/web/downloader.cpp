@@ -12,8 +12,8 @@
 #endif
 
 #include "atom/log/loguru.hpp"
-#include "atom/web/curl.hpp"
 #include "atom/macro.hpp"
+#include "atom/web/curl.hpp"
 
 namespace atom::web {
 
@@ -74,8 +74,7 @@ private:
 
 DownloadManager::Impl::Impl(std::string task_file)
     : taskFile_(std::move(task_file)) {
-    LOG_F(INFO, "Initializing DownloadManager with task file: {}",
-          taskFile_);
+    LOG_F(INFO, "Initializing DownloadManager with task file: {}", taskFile_);
     loadTaskListFromFile();
 }
 
@@ -207,8 +206,8 @@ void DownloadManager::Impl::downloadTask(DownloadTask& task,
             }
         })
         .onError([&](CURLcode code) {
-            LOG_F(ERROR, "Download error for URL {}: %d", task.url.c_str(),
-                  code);
+            LOG_F(ERROR, "Download error for URL {}: {}", task.url.c_str(),
+                  static_cast<int>(code));
             if (task.retries < maxRetries_) {
                 task.retries++;
                 taskQueue_.push(task);

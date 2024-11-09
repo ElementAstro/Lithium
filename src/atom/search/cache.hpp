@@ -34,6 +34,7 @@ Description: ResourceCache class for Atom Search
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "atom/log/loguru.hpp"
@@ -55,6 +56,7 @@ concept Cacheable = std::copy_constructible<T> && std::is_copy_assignable_v<T>;
 template <Cacheable T>
 class ResourceCache {
 public:
+    using Callback = std::function<void(const std::string &key)>;
     /**
      * @brief Constructs a ResourceCache with a specified maximum size.
      *
@@ -239,6 +241,27 @@ public:
      */
     void removeBatch(const std::vector<std::string> &keys);
 
+    /**
+     * @brief Registers a callback to be called on insertion.
+     *
+     * @param callback The callback function.
+     */
+    void onInsert(Callback callback);
+
+    /**
+     * @brief Registers a callback to be called on removal.
+     *
+     * @param callback The callback function.
+     */
+    void onRemove(Callback callback);
+
+    /**
+     * @brief Retrieves cache statistics.
+     *
+     * @return A pair containing hit count and miss count.
+     */
+    std::pair<size_t, size_t> getStatistics() const;
+
 private:
     /**
      * @brief Evicts resources from the cache if it exceeds the maximum size.
@@ -267,6 +290,11 @@ private:
     std::atomic<bool> stopCleanupThread_{
         false};  ///< Flag to stop the cleanup thread.
 
+    Callback insertCallback_;
+    Callback removeCallback_;
+    mutable std::atomic<size_t> hitCount_{0};
+    mutable std::atomic<size_t> missCount_{0};
+
     // Adaptive cleanup interval based on expired entry density
     std::chrono::seconds cleanupInterval_{
         1};  ///< The interval for cleaning up expired resources.
@@ -286,14 +314,21 @@ ResourceCache<T>::~ResourceCache() {
 template <Cacheable T>
 void ResourceCache<T>::insert(const std::string &key, const T &value,
                               std::chrono::seconds expirationTime) {
-    std::unique_lock lock(cacheMutex_);
-    if (cache_.size() >= maxSize_) {
-        evictOldest();
+    try {
+        std::unique_lock lock(cacheMutex_);
+        if (cache_.size() >= maxSize_) {
+            evictOldest();
+        }
+        cache_[key] = {value, std::chrono::steady_clock::now()};
+        expirationTimes_[key] = expirationTime;
+        lastAccessTimes_[key] = std::chrono::steady_clock::now();
+        lruList_.push_front(key);
+        if (insertCallback_) {
+            insertCallback_(key);
+        }
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Insert failed for key {}: {}", key, e.what());
     }
-    cache_[key] = {value, std::chrono::steady_clock::now()};
-    expirationTimes_[key] = expirationTime;
-    lastAccessTimes_[key] = std::chrono::steady_clock::now();
-    lruList_.push_front(key);
 }
 
 template <Cacheable T>
@@ -304,32 +339,61 @@ auto ResourceCache<T>::contains(const std::string &key) const -> bool {
 
 template <Cacheable T>
 auto ResourceCache<T>::get(const std::string &key) -> std::optional<T> {
-    DLOG_F(INFO, "Get key: {}", key);
-    std::shared_lock lock(cacheMutex_);
-    if (!contains(key)) {
-        return std::nullopt;
-    }
-    if (isExpired(key)) {
+    try {
+        std::shared_lock lock(cacheMutex_);
+        if (!contains(key)) {
+            missCount_++;
+            return std::nullopt;
+        }
+        if (isExpired(key)) {
+            lock.unlock();
+            remove(key);
+            missCount_++;
+            return std::nullopt;
+        }
+        hitCount_++;
         lock.unlock();
-        remove(key);
+
+        std::unique_lock uniqueLock(cacheMutex_);
+        lastAccessTimes_[key] = std::chrono::steady_clock::now();
+        lruList_.remove(key);
+        lruList_.push_front(key);
+        return cache_[key].first;
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Get failed for key {}: {}", key, e.what());
         return std::nullopt;
     }
-    lock.unlock();
-
-    std::unique_lock uniqueLock(cacheMutex_);
-    lastAccessTimes_[key] = std::chrono::steady_clock::now();
-    lruList_.remove(key);
-    lruList_.push_front(key);
-    return cache_[key].first;
 }
 
 template <Cacheable T>
 void ResourceCache<T>::remove(const std::string &key) {
-    std::unique_lock lock(cacheMutex_);
-    cache_.erase(key);
-    expirationTimes_.erase(key);
-    lastAccessTimes_.erase(key);
-    lruList_.remove(key);
+    try {
+        std::unique_lock lock(cacheMutex_);
+        cache_.erase(key);
+        expirationTimes_.erase(key);
+        lastAccessTimes_.erase(key);
+        lruList_.remove(key);
+        if (removeCallback_) {
+            removeCallback_(key);
+        }
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Remove failed for key {}: {}", key, e.what());
+    }
+}
+
+template <Cacheable T>
+void ResourceCache<T>::onInsert(Callback callback) {
+    insertCallback_ = std::move(callback);
+}
+
+template <Cacheable T>
+void ResourceCache<T>::onRemove(Callback callback) {
+    removeCallback_ = std::move(callback);
+}
+
+template <Cacheable T>
+std::pair<size_t, size_t> ResourceCache<T>::getStatistics() const {
+    return {hitCount_.load(), missCount_.load()};
 }
 
 template <Cacheable T>

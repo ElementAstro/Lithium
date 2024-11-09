@@ -1,6 +1,7 @@
 #ifndef ATOM_EXTRA_BOOST_CHARCONV_HPP
 #define ATOM_EXTRA_BOOST_CHARCONV_HPP
 
+#if __has_include(<boost/charconv.hpp>)
 #include <array>
 #include <boost/charconv.hpp>
 #include <charconv>
@@ -273,5 +274,7 @@ private:
 };
 
 }  // namespace atom::extra::boost
+
+#endif
 
 #endif  // ATOM_EXTRA_BOOST_CHARCONV_HPP

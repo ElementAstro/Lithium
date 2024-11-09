@@ -20,6 +20,7 @@ Description: Storage Monitor
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <condition_variable>
 #include "atom/macro.hpp"
 
 namespace atom::system {
@@ -33,7 +34,7 @@ public:
     /**
      * @brief 默认构造函数。
      */
-    StorageMonitor() = default;
+    StorageMonitor();
 
     ~StorageMonitor();
 
@@ -90,18 +91,36 @@ public:
      */
     void listFiles(const std::string &path);
 
+    /**
+     * @brief 动态添加存储路径。
+     *
+     * @param path 要添加的存储路径。
+     */
+    void addStoragePath(const std::string &path);
+
+    /**
+     * @brief 动态移除存储路径。
+     *
+     * @param path 要移除的存储路径。
+     */
+    void removeStoragePath(const std::string &path);
+
+    /**
+     * @brief 获取当前存储状态。
+     *
+     * @return 存储状态的字符串表示。
+     */
+    std::string getStorageStatus();
+
 private:
     std::vector<std::string> m_storagePaths;  ///< 所有已挂载的存储空间路径。
     std::unordered_map<std::string, std::pair<uintmax_t, uintmax_t>>
         m_storageStats;
-    std::unordered_map<std::string, uintmax_t>
-        m_lastCapacity;  ///< 上一次记录的存储空间容量。
-    std::unordered_map<std::string, uintmax_t>
-        m_lastFree;      ///< 上一次记录的存储空间可用空间。
     std::mutex m_mutex;  ///< 互斥锁，用于保护数据结构的线程安全。
-    std::vector<std::function<void(const std::string &)>>
-        m_callbacks;           ///< 注册的回调函数列表。
-    bool m_isRunning = false;  ///< 标记是否正在运行监控。
+    std::vector<std::function<void(const std::string &)>> m_callbacks; ///< 注册的回调函数列表。
+    bool m_isRunning;  ///< 标记是否正在运行监控。
+    std::thread m_monitorThread; ///< 监控线程。
+    std::condition_variable m_cv; ///< 条件变量用于线程同步。
 };
 
 #ifdef _WIN32

@@ -23,6 +23,12 @@
 #endif
 
 namespace atom::meta {
+template <typename T>
+concept FunctionPointer =
+    std::is_function_v<std::remove_pointer_t<T>> && std::is_pointer_v<T>;
+
+template <typename T>
+concept MemberFunctionPointer = std::is_member_function_pointer_v<T>;
 
 template <typename Func>
 struct FunctionTraits;
@@ -175,6 +181,16 @@ struct FunctionTraits<Return (Class::*)(Args...) const volatile noexcept>
     static constexpr bool is_noexcept = true;
 };
 
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const volatile && noexcept>
+    : FunctionTraits<Return (Class::*)(Args...)> {
+    static constexpr bool is_variadic = true;
+    static constexpr bool is_noexcept = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_rvalue_reference_member_function = true;
+};
+
 template <typename Return, typename... Args>
 struct FunctionTraits<Return(Args..., ...)>
     : FunctionTraitsBase<Return, Args...> {
@@ -185,15 +201,13 @@ template <typename Return, typename... Args>
 struct FunctionTraits<Return(Args..., ...) noexcept>
     : FunctionTraits<Return(Args..., ...)> {
     static constexpr bool is_noexcept = true;
-    static constexpr bool is_variadic = true;
 };
 
-// Lambda and function object support
 template <typename Func>
-struct FunctionTraits
+    requires requires { &std::remove_cvref_t<Func>::operator(); }
+struct FunctionTraits<Func>
     : FunctionTraits<decltype(&std::remove_cvref_t<Func>::operator())> {};
 
-// Support for function references
 template <typename Func>
 struct FunctionTraits<Func &> : FunctionTraits<Func> {};
 

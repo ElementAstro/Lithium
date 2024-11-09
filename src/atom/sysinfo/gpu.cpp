@@ -24,7 +24,9 @@ Description: System Information Module - GPU
 #include <CoreGraphics/CoreGraphics.h>
 #elif defined(__linux__)
 #include <X11/Xlib.h>
+#if __has_include(<X11/extensions/Xrandr.h>)
 #include <X11/extensions/Xrandr.h>
+#endif
 #include <fstream>
 #endif
 
@@ -166,12 +168,12 @@ auto getAllMonitorsInfo() -> std::vector<MonitorInfo> {
     LOG_F(INFO, "Starting getAllMonitorsInfo function");
     std::vector<MonitorInfo> monitors;
 
+#if __has_include(<X11/extensions/Xrandr.h>)
     Display* display = XOpenDisplay(nullptr);
     if (display == nullptr) {
         LOG_F(ERROR, "Unable to open X display");
         return monitors;
     }
-
     Window root = DefaultRootWindow(display);
     XRRScreenResources* screenRes = XRRGetScreenResources(display, root);
     if (screenRes == nullptr) {
@@ -215,8 +217,10 @@ auto getAllMonitorsInfo() -> std::vector<MonitorInfo> {
 
     XRRFreeScreenResources(screenRes);
     XCloseDisplay(display);
-
     LOG_F(INFO, "Finished getAllMonitorsInfo function");
+#else
+    LOG_F(ERROR, "Xrandr extension not found");
+#endif
     return monitors;
 }
 

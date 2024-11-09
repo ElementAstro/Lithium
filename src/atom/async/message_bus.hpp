@@ -149,7 +149,14 @@ public:
         std::unique_lock lock(mutex_);
         Token token = nextToken_++;
         subscribers_[std::type_index(typeid(MessageType))][name].emplace_back(
-            Subscriber{std::move(handler), async, once, std::move(filter),
+            Subscriber{[handler = std::move(handler)](const std::any& msg) {
+                           handler(std::any_cast<const MessageType&>(msg));
+                       },
+                       async, once,
+                       [filter = std::move(filter)](const std::any& msg) {
+                           return filter(
+                               std::any_cast<const MessageType&>(msg));
+                       },
                        token});
         namespaces_.insert(extractNamespace(name));  // Record namespace
         std::cout << "[MessageBus] Subscribed to: " << name

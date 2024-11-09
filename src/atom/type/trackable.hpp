@@ -131,19 +131,19 @@ public:
      * @return Trackable& Reference to the trackable object.
      */
     auto operator+=(const T& rhs) -> Trackable& {
-        return applyOperation(rhs, std::plus<>{});
+        return applyOperation(rhs, std::plus<T>{});
     }
 
     auto operator-=(const T& rhs) -> Trackable& {
-        return applyOperation(rhs, std::minus<>{});
+        return applyOperation(rhs, std::minus<T>{});
     }
 
     auto operator*=(const T& rhs) -> Trackable& {
-        return applyOperation(rhs, std::multiplies<>{});
+        return applyOperation(rhs, std::multiplies<T>{});
     }
 
     auto operator/=(const T& rhs) -> Trackable& {
-        return applyOperation(rhs, std::divides<>{});
+        return applyOperation(rhs, std::divides<T>{});
     }
 
     /**

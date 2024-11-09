@@ -17,6 +17,8 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
+#include <unordered_map>
 #include <vector>
 
 #include "atom/type/json_fwd.hpp"
@@ -46,6 +48,9 @@ public:
     static void mergeJsonObjects(nlohmann::json& base,
                                  const nlohmann::json& toMerge);
 
+    static void deepMergeJsonObjects(nlohmann::json& base,
+                                     const nlohmann::json& toMerge);
+
     static void batchAsyncProcess(
         const std::vector<fs::path>& filePaths,
         const std::function<void(const std::optional<nlohmann::json>&)>&
@@ -61,8 +66,21 @@ public:
 
     static void batchProcessDirectory(
         const fs::path& directoryPath,
-        const std::function<void(const std::optional<nlohmann::json>&)>& process,
+        const std::function<void(const std::optional<nlohmann::json>&)>&
+            process,
         const std::function<void()>& onComplete);
+
+    // 新增功能：JSON模式验证
+    static bool validateJson(const nlohmann::json& jsonData,
+                             const nlohmann::json& schema);
+
+private:
+    static std::unordered_map<fs::path, nlohmann::json> cache_;
+    static std::shared_mutex cache_mutex_;
+
+    // 线程池相关
+    static void initializeThreadPool();
+    static void enqueueTask(std::function<void()> task);
 };
 
 }  // namespace lithium

@@ -6,12 +6,8 @@
 #ifndef LITHIUM_DEBUG_PROGRESS_HPP
 #define LITHIUM_DEBUG_PROGRESS_HPP
 
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
 #include <functional>
-#include <future>
-#include <mutex>
+#include <memory>
 #include <string>
 
 namespace lithium::debug {
@@ -127,55 +123,8 @@ public:
     [[nodiscard]] bool isPaused() const;
 
 private:
-    int total_;                 ///< The total amount of work to be done.
-    int width_;                 ///< The width of the progress bar.
-    char completeChar_;         ///< The character representing completed work.
-    char incompleteChar_;       ///< The character representing incomplete work.
-    bool showTimeLeft_;         ///< Whether to show the estimated time left.
-    Color color_;               ///< The color of the progress bar.
-    std::atomic<int> current_;  ///< The current progress value.
-    std::atomic<bool> running_;  ///< Whether the progress bar is running.
-    std::atomic<bool> paused_;   ///< Whether the progress bar is paused.
-    int refreshRateMs_;          ///< The refresh rate in milliseconds.
-    bool showPercentage_;        ///< Whether to show the percentage completed.
-    std::chrono::time_point<std::chrono::steady_clock>
-        startTime_;  ///< The start time of the progress bar.
-    std::future<void>
-        future_;        ///< The future object for asynchronous operations.
-    std::mutex mutex_;  ///< The mutex for thread safety.
-    std::condition_variable
-        cv_;  ///< The condition variable for synchronization.
-    std::function<void()> completionCallback_;  ///< The callback function to be
-                                                ///< called upon completion.
-    std::string label_;  ///< The label for the progress bar.
-
-    /**
-     * @brief Prints the progress bar.
-     */
-    void printProgressBar();
-
-    /**
-     * @brief Selects the color based on the progress.
-     *
-     * @param progress The current progress as a float.
-     * @return The color code as a string.
-     */
-    [[nodiscard]] std::string selectColorBasedOnProgress(float progress) const;
-
-    /**
-     * @brief Logs an event.
-     *
-     * @param event The event to be logged.
-     */
-    void logEvent(const std::string& event) const;
-
-    /**
-     * @brief Gets the ANSI color code for a given color enum.
-     *
-     * @param color The color enum.
-     * @return The ANSI color code as a string.
-     */
-    [[nodiscard]] std::string getColorCode(Color color) const;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace lithium::debug

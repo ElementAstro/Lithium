@@ -25,6 +25,7 @@
 #include "atom/sysinfo/os.hpp"
 #include "atom/system//software.hpp"
 #include "atom/system/command.hpp"
+#include "atom/system/network_manager.hpp"
 #include "atom/system/process.hpp"
 #include "atom/system/user.hpp"
 #include "atom/utils/container.hpp"

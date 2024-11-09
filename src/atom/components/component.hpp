@@ -494,12 +494,12 @@ void Component::defBaseClass() {
 template <typename Callable>
 void Component::def(const std::string& name, Callable&& func,
                     const std::string& group, const std::string& description) {
-    using Traits = atom::meta::FunctionTraits<decltype(func)>;
-
-    m_CommandDispatcher_->def(
-        name, group, description,
-        std::function<typename Traits::return_type(
-            typename Traits::argument_t)>(std::forward<Callable>(func)));
+    using Traits = atom::meta::FunctionTraits<std::decay_t<Callable>>;
+    using ReturnType = typename Traits::return_type;
+    static_assert(Traits::arity <= 8, "Too many arguments");
+// clang-format off
+    #include "component.template"
+// clang-format on
 }
 
 template <typename Ret>
@@ -573,8 +573,16 @@ template <typename... Args, typename Ret, typename Class, typename InstanceType>
 void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
                     const InstanceType& instance, const std::string& group,
                     const std::string& description) {
-    if constexpr (SmartPointer<InstanceType> ||
-                  std::is_same_v<InstanceType, PointerSentinel<Class>>) {
+    if constexpr (std::is_same_v<InstanceType, std::unique_ptr<Class>>) {
+        m_CommandDispatcher_->def(
+            name, group, description,
+            std::function<Ret(Args...)>([&instance, func](Args... args) {
+                return std::invoke(func, instance.get(),
+                                   std::forward<Args>(args)...);
+            }));
+
+    } else if constexpr (SmartPointer<InstanceType> ||
+                         std::is_same_v<InstanceType, PointerSentinel<Class>>) {
         m_CommandDispatcher_->def(
             name, group, description,
             std::function<Ret(Args...)>([instance, func](Args... args) {

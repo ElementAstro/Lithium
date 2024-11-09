@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-namespace atom::connection {
+namespace atom::async::connection {
 
 /**
  * @brief A class for interacting with a FIFO (First In, First Out) pipe.

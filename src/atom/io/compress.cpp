@@ -241,6 +241,120 @@ auto compressFolder(const char *folder_name) -> bool {
     return compressFolder(fs::path(folder_name));
 }
 
+void compressFileSlice(const std::string &inputFile, size_t sliceSize) {
+    std::ifstream inFile(inputFile, std::ios::binary);
+    if (!inFile) {
+        LOG_F(ERROR, "Failed to open input file.");
+        return;
+    }
+
+    std::vector<char> buffer(sliceSize);
+    size_t bytesRead;
+    int fileIndex = 0;
+
+    while (inFile) {
+        // Read a slice of the file
+        inFile.read(buffer.data(), sliceSize);
+        bytesRead = inFile.gcount();
+
+        if (bytesRead > 0) {
+            // Prepare compressed data
+            std::vector<char> compressedData(compressBound(bytesRead));
+            uLongf compressedSize = compressedData.size();
+
+            // Compress the data
+            if (compress(reinterpret_cast<Bytef *>(compressedData.data()),
+                         &compressedSize,
+                         reinterpret_cast<const Bytef *>(buffer.data()),
+                         bytesRead) != Z_OK) {
+                LOG_F(ERROR, "Compression failed.");
+                inFile.close();
+                return;
+            }
+
+            // Write the compressed data to a new file
+            std::string compressedFileName =
+                "slice_" + std::to_string(fileIndex++) + ".zlib";
+            std::ofstream outFile(compressedFileName, std::ios::binary);
+            if (!outFile) {
+                LOG_F(ERROR, "Failed to open output file.");
+                inFile.close();
+                return;
+            }
+
+            // Write the size of the compressed data and the data itself
+            outFile.write(reinterpret_cast<char *>(&compressedSize),
+                          sizeof(compressedSize));
+            outFile.write(compressedData.data(), compressedSize);
+            outFile.close();
+        }
+    }
+
+    inFile.close();
+    LOG_F(INFO, "File sliced and compressed successfully.");
+}
+
+void decompressFileSlice(const std::string &sliceFile, size_t sliceSize) {
+    std::ifstream inFile(sliceFile, std::ios::binary);
+    if (!inFile) {
+        LOG_F(ERROR, "Failed to open compressed file: {}", sliceFile);
+        return;
+    }
+
+    // Read the compressed size
+    uLongf compressedSize;
+    inFile.read(reinterpret_cast<char *>(&compressedSize),
+                sizeof(compressedSize));
+
+    // Prepare buffer for compressed data
+    std::vector<char> compressedData(compressedSize);
+    inFile.read(compressedData.data(), compressedSize);
+    inFile.close();
+
+    // Prepare buffer for decompressed data
+    std::vector<char> decompressedData(
+        sliceSize);  // Adjust sliceSize for max expected original size
+    uLongf decompressedSize = sliceSize;
+
+    // Decompress the data
+    if (uncompress(reinterpret_cast<Bytef *>(decompressedData.data()),
+                   &decompressedSize,
+                   reinterpret_cast<const Bytef *>(compressedData.data()),
+                   compressedSize) != Z_OK) {
+        LOG_F(ERROR, "Decompression failed for file: {}", sliceFile);
+        return;
+    }
+
+    // Write the decompressed data to a new file
+    std::string decompressedFileName = "decompressed_" + sliceFile;
+    std::ofstream outFile(decompressedFileName, std::ios::binary);
+    if (!outFile) {
+        LOG_F(ERROR, "Failed to open decompressed output file.");
+        return;
+    }
+
+    outFile.write(decompressedData.data(), decompressedSize);
+    outFile.close();
+    LOG_F(INFO, "Decompressed file created: {}", decompressedFileName);
+}
+
+void listCompressedFiles() {
+    for (const auto &entry : std::filesystem::directory_iterator(".")) {
+        if (entry.path().extension() == ".zlib") {
+            LOG_F(INFO, "{}", entry.path().filename().string());
+        }
+    }
+}
+
+void deleteCompressedFiles() {
+    for (const auto &entry : std::filesystem::directory_iterator(".")) {
+        if (entry.path().extension() == ".zlib") {
+            std::filesystem::remove(entry.path());
+            LOG_F(INFO, "Deleted: {}", entry.path().filename().string());
+        }
+    }
+}
+
 auto extractZip(std::string_view zip_file,
                 std::string_view destination_folder) -> bool {
     LOG_F(INFO, "extractZip called with zip_file: {}, destination_folder: {}",

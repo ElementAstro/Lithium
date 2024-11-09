@@ -9,13 +9,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "tinyxml2/tinyxml2.h"
-
 #include "atom/type/json_fwd.hpp"
 #include "version.hpp"
 
 using json = nlohmann::json;
-using namespace tinyxml2;
 
 namespace lithium {
 /**

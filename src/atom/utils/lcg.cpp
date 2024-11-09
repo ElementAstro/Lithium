@@ -271,11 +271,4 @@ auto LCG::nextMultinomial(int trials, const std::vector<double>& probabilities)
         trials, probabilities.size());
     return counts;
 }
-
-constexpr auto LCG::min() -> result_type { return 0; }
-
-constexpr auto LCG::max() -> result_type {
-    return std::numeric_limits<result_type>::max();
-}
-
 }  // namespace atom::utils

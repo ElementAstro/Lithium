@@ -20,11 +20,13 @@ Description: A static vector (Optimized with C++20 features)
 #include <cassert>
 #include <compare>
 #include <cstddef>
+#include <iterator>
 #include <ranges>
+#include <stdexcept>
 #include <utility>
 
-#include "error/exception.hpp"
 #include "atom/macro.hpp"
+#include "error/exception.hpp"
 
 /**
  * @brief A static vector implementation with a fixed capacity.
@@ -58,51 +60,78 @@ public:
      *
      * @param init The initializer list to initialize the StaticVector with.
      */
-    constexpr StaticVector(std::initializer_list<T> init) noexcept {
-        assert(init.size() <= Capacity);
+    constexpr StaticVector(std::initializer_list<T> init) {
+        if (init.size() > Capacity) {
+            throw std::length_error("Initializer list size exceeds capacity");
+        }
         std::ranges::copy(init, begin());
         m_size_ = init.size();
     }
 
     /**
-     * @brief Copy constructor. Constructs a StaticVector by copying another StaticVector.
+     * @brief Copy constructor. Constructs a StaticVector by copying another
+     * StaticVector.
      *
      * @param other The StaticVector to copy from.
      */
-    constexpr StaticVector(const StaticVector& other) noexcept = default;
+    constexpr StaticVector(const StaticVector& other) noexcept {
+        std::ranges::copy(other, begin());
+        m_size_ = other.m_size_;
+    }
 
     /**
-     * @brief Move constructor. Constructs a StaticVector by moving another StaticVector.
+     * @brief Move constructor. Constructs a StaticVector by moving another
+     * StaticVector.
      *
      * @param other The StaticVector to move from.
      */
-    constexpr StaticVector(StaticVector&& other) noexcept = default;
+    constexpr StaticVector(StaticVector&& other) noexcept {
+        std::ranges::move(other, begin());
+        m_size_ = other.m_size_;
+        other.m_size_ = 0;
+    }
 
     /**
-     * @brief Copy assignment operator. Copies the contents of another StaticVector.
+     * @brief Copy assignment operator. Copies the contents of another
+     * StaticVector.
      *
      * @param other The StaticVector to copy from.
      * @return A reference to the assigned StaticVector.
      */
     constexpr auto operator=(const StaticVector& other) noexcept
-        -> StaticVector& = default;
+        -> StaticVector& {
+        if (this != &other) {
+            std::ranges::copy(other, begin());
+            m_size_ = other.m_size_;
+        }
+        return *this;
+    }
 
     /**
-     * @brief Move assignment operator. Moves the contents of another StaticVector.
+     * @brief Move assignment operator. Moves the contents of another
+     * StaticVector.
      *
      * @param other The StaticVector to move from.
      * @return A reference to the assigned StaticVector.
      */
-    constexpr auto operator=(StaticVector&& other) noexcept -> StaticVector& =
-                                                                   default;
+    constexpr auto operator=(StaticVector&& other) noexcept -> StaticVector& {
+        if (this != &other) {
+            std::ranges::move(other, begin());
+            m_size_ = other.m_size_;
+            other.m_size_ = 0;
+        }
+        return *this;
+    }
 
     /**
      * @brief Adds an element to the end of the StaticVector by copying.
      *
      * @param value The value to add.
      */
-    constexpr void pushBack(const T& value) noexcept {
-        assert(m_size_ < Capacity);
+    constexpr void pushBack(const T& value) {
+        if (m_size_ >= Capacity) {
+            throw std::overflow_error("StaticVector capacity exceeded");
+        }
         m_data_[m_size_++] = value;
     }
 
@@ -111,8 +140,10 @@ public:
      *
      * @param value The value to add.
      */
-    constexpr void pushBack(T&& value) noexcept {
-        assert(m_size_ < Capacity);
+    constexpr void pushBack(T&& value) {
+        if (m_size_ >= Capacity) {
+            throw std::overflow_error("StaticVector capacity exceeded");
+        }
         m_data_[m_size_++] = std::move(value);
     }
 
@@ -124,16 +155,20 @@ public:
      * @return A reference to the constructed element.
      */
     template <typename... Args>
-    constexpr auto emplaceBack(Args&&... args) noexcept -> reference {
-        assert(m_size_ < Capacity);
+    constexpr auto emplaceBack(Args&&... args) -> reference {
+        if (m_size_ >= Capacity) {
+            throw std::overflow_error("StaticVector capacity exceeded");
+        }
         return m_data_[m_size_++] = T(std::forward<Args>(args)...);
     }
 
     /**
      * @brief Removes the last element from the StaticVector.
      */
-    constexpr void popBack() noexcept {
-        assert(m_size_ > 0);
+    constexpr void popBack() {
+        if (m_size_ == 0) {
+            throw std::underflow_error("StaticVector is empty");
+        }
         --m_size_;
     }
 
@@ -202,7 +237,7 @@ public:
      */
     [[nodiscard]] constexpr auto at(size_type index) -> reference {
         if (index >= m_size_) {
-            THROW_OUT_OF_RANGE("StaticVector::at");
+            throw std::out_of_range("StaticVector::at: index out of range");
         }
         return m_data_[index];
     }
@@ -216,7 +251,7 @@ public:
      */
     [[nodiscard]] constexpr auto at(size_type index) const -> const_reference {
         if (index >= m_size_) {
-            THROW_OUT_OF_RANGE("StaticVector::at");
+            throw std::out_of_range("StaticVector::at: index out of range");
         }
         return m_data_[index];
     }
@@ -227,7 +262,9 @@ public:
      * @return A reference to the first element.
      */
     [[nodiscard]] constexpr auto front() noexcept -> reference {
-        assert(m_size_ > 0);
+        if (m_size_ == 0) {
+            throw std::underflow_error("StaticVector is empty");
+        }
         return m_data_[0];
     }
 
@@ -237,7 +274,9 @@ public:
      * @return A const reference to the first element.
      */
     [[nodiscard]] constexpr auto front() const noexcept -> const_reference {
-        assert(m_size_ > 0);
+        if (m_size_ == 0) {
+            throw std::underflow_error("StaticVector is empty");
+        }
         return m_data_[0];
     }
 
@@ -247,7 +286,9 @@ public:
      * @return A reference to the last element.
      */
     [[nodiscard]] constexpr auto back() noexcept -> reference {
-        assert(m_size_ > 0);
+        if (m_size_ == 0) {
+            throw std::underflow_error("StaticVector is empty");
+        }
         return m_data_[m_size_ - 1];
     }
 
@@ -257,7 +298,9 @@ public:
      * @return A const reference to the last element.
      */
     [[nodiscard]] constexpr auto back() const noexcept -> const_reference {
-        assert(m_size_ > 0);
+        if (m_size_ == 0) {
+            throw std::underflow_error("StaticVector is empty");
+        }
         return m_data_[m_size_ - 1];
     }
 
@@ -323,7 +366,8 @@ public:
     }
 
     /**
-     * @brief Returns a const reverse iterator to the beginning of the StaticVector.
+     * @brief Returns a const reverse iterator to the beginning of the
+     * StaticVector.
      *
      * @return A const reverse iterator to the beginning of the StaticVector.
      */
@@ -370,7 +414,8 @@ public:
     }
 
     /**
-     * @brief Returns a const reverse iterator to the beginning of the StaticVector.
+     * @brief Returns a const reverse iterator to the beginning of the
+     * StaticVector.
      *
      * @return A const reverse iterator to the beginning of the StaticVector.
      */
@@ -406,29 +451,29 @@ public:
      * @param rhs The right-hand side StaticVector.
      * @return True if the StaticVectors are equal, false otherwise.
      */
+    [[nodiscard]] constexpr auto operator==(
+        const StaticVector& other) const noexcept -> bool {
+        return m_size_ == other.m_size_ &&
+               std::ranges::equal(m_data_, other.m_data_);
+    }
+
+    /**
+     * @brief Three-way comparison operator.
+     *
+     * @param lhs The left-hand side StaticVector.
+     * @param rhs The right-hand side StaticVector.
+     * @return The result of the three-way comparison.
+     */
     [[nodiscard]] constexpr auto operator<=>(
-        const StaticVector&) const noexcept = default;
+        const StaticVector& other) const noexcept {
+        return std::lexicographical_compare_three_way(
+            begin(), end(), other.begin(), other.end());
+    }
 
 private:
     std::array<T, Capacity> m_data_{};
     size_type m_size_{0};
 };
-
-// Equality operator
-template <typename T, std::size_t Capacity>
-constexpr auto operator==(const StaticVector<T, Capacity>& lhs,
-                          const StaticVector<T, Capacity>& rhs) noexcept
-    -> bool {
-    return std::ranges::equal(lhs, rhs);
-}
-
-// Three-way comparison operator
-template <typename T, std::size_t Capacity>
-constexpr auto operator<=>(const StaticVector<T, Capacity>& lhs,
-                           const StaticVector<T, Capacity>& rhs) noexcept {
-    return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(),
-                                                  rhs.begin(), rhs.end());
-}
 
 // Swap function for StaticVector
 template <typename T, std::size_t Capacity>

@@ -1,190 +1,9 @@
-/*
- * process.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2023-7-19
-
-Description: Process Manager
-
-**************************************************/
-
 #ifndef ATOM_SYSTEM_PROCESS_HPP
 #define ATOM_SYSTEM_PROCESS_HPP
 
-#include <filesystem>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "atom/error/exception.hpp"
-
-#include "atom/macro.hpp"
-
-namespace fs = std::filesystem;
+#include "process_info.hpp"
 
 namespace atom::system {
-class FailedToGetUserTokenException : public atom::error::Exception {
-public:
-    using atom::error::Exception::Exception;
-};
-
-#define THROW_FAILED_TO_GET_USER_TOKEN_EXCEPTION(...)  \
-    throw atom::system::FailedToGetUserTokenException( \
-        ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, __VA_ARGS__)
-
-/**
- * @struct Process
- * @brief Represents a system process.
- */
-struct Process {
-    int pid;             ///< Process ID.
-    std::string name;    ///< Process name.
-    std::string output;  ///< Process output.
-    fs::path path;       ///< Path to the process executable.
-    std::string status;  ///< Process status.
-#if _WIN32
-    void *handle;  ///< Handle to the process (Windows only).
-#endif
-};
-
-/**
- * @struct NetworkConnection
- * @brief Represents a network connection.
- */
-struct NetworkConnection {
-    std::string protocol;       ///< Protocol (TCP or UDP).
-    std::string localAddress;   ///< Local IP address.
-    std::string remoteAddress;  ///< Remote IP address.
-    int localPort;              ///< Local port number.
-    int remotePort;             ///< Remote port number.
-} ATOM_ALIGNAS(128);
-
-struct PrivilegesInfo {
-    std::string username;
-    std::string groupname;
-    std::vector<std::string> privileges;
-    bool isAdmin;
-} ATOM_ALIGNAS(128);
-
-/**
- * @class ProcessManager
- * @brief Manages system processes.
- */
-class ProcessManager {
-public:
-    /**
-     * @brief Constructs a ProcessManager with a maximum number of processes.
-     * @param maxProcess The maximum number of processes to manage.
-     */
-    explicit ProcessManager(int maxProcess = 10);
-
-    /**
-     * @brief Destroys the ProcessManager.
-     */
-    ~ProcessManager();
-
-    /**
-     * @brief Creates a shared pointer to a ProcessManager.
-     * @param maxProcess The maximum number of processes to manage.
-     * @return A shared pointer to a ProcessManager.
-     */
-    static auto createShared(int maxProcess = 10)
-        -> std::shared_ptr<ProcessManager>;
-
-    /**
-     * @brief Creates a new process.
-     * @param command The command to execute.
-     * @param identifier An identifier for the process.
-     * @return True if the process was created successfully, otherwise false.
-     */
-    auto createProcess(const std::string &command,
-                       const std::string &identifier) -> bool;
-
-    /**
-     * @brief Terminates a process by its PID.
-     * @param pid The process ID.
-     * @param signal The signal to send to the process (default is SIGTERM).
-     * @return True if the process was terminated successfully, otherwise false.
-     */
-    auto terminateProcess(int pid, int signal = 15 /*SIGTERM*/) -> bool;
-
-    /**
-     * @brief Terminates a process by its name.
-     * @param name The process name.
-     * @param signal The signal to send to the process (default is SIGTERM).
-     * @return True if the process was terminated successfully, otherwise false.
-     */
-    auto terminateProcessByName(const std::string &name,
-                                int signal = 15 /*SIGTERM*/) -> bool;
-
-    /**
-     * @brief Checks if a process with the given identifier exists.
-     * @param identifier The process identifier.
-     * @return True if the process exists, otherwise false.
-     */
-    auto hasProcess(const std::string &identifier) -> bool;
-
-    /**
-     * @brief Gets a list of running processes.
-     * @return A vector of running processes.
-     */
-    [[nodiscard]] auto getRunningProcesses() const -> std::vector<Process>;
-
-    /**
-     * @brief Gets the output of a process by its identifier.
-     * @param identifier The process identifier.
-     * @return A vector of strings containing the process output.
-     */
-    [[nodiscard]] auto getProcessOutput(const std::string &identifier)
-        -> std::vector<std::string>;
-
-    /**
-     * @brief Waits for all managed processes to complete.
-     */
-    void waitForCompletion();
-
-    /**
-     * @brief Runs a script as a new process.
-     * @param script The script to run.
-     * @param identifier An identifier for the process.
-     * @return True if the script was run successfully, otherwise false.
-     */
-    auto runScript(const std::string &script,
-                   const std::string &identifier) -> bool;
-
-    /**
-     * @brief Monitors the managed processes.
-     * @return True if monitoring was successful, otherwise false.
-     */
-    auto monitorProcesses() -> bool;
-
-#ifdef _WIN32
-    /**
-     * @brief Gets the handle of a process by its PID (Windows only).
-     * @param pid The process ID.
-     * @return The handle of the process.
-     */
-    auto getProcessHandle(int pid) const -> void *;
-#else
-    /**
-     * @brief Gets the file path of a process by its PID (non-Windows).
-     * @param pid The process ID.
-     * @param file The file name.
-     * @return The file path of the process.
-     */
-    static auto getProcFilePath(int pid,
-                                const std::string &file) -> std::string;
-#endif
-
-private:
-    class ProcessManagerImpl;  ///< Forward declaration of implementation class
-    std::unique_ptr<ProcessManagerImpl> impl;  ///< Pointer to implementation
-};
-
 /**
  * @brief Gets information about all processes.
  * @return A vector of pairs containing process IDs and names.
@@ -250,18 +69,10 @@ auto getParentProcessId(int processId) -> int;
  * @param password The password of the user account.
  * @return bool True if the process is created successfully, otherwise false.
  */
-auto _CreateProcessAsUser(const std::string &command,
+auto createProcessAsUser(const std::string &command,
                           const std::string &username,
                           const std::string &domain,
                           const std::string &password) -> bool;
-
-/**
- * @brief Gets the network connections of a process by its PID.
- * @param pid The process ID.
- * @return A vector of NetworkConnection structs representing the network
- * connections.
- */
-auto getNetworkConnections(int pid) -> std::vector<NetworkConnection>;
 
 /**
  * @brief Gets the process IDs of processes with the specified name.
@@ -273,7 +84,6 @@ auto getProcessIdByName(const std::string &processName) -> std::vector<int>;
 #ifdef _WIN32
 auto getWindowsPrivileges(int pid) -> PrivilegesInfo;
 #endif
-
 }  // namespace atom::system
 
 #endif

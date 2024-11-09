@@ -27,9 +27,9 @@ public:
     explicit INDICamera(std::string name);
     ~INDICamera() override = default;
 
-    auto initialize() -> bool override = 0;
+    auto initialize() -> bool override;
 
-    auto destroy() -> bool override = 0;
+    auto destroy() -> bool override;
 
     auto connect(const std::string &deviceName, int timeout,
                  int maxRetry) -> bool override;
@@ -48,12 +48,26 @@ public:
 
     auto startExposure(const double &exposure) -> bool override;
     auto abortExposure() -> bool override;
+    auto getExposureStatus() -> bool override;
+    auto getExposureResult() -> bool override;
+    auto saveExposureResult() -> bool override;
+
+    auto startVideo() -> bool override;
+    auto stopVideo() -> bool override;
+    auto getVideoResult() -> bool override;
+    auto getVideoStatus() -> bool override;
+    auto saveVideoResult() -> bool override;
 
     auto startCooling() -> bool override;
     auto stopCooling() -> bool override;
+    auto getCoolingStatus() -> bool override;
+    auto isCoolingAvailable() -> bool override;
 
     auto setTemperature(const double &value) -> bool override;
     auto getTemperature() -> std::optional<double> override;
+
+    auto getCoolingPower() -> bool override;
+    auto setCoolingPower(const double &value) -> bool override;
 
     auto getCameraFrameInfo() -> std::optional<std::tuple<int, int, int, int>>;
     auto setCameraFrameInfo(int x, int y, int width, int height) -> bool;
@@ -61,8 +75,28 @@ public:
 
     auto getGain() -> std::optional<double> override;
     auto setGain(const int &value) -> bool override;
+    auto isGainAvailable() -> bool override;
+
     auto getOffset() -> std::optional<double> override;
     auto setOffset(const int &value) -> bool override;
+    auto isOffsetAvailable() -> bool override;
+
+    auto getISO() -> bool override;
+    auto setISO(const int &iso) -> bool override;
+    auto isISOAvailable() -> bool override;
+
+    auto getFrame() -> std::optional<std::pair<int, int>> override;
+    auto setFrame(const int &x, const int &y, const int &w,
+                  const int &h) -> bool override;
+    auto isFrameSettingAvailable() -> bool override;
+
+    auto getFrameType() -> bool override;
+
+    auto setFrameType(FrameType type) -> bool override;
+
+    auto getUploadMode() -> bool override;
+
+    auto setUploadMode(UploadMode mode) -> bool override;
 
     auto setBinning(const int &hor, const int &ver) -> bool override;
     auto getBinning() -> std::optional<std::tuple<int, int, int, int>> override;

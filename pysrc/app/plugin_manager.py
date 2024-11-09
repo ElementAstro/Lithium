@@ -145,8 +145,8 @@ def get_plugin_info(plugin_name: str) -> Dict:
     """
     if plugin_name not in loaded_plugins:
         logger.error("Plugin {} not found.", plugin_name)
-        raise HTTPException(status_code=404, detail=f"Plugin {
-                            plugin_name} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Plugin {plugin_name} not found")
 
     plugin = loaded_plugins[plugin_name]
     info = {

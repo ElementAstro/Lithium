@@ -19,8 +19,7 @@ Description: A simple Asio-based UDP server.
 #include <memory>
 #include <string>
 
-namespace atom::connection {
-
+namespace atom::async::connection {
 /**
  * @class UdpSocketHub
  * @brief Represents a hub for managing UDP sockets and message handling using

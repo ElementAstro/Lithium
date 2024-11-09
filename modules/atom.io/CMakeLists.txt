@@ -7,7 +7,7 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom.io C CXX)
+project(atom_ioio C CXX)
 
 set(CMAKE_ATOM_IO_BUILTIN_VERSION_MAJOR 1)
 set(CMAKE_ATOM_IO_BUILTIN_VERSION_MINOR 0)
@@ -50,9 +50,14 @@ target_include_directories(${PROJECT_NAME} PUBLIC .)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_ATOM_IO_BUILTIN_VERSION_STRING}
     SOVERSION ${ATOM_IO_BUILTIN_SOVERSION}
-    OUTPUT_NAME atom.io
+    OUTPUT_NAME atom_ioio
 )
 
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+find_package(Python COMPONENTS Interpreter Development)
+find_package(pybind11 CONFIG)
+
+pybind11_add_module(${PROJECT_NAME}_py pymodule.cpp)

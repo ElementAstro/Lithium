@@ -10,7 +10,10 @@
 namespace atom::type {
 
 /**
- * @brief Generic Error class template.
+ * @brief A generic error class template that encapsulates error information.
+ *
+ * The `Error` class is used to represent and store error details. It provides
+ * access to the error and supports comparison operations.
  *
  * @tparam E The type of the error.
  */
@@ -18,44 +21,49 @@ template <typename E>
 class Error {
 public:
     /**
-     * @brief Constructs an Error with the given error value.
+     * @brief Constructs an `Error` object with the given error.
      *
-     * @param error The error value.
+     * @param error The error to be stored.
      */
     explicit Error(E error) : error_(std::move(error)) {}
 
     /**
-     * @brief Special constructor for const char* when E is std::string.
+     * @brief Constructs an `Error` object from a C-style string if the error
+     * type is `std::string`.
      *
-     * @param error The error message.
+     * @tparam T The type of the C-style string.
+     * @param error The C-style string representing the error.
      */
     template <typename T>
         requires std::is_same_v<E, std::string>
     explicit Error(const T* error) : error_(error) {}
 
     /**
-     * @brief Retrieves the error value.
+     * @brief Retrieves the stored error.
      *
-     * @return The error value.
+     * @return A constant reference to the stored error.
      */
     [[nodiscard]] auto error() const -> const E& { return error_; }
 
     /**
-     * @brief Equality operator for Error.
+     * @brief Compares two `Error` objects for equality.
      *
-     * @param other The other Error to compare with.
-     * @return True if the errors are equal, false otherwise.
+     * @param other The other `Error` object to compare with.
+     * @return `true` if both errors are equal, `false` otherwise.
      */
     auto operator==(const Error& other) const -> bool {
         return error_ == other.error_;
     }
 
 private:
-    E error_;  ///< The error value.
+    E error_;  ///< The encapsulated error.
 };
 
 /**
- * @brief unexpected class similar to std::unexpected.
+ * @brief An `unexpected` class template similar to `std::unexpected`.
+ *
+ * The `unexpected` class is used to represent an error state in the `expected`
+ * type.
  *
  * @tparam E The type of the error.
  */
@@ -63,90 +71,158 @@ template <typename E>
 class unexpected {
 public:
     /**
-     * @brief Constructs an unexpected with the given error value.
+     * @brief Constructs an `unexpected` object with a constant reference to an
+     * error.
      *
-     * @param error The error value.
+     * @param error The error to be stored.
      */
     explicit unexpected(const E& error) : error_(error) {}
 
     /**
-     * @brief Constructs an unexpected with the given error value.
+     * @brief Constructs an `unexpected` object by moving an error.
      *
-     * @param error The error value.
+     * @param error The error to be stored.
      */
     explicit unexpected(E&& error) : error_(std::move(error)) {}
 
     /**
-     * @brief Retrieves the error value.
+     * @brief Retrieves the stored error.
      *
-     * @return The error value.
+     * @return A constant reference to the stored error.
      */
     [[nodiscard]] auto error() const -> const E& { return error_; }
 
+    /**
+     * @brief Compares two `unexpected` objects for equality.
+     *
+     * @param other The other `unexpected` object to compare with.
+     * @return `true` if both errors are equal, `false` otherwise.
+     */
+    bool operator==(const unexpected& other) const {
+        return error_ == other.error_;
+    }
+
 private:
-    E error_;  ///< The error value.
+    E error_;  ///< The encapsulated error.
 };
 
 /**
- * @brief Primary expected class template.
+ * @brief The primary `expected` class template.
  *
- * @tparam T The type of the value.
- * @tparam E The type of the error (default is std::string).
+ * The `expected` class represents a value that may either contain a valid value
+ * of type `T` or an error of type `E`. It provides mechanisms to access the
+ * value or the error and supports various monadic operations.
+ *
+ * @tparam T The type of the expected value.
+ * @tparam E The type of the error (default is `std::string`).
  */
 template <typename T, typename E = std::string>
 class expected {
 public:
-    /**
-     * @brief Constructs an expected with the given value.
-     *
-     * @param value The value.
-     */
-    expected(const T& value) : value_(value) {}
+    // Constructors for value
 
     /**
-     * @brief Constructs an expected with the given value.
+     * @brief Default constructs an `expected` object containing a
+     * default-constructed value.
      *
-     * @param value The value.
+     * This constructor is only enabled if `T` is default constructible.
      */
-    expected(T&& value) : value_(std::move(value)) {}
+    constexpr expected()
+        requires std::is_default_constructible_v<T>
+        : value_(std::in_place_index<0>, T()) {}
 
     /**
-     * @brief Constructs an expected with the given error.
+     * @brief Constructs an `expected` object containing a copy of the given
+     * value.
      *
-     * @param error The error.
+     * @param value The value to be stored.
      */
-    expected(const Error<E>& error) : value_(error) {}
+    constexpr expected(const T& value)
+        : value_(std::in_place_index<0>, value) {}
 
     /**
-     * @brief Constructs an expected with the given error.
+     * @brief Constructs an `expected` object containing a moved value.
      *
-     * @param error The error.
+     * @param value The value to be moved and stored.
      */
-    expected(Error<E>&& error) : value_(std::move(error)) {}
+    constexpr expected(T&& value)
+        : value_(std::in_place_index<0>, std::move(value)) {}
+
+    // Constructors for error
 
     /**
-     * @brief Constructs an expected with the given unexpected error.
+     * @brief Constructs an `expected` object containing a copy of the given
+     * error.
      *
-     * @param unex The unexpected error.
+     * @param error The error to be stored.
      */
-    expected(const unexpected<E>& unex) : value_(Error<E>(unex.error())) {}
+    constexpr expected(const Error<E>& error) : value_(error) {}
 
     /**
-     * @brief Checks if the expected object contains a value.
+     * @brief Constructs an `expected` object containing a moved error.
      *
-     * @return True if it contains a value, false otherwise.
+     * @param error The error to be moved and stored.
      */
-    [[nodiscard]] auto has_value() const -> bool {
+    constexpr expected(Error<E>&& error) : value_(std::move(error)) {}
+
+    /**
+     * @brief Constructs an `expected` object from an `unexpected` error by
+     * copying it.
+     *
+     * @param unex The `unexpected` error to be stored.
+     */
+    constexpr expected(const unexpected<E>& unex)
+        : value_(Error<E>(unex.error())) {}
+
+    /**
+     * @brief Constructs an `expected` object from an `unexpected` error by
+     * moving it.
+     *
+     * @param unex The `unexpected` error to be moved and stored.
+     */
+    constexpr expected(unexpected<E>&& unex)
+        : value_(Error<E>(std::move(unex.error()))) {}
+
+    // Copy and move constructors
+
+    /**
+     * @brief Default copy constructor.
+     */
+    constexpr expected(const expected&) = default;
+
+    /**
+     * @brief Default move constructor.
+     */
+    constexpr expected(expected&&) noexcept = default;
+
+    /**
+     * @brief Default copy assignment operator.
+     */
+    constexpr expected& operator=(const expected&) = default;
+
+    /**
+     * @brief Default move assignment operator.
+     */
+    constexpr expected& operator=(expected&&) noexcept = default;
+
+    // Observers
+
+    /**
+     * @brief Checks if the `expected` object contains a valid value.
+     *
+     * @return `true` if it contains a value, `false` if it contains an error.
+     */
+    [[nodiscard]] constexpr bool has_value() const noexcept {
         return std::holds_alternative<T>(value_);
     }
 
     /**
-     * @brief Retrieves the value, throws if it's an error.
+     * @brief Retrieves a reference to the stored value.
      *
-     * @return The value.
-     * @throws std::logic_error if it contains an error.
+     * @return A reference to the stored value.
+     * @throws std::logic_error If the `expected` contains an error.
      */
-    auto value() -> T& {
+    [[nodiscard]] constexpr T& value() & {
         if (!has_value()) {
             throw std::logic_error(
                 "Attempted to access value, but it contains an error.");
@@ -155,12 +231,12 @@ public:
     }
 
     /**
-     * @brief Retrieves the value, throws if it's an error.
+     * @brief Retrieves a constant reference to the stored value.
      *
-     * @return The value.
-     * @throws std::logic_error if it contains an error.
+     * @return A constant reference to the stored value.
+     * @throws std::logic_error If the `expected` contains an error.
      */
-    [[nodiscard]] auto value() const -> const T& {
+    [[nodiscard]] constexpr const T& value() const& {
         if (!has_value()) {
             throw std::logic_error(
                 "Attempted to access value, but it contains an error.");
@@ -169,12 +245,26 @@ public:
     }
 
     /**
-     * @brief Retrieves the error, throws if it's a value.
+     * @brief Retrieves an rvalue reference to the stored value.
      *
-     * @return The error.
-     * @throws std::logic_error if it contains a value.
+     * @return An rvalue reference to the stored value.
+     * @throws std::logic_error If the `expected` contains an error.
      */
-    auto error() -> Error<E>& {
+    [[nodiscard]] constexpr T&& value() && {
+        if (!has_value()) {
+            throw std::logic_error(
+                "Attempted to access value, but it contains an error.");
+        }
+        return std::get<T>(std::move(value_));
+    }
+
+    /**
+     * @brief Retrieves a constant reference to the stored error.
+     *
+     * @return A constant reference to the stored error.
+     * @throws std::logic_error If the `expected` contains a value.
+     */
+    [[nodiscard]] constexpr const Error<E>& error() const& {
         if (has_value()) {
             throw std::logic_error(
                 "Attempted to access error, but it contains a value.");
@@ -183,12 +273,12 @@ public:
     }
 
     /**
-     * @brief Retrieves the error, throws if it's a value.
+     * @brief Retrieves a reference to the stored error.
      *
-     * @return The error.
-     * @throws std::logic_error if it contains a value.
+     * @return A reference to the stored error.
+     * @throws std::logic_error If the `expected` contains a value.
      */
-    [[nodiscard]] auto error() const -> const Error<E>& {
+    [[nodiscard]] constexpr Error<E>& error() & {
         if (has_value()) {
             throw std::logic_error(
                 "Attempted to access error, but it contains a value.");
@@ -197,182 +287,311 @@ public:
     }
 
     /**
-     * @brief Retrieves the value or a default value if it contains an error.
+     * @brief Retrieves an rvalue reference to the stored error.
      *
-     * @tparam U The type of the default value.
-     * @param default_value The default value.
-     * @return The value or the default value.
+     * @return An rvalue reference to the stored error.
+     * @throws std::logic_error If the `expected` contains a value.
      */
-    template <typename U>
-    auto value_or(U&& default_value) const -> T {
+    [[nodiscard]] constexpr Error<E>&& error() && {
         if (has_value()) {
-            return value();
+            throw std::logic_error(
+                "Attempted to access error, but it contains a value.");
         }
-        if constexpr (std::is_invocable_v<U, E>) {
-            return std::forward<U>(default_value)(error().error());
-        } else {
-            return static_cast<T>(std::forward<U>(default_value));
-        }
+        return std::get<Error<E>>(std::move(value_));
     }
 
     /**
-     * @brief Maps the value to another type using the given function.
+     * @brief Conversion operator to `bool`.
      *
-     * @tparam Func The type of the function.
-     * @param func The function to apply to the value.
-     * @return An expected object with the mapped value or the original error.
+     * @return `true` if the `expected` contains a value, `false` otherwise.
      */
-    template <typename Func>
-    auto map(Func&& func) const
-        -> expected<decltype(func(std::declval<T>())), E> {
-        using ReturnType = decltype(func(std::declval<T>()));
-        if (has_value()) {
-            return expected<ReturnType, E>(func(value()));
-        } else {
-            return expected<ReturnType, E>(error());
-        }
-    }
+    constexpr explicit operator bool() const noexcept { return has_value(); }
+
+    // Monadic operations
 
     /**
-     * @brief Applies the given function to the value if it exists.
+     * @brief Applies a function to the stored value if it exists.
      *
-     * @tparam Func The type of the function.
-     * @param func The function to apply to the value.
-     * @return The result of the function or the original error.
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply to the stored value.
+     * @return The result of the function if a value exists, or an `expected`
+     * containing the error.
      */
     template <typename Func>
-    auto and_then(Func&& func) const -> decltype(func(std::declval<T>())) {
+    constexpr auto and_then(
+        Func&& func) & -> decltype(func(std::declval<T&>())) {
         if (has_value()) {
             return func(value());
         }
-        using ReturnType = decltype(func(value()));
-        return ReturnType(error());
+        return decltype(func(std::declval<T&>()))(error());
     }
 
     /**
-     * @brief Transforms the error using the given function.
+     * @brief Applies a constant function to the stored value if it exists.
      *
-     * @tparam Func The type of the function.
-     * @param func The function to apply to the error.
-     * @return An expected object with the original value or the transformed
-     * error.
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply to the stored value.
+     * @return The result of the function if a value exists, or an `expected`
+     * containing the error.
      */
     template <typename Func>
-    auto transform_error(Func&& func) const
-        -> expected<T, decltype(func(std::declval<E>()))> {
-        using ErrorType = decltype(func(std::declval<E>()));
+    constexpr auto and_then(
+        Func&& func) const& -> decltype(func(std::declval<const T&>())) {
         if (has_value()) {
-            return expected<T, ErrorType>(value());
+            return func(value());
         }
-        return expected<T, ErrorType>(Error<ErrorType>(func(error().error())));
+        return decltype(func(std::declval<const T&>()))(error());
     }
 
     /**
-     * @brief Applies the given function to the error if it exists.
+     * @brief Applies a function to the stored value if it exists, moving the
+     * value.
      *
-     * @tparam Func The type of the function.
-     * @param func The function to apply to the error.
-     * @return An expected object with the original value or the result of the
-     * function.
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply to the stored value.
+     * @return The result of the function if a value exists, or an `expected`
+     * containing the error.
      */
     template <typename Func>
-    auto or_else(Func&& func) const -> expected<T, E> {
+    constexpr auto and_then(
+        Func&& func) && -> decltype(func(std::declval<T&&>())) {
+        if (has_value()) {
+            return func(std::move(value()));
+        }
+        return decltype(func(std::declval<T&&>()))(std::move(error()));
+    }
+
+    /**
+     * @brief Applies a function to the stored value if it exists and wraps the
+     * result in an `expected`.
+     *
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply to the stored value.
+     * @return An `expected` containing the result of the function, or an
+     * `expected` containing the error.
+     */
+    template <typename Func>
+    constexpr auto map(
+        Func&& func) & -> expected<decltype(func(std::declval<T&>())), E> {
+        if (has_value()) {
+            return expected<decltype(func(value())), E>(func(value()));
+        }
+        return expected<decltype(func(std::declval<T&>())), E>(error());
+    }
+
+    /**
+     * @brief Applies a constant function to the stored value if it exists and
+     * wraps the result in an `expected`.
+     *
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply to the stored value.
+     * @return An `expected` containing the result of the function, or an
+     * `expected` containing the error.
+     */
+    template <typename Func>
+    constexpr auto map(Func&& func)
+        const& -> expected<decltype(func(std::declval<const T&>())), E> {
+        if (has_value()) {
+            return expected<decltype(func(value())), E>(func(value()));
+        }
+        return expected<decltype(func(std::declval<const T&>())), E>(error());
+    }
+
+    /**
+     * @brief Applies a function to the stored value if it exists, moving the
+     * value, and wraps the result in an `expected`.
+     *
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply to the stored value.
+     * @return An `expected` containing the result of the function, or an
+     * `expected` containing the error.
+     */
+    template <typename Func>
+    constexpr auto map(
+        Func&& func) && -> expected<decltype(func(std::declval<T&&>())), E> {
+        if (has_value()) {
+            return expected<decltype(func(std::declval<T&&>())), E>(
+                func(std::move(value())));
+        }
+        return expected<decltype(func(std::declval<T&&>())), E>(
+            std::move(error()));
+    }
+
+    /**
+     * @brief Transforms the stored error using the provided function.
+     *
+     * @tparam Func The type of the function to apply to the error.
+     * @param func The function to apply to the stored error.
+     * @return An `expected` with the transformed error type if an error exists,
+     * otherwise the original `expected`.
+     */
+    template <typename Func>
+    constexpr auto transform_error(
+        Func&& func) & -> expected<T, decltype(func(std::declval<E&>()))> {
         if (has_value()) {
             return *this;
         }
-        return func(error().error());
+        return expected<T, decltype(func(std::declval<E&>()))>(
+            func(error().error()));
     }
 
     /**
-     * @brief Equality operator for expected.
+     * @brief Transforms the stored error using the provided constant function.
      *
-     * @param lhs The left-hand side expected.
-     * @param rhs The right-hand side expected.
-     * @return True if the expected objects are equal, false otherwise.
+     * @tparam Func The type of the function to apply to the error.
+     * @param func The function to apply to the stored error.
+     * @return An `expected` with the transformed error type if an error exists,
+     * otherwise the original `expected`.
      */
-    friend auto operator==(const expected& lhs, const expected& rhs) -> bool {
-        return lhs.value_ == rhs.value_;
+    template <typename Func>
+    constexpr auto transform_error(Func&& func)
+        const& -> expected<T, decltype(func(std::declval<const E&>()))> {
+        if (has_value()) {
+            return *this;
+        }
+        return expected<T, decltype(func(std::declval<const E&>()))>(
+            func(error().error()));
     }
 
     /**
-     * @brief Inequality operator for expected.
+     * @brief Transforms the stored error using the provided function, moving
+     * the error.
      *
-     * @param lhs The left-hand side expected.
-     * @param rhs The right-hand side expected.
-     * @return True if the expected objects are not equal, false otherwise.
+     * @tparam Func The type of the function to apply to the error.
+     * @param func The function to apply to the stored error.
+     * @return An `expected` with the transformed error type if an error exists,
+     * otherwise the original `expected`.
      */
-    friend auto operator!=(const expected& lhs, const expected& rhs) -> bool {
+    template <typename Func>
+    constexpr auto transform_error(
+        Func&& func) && -> expected<T, decltype(func(std::declval<E&&>()))> {
+        if (has_value()) {
+            return std::move(*this);
+        }
+        return expected<T, decltype(func(std::declval<E&&>()))>(
+            func(std::move(error().error())));
+    }
+
+    // Equality operators
+
+    /**
+     * @brief Compares two `expected` objects for equality.
+     *
+     * @param lhs The left-hand side `expected` object.
+     * @param rhs The right-hand side `expected` object.
+     * @return `true` if both `expected` objects are equal, `false` otherwise.
+     */
+    friend constexpr bool operator==(const expected& lhs, const expected& rhs) {
+        if (lhs.has_value() != rhs.has_value())
+            return false;
+        if (lhs.has_value()) {
+            return lhs.value_ == rhs.value_;
+        }
+        return lhs.error_ == rhs.error_;
+    }
+
+    /**
+     * @brief Compares two `expected` objects for inequality.
+     *
+     * @param lhs The left-hand side `expected` object.
+     * @param rhs The right-hand side `expected` object.
+     * @return `true` if both `expected` objects are not equal, `false`
+     * otherwise.
+     */
+    friend constexpr bool operator!=(const expected& lhs, const expected& rhs) {
         return !(lhs == rhs);
     }
 
 private:
-    std::variant<T, Error<E>> value_;  ///< The value or error.
+    std::variant<T, Error<E>>
+        value_;  ///< The variant holding either the value or the error.
 };
 
 /**
- * @brief Specialization of expected for void type.
+ * @brief Specialization of the `expected` class template for `void` type.
+ *
+ * This specialization handles cases where no value is expected, only an error.
  *
  * @tparam E The type of the error.
  */
 template <typename E>
 class expected<void, E> {
 public:
-    /**
-     * @brief Constructs an expected with a void value.
-     */
-    expected() : value_(std::monostate{}) {}
+    // Constructors for value
 
     /**
-     * @brief Constructs an expected with the given error.
-     *
-     * @param error The error.
+     * @brief Default constructs an `expected` object containing no value.
      */
-    expected(const Error<E>& error) : value_(error) {}
+    constexpr expected() noexcept : value_(std::monostate{}) {}
+
+    // Constructors for error
 
     /**
-     * @brief Constructs an expected with the given error.
+     * @brief Constructs an `expected` object containing a copy of the given
+     * error.
      *
-     * @param error The error.
+     * @param error The error to be stored.
      */
-    expected(Error<E>&& error) : value_(std::move(error)) {}
+    constexpr expected(const Error<E>& error) : value_(error) {}
 
     /**
-     * @brief Constructs an expected with the given unexpected error.
+     * @brief Constructs an `expected` object containing a moved error.
      *
-     * @param unex The unexpected error.
+     * @param error The error to be moved and stored.
      */
-    expected(const unexpected<E>& unex) : value_(Error<E>(unex.error())) {}
+    constexpr expected(Error<E>&& error) : value_(std::move(error)) {}
 
     /**
-     * @brief Checks if the expected object contains a value.
+     * @brief Constructs an `expected` object from an `unexpected` error by
+     * copying it.
      *
-     * @return True if it contains a value, false otherwise.
+     * @param unex The `unexpected` error to be stored.
      */
-    [[nodiscard]] auto has_value() const -> bool {
+    constexpr expected(const unexpected<E>& unex)
+        : value_(Error<E>(unex.error())) {}
+
+    /**
+     * @brief Constructs an `expected` object from an `unexpected` error by
+     * moving it.
+     *
+     * @param unex The `unexpected` error to be moved and stored.
+     */
+    constexpr expected(unexpected<E>&& unex)
+        : value_(Error<E>(std::move(unex.error()))) {}
+
+    // Observers
+
+    /**
+     * @brief Checks if the `expected` object contains a valid value.
+     *
+     * @return `true` if it contains a value, `false` if it contains an error.
+     */
+    [[nodiscard]] constexpr bool has_value() const noexcept {
         return std::holds_alternative<std::monostate>(value_);
     }
 
     /**
-     * @brief A no-op value_or function, returns nothing as the value type is
-     * void.
+     * @brief Retrieves the stored value.
      *
-     * @tparam U The type of the default value.
-     * @param default_value The default value.
+     * Since the value type is `void`, this function does nothing but can throw
+     * if an error exists.
+     *
+     * @throws std::logic_error If the `expected` contains an error.
      */
-    template <typename U>
-    auto value_or(U&& default_value) const -> void {
+    constexpr void value() const {
         if (!has_value()) {
-            std::forward<U>(default_value)(error().error());
+            throw std::logic_error(
+                "Attempted to access value, but it contains an error.");
         }
     }
 
     /**
-     * @brief Retrieves the error, throws if it's a value.
+     * @brief Retrieves a constant reference to the stored error.
      *
-     * @return The error.
-     * @throws std::logic_error if it contains a value.
+     * @return A constant reference to the stored error.
+     * @throws std::logic_error If the `expected` contains a value.
      */
-    auto error() -> Error<E>& {
+    [[nodiscard]] constexpr const Error<E>& error() const& {
         if (has_value()) {
             throw std::logic_error(
                 "Attempted to access error, but it contains a value.");
@@ -381,12 +600,12 @@ public:
     }
 
     /**
-     * @brief Retrieves the error, throws if it's a value.
+     * @brief Retrieves a reference to the stored error.
      *
-     * @return The error.
-     * @throws std::logic_error if it contains a value.
+     * @return A reference to the stored error.
+     * @throws std::logic_error If the `expected` contains a value.
      */
-    [[nodiscard]] auto error() const -> const Error<E>& {
+    [[nodiscard]] constexpr Error<E>& error() & {
         if (has_value()) {
             throw std::logic_error(
                 "Attempted to access error, but it contains a value.");
@@ -395,127 +614,214 @@ public:
     }
 
     /**
-     * @brief Applies the given function if it contains a value.
+     * @brief Retrieves an rvalue reference to the stored error.
      *
-     * @tparam Func The type of the function.
+     * @return An rvalue reference to the stored error.
+     * @throws std::logic_error If the `expected` contains a value.
+     */
+    [[nodiscard]] constexpr Error<E>&& error() && {
+        if (has_value()) {
+            throw std::logic_error(
+                "Attempted to access error, but it contains a value.");
+        }
+        return std::get<Error<E>>(std::move(value_));
+    }
+
+    /**
+     * @brief Conversion operator to `bool`.
+     *
+     * @return `true` if the `expected` contains a value, `false` otherwise.
+     */
+    constexpr explicit operator bool() const noexcept { return has_value(); }
+
+    // Monadic operations
+
+    /**
+     * @brief Applies a function to the `expected` object if it contains a
+     * value.
+     *
+     * @tparam Func The type of the function to apply.
      * @param func The function to apply.
-     * @return An expected object with the result of the function or the
-     * original error.
+     * @return The result of the function if a value exists, or an `expected`
+     * containing the error.
      */
     template <typename Func>
-    auto and_then(Func&& func) const -> expected<void, E> {
+    constexpr auto and_then(Func&& func) & -> decltype(func()) {
         if (has_value()) {
-            func();
-            return expected<void, E>();
+            return func();
         }
-        return expected<void, E>(error());
+        return decltype(func())(error());
     }
 
     /**
-     * @brief Transforms the error using the given function.
+     * @brief Applies a constant function to the `expected` object if it
+     * contains a value.
      *
-     * @tparam Func The type of the function.
-     * @param func The function to apply to the error.
-     * @return An expected object with the original value or the transformed
-     * error.
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply.
+     * @return The result of the function if a value exists, or an `expected`
+     * containing the error.
      */
     template <typename Func>
-    auto transform_error(Func&& func) const
-        -> expected<void, decltype(func(std::declval<E>()))> {
-        using ErrorType = decltype(func(std::declval<E>()));
+    constexpr auto and_then(Func&& func) const& -> decltype(func()) {
         if (has_value()) {
-            return expected<void, ErrorType>();
+            return func();
         }
-        return expected<void, ErrorType>(
-            Error<ErrorType>(func(error().error())));
+        return decltype(func())(error());
     }
 
     /**
-     * @brief Applies the given function to the error if it exists.
+     * @brief Applies a function to the `expected` object if it contains a
+     * value, moving the error.
      *
-     * @tparam Func The type of the function.
-     * @param func The function to apply to the error.
-     * @return An expected object with the original value or the result of the
-     * function.
+     * @tparam Func The type of the function to apply.
+     * @param func The function to apply.
+     * @return The result of the function if a value exists, or an `expected`
+     * containing the error.
      */
     template <typename Func>
-    auto or_else(Func&& func) const -> expected<void, E> {
+    constexpr auto and_then(Func&& func) && -> decltype(func()) {
+        if (has_value()) {
+            return func();
+        }
+        return decltype(func())(std::move(error()));
+    }
+
+    /**
+     * @brief Transforms the stored error using the provided function.
+     *
+     * @tparam Func The type of the function to apply to the error.
+     * @param func The function to apply to the stored error.
+     * @return An `expected` with the transformed error type if an error exists,
+     * otherwise the original `expected`.
+     */
+    template <typename Func>
+    constexpr auto transform_error(
+        Func&& func) & -> expected<void, decltype(func(std::declval<E&>()))> {
         if (has_value()) {
             return *this;
         }
-        return func(error().error());
+        return expected<void, decltype(func(std::declval<E&>()))>(
+            func(error().error()));
     }
 
     /**
-     * @brief Equality operator for expected.
+     * @brief Transforms the stored error using the provided constant function.
      *
-     * @param lhs The left-hand side expected.
-     * @param rhs The right-hand side expected.
-     * @return True if the expected objects are equal, false otherwise.
+     * @tparam Func The type of the function to apply to the error.
+     * @param func The function to apply to the stored error.
+     * @return An `expected` with the transformed error type if an error exists,
+     * otherwise the original `expected`.
      */
-    friend auto operator==(const expected& lhs, const expected& rhs) -> bool {
-        return lhs.value_ == rhs.value_;
+    template <typename Func>
+    constexpr auto transform_error(Func&& func)
+        const& -> expected<void, decltype(func(std::declval<const E&>()))> {
+        if (has_value()) {
+            return *this;
+        }
+        return expected<void, decltype(func(std::declval<const E&>()))>(
+            func(error().error()));
     }
 
     /**
-     * @brief Inequality operator for expected.
+     * @brief Transforms the stored error using the provided function, moving
+     * the error.
      *
-     * @param lhs The left-hand side expected.
-     * @param rhs The right-hand side expected.
-     * @return True if the expected objects are not equal, false otherwise.
+     * @tparam Func The type of the function to apply to the error.
+     * @param func The function to apply to the stored error.
+     * @return An `expected` with the transformed error type if an error exists,
+     * otherwise the original `expected`.
      */
-    friend auto operator!=(const expected& lhs, const expected& rhs) -> bool {
+    template <typename Func>
+    constexpr auto transform_error(
+        Func&& func) && -> expected<void, decltype(func(std::declval<E&&>()))> {
+        if (has_value()) {
+            return std::move(*this);
+        }
+        return expected<void, decltype(func(std::declval<E&&>()))>(
+            func(std::move(error().error())));
+    }
+
+    // Equality operators
+
+    /**
+     * @brief Compares two `expected<void, E>` objects for equality.
+     *
+     * @param lhs The left-hand side `expected` object.
+     * @param rhs The right-hand side `expected` object.
+     * @return `true` if both `expected` objects are equal, `false` otherwise.
+     */
+    friend constexpr bool operator==(const expected& lhs, const expected& rhs) {
+        if (lhs.has_value() != rhs.has_value())
+            return false;
+        if (lhs.has_value()) {
+            return true;
+        }
+        return lhs.error_ == rhs.error_;
+    }
+
+    /**
+     * @brief Compares two `expected<void, E>` objects for inequality.
+     *
+     * @param lhs The left-hand side `expected` object.
+     * @param rhs The right-hand side `expected` object.
+     * @return `true` if both `expected` objects are not equal, `false`
+     * otherwise.
+     */
+    friend constexpr bool operator!=(const expected& lhs, const expected& rhs) {
         return !(lhs == rhs);
     }
 
 private:
-    std::variant<std::monostate, Error<E>> value_;  ///< The value or error.
+    std::variant<std::monostate, Error<E>>
+        value_;  ///< The variant holding either no value or the error.
 };
 
 /**
- * @brief Utility function to create an expected object.
+ * @brief Creates an `expected` object containing the given value.
  *
  * @tparam T The type of the value.
- * @param value The value.
- * @return An expected object containing the value.
+ * @param value The value to be stored in the `expected`.
+ * @return An `expected` object containing the value.
  */
 template <typename T>
-auto make_expected(T&& value) -> expected<std::decay_t<T>> {
+constexpr auto make_expected(T&& value) -> expected<std::decay_t<T>> {
     return expected<std::decay_t<T>>(std::forward<T>(value));
 }
 
 /**
- * @brief Utility function to create an unexpected object.
+ * @brief Creates an `unexpected` object containing the given error.
  *
  * @tparam E The type of the error.
- * @param error The error.
- * @return An unexpected object containing the error.
+ * @param error The error to be stored in the `unexpected`.
+ * @return An `unexpected` object containing the error.
  */
 template <typename E>
-auto make_unexpected(const E& error) -> unexpected<std::decay_t<E>> {
+constexpr auto make_unexpected(const E& error) -> unexpected<std::decay_t<E>> {
     return unexpected<std::decay_t<E>>(error);
 }
 
 /**
- * @brief Utility function to create an unexpected object from a const char*.
+ * @brief Creates an `unexpected` object by moving the given error.
  *
- * @param error The error message.
- * @return An unexpected object containing the error message.
+ * @tparam E The type of the error.
+ * @param error The error to be moved and stored in the `unexpected`.
+ * @return An `unexpected` object containing the moved error.
  */
-auto make_unexpected(const char* error) -> unexpected<std::string> {
-    return unexpected<std::string>(std::string(error));
+template <typename E>
+constexpr auto make_unexpected(E&& error) -> unexpected<std::decay_t<E>> {
+    return unexpected<std::decay_t<E>>(std::forward<E>(error));
 }
 
 /**
- * @brief Utility function to create an unexpected object.
+ * @brief Creates an `unexpected` object containing a `std::string` error from a
+ * C-style string.
  *
- * @tparam E The type of the error.
- * @param error The error.
- * @return An unexpected object containing the error.
+ * @param error The C-style string representing the error.
+ * @return An `unexpected<std::string>` object containing the error.
  */
-template <typename E>
-auto make_unexpected(E&& error) -> unexpected<std::decay_t<E>> {
-    return unexpected<std::decay_t<E>>(std::forward<E>(error));
+inline auto make_unexpected(const char* error) -> unexpected<std::string> {
+    return unexpected<std::string>(std::string(error));
 }
 
 }  // namespace atom::type

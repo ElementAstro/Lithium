@@ -1,0 +1,32 @@
+name: atom.extra
+version: 1.0.0
+description: Atom Extra Module for Lithium
+license: GPL-3.0-or-later
+author: Max Qian
+repository:
+  type: git
+  url: https://github.com/ElementAstro/Lithium
+bugs:
+  url: https://github.com/ElementAstro/Lithium/issues
+homepage: https://github.com/ElementAstro/Lithium
+keywords:
+  - atom
+  - extra
+  - python
+  - cpp
+  - boost
+  - beast
+  - websocket
+  - http
+platforms:
+  - windows
+  - linux
+  - macos
+scripts:
+  build: cmake --build . --config Release -- -j 4
+  lint: clang-format -i src/*.cpp src/*.h
+modules:
+  - name: extra
+    entry: getInstance
+pymodule:
+  - name: atom_extra_py

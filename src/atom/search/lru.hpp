@@ -213,18 +213,18 @@ auto ThreadSafeLRUCache<Key, Value>::get(const Key& key)
         return std::nullopt;  // Avoid deadlock
     }
 
-    auto it = cache_items_map_.find(key);
-    if (it == cache_items_map_.end() || isExpired(it->second)) {
+    auto iterator = cache_items_map_.find(key);
+    if (iterator == cache_items_map_.end() || isExpired(iterator->second)) {
         ++miss_count_;
-        if (it != cache_items_map_.end()) {
+        if (iterator != cache_items_map_.end()) {
             erase(key);  // Remove expired item
         }
         return std::nullopt;
     }
     ++hit_count_;
     cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_,
-                             it->second.iterator);
-    return it->second.value;
+                             iterator->second.iterator);
+    return iterator->second.value;
 }
 
 template <typename Key, typename Value>
@@ -232,14 +232,14 @@ void ThreadSafeLRUCache<Key, Value>::put(
     const Key& key, const Value& value,
     std::optional<std::chrono::seconds> ttl) {
     std::unique_lock lock(mutex_);
-    auto it = cache_items_map_.find(key);
+    auto iterator = cache_items_map_.find(key);
     auto expiryTime = ttl ? Clock::now() + *ttl : TimePoint::max();
 
-    if (it != cache_items_map_.end()) {
+    if (iterator != cache_items_map_.end()) {
         cache_items_list_.splice(cache_items_list_.begin(), cache_items_list_,
-                                 it->second.iterator);
-        it->second.value = value;
-        it->second.expiryTime = expiryTime;
+                                 iterator->second.iterator);
+        iterator->second.value = value;
+        iterator->second.expiryTime = expiryTime;
     } else {
         cache_items_list_.emplace_front(key, value);
         cache_items_map_[key] = {value, expiryTime, cache_items_list_.begin()};
@@ -259,10 +259,10 @@ void ThreadSafeLRUCache<Key, Value>::put(
 template <typename Key, typename Value>
 void ThreadSafeLRUCache<Key, Value>::erase(const Key& key) {
     std::unique_lock lock(mutex_);
-    auto it = cache_items_map_.find(key);
-    if (it != cache_items_map_.end()) {
-        cache_items_list_.erase(it->second.iterator);
-        cache_items_map_.erase(it);
+    auto iterator = cache_items_map_.find(key);
+    if (iterator != cache_items_map_.end()) {
+        cache_items_list_.erase(iterator->second.iterator);
+        cache_items_map_.erase(iterator);
         if (on_erase_) {
             on_erase_(key);
         }
@@ -298,10 +298,10 @@ auto ThreadSafeLRUCache<Key, Value>::popLru()
     }
     auto last = cache_items_list_.end();
     --last;
-    KeyValuePair kv = *last;
+    KeyValuePair keyValuePair = *last;
     cache_items_map_.erase(last->first);
     cache_items_list_.pop_back();
-    return kv;
+    return keyValuePair;
 }
 
 template <typename Key, typename Value>
@@ -317,7 +317,7 @@ void ThreadSafeLRUCache<Key, Value>::resize(size_t new_max_size) {
 }
 
 template <typename Key, typename Value>
-size_t ThreadSafeLRUCache<Key, Value>::size() const {
+auto ThreadSafeLRUCache<Key, Value>::size() const -> size_t {
     std::shared_lock lock(mutex_);
     return cache_items_map_.size();
 }
@@ -403,7 +403,8 @@ void ThreadSafeLRUCache<Key, Value>::loadFromFile(const std::string& filename) {
 }
 
 template <typename Key, typename Value>
-auto ThreadSafeLRUCache<Key, Value>::isExpired(const CacheItem& item) const -> bool {
+auto ThreadSafeLRUCache<Key, Value>::isExpired(const CacheItem& item) const
+    -> bool {
     return Clock::now() > item.expiryTime;
 }
 

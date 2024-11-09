@@ -1,0 +1,98 @@
+if constexpr (Traits::arity == 0) {
+
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType()>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 1) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 2) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 3) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    using ArgType_2 = typename Traits::template argument_t<2>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1, ArgType_2)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 4) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    using ArgType_2 = typename Traits::template argument_t<2>;
+    using ArgType_3 = typename Traits::template argument_t<3>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1, ArgType_2, ArgType_3)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 5) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    using ArgType_2 = typename Traits::template argument_t<2>;
+    using ArgType_3 = typename Traits::template argument_t<3>;
+    using ArgType_4 = typename Traits::template argument_t<4>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1, ArgType_2, ArgType_3, ArgType_4)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 6) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    using ArgType_2 = typename Traits::template argument_t<2>;
+    using ArgType_3 = typename Traits::template argument_t<3>;
+    using ArgType_4 = typename Traits::template argument_t<4>;
+    using ArgType_5 = typename Traits::template argument_t<5>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1, ArgType_2, ArgType_3, ArgType_4, ArgType_5)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 7) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    using ArgType_2 = typename Traits::template argument_t<2>;
+    using ArgType_3 = typename Traits::template argument_t<3>;
+    using ArgType_4 = typename Traits::template argument_t<4>;
+    using ArgType_5 = typename Traits::template argument_t<5>;
+    using ArgType_6 = typename Traits::template argument_t<6>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1, ArgType_2, ArgType_3, ArgType_4, ArgType_5, ArgType_6)>(std::forward<Callable>(func)));
+}
+
+
+if constexpr (Traits::arity == 8) {
+    using ArgType_0 = typename Traits::template argument_t<0>;
+    using ArgType_1 = typename Traits::template argument_t<1>;
+    using ArgType_2 = typename Traits::template argument_t<2>;
+    using ArgType_3 = typename Traits::template argument_t<3>;
+    using ArgType_4 = typename Traits::template argument_t<4>;
+    using ArgType_5 = typename Traits::template argument_t<5>;
+    using ArgType_6 = typename Traits::template argument_t<6>;
+    using ArgType_7 = typename Traits::template argument_t<7>;
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<ReturnType(ArgType_0, ArgType_1, ArgType_2, ArgType_3, ArgType_4, ArgType_5, ArgType_6, ArgType_7)>(std::forward<Callable>(func)));
+}

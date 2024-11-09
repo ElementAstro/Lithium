@@ -20,7 +20,7 @@ Description: A simple Asio-based UDP server.
 #include <thread>
 
 
-namespace atom::connection {
+namespace atom::async::connection {
 
 constexpr std::size_t BUFFER_SIZE = 1024;
 

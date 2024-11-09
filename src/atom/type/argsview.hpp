@@ -17,6 +17,7 @@ Description: Argument View for C++20
 
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -61,6 +62,11 @@ public:
         : args_(std::apply(
               [](const auto&... args) { return std::tuple<Args...>(args...); },
               other_args_view.args_)) {}
+
+    template <typename... OptionalArgs>
+
+    constexpr explicit ArgsView(std::optional<OptionalArgs>... optional_args)
+        : args_(std::make_tuple(optional_args.value_or(Args{})...)) {}
 
     /**
      * @brief Get the argument at the specified index.
@@ -110,7 +116,6 @@ public:
      * the transformed arguments.
      */
     template <typename F>
-
     auto transform(F&& f) const {
         return ArgsView<std::decay_t<decltype(f(std::declval<Args>()))>...>(
             std::apply(
@@ -183,6 +188,60 @@ public:
             [](const auto&... args) { return std::tuple<Args...>(args...); },
             other_args_view.args_);
         return *this;
+    }
+
+    /**
+     * @brief Filter the arguments using a predicate.
+     *
+     * @tparam Pred Type of the predicate.
+     * @param pred The predicate to apply.
+     * @return ArgsView<std::decay_t<Args>...> A new ArgsView with the filtered
+     * arguments.
+     */
+    template <typename Pred>
+    auto filter(Pred&& pred) const {
+        return std::apply(
+            [&](const auto&... args) {
+                return ArgsView{
+                    (pred(args) ? std::optional{args} : std::nullopt)...};
+            },
+            args_);
+    }
+
+    /**
+     * @brief Find the first argument that satisfies a predicate.
+     *
+     * @tparam Pred Type of the predicate.
+     * @param pred The predicate to apply.
+     * @return std::optional<std::decay_t<Args>> The first argument that
+     * satisfies the predicate, or std::nullopt if none do.
+     */
+    template <typename Pred>
+    auto find(Pred&& pred) const {
+        return std::apply(
+            [&](const auto&... args)
+                -> std::optional<std::common_type_t<Args...>> {
+                return ((pred(args)
+                             ? std::optional<std::common_type_t<Args...>>{args}
+                             : std::nullopt) ||
+                        ...);
+            },
+            args_);
+    }
+
+    /**
+     * @brief Check if the arguments contain a specific value.
+     *
+     * @tparam T Type of the value.
+     * @param value The value to check for.
+     * @return true If the value is found.
+     * @return false Otherwise.
+     */
+    template <typename T>
+    auto contains(const T& value) const -> bool {
+        return std::apply(
+            [&](const auto&... args) { return ((args == value) || ...); },
+            args_);
     }
 
 private:

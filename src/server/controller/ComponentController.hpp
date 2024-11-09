@@ -63,7 +63,7 @@ auto jsonToPackageJsonDto(const std::string& json) {
     auto packageJsonDto =
         objectMapper.readFromString<oatpp::Object<PackageJsonDto>>(json);
 
-    return packageJsonDto.get();
+    return packageJsonDto;
 }
 
 using json = nlohmann::json;
@@ -145,8 +145,8 @@ public:
             if (auto msg = mMessageQueue->take(); msg.has_value()) {
                 res->error = msg.value()["error"].get<std::string>();
                 res->stacktrace = msg.value()["stacktrace"].get<std::string>();
-                LOG_F(ERROR, "Failed to load component: {}, {}", res->error,
-                      res->stacktrace);
+                LOG_F(ERROR, "Failed to load component: {}, {}", *res->error,
+                      *res->stacktrace);
             } else {
                 res->error = "Failed to load component";
             }
@@ -155,11 +155,11 @@ public:
         }
 
         static auto verifyComponentsLoaded(
-            const oatpp::List<ComponentDto>& components,
+            const oatpp::List<Object<ComponentDto>>& components,
             const std::vector<std::string>& loadedComponents) -> bool {
             std::vector<std::string> componentsList;
             for (const auto& component : *components) {
-                componentsList.push_back(component.name.getValue(""));
+                componentsList.push_back(component->name.getValue(""));
             }
             return atom::utils::isSubset(componentsList, loadedComponents);
         }
@@ -179,9 +179,9 @@ public:
             auto componentManager = mComponentManager.lock();
 
             for (const auto& component : *components) {
-                auto componentName = component.name;
-                auto componentPath = component.path;
-                auto componentInstance = component.instance;
+                auto componentName = component->name;
+                auto componentPath = component->path;
+                auto componentInstance = component->instance;
                 auto componentFullName =
                     componentName + "::" + componentInstance;
 
@@ -238,7 +238,7 @@ public:
 
     ENDPOINT_INFO(getUIApiServreComponentUnload) {
         info->summary = "Unload component";
-        info->addConsumes<Object<RequestComponentUnloadDto>>(
+        info->addConsumes<RequestComponentUnloadDto>(
             "application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
                                              "application/json");
@@ -282,8 +282,8 @@ public:
             if (auto msg = mMessageQueue->take(); msg.has_value()) {
                 res->error = msg.value()["error"].get<std::string>();
                 res->stacktrace = msg.value()["stacktrace"].get<std::string>();
-                LOG_F(ERROR, "Failed to unload component: {}, {}", res->error,
-                      res->stacktrace);
+                LOG_F(ERROR, "Failed to unload component: {}, {}", *res->error,
+                      *res->stacktrace);
             } else {
                 res->error = "Failed to unload component";
             }
@@ -306,8 +306,8 @@ public:
             auto componentManager = mComponentManager.lock();
 
             for (const auto& component : *components) {
-                auto componentName = component.name;
-                auto componentInstance = component.instance;
+                auto componentName = component->name;
+                auto componentInstance = component->instance;
                 auto componentFullName =
                     componentName + "::" + componentInstance;
 
@@ -339,7 +339,7 @@ public:
 
     ENDPOINT_INFO(getUIApiServreComponentReload) {
         info->summary = "Reload component";
-        info->addConsumes<Object<RequestComponentReloadDto>>(
+        info->addConsumes<RequestComponentReloadDto>(
             "application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
                                              "application/json");
@@ -379,8 +379,8 @@ public:
             if (auto msg = mMessageQueue->take(); msg.has_value()) {
                 res->error = msg.value()["error"].get<std::string>();
                 res->stacktrace = msg.value()["stacktrace"].get<std::string>();
-                LOG_F(ERROR, "Failed to unload component: {}, {}", res->error,
-                      res->stacktrace);
+                LOG_F(ERROR, "Failed to unload component: {}, {}", *res->error,
+                      *res->stacktrace);
             } else {
                 res->error = "Failed to unload component";
             }
@@ -398,8 +398,8 @@ public:
             if (auto msg = mMessageQueue->take(); msg.has_value()) {
                 res->error = msg.value()["error"].get<std::string>();
                 res->stacktrace = msg.value()["stacktrace"].get<std::string>();
-                LOG_F(ERROR, "Failed to load component: {}, {}", res->error,
-                      res->stacktrace);
+                LOG_F(ERROR, "Failed to load component: {}, {}", *res->error,
+                      *res->stacktrace);
             } else {
                 res->error = "Failed to load component";
             }
@@ -421,8 +421,8 @@ public:
             auto componentManager = mComponentManager.lock();
 
             for (const auto& component : *components) {
-                auto componentName = component.name;
-                auto componentInstance = component.instance;
+                auto componentName = component->name;
+                auto componentInstance = component->instance;
                 auto componentFullName =
                     componentName + "::" + componentInstance;
 
@@ -478,7 +478,7 @@ public:
             res->message = "Components list";
             for (const auto& component :
                  mComponentManager.lock()->getComponentList()) {
-                auto instance = ComponentInstanceDto();
+                auto instance = ComponentInstanceDto::createShared();
                 auto info =
                     mComponentManager.lock()->getComponentInfo(component);
                 if (!info.has_value()) {
@@ -501,9 +501,9 @@ public:
                     ]
                 }
                 */
-                instance.name = component;
-                instance.instance = component;
-                instance.description =
+                instance->name = component;
+                instance->instance = component;
+                instance->description =
                     mComponentManager.lock()->getComponentDoc(component);
                 for (const auto& func : info.value()["functions"].get<json>()) {
                     if (!func.is_object() || !func.contains("name") ||
@@ -580,7 +580,7 @@ public:
             res->command = COMMAND;
             res->message = "Component info";
             res->component_info->emplace_back(
-                *jsonToPackageJsonDto(componentInfo.value().dump()));
+                jsonToPackageJsonDto(componentInfo.value().dump()));
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
         }
@@ -638,8 +638,8 @@ public:
             if (auto msg = mMessageQueue->take(); msg.has_value()) {
                 res->error = msg.value()["error"].get<std::string>();
                 res->stacktrace = msg.value()["stacktrace"].get<std::string>();
-                LOG_F(ERROR, "Failed to run function: {}, {}", res->error,
-                      res->stacktrace);
+                LOG_F(ERROR, "Failed to run function: {}, {}", *res->error,
+                      *res->stacktrace);
             } else {
                 res->error = "Failed to run function";
             }
@@ -706,7 +706,7 @@ public:
             // directly pass them to std::vector<any> or FunctionParams
 
             if (!componentManager->hasComponent(component)) {
-                LOG_F(ERROR, "Component {} not found", component);
+                LOG_F(ERROR, "Component {} not found", *component);
                 return _return(
                     createErrorResponse<ReturnComponentFunctionNotFoundDto>(
                         "Component not found", component, function, 300));
@@ -716,7 +716,7 @@ public:
             if (auto componentWeakPtr =
                     componentManager->getComponent(component);
                 !componentWeakPtr.has_value() || componentWeakPtr->expired()) {
-                LOG_F(ERROR, "Component pointer is invalid: {}", component);
+                LOG_F(ERROR, "Component pointer is invalid: {}", *component);
                 return _return(
                     createErrorResponse<ReturnComponentFunctionNotFoundDto>(
                         "Component pointer is invalid", component, function,
@@ -724,7 +724,7 @@ public:
             } else {
                 auto componentPtr = componentWeakPtr->lock();
                 if (!componentPtr->has(function)) {
-                    LOG_F(ERROR, "Function {} not found", function);
+                    LOG_F(ERROR, "Function {} not found", *function);
                     return _return(
                         createErrorResponse<ReturnComponentFunctionNotFoundDto>(
                             "Function not found", component, function, 300));
@@ -798,7 +798,6 @@ public:
                                        oatpp::List<oatpp::String>,
                                        oatpp::List<oatpp::Boolean>>{});
                         if (!success) {
-                            LOG_F(ERROR, "Failed to parse argument: {}", arg);
                             return _return(createErrorResponse<
                                            ReturnComponentFunctionNotFoundDto>(
                                 "Failed to parse argument", component, function,
@@ -809,11 +808,12 @@ public:
 
                 // Call the function
                 try {
-                    auto result = componentPtr->dispatch(function, functionArgs);
+                    auto result =
+                        componentPtr->dispatch(function, functionArgs);
                 } catch (const DispatchException& e) {
                     LOG_F(ERROR, "Failed to run function: {}", e.what());
                     return _return(handleRunFailure(component, function));
-                } catch (const DispatchTimeout&e) {
+                } catch (const DispatchTimeout& e) {
                     LOG_F(ERROR, "Failed to run function: {}", e.what());
                     return _return(handleRunFailure(component, function));
                 } catch (const std::exception& e) {

@@ -15,6 +15,7 @@ Description: System Information Module - Memory
 #include "atom/sysinfo/memory.hpp"
 
 #include <fstream>
+#include <regex>
 #include <sstream>
 
 #include "atom/log/loguru.hpp"
@@ -193,40 +194,31 @@ auto getAvailableMemorySize() -> unsigned long long {
 #elif defined(__linux__)
     std::ifstream meminfo("/proc/meminfo");
     if (!meminfo.is_open()) {
-        LOG_F(ERROR, "GetAvailableMemorySize error: open /proc/meminfo error");
-        return 1;  // Return error code
+        LOG_F(ERROR, "Failed to open /proc/meminfo");
+        return -1;
     }
 
     std::string line;
+    std::regex memAvailableRegex(R"(MemAvailable:\s+(\d+)\s+kB)");
     bool found = false;
 
-    // Read the file line by line
     while (std::getline(meminfo, line)) {
-        if (line.substr(0, 13) == "MemAvailable:") {
-            unsigned long long availableMemory;
-            // Parse the line
-            if (std::sscanf(line, "MemAvailable: {} kB", &availableMemory) ==
-                1) {
-                availableMemorySize =
-                    availableMemory * 1024;  // Convert from kB to bytes
+        std::smatch match;
+        if (std::regex_search(line, match, memAvailableRegex)) {
+            if (match.size() == 2) {
+                availableMemorySize = std::stoull(match[1].str()) *
+                                      1024;  // Convert from kB to bytes
                 found = true;
                 LOG_F(INFO, "Available Memory Size: {} bytes",
                       availableMemorySize);
                 break;
-            } else {
-                LOG_F(ERROR, "GetAvailableMemorySize error: parse error");
-                return -1;
             }
         }
     }
 
-    meminfo.close();
-
     if (!found) {
-        LOG_F(ERROR,
-              "GetAvailableMemorySize error: MemAvailable entry not found in "
-              "/proc/meminfo");
-        return -1;  // Return error code
+        LOG_F(ERROR, "GetAvailableMemorySize error: parse error");
+        return -1;
     }
 #endif
     LOG_F(INFO, "Finished getAvailableMemorySize function");
@@ -455,14 +447,29 @@ auto getTotalMemory() -> size_t {
     }
 #elif defined(__linux__)
     std::ifstream memInfoFile("/proc/meminfo");
+    if (!memInfoFile.is_open()) {
+        LOG_F(ERROR, "Failed to open /proc/meminfo");
+        return -1;
+    }
+
     std::string line;
+    std::regex memTotalRegex(R"(MemTotal:\s+(\d+)\s+kB)");
+
     while (std::getline(memInfoFile, line)) {
-        size_t value;
-        if (sscanf(line, "MemTotal: {} kB", &value) == 1) {
-            totalMemory = value * 1024;  // Convert kB to bytes
-            LOG_F(INFO, "Total Memory: {} bytes", totalMemory);
-            break;
+        std::smatch match;
+        if (std::regex_search(line, match, memTotalRegex)) {
+            if (match.size() == 2) {
+                totalMemory = std::stoull(match[1].str()) *
+                              1024;  // Convert from kB to bytes
+                LOG_F(INFO, "Total Memory: {} bytes", totalMemory);
+                break;
+            }
         }
+    }
+
+    if (totalMemory == 0) {
+        LOG_F(ERROR, "GetTotalMemory error: parse error");
+        return -1;
     }
 #elif defined(__APPLE__)
     int mib[2];
@@ -490,14 +497,28 @@ auto getAvailableMemory() -> size_t {
     return 0;
 #elif defined(__linux__)
     std::ifstream memInfoFile("/proc/meminfo");
+    if (!memInfoFile.is_open()) {
+        LOG_F(ERROR, "Failed to open /proc/meminfo");
+        return 0;
+    }
+
     std::string line;
+    std::regex memAvailableRegex(R"(MemAvailable:\s+(\d+)\s+kB)");
     size_t availableMemory = 0;
+
     while (std::getline(memInfoFile, line)) {
-        size_t value;
-        if (sscanf(line, "MemAvailable: {} kB", &value) == 1) {
-            availableMemory = value * 1024;  // Convert kB to bytes
-            break;
+        std::smatch match;
+        if (std::regex_search(line, match, memAvailableRegex)) {
+            if (match.size() == 2) {
+                availableMemory = std::stoull(match[1].str()) * 1024;  // Convert from kB to bytes
+                LOG_F(INFO, "Available Memory: {} bytes", availableMemory);
+                break;
+            }
         }
+    }
+
+    if (availableMemory == 0) {
+        LOG_F(ERROR, "GetAvailableMemory error: parse error");
     }
     return availableMemory;
 #elif defined(__APPLE__)

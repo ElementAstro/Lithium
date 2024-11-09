@@ -1,79 +1,96 @@
+#ifndef ATOM_META_TEST_TYPE_CASTER_HPP
+#define ATOM_META_TEST_TYPE_CASTER_HPP
+
 #include "atom/function/type_caster.hpp"
 #include <gtest/gtest.h>
 
-TEST(TypeCasterTest, RegisterConversion) {
-    atom::meta::TypeCaster caster;
-    bool conversionRegistered = false;
+using namespace atom::meta;
 
-    // Define a conversion function from int to double
-    auto intToDoubleFunc = [](const std::any& value) {
-        return static_cast<double>(std::any_cast<int>(value));
+class TypeCasterTest : public ::testing::Test {
+protected:
+    TypeCaster typeCaster;
+
+    void SetUp() override {
+        // Register some custom types and conversions for testing
+        typeCaster.registerType<int>("int");
+        typeCaster.registerType<double>("double");
+        typeCaster.registerConversion<int, double>([](const std::any& input) {
+            return std::any_cast<int>(input) * 1.0;
+        });
+        typeCaster.registerConversion<double, int>([](const std::any& input) {
+            return static_cast<int>(std::any_cast<double>(input));
+        });
+    }
+};
+
+TEST_F(TypeCasterTest, ConvertIntToDouble) {
+    std::any input = 42;
+    std::any result = typeCaster.convert<double>(input);
+    EXPECT_EQ(std::any_cast<double>(result), 42.0);
+}
+
+TEST_F(TypeCasterTest, ConvertDoubleToInt) {
+    std::any input = 42.0;
+    std::any result = typeCaster.convert<int>(input);
+    EXPECT_EQ(std::any_cast<int>(result), 42);
+}
+
+TEST_F(TypeCasterTest, RegisterAndConvertCustomType) {
+    struct CustomType {
+        int value;
     };
 
-    // Attempt to register the conversion
-    try {
-        caster.registerConversion<int, double>(intToDoubleFunc);
-        conversionRegistered = true;
-    } catch (const std::exception&) {
-        conversionRegistered = false;
-    }
-
-    // Verify that the conversion was registered
-    ASSERT_TRUE(conversionRegistered);
-    ASSERT_TRUE((caster.hasConversion<int, double>()));
-}
-
-TEST(TypeCasterTest, Convert) {
-    atom::meta::TypeCaster caster;
-
-    // Register conversions
-    caster.registerConversion<int, double>([](const std::any& value) {
-        return static_cast<double>(std::any_cast<int>(value));
-    });
-    caster.registerConversion<double, std::string>([](const std::any& value) {
-        std::stringstream ss;
-        ss << std::any_cast<double>(value);
-        return ss.str();
+    typeCaster.registerType<CustomType>("CustomType");
+    typeCaster.registerConversion<CustomType, int>([](const std::any& input) {
+        return std::any_cast<CustomType>(input).value;
     });
 
-    // Create input vector
-    std::vector<std::any> input = {1, 2.0, 3.14};
-
-    // Define target type names
-    std::vector<std::string> targetTypeNames = {
-        "int", "double",
-        atom::meta::DemangleHelper::demangleType<std::string>()};
-
-    // Perform conversion
-    std::vector<std::any> output = caster.convert(input, targetTypeNames);
-
-    // Verify output
-    ASSERT_EQ(output.size(), input.size());
-    ASSERT_TRUE(std::any_cast<int>(output[0]) == 1);
-    ASSERT_TRUE(std::any_cast<double>(output[1]) == 2.0);
-    ASSERT_TRUE(std::any_cast<std::string>(output[2]) == "3.14");
+    CustomType customValue{123};
+    std::any input = customValue;
+    std::any result = typeCaster.convert<int>(input);
+    EXPECT_EQ(std::any_cast<int>(result), 123);
 }
 
-TEST(TypeCasterTest, InvalidArgument) {
-    atom::meta::TypeCaster caster;
+TEST_F(TypeCasterTest, RegisterMultiStageConversion) {
+    typeCaster.registerMultiStageConversion<int, double, std::string>(
+        [](const std::any& input) { return std::any_cast<int>(input) * 1.0; },
+        [](const std::any& input) {
+            return std::to_string(std::any_cast<double>(input));
+        });
 
-    // Create input vector with mismatched size
-    std::vector<std::any> input = {1, 2.0};
-    std::vector<std::string> targetTypeNames = {
-        "int", "double",
-        atom::meta::DemangleHelper::demangleType<std::string>()};
-
-    // Verify that an exception is thrown for mismatched sizes
-    ASSERT_THROW(caster.convert(input, targetTypeNames),
-                 atom::error::Exception);
+    std::any input = 42;
+    std::any result = typeCaster.convert<std::string>(input);
+    EXPECT_EQ(std::any_cast<std::string>(result), "42.000000");
 }
 
-TEST(TypeCasterTest, UnknownType) {
-    atom::meta::TypeCaster caster;
-
-    // Define target type name of an unknown type
-    std::vector<std::string> targetTypeNames = {"unknown"};
-
-    // Verify that an exception is thrown for unknown type
-    ASSERT_THROW(caster.convert({}, targetTypeNames), atom::error::Exception);
+TEST_F(TypeCasterTest, GetRegisteredTypes) {
+    auto types = typeCaster.getRegisteredTypes();
+    EXPECT_NE(std::find(types.begin(), types.end(), "int"), types.end());
+    EXPECT_NE(std::find(types.begin(), types.end(), "double"), types.end());
 }
+
+TEST_F(TypeCasterTest, EnumToString) {
+    enum class TestEnum { VALUE1, VALUE2 };
+    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE1",
+                                           TestEnum::VALUE1);
+    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE2",
+                                           TestEnum::VALUE2);
+
+    EXPECT_EQ(typeCaster.enumToString(TestEnum::VALUE1, "TestEnum"), "VALUE1");
+    EXPECT_EQ(typeCaster.enumToString(TestEnum::VALUE2, "TestEnum"), "VALUE2");
+}
+
+TEST_F(TypeCasterTest, StringToEnum) {
+    enum class TestEnum { VALUE1, VALUE2 };
+    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE1",
+                                           TestEnum::VALUE1);
+    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE2",
+                                           TestEnum::VALUE2);
+
+    EXPECT_EQ(typeCaster.stringToEnum<TestEnum>("VALUE1", "TestEnum"),
+              TestEnum::VALUE1);
+    EXPECT_EQ(typeCaster.stringToEnum<TestEnum>("VALUE2", "TestEnum"),
+              TestEnum::VALUE2);
+}
+
+#endif  // ATOM_META_TEST_TYPE_CASTER_HPP

@@ -123,4 +123,9 @@ auto Timer::getTaskCount() const -> size_t {
     std::unique_lock lock(m_mutex);
     return m_taskQueue.size();
 }
+
+void Timer::wait() {
+    std::unique_lock lock(m_mutex);
+    m_cond.wait(lock, [&]() { return m_taskQueue.empty(); });
+}
 }  // namespace atom::async

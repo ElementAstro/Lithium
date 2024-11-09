@@ -1,6 +1,7 @@
 #include "device.hpp"
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -147,8 +148,7 @@ auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
 }
 
 #else  // Linux
-
-std::vector<DeviceInfo> enumerate_usb_devices() {
+auto enumerateUsbDevices() -> std::vector<DeviceInfo> {
     LOG_F(INFO, "enumerate_usb_devices called");
     std::vector<DeviceInfo> devices;
     libusb_context *ctx = nullptr;
@@ -231,33 +231,31 @@ std::vector<DeviceInfo> enumerate_usb_devices() {
     return devices;
 }
 
-std::vector<DeviceInfo> enumerate_serial_ports() {
+auto enumerateSerialPorts() -> std::vector<DeviceInfo> {
     LOG_F(INFO, "enumerate_serial_ports called");
     std::vector<DeviceInfo> devices;
-    struct dirent *entry;
-    DIR *dp = opendir("/dev");
 
-    if (dp == nullptr) {
+    auto dp =
+        std::unique_ptr<DIR, decltype(&closedir)>(opendir("/dev"), closedir);
+    if (!dp) {
         LOG_F(ERROR, "Failed to open /dev directory");
         return devices;
     }
 
-    while ((entry = readdir(dp))) {
+    while (auto entry = readdir(dp.get())) {
         std::string filename(entry->d_name);
-        if (filename.find("ttyS") != std::string::npos ||
-            filename.find("ttyUSB") != std::string::npos) {
+        if (filename.contains("ttyS") || filename.contains("ttyUSB")) {
             devices.push_back({filename, ""});
             LOG_F(INFO, "Found serial port: {}", filename);
         }
     }
 
-    closedir(dp);
     LOG_F(INFO, "enumerate_serial_ports completed with {} devices found",
           devices.size());
     return devices;
 }
 
-std::vector<DeviceInfo> enumerate_bluetooth_devices() {
+auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
     LOG_F(INFO, "enumerate_bluetooth_devices called");
     std::vector<DeviceInfo> devices;
 #if __has_include(<bluetooth/bluetooth.h>)

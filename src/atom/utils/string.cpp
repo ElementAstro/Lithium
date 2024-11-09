@@ -15,14 +15,12 @@ Description: Some useful string functions
 #include "string.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <codecvt>
 #include <iomanip>
 #include <locale>
 #include <sstream>
 #include <string>
-
-#include <charconv>
-#include "atom/error/exception.hpp"
 
 namespace atom::utils {
 auto hasUppercase(std::string_view str) -> bool {
@@ -242,4 +240,44 @@ auto wstringToString(const std::wstring &wstr) -> std::string {
     return myconv.to_bytes(wstr);
 }
 
+auto stod(std::string_view str, std::size_t *idx) -> double {
+    return std::stod(std::string(str), idx);
+}
+
+auto stof(std::string_view str, std::size_t *idx) -> float {
+    return std::stof(std::string(str), idx);
+}
+
+auto stoi(std::string_view str, std::size_t *idx, int base) -> int {
+    return std::stoi(std::string(str), idx, base);
+}
+
+auto stol(std::string_view str, std::size_t *idx, int base) -> long {
+    return std::stol(std::string(str), idx, base);
+}
+
+auto nstrtok(std::string_view &str, const std::string_view &delims)
+    -> std::optional<std::string_view> {
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    size_t start = str.find_first_not_of(delims);
+    if (start == std::string_view::npos) {
+        str = {};
+        return std::nullopt;
+    }
+
+    size_t end = str.find_first_of(delims, start);
+    std::string_view token;
+    if (end == std::string_view::npos) {
+        token = str.substr(start);
+        str = {};
+    } else {
+        token = str.substr(start, end - start);
+        str.remove_prefix(end + 1);
+    }
+
+    return token;
+}
 }  // namespace atom::utils

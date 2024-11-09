@@ -9,14 +9,14 @@
 struct InterfacePHD2Profile {
     std::string name;
     std::string camera;
-    std::string cameraCCD;  // Changed to camelCase
-    double pixelSize;       // Changed to camelCase
+    std::string cameraCCD;
+    double pixelSize;
     std::string telescope;
-    double focalLength;           // Changed to camelCase
-    double massChangeThreshold;   // Changed to camelCase
-    bool massChangeFlag;          // Changed to camelCase
-    double calibrationDistance;   // Changed to camelCase
-    double calibrationDuration;   // Changed to camelCase
+    double focalLength;
+    double massChangeThreshold;
+    bool massChangeFlag;
+    double calibrationDistance;
+    double calibrationDuration;
 } __attribute__((aligned(128)));  // Align to 128 bytes
 
 class PHD2ProfileSettingHandler {
@@ -35,37 +35,28 @@ public:
         -> PHD2ProfileSettingHandler&;
 
     [[nodiscard]] auto loadProfileFile()
-        -> std::optional<InterfacePHD2Profile>;  // Changed to camelCase and
-                                                 // added [[nodiscard]]
-    auto loadProfile(const std::string& profileName)
-        -> bool;  // Changed to camelCase
-    auto newProfileSetting(const std::string& newProfileName)
-        -> bool;  // Changed to camelCase
-    auto updateProfile(const InterfacePHD2Profile& phd2ProfileSetting)
-        -> bool;  // Changed to camelCase
-    auto deleteProfile(const std::string& toDeleteProfile)
-        -> bool;                                       // Changed to camelCase
-    void saveProfile(const std::string& profileName);  // Changed to camelCase
-    auto restoreProfile(const std::string& toRestoreProfile)
-        -> bool;  // Changed to camelCase
+        -> std::optional<InterfacePHD2Profile>;  // Added [[nodiscard]]
+    auto loadProfile(const std::string& profileName) -> bool;
+    auto newProfileSetting(const std::string& newProfileName) -> bool;
+    auto updateProfile(const InterfacePHD2Profile& phd2ProfileSetting) -> bool;
+    auto deleteProfile(const std::string& toDeleteProfile) -> bool;
+    void saveProfile(const std::string& profileName);
+    auto restoreProfile(const std::string& toRestoreProfile) -> bool;
 
     // New functionality
     [[nodiscard]] auto listProfiles() const
-        -> std::vector<std::string>;  // Changed to camelCase and added
-                                      // [[nodiscard]]
+        -> std::vector<std::string>;  // Added [[nodiscard]]
     [[nodiscard]] auto exportProfile(const std::string& profileName,
                                      const std::filesystem::path& exportPath)
-        const -> bool;  // Changed to camelCase and added [[nodiscard]]
+        const -> bool;  // Added [[nodiscard]]
     auto importProfile(const std::filesystem::path& importPath,
-                       const std::string& newProfileName)
-        -> bool;  // Changed to camelCase
+                       const std::string& newProfileName) -> bool;
     [[nodiscard]] auto compareProfiles(const std::string& profile1,
                                        const std::string& profile2) const
-        -> bool;  // Changed to camelCase and added [[nodiscard]]
-    void printProfileDetails(
-        const std::string& profileName) const;  // Changed to camelCase
+        -> bool;  // Added [[nodiscard]]
+    void printProfileDetails(const std::string& profileName) const;
 
 private:
     class Impl;
-    std::unique_ptr<Impl> pImpl;  // Changed to camelCase
+    std::unique_ptr<Impl> pImpl;
 };

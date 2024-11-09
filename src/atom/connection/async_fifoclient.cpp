@@ -14,7 +14,7 @@
 #include <unistd.h>
 #endif
 
-namespace atom::connection {
+namespace atom::async::connection {
 
 struct FifoClient::Impl {
     asio::io_context io_context;

@@ -32,6 +32,7 @@
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/env.hpp"
+#include "atom/system/process_manager.hpp"
 #include "atom/system/process.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
@@ -173,7 +174,7 @@ auto ComponentManager::loadComponentDirectory() -> bool {
                 LOG_F(
                     ERROR,
                     "Component directory loaded from config does not exist: {}",
-                    value.value());
+                    value.value().dump());
                 return false;
             }
         } catch (const json::parse_error& e) {

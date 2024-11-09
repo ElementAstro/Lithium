@@ -20,7 +20,7 @@ Description: AtomTelescope Simulator and Basic Definition
 
 enum class ConnectionMode { SERIAL, TCP, NONE };
 
-enum class BAUD_RATE { B9600, B19200, B38400, B57600, B115200, B230400, NONE };
+enum class T_BAUD_RATE { B9600, B19200, B38400, B57600, B115200, B230400, NONE };
 
 enum class TrackMode { SIDEREAL, SOLAR, LUNAR, CUSTOM, NONE };
 

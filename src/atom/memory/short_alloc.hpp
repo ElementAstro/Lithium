@@ -1,28 +1,17 @@
-/*
- * short_alloc.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2024-3-1
-
-Description: Short Alloc from Howard Hinnant
-
-**************************************************/
-
 #ifndef ATOM_MEMORY_SHORT_ALLOC_HPP
 #define ATOM_MEMORY_SHORT_ALLOC_HPP
 
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <mutex>
 
 #include "atom/macro.hpp"
 
 namespace atom::memory {
+
 /**
  * @brief A fixed-size memory arena for allocating objects with a specific
  * alignment.
@@ -41,36 +30,86 @@ template <std::size_t N, std::size_t alignment = alignof(std::max_align_t)>
 class Arena {
     alignas(alignment) std::array<char, N> buf_{};
     char* ptr_;
+    mutable std::mutex mutex_;
 
 public:
     Arena() ATOM_NOEXCEPT : ptr_(buf_.data()) {}
-    ~Arena() { ptr_ = nullptr; }
+    ~Arena() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ptr_ = nullptr;
+    }
+
     Arena(const Arena&) = delete;
     auto operator=(const Arena&) -> Arena& = delete;
 
+    /**
+     * @brief Allocate memory from the arena.
+     *
+     * @param n The number of bytes to allocate.
+     * @return void* Pointer to the allocated memory.
+     * @throw std::bad_alloc If there is not enough memory to fulfill the
+     * request.
+     */
     auto allocate(std::size_t n) -> void* {
-        auto space = N - used();
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::size_t space = N - used();
         void* result = ptr_;
-        if (!std::align(alignment, n, result, space)) {
+        void* alignedPtr = std::align(alignment, n, result, space);
+        if (alignedPtr == nullptr) {
             throw std::bad_alloc();
         }
-        ptr_ = static_cast<char*>(result) + n;
-        return result;
+        ptr_ = static_cast<char*>(alignedPtr) + n;
+        return alignedPtr;
     }
 
+    /**
+     * @brief Deallocate memory back to the arena.
+     *
+     * Note: This method only supports deallocating the most recently allocated
+     * block.
+     *
+     * @param p Pointer to the memory to deallocate.
+     * @param n The number of bytes to deallocate.
+     */
     void deallocate(void* p, std::size_t n) ATOM_NOEXCEPT {
+        std::lock_guard<std::mutex> lock(mutex_);
         if (static_cast<char*>(p) + n == ptr_) {
             ptr_ = static_cast<char*>(p);
         }
     }
 
+    /**
+     * @brief Get the total size of the arena.
+     *
+     * @return constexpr std::size_t The size of the arena.
+     */
     static ATOM_CONSTEXPR auto size() ATOM_NOEXCEPT -> std::size_t { return N; }
 
+    /**
+     * @brief Get the amount of used memory in the arena.
+     *
+     * @return std::size_t The number of bytes used.
+     */
     ATOM_NODISCARD auto used() const ATOM_NOEXCEPT -> std::size_t {
         return static_cast<std::size_t>(ptr_ - buf_.data());
     }
 
-    void reset() ATOM_NOEXCEPT { ptr_ = buf_.data(); }
+    /**
+     * @brief Get the remaining memory in the arena.
+     *
+     * @return std::size_t The number of bytes remaining.
+     */
+    ATOM_NODISCARD auto remaining() const ATOM_NOEXCEPT -> std::size_t {
+        return N - used();
+    }
+
+    /**
+     * @brief Reset the arena to its initial state.
+     */
+    void reset() ATOM_NOEXCEPT {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ptr_ = buf_.data();
+    }
 
 private:
     auto pointerInBuffer(char* p) ATOM_NOEXCEPT -> bool {
@@ -114,7 +153,11 @@ public:
         if (n > SIZE / sizeof(T)) {
             throw std::bad_alloc();
         }
-        return static_cast<T*>(a_.allocate(n * sizeof(T)));
+        void* ptr = a_.allocate(n * sizeof(T));
+        if (ptr == nullptr) {
+            throw std::bad_alloc();
+        }
+        return static_cast<T*>(ptr);
     }
 
     void deallocate(T* p, std::size_t n) ATOM_NOEXCEPT {
@@ -123,7 +166,7 @@ public:
 
     template <class U, class... Args>
     void construct(U* p, Args&&... args) {
-        new (p) U(std::forward<Args>(args)...);
+        ::new (static_cast<void*>(p)) U(std::forward<Args>(args)...);
     }
 
     template <class U>
@@ -159,12 +202,24 @@ inline auto operator!=(const ShortAlloc<T, N, A1>& x,
     return !(x == y);
 }
 
+/**
+ * @brief Allocate a unique_ptr with a custom deleter using a specific
+ * allocator.
+ *
+ * @tparam Alloc The allocator type.
+ * @tparam T The type of object to allocate.
+ * @tparam Args The types of arguments to forward to the constructor.
+ * @param alloc The allocator instance.
+ * @param args The arguments to pass to the constructor of T.
+ * @return std::unique_ptr<T, std::function<void(T*)>> The allocated unique_ptr
+ * with a custom deleter.
+ */
 template <typename Alloc, typename T, typename... Args>
 auto allocateUnique(Alloc& alloc, Args&&... args)
     -> std::unique_ptr<T, std::function<void(T*)>> {
     using AllocTraits = std::allocator_traits<Alloc>;
 
-    auto p = AllocTraits::allocate(alloc, 1);
+    T* p = AllocTraits::allocate(alloc, 1);
     try {
         AllocTraits::construct(alloc, p, std::forward<Args>(args)...);
     } catch (...) {
@@ -179,6 +234,7 @@ auto allocateUnique(Alloc& alloc, Args&&... args)
 
     return std::unique_ptr<T, std::function<void(T*)>>(p, deleter);
 }
+
 }  // namespace atom::memory
 
 #endif  // ATOM_MEMORY_SHORT_ALLOC_HPP

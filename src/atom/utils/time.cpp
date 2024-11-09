@@ -32,7 +32,11 @@ auto getTimestampString() -> std::string {
                         K_MILLISECONDS_IN_SECOND;
 
     std::tm timeInfo{};
+#ifdef _WIN32
     if (localtime_s(&timeInfo, &time) != 0) {
+#else
+    if (localtime_r(&time, &timeInfo) == nullptr) {
+#endif
         THROW_TIME_CONVERT_ERROR("Failed to convert time to local time");
     }
 
@@ -61,7 +65,11 @@ auto convertToChinaTime(const std::string &utcTimeStr) -> std::string {
     // 格式化为字符串
     auto localTime = std::chrono::system_clock::to_time_t(localTimePoint);
     std::tm localTimeStruct{};
+#ifdef _WIN32
     if (localtime_s(&localTimeStruct, &localTime) != 0) {
+#else
+    if (localtime_r(&localTime, &localTimeStruct) == nullptr) {
+#endif
         THROW_TIME_CONVERT_ERROR("Failed to convert time to local time");
     }
 
@@ -83,7 +91,11 @@ auto getChinaTimestampString() -> std::string {
     // 格式化为字符串
     auto localTime = std::chrono::system_clock::to_time_t(localTimePoint);
     std::tm localTimeStruct{};
+#ifdef _WIN32
     if (localtime_s(&localTimeStruct, &localTime) != 0) {
+#else
+    if (localtime_r(&localTime, &localTimeStruct) == nullptr) {
+#endif
         THROW_TIME_CONVERT_ERROR("Failed to convert time to local time");
     }
 
@@ -97,7 +109,11 @@ auto timeStampToString(time_t timestamp) -> std::string {
     constexpr size_t K_BUFFER_SIZE = 80;  // Named constant for magic number
     std::array<char, K_BUFFER_SIZE> buffer{};
     std::tm timeStruct{};
+#ifdef _WIN32
     if (localtime_s(&timeStruct, &timestamp) != 0) {
+#else
+    if (localtime_r(&timestamp, &timeStruct) == nullptr) {
+#endif
         THROW_TIME_CONVERT_ERROR("Failed to convert timestamp to local time");
     }
 
@@ -119,22 +135,26 @@ auto toString(const std::tm &tm, const std::string &format) -> std::string {
 auto getUtcTime() -> std::string {
     const auto NOW = std::chrono::system_clock::now();
     const std::time_t NOW_TIME_T = std::chrono::system_clock::to_time_t(NOW);
-    std::tm tm;
+    std::tm utcTime;
 #ifdef _WIN32
-    if (gmtime_s(&tm, &NOW_TIME_T) != 0) {
+    if (gmtime_s(&utcTime, &NOW_TIME_T) != 0) {
         THROW_TIME_CONVERT_ERROR("Failed to convert time to UTC");
     }
 #else
-    gmtime_r(&now_time_t, &tm);
+    gmtime_r(&NOW_TIME_T, &utcTime);
 #endif
-    return toString(tm, "%FT%TZ");
+    return toString(utcTime, "%FT%TZ");
 }
 
 auto timestampToTime(long long timestamp) -> std::tm {
     auto time = static_cast<std::time_t>(timestamp / K_MILLISECONDS_IN_SECOND);
 
     std::tm timeStruct;
+#ifdef _WIN32
     if (localtime_s(&timeStruct, &time) != 0) {
+#else
+    if (localtime_r(&time, &timeStruct) == nullptr) {
+#endif
         THROW_TIME_CONVERT_ERROR("Failed to convert timestamp to local time");
     }  // Use localtime_s for thread safety
 

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <compare>
 #include <format>
+#include <random>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -76,7 +77,13 @@ public:
      * @return The result of the comparison.
      */
     auto operator<=>(const UUID& other) const -> std::strong_ordering {
-        return uuid_ <=> other.uuid_;
+        if (uuid_ < other.uuid_) {
+            return std::strong_ordering::less;
+        }
+        if (uuid_ > other.uuid_) {
+            return std::strong_ordering::greater;
+        }
+        return std::strong_ordering::equal;
     }
 
     /**

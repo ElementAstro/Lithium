@@ -88,6 +88,65 @@ check_memory_usage() {
     log "Displayed current memory usage."
 }
 
+# Mount shared memory segment
+# This function allows the user to mount a shared memory segment to the file system.
+mount_shm_segment() {
+    echo -n "Enter the shared memory segment ID to mount: "
+    read shm_id
+    echo -n "Enter the mount point (directory): "
+    read mount_point
+    if [ ! -d "$mount_point" ]; then
+        mkdir -p $mount_point
+    fi
+    mount -t tmpfs -o size=$(ipcs -m -i $shm_id | grep 'bytes' | awk '{print $5}') shm $mount_point
+    if [ $? -eq 0 ]; then
+        echo "Shared memory segment ID: $shm_id mounted to $mount_point."
+        log "Mounted shared memory segment ID: $shm_id to $mount_point."
+    else
+        echo "Failed to mount shared memory segment ID: $shm_id."
+        log "Failed to mount shared memory segment ID: $shm_id."
+    fi
+}
+
+# Unmount shared memory segment
+# This function allows the user to unmount a shared memory segment from the file system.
+unmount_shm_segment() {
+    echo -n "Enter the mount point (directory) to unmount: "
+    read mount_point
+    umount $mount_point
+    if [ $? -eq 0 ]; then
+        echo "Unmounted shared memory segment from $mount_point."
+        log "Unmounted shared memory segment from $mount_point."
+    else
+        echo "Failed to unmount shared memory segment from $mount_point."
+        log "Failed to unmount shared memory segment from $mount_point."
+    fi
+}
+
+# List all shared memory segments with details
+# This function lists all shared memory segments with detailed information.
+list_all_shm_segments() {
+    echo "Listing all shared memory segments with details:"
+    ipcs -m -p -t -a
+    log "Listed all shared memory segments with details."
+}
+
+# Clean up unused shared memory segments
+# This function cleans up all unused shared memory segments.
+cleanup_unused_shm_segments() {
+    echo "Cleaning up unused shared memory segments..."
+    for shm_id in $(ipcs -m | awk '/^0x/ {print $2}'); do
+        ipcrm -m $shm_id
+        if [ $? -eq 0 ]; then
+            echo "Deleted unused shared memory segment ID: $shm_id."
+            log "Deleted unused shared memory segment ID: $shm_id."
+        else
+            echo "Failed to delete unused shared memory segment ID: $shm_id."
+            log "Failed to delete unused shared memory segment ID: $shm_id."
+        fi
+    done
+}
+
 # Show help
 # This function displays usage information for the script.
 show_help() {
@@ -98,7 +157,11 @@ show_help() {
     echo "4. Change shared memory segment permissions - Change the permissions of a specific segment."
     echo "5. Batch delete shared memory segments - Delete multiple shared memory segments at once."
     echo "6. Check memory usage - Display current system memory usage."
-    echo "7. Help - Display this help information."
+    echo "7. Mount shared memory segment - Mount a shared memory segment to the file system."
+    echo "8. Unmount shared memory segment - Unmount a shared memory segment from the file system."
+    echo "9. List all shared memory segments - List all shared memory segments with details."
+    echo "10. Clean up unused shared memory segments - Clean up all unused shared memory segments."
+    echo "11. Help - Display this help information."
 }
 
 # Main menu
@@ -111,8 +174,12 @@ while true; do
     echo "4. Change shared memory segment permissions"
     echo "5. Batch delete shared memory segments"
     echo "6. Check memory usage"
-    echo "7. Help"
-    echo "8. Exit"
+    echo "7. Mount shared memory segment"
+    echo "8. Unmount shared memory segment"
+    echo "9. List all shared memory segments"
+    echo "10. Clean up unused shared memory segments"
+    echo "11. Help"
+    echo "12. Exit"
     echo -n "Please select an option: "
     read choice  # Read user choice
 
@@ -123,8 +190,12 @@ while true; do
         4) change_shm_permissions ;;
         5) delete_multiple_shm_segments ;;
         6) check_memory_usage ;;
-        7) show_help ;;
-        8) echo "Exiting"; log "Exited the script."; exit 0 ;;
+        7) mount_shm_segment ;;
+        8) unmount_shm_segment ;;
+        9) list_all_shm_segments ;;
+        10) cleanup_unused_shm_segments ;;
+        11) show_help ;;
+        12) echo "Exiting"; log "Exited the script."; exit 0 ;;
         *) echo "Invalid option, please try again." ;;
     esac
 done

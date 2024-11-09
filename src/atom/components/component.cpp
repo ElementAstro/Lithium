@@ -234,3 +234,8 @@ auto Component::getVariableGroup(const std::string& name) const -> std::string {
     LOG_SCOPE_FUNCTION(INFO);
     return m_VariableManager_->getGroup(name);
 }
+
+auto Component::getVariableNames() const -> std::vector<std::string> {
+    LOG_SCOPE_FUNCTION(INFO);
+    return m_VariableManager_->getAllVariables();
+}

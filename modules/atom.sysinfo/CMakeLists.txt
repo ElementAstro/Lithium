@@ -1,11 +1,11 @@
-# CMakeLists.txt for atom.sysinfo
+# CMakeLists.txt for atom_iosysinfo
 # This project is licensed under the terms of the GPL3 license.
 #
 # Author: Max Qian
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom.sysinfo)
+project(atom_iosysinfo)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -24,8 +24,8 @@ set(${PROJECT_NAME}_LIBS
 )
 
 # Create the module library
-add_library(atom.sysinfo SHARED ${SOURCE_FILES})
+add_library(atom_iosysinfo SHARED ${SOURCE_FILES})
 
-target_link_libraries(atom.sysinfo ${${PROJECT_NAME}_LIBS})
+target_link_libraries(atom_iosysinfo ${${PROJECT_NAME}_LIBS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)

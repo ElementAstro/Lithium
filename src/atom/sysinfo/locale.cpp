@@ -2,6 +2,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <langinfo.h>
 #endif
 
 #ifdef ATOM_ENABLE_DEBUG
@@ -11,6 +13,7 @@
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
+#ifdef _WIN32
 // Windows-specific helper function to convert wstring to string
 auto wstringToString(const std::wstring& wstr) -> std::string {
     LOG_F(INFO, "Converting wstring to string");
@@ -30,6 +33,7 @@ std::string getLocaleInfo(LCTYPE type) {
     LOG_F(WARNING, "Failed to retrieve locale info");
     return "Unknown";
 }
+#endif
 
 // Function to get system language info, cross-platform
 LocaleInfo getSystemLanguageInfo() {

@@ -33,7 +33,7 @@ void run(const oatpp::base::CommandLineArguments& args) {
 
     router->addController(INDIController::createShared());
 
-    //router->addController(createInstance());
+    // router->addController(createInstance());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
@@ -63,13 +63,13 @@ void run(const oatpp::base::CommandLineArguments& args) {
 
     if (appConfig->useTLS) {
         LOG_F(INFO, "clients are expected to connect at https://{}:{}",
-              appConfig->host, appConfig->port);
+              *appConfig->host, *appConfig->port);
     } else {
-        LOG_F(INFO, "Canonical base URL={}", appConfig->getCanonicalBaseUrl());
+        LOG_F(INFO, "Canonical base URL={}", *appConfig->getCanonicalBaseUrl());
     }
 
-    LOG_F(INFO, "Canonical base URL={}", appConfig->getCanonicalBaseUrl());
-    LOG_F(INFO, "Statistics URL={}", appConfig->getStatsUrl());
+    LOG_F(INFO, "Canonical base URL={}", *appConfig->getCanonicalBaseUrl());
+    LOG_F(INFO, "Statistics URL={}", *appConfig->getStatsUrl());
 
     serverThread.join();
     pingThread.join();

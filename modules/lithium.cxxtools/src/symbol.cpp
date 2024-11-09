@@ -1,3 +1,5 @@
+#include "symbol.hpp"
+
 #include <array>
 #include <atomic>
 #include <fstream>

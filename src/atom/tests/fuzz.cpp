@@ -8,46 +8,64 @@ RandomDataGenerator::RandomDataGenerator(int seed)
       realDistribution_(0.0, 1.0),
       charDistribution_(CHAR_MIN, CHAR_MAX) {}
 
-auto RandomDataGenerator::generateIntegers(int count, int min, int max) -> std::vector<int> {
+auto RandomDataGenerator::generateIntegers(int count, int min,
+                                           int max) -> std::vector<int> {
     std::uniform_int_distribution<> customDistribution(min, max);
-    return std::views::iota(0, count) |
-           std::views::transform([this, &customDistribution](auto) {
-               return customDistribution(generator_);
-           }) |
-           std::ranges::to<std::vector>();
+    std::vector<int> result;
+    result.reserve(count);
+    for (int i = 0; i < count; ++i) {
+        result.push_back(customDistribution(generator_));
+    }
+    return result;
 }
 
-auto RandomDataGenerator::generateReals(int count, double min, double max) -> std::vector<double> {
+auto RandomDataGenerator::generateReals(int count, double min,
+                                        double max) -> std::vector<double> {
     std::uniform_real_distribution<> customDistribution(min, max);
-    return std::views::iota(0, count) |
-           std::views::transform([this, &customDistribution](auto) {
-               return customDistribution(generator_);
-           }) |
-           std::ranges::to<std::vector>();
+    std::vector<double> result;
+    result.reserve(count);
+    for (int i = 0; i < count; ++i) {
+        result.push_back(customDistribution(generator_));
+    }
+    return result;
 }
 
-auto RandomDataGenerator::generateString(int length, bool alphanumeric) -> std::string {
+auto RandomDataGenerator::generateString(int length,
+                                         bool alphanumeric) -> std::string {
     std::string chars =
         alphanumeric
             ? "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx"
               "yz"
-            : std::string(95, ' ') |
-                  std::views::transform(
-                      [i = CHAR_MIN](char&) mutable { return char(i++); }) |
-                  std::ranges::to<std::string>();
+            : []() {
+                  std::string result(95, ' ');
+                  for (char i = CHAR_MIN; i < CHAR_MIN + 95; ++i) {
+                      result[i - CHAR_MIN] = i;
+                  }
+                  return result;
+              }();
     std::uniform_int_distribution<> customDistribution(0, chars.size() - 1);
-    return std::views::iota(0, length) |
-           std::views::transform([this, &customDistribution, &chars](auto) {
-               return chars[customDistribution(generator_)];
-           }) |
-           std::ranges::to<std::string>();
+    std::string result;
+    result.reserve(length);
+    for (int i = 0; i < length; ++i) {
+        result.push_back(chars[customDistribution(generator_)]);
+    }
+    return result;
 }
 
 auto RandomDataGenerator::generateBooleans(int count) -> std::vector<bool> {
+#if __cplusplus >= 202302L
     return std::views::iota(0, count) | std::views::transform([this](auto) {
                return std::bernoulli_distribution(0.5)(generator_);
            }) |
            std::ranges::to<std::vector>();
+#else
+    std::vector<bool> result;
+    result.reserve(count);
+    for (int i = 0; i < count; ++i) {
+        result.push_back(std::bernoulli_distribution(0.5)(generator_));
+    }
+    return result;
+#endif
 }
 
 auto RandomDataGenerator::generateException() -> std::string {
@@ -64,15 +82,18 @@ auto RandomDataGenerator::generateException() -> std::string {
     }
 }
 
-auto RandomDataGenerator::generateDateTime(const std::chrono::system_clock::time_point& start, const std::chrono::system_clock::time_point& end) -> std::chrono::system_clock::time_point {
+auto RandomDataGenerator::generateDateTime(
+    const std::chrono::system_clock::time_point& start,
+    const std::chrono::system_clock::time_point& end)
+    -> std::chrono::system_clock::time_point {
     auto duration =
         std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    std::uniform_int_distribution<long long> distribution(0,
-                                                          duration.count());
+    std::uniform_int_distribution<long long> distribution(0, duration.count());
     return start + std::chrono::seconds(distribution(generator_));
 }
 
-auto RandomDataGenerator::generateRegexMatch(const std::string& regexStr) -> std::string {
+auto RandomDataGenerator::generateRegexMatch(const std::string& regexStr)
+    -> std::string {
     std::string result;
     for (char character : regexStr) {
         switch (character) {
@@ -94,7 +115,8 @@ auto RandomDataGenerator::generateRegexMatch(const std::string& regexStr) -> std
     return result;
 }
 
-auto RandomDataGenerator::generateFilePath(const std::string& baseDir, int depth) -> std::filesystem::path {
+auto RandomDataGenerator::generateFilePath(const std::string& baseDir,
+                                           int depth) -> std::filesystem::path {
     std::filesystem::path path(baseDir);
     for (int i = 0; i < depth; ++i) {
         path /= generateString(FILE_PATH_SEGMENT_LENGTH, true);
@@ -169,8 +191,7 @@ auto RandomDataGenerator::generateMACAddress() -> std::string {
 
 auto RandomDataGenerator::generateURL() -> std::string {
     static const std::vector<std::string> PROTOCOLS = {"http", "https"};
-    static const std::vector<std::string> TLDS = {"com", "org", "net",
-                                                  "io"};
+    static const std::vector<std::string> TLDS = {"com", "org", "net", "io"};
 
     std::string protocol =
         PROTOCOLS[intDistribution_(generator_) % PROTOCOLS.size()];
@@ -180,29 +201,35 @@ auto RandomDataGenerator::generateURL() -> std::string {
     return protocol + "://www." + domain + "." + tld;
 }
 
-auto RandomDataGenerator::generateNormalDistribution(int count, double mean, double stddev) -> std::vector<double> {
+auto RandomDataGenerator::generateNormalDistribution(
+    int count, double mean, double stddev) -> std::vector<double> {
     std::normal_distribution<> distribution(mean, stddev);
     return generateCustomDistribution<double>(count, distribution);
 }
 
-auto RandomDataGenerator::generateExponentialDistribution(int count, double lambda) -> std::vector<double> {
+auto RandomDataGenerator::generateExponentialDistribution(
+    int count, double lambda) -> std::vector<double> {
     std::exponential_distribution<> distribution(lambda);
     return generateCustomDistribution<double>(count, distribution);
 }
 
-void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss, const std::string& str) {
+void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss,
+                                                const std::string& str) {
     oss << '"' << str << '"';
 }
 
-void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss, int number) {
+void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss,
+                                                int number) {
     oss << number;
 }
 
-void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss, double number) {
+void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss,
+                                                double number) {
     oss << std::fixed << std::setprecision(JSON_PRECISION) << number;
 }
 
-void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss, bool boolean) {
+void RandomDataGenerator::serializeToJSONHelper(std::ostringstream& oss,
+                                                bool boolean) {
     oss << (boolean ? "true" : "false");
 }
 
@@ -217,7 +244,8 @@ auto RandomDataGenerator::generateTree(int depth, int maxChildren) -> TreeNode {
     return root;
 }
 
-auto RandomDataGenerator::generateGraph(int nodes, double edgeProbability) -> std::vector<std::vector<int>> {
+auto RandomDataGenerator::generateGraph(int nodes, double edgeProbability)
+    -> std::vector<std::vector<int>> {
     std::vector<std::vector<int>> adjacencyList(nodes);
     for (int i = 0; i < nodes; ++i) {
         for (int j = i + 1; j < nodes; ++j) {
@@ -230,11 +258,11 @@ auto RandomDataGenerator::generateGraph(int nodes, double edgeProbability) -> st
     return adjacencyList;
 }
 
-auto RandomDataGenerator::generateKeyValuePairs(int count) -> std::vector<std::pair<std::string, std::string>> {
+auto RandomDataGenerator::generateKeyValuePairs(int count)
+    -> std::vector<std::pair<std::string, std::string>> {
     std::vector<std::pair<std::string, std::string>> pairs;
     for (int i = 0; i < count; ++i) {
-        pairs.emplace_back(generateString(5, true),
-                           generateString(8, true));
+        pairs.emplace_back(generateString(5, true), generateString(8, true));
     }
     return pairs;
 }

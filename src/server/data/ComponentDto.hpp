@@ -109,7 +109,7 @@ class ComponentInstanceDto : public oatpp::DTO {
     DTO_FIELD(String, description);
 
     DTO_FIELD_INFO(functions) { info->description = "Component functions"; }
-    DTO_FIELD(List<ComponentFunctionDto>, functions);
+    DTO_FIELD(List<Object<ComponentFunctionDto>>, functions);
 };
 
 class RequestComponentLoadDto : public RequestDto {
@@ -119,7 +119,7 @@ class RequestComponentLoadDto : public RequestDto {
         info->description = "List of components to load";
         info->required = true;
     }
-    DTO_FIELD(List<ComponentDto>, components);
+    DTO_FIELD(List<Object<ComponentDto>>, components);
 };
 
 class RequestComponentUnloadDto : public RequestDto {
@@ -129,7 +129,7 @@ class RequestComponentUnloadDto : public RequestDto {
         info->description = "List of components to unload";
         info->required = true;
     }
-    DTO_FIELD(List<ComponentInstanceDto>, components);
+    DTO_FIELD(List<Object<ComponentInstanceDto>>, components);
 };
 
 class RequestComponentReloadDto : public RequestDto {
@@ -139,7 +139,7 @@ class RequestComponentReloadDto : public RequestDto {
         info->description = "List of components to reload";
         info->required = true;
     }
-    DTO_FIELD(List<ComponentInstanceDto>, components);
+    DTO_FIELD(List<Object<ComponentInstanceDto>>, components);
 };
 
 class RequestComponentInfoDto : public RequestDto {
@@ -243,7 +243,7 @@ class ReturnComponentListDto : public StatusDto {
     DTO_INIT(ReturnComponentListDto, StatusDto)
 
     DTO_FIELD_INFO(components) { info->description = "List of components"; }
-    DTO_FIELD(List<ComponentInstanceDto>, components);
+    DTO_FIELD(List<Object<ComponentInstanceDto>>, components);
 };
 
 class ReturnComponentInfoDto : public StatusDto {
@@ -252,7 +252,7 @@ class ReturnComponentInfoDto : public StatusDto {
     DTO_FIELD_INFO(component_info) {
         info->description = "Component infomation, just like package.json";
     }
-    DTO_FIELD(List<PackageJsonDto>, component_info);
+    DTO_FIELD(List<Object<PackageJsonDto>>, component_info);
 };
 
 class ReturnComponentFunctionNotFoundDto : public StatusDto {

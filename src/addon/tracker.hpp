@@ -15,6 +15,7 @@ using json = nlohmann::json;
 
 namespace fs = std::filesystem;
 
+namespace lithium {
 class FileTracker {
 public:
     FileTracker(std::string_view directory, std::string_view jsonFilePath,
@@ -54,5 +55,6 @@ private:
     struct Impl;
     std::unique_ptr<Impl> pImpl;
 };
+}  // namespace lithium
 
 #endif  // LITHIUM_ADDON_TRACKER_HPP

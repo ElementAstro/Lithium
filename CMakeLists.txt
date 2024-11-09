@@ -10,40 +10,10 @@ cmake_minimum_required(VERSION 3.20)
 project(Lithium VERSION 1.0.0 LANGUAGES C CXX)
 
 # Set project options
-option(ENABLE_ASYNC "Enable Async Server Mode" ON)
-option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
-option(ENABLE_DEBUG "Enable Debug Mode" OFF)
-option(ENABLE_FASHHASH "Enable Using emhash8 as fast hash map" OFF)
-option(ENABLE_WEB_SERVER "Enable Web Server" ON)
-option(ENABLE_WEB_CLIENT "Enable Web Client" ON)
-
-# Set compile definitions based on options
-if(ENABLE_ASYNC)
-    add_compile_definitions(ENABLE_ASYNC_FLAG=1)
-endif()
-if(ENABLE_DEBUG)
-    add_compile_definitions(ENABLE_DEBUG_FLAG=1)
-endif()
-if(ENABLE_NATIVE_SERVER)
-    add_compile_definitions(ENABLE_NATIVE_SERVER_FLAG=1)
-endif()
-if(ENABLE_FASHHASH)
-    add_compile_definitions(ENABLE_FASHHASH_FLAG=1)
-endif()
-if(ENABLE_WEB_SERVER)
-    add_compile_definitions(ENABLE_WEB_SERVER_FLAG=1)
-endif()
-if(ENABLE_WEB_CLIENT)
-    add_compile_definitions(ENABLE_WEB_CLIENT_FLAG=1)
-endif()
+include(cmake/options.cmake)
 
 # Set policies
-if(POLICY CMP0003)
-    cmake_policy(SET CMP0003 NEW)
-endif()
-if(POLICY CMP0043)
-    cmake_policy(SET CMP0043 NEW)
-endif()
+include(cmake/policies.cmake)
 
 # Set project directories
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
@@ -55,15 +25,15 @@ set(lithium_task_dir ${lithium_src_dir}/task)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
-	${lithium_src_dir}/../cmake_modules/compiler_options.cmake)
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-include(cmake_modules/compiler_options.cmake)
+	${lithium_src_dir}/../cmake/compiler_options.cmake)
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/")
+include(cmake/compiler_options.cmake)
 
 # ------------------ CPM Begin ------------------
 
 set(CPM_DOWNLOAD_VERSION 0.35.6)
-set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake_modules/CPM.cmake")
+set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake/CPM.cmake")
 
 if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
     message(STATUS "Downloading CPM.cmake")
@@ -137,133 +107,10 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket/oatpp-websocket)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-openssl/oatpp-openssl)
 
 # Find packages
-find_package(OpenSSL REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(SQLite3 REQUIRED)
-find_package(fmt REQUIRED)
-find_package(Readline REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+include(cmake/find_packages.cmake)
 
-find_package(Python COMPONENTS Interpreter REQUIRED)
-include_directories(${pybind11_INCLUDE_DIRS} ${Python_INCLUDE_DIRS})
-
-# Specify the path to requirements.txt
-set(REQUIREMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt")
-
-# Define a function to check if a Python package is installed
-function(check_python_package package version)
-    # Replace hyphens with underscores for the import statement
-    string(REPLACE "-" "_" import_name ${package})
-
-    # Check if the package can be imported
-    execute_process(
-        COMMAND ${Python_EXECUTABLE} -c "import ${import_name}"
-        RESULT_VARIABLE result
-    )
-
-    if(NOT result EQUAL 0)
-        set(result FALSE PARENT_SCOPE)
-        return()
-    endif()
-
-    # Get the installed package version
-    execute_process(
-        COMMAND ${Python_EXECUTABLE} -m pip show ${package}
-        OUTPUT_VARIABLE package_info
-    )
-
-    # Extract version information from the output
-    string(FIND "${package_info}" "Version:" version_pos)
-
-    if(version_pos EQUAL -1)
-        set(result FALSE PARENT_SCOPE)
-        return() # Return false if version not found
-    endif()
-
-    # Extract the version string
-    string(SUBSTRING "${package_info}" ${version_pos} 1000 version_string)
-    string(REGEX REPLACE "Version: ([^ ]+).*" "\\1" installed_version "${version_string}")
-
-    # Compare versions
-    if("${installed_version}" VERSION_LESS "${version}")
-        set(result FALSE PARENT_SCOPE) # Return false if installed version is less than required
-        return()
-    endif()
-
-    set(result TRUE PARENT_SCOPE)
-endfunction()
-
-if (EXISTS "${CMAKE_BINARY_DIR}/check_marker.txt")
-    message(STATUS "Check marker file found, skipping the checks.")
-else()
-# Create a virtual environment
-set(VENV_DIR "${CMAKE_BINARY_DIR}/venv")
-execute_process(
-    COMMAND ${Python_EXECUTABLE} -m venv ${VENV_DIR}
-)
-
-set(PYTHON_EXECUTABLE "${VENV_DIR}/bin/python")
-set(PIP_EXECUTABLE "${VENV_DIR}/bin/pip")
-
-# Upgrade pip in the virtual environment
-execute_process(
-    COMMAND ${PIP_EXECUTABLE} install --upgrade pip
-)
-
-# Read the requirements.txt file and install missing packages
-file(READ ${REQUIREMENTS_FILE} requirements_content)
-
-# Split the requirements file content into lines
-string(REPLACE "\n" ";" requirements_list "${requirements_content}")
-
-# Check and install each package
-foreach(requirement ${requirements_list})
-    # Skip empty lines
-    string(STRIP ${requirement} trimmed_requirement)
-    if(trimmed_requirement STREQUAL "")
-        continue()
-    endif()
-
-    # Get the package name and version (without the version number)
-    if(${trimmed_requirement} MATCHES "==")
-        string(REPLACE "==" ";" parts ${trimmed_requirement})
-    elseif(${trimmed_requirement} MATCHES ">=")
-        string(REPLACE ">=" ";" parts ${trimmed_requirement})
-    else()
-        message(WARNING "Could not parse requirement '${trimmed_requirement}'. Skipping...")
-        continue()
-    endif()
-
-    list(GET parts 0 package_name)
-    list(GET parts 1 package_version)
-
-    # If the package name or version could not be parsed, output a warning and skip
-    if(NOT package_name OR NOT package_version)
-        message(WARNING "Could not parse requirement '${trimmed_requirement}'. Skipping...")
-        continue()
-    endif()
-
-    # Check if the package is installed
-    message(STATUS "Checking if Python package '${package_name}' is installed...")
-    check_python_package(${package_name} ${package_version})
-    if(NOT result)
-        message(STATUS "Package '${package_name}' is not installed or needs an upgrade. Installing...")
-        execute_process(
-            COMMAND ${PIP_EXECUTABLE} install ${trimmed_requirement}
-            RESULT_VARIABLE install_result
-        )
-        if(NOT install_result EQUAL 0)
-            message(FATAL_ERROR "Failed to install Python package '${package_name}'.")
-        endif()
-    else()
-        message(STATUS "Package '${package_name}' is already installed with a suitable version.")
-    endif()
-endforeach()
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/check_marker.txt"
-    RESULT_VARIABLE result
-)
-endif()
+# Configure Python environment
+include(cmake/python_environment.cmake)
 
 # Configure config.h
 configure_file(${lithium_src_dir}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -273,13 +120,16 @@ set(BUILD_SHARED_LIBS ON)
 # Add subdirectories
 add_subdirectory(libs)
 add_subdirectory(modules)
+
 add_subdirectory(${lithium_module_dir})
+
 add_subdirectory(${lithium_src_dir}/config)
 add_subdirectory(${lithium_src_dir}/task)
 add_subdirectory(${lithium_src_dir}/server)
 add_subdirectory(${lithium_src_dir}/utils)
 add_subdirectory(${lithium_src_dir}/addon)
 add_subdirectory(${lithium_src_dir}/client)
+add_subdirectory(${lithium_src_dir}/target)
 add_subdirectory(${lithium_src_dir}/device)
 add_subdirectory(tests)
 
@@ -399,17 +249,7 @@ target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 set_target_properties(lithium_server PROPERTIES OUTPUT_NAME lithium_server)
 
 # Set install paths
-if(UNIX AND NOT APPLE)
-    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-        set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Lithium install path" FORCE)
-    endif()
-endif()
-
-if(WIN32)
-    set(CMAKE_INSTALL_PREFIX "C:/Program Files/LithiumServer")
-elseif(LINUX)
-    set(CMAKE_INSTALL_PREFIX "/usr/lithium")
-endif()
+include(cmake/install_paths.cmake)
 
 # Enable folder grouping in IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

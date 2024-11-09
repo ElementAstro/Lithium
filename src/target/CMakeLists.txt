@@ -2,91 +2,28 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Project name and version, using C and C++ languages
-project(lithium-addons VERSION 1.0.0 LANGUAGES C CXX)
+project(lithium-target VERSION 1.0.0 LANGUAGES C CXX)
 
 # Project description and information
-# This project is the official addonsuration module for the Lithium server.
 # Author: Max Qian
 # License: GPL3
 # Project Name: Lithium-Addons
-# Description: The official addons module for lithium server
+# Description: This project is the official target search module for the Lithium server.
 # Author: Max Qian
 # License: GPL3
 
-if (NOT MINGW OR NOT WIN32)
-find_package(Seccomp REQUIRED)
-endif()
-
 # Project sources
 set(PROJECT_SOURCES
-    addons.cpp
-    build_manager.cpp
-    compile_command_generator.cpp
-    compiler_output_parser.cpp
-    compiler.cpp
-    dependency.cpp
-    generator.cpp
-    loader.cpp
-    manager.cpp
-    sandbox.cpp
-    system_dependency.cpp
-    toolchain.cpp
-    tracker.cpp
-    version.cpp
-
-    debug/dump.cpp
-    debug/dynamic.cpp
-    debug/elf.cpp
-    debug/pdb.cpp
-
-    platform/cmake.cpp
-    platform/meson.cpp
-    platform/xmake.cpp
-
-    project/git_impl.cpp
-    project/git.cpp
-
-    remote/github_impl.cpp
-    remote/github.cpp
-
-    template/remote.cpp
-    template/standalone.cpp
+   engine.cpp
+   preference.cpp
+   reader.cpp
 )
 
 # Project headers
 set(PROJECT_HEADERS
-    addons.hpp
-    build_manager.hpp
-    compile_command_generator.hpp
-    compiler_output_parser.hpp
-    compiler.hpp
-    dependency.hpp
-    generator.hpp
-    loader.hpp
-    manager.hpp
-    sandbox.hpp
-    system_dependency.hpp
-    toolchain.hpp
-    tracker.hpp
-    version.hpp
-
-    debug/dump.hpp
-    debug/dynamic.hpp
-    debug/elf.hpp
-    debug/pdb.hpp
-
-    platform/cmake.hpp
-    platform/meson.hpp
-    platform/xmake.hpp
-
-    project/git_impl.hpp
-    project/git.hpp
-
-    remote/github_impl.hpp
-    remote/github.hpp
-
-    template/remote.hpp
-    template/standalone.hpp
+    engine.hpp
+    preference.hpp
+    reader.hpp
 )
 
 # Required libraries for the project

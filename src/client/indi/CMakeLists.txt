@@ -3,7 +3,7 @@ project(lithium.client.indi_modules)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-include(${CMAKE_SOURCE_DIR}/cmake_modules/ScanModule.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/ScanModule.cmake)
 
 # Common libraries for all modules
 set(COMMON_LIBS

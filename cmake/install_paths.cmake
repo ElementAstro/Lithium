@@ -1,0 +1,11 @@
+if(UNIX AND NOT APPLE)
+    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+        set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Lithium install path" FORCE)
+    endif()
+endif()
+
+if(WIN32)
+    set(CMAKE_INSTALL_PREFIX "C:/Program Files/LithiumServer")
+elseif(LINUX)
+    set(CMAKE_INSTALL_PREFIX "/usr/lithium")
+endif()

@@ -1,3 +1,4 @@
+#include "macro.hpp"
 #if defined(__GNUC__) || defined(__clang__)
 // Disable all warnings from gcc/clang:
 #pragma GCC diagnostic push
@@ -153,7 +154,7 @@ struct FileAbs {
     Verbosity verbosity;
     struct stat st;
     FILE* fp;
-    bool is_reopening = false;  // to prevent recursive call in file_reopen.
+    bool is_reopening = false;  // to prevent recursive call in fileReopen.
     decltype(steady_clock::now()) last_check_time = steady_clock::now();
 };
 #else
@@ -163,7 +164,7 @@ using FileAbs = FILE*;
 struct Callback {
     std::string id;
     log_handler_t callback;
-    void* user_data;
+    void* userData;
     Verbosity verbosity;  // Does not change!
     close_handler_t close;
     flush_handler_t flush;
@@ -175,7 +176,7 @@ using CallbackVec = std::vector<Callback>;
 using StringPair = std::pair<std::string, std::string>;
 using StringPairList = std::vector<StringPair>;
 
-const auto s_start_time = steady_clock::now();
+const auto S_START_TIME = steady_clock::now();
 
 Verbosity g_stderr_verbosity = Verbosity_0;
 bool g_colorlogtostderr = true;
@@ -194,26 +195,26 @@ bool g_preamble_file = true;
 bool g_preamble_verbose = true;
 bool g_preamble_pipe = true;
 
-static std::recursive_mutex s_mutex;
-static Verbosity s_max_out_verbosity = Verbosity_OFF;
-static std::string s_argv0_filename;
-static std::string s_arguments;
-static char s_current_dir[PATH_MAX];
-static CallbackVec s_callbacks;
-static fatal_handler_t s_fatal_handler = nullptr;
-static verbosity_to_name_t s_verbosity_to_name_callback = nullptr;
-static name_to_verbosity_t s_name_to_verbosity_callback = nullptr;
-static StringPairList s_user_stack_cleanups;
-static bool s_strip_file_path = true;
-static std::atomic<unsigned> s_stderr_indentation{0};
+static std::recursive_mutex sMutex;
+static Verbosity sMaxOutVerbosity = Verbosity_OFF;
+static std::string sArgv0Filename;
+static std::string sArguments;
+static char sCurrentDir[PATH_MAX];
+static CallbackVec sCallbacks;
+static fatal_handler_t sFatalHandler = nullptr;
+static verbosity_to_name_t sVerbosityToNameCallback = nullptr;
+static name_to_verbosity_t sNameToVerbosityCallback = nullptr;
+static StringPairList sUserStackCleanups;
+static bool sStripFilePath = true;
+static std::atomic<unsigned> sStderrIndentation{0};
 
 // For periodic flushing:
-static std::thread* s_flush_thread = nullptr;
-static bool s_needs_flushing = false;
+static std::thread* sFlushThread = nullptr;
+static bool sNeedsFlushing = false;
 
-static SignalOptions s_signal_options = SignalOptions::none();
+static SignalOptions sSignalOptions = SignalOptions::none();
 
-static const bool s_terminal_has_color = []() {
+static const bool S_TERMINAL_HAS_COLOR = []() {
 #ifdef _WIN32
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -241,18 +242,18 @@ static const bool s_terminal_has_color = []() {
                0 == strcmp(term, "xterm-256color") ||
                0 == strcmp(term, "xterm-termite") ||
                0 == strcmp(term, "xterm-color");
-    } else {
-        return false;
     }
+    return false;
+
 #endif
 }();
 
-static void print_preamble_header(char* out_buff, size_t out_buff_size);
+static void printPreambleHeader(char* out_buff, size_t out_buff_size);
 
 // ------------------------------------------------------------------------------
 // Colors
 
-bool terminal_has_color() { return s_terminal_has_color; }
+auto terminal_has_color() -> bool { return S_TERMINAL_HAS_COLOR; }
 
 // Colors
 
@@ -262,44 +263,66 @@ bool terminal_has_color() { return s_terminal_has_color; }
 #define VTSEQ(ID) ("\x1b[" #ID "m")
 #endif
 
-const char* terminal_black() { return s_terminal_has_color ? VTSEQ(30) : ""; }
-const char* terminal_red() { return s_terminal_has_color ? VTSEQ(31) : ""; }
-const char* terminal_green() { return s_terminal_has_color ? VTSEQ(32) : ""; }
-const char* terminal_yellow() { return s_terminal_has_color ? VTSEQ(33) : ""; }
-const char* terminal_blue() { return s_terminal_has_color ? VTSEQ(34) : ""; }
-const char* terminal_purple() { return s_terminal_has_color ? VTSEQ(35) : ""; }
-const char* terminal_cyan() { return s_terminal_has_color ? VTSEQ(36) : ""; }
-const char* terminal_light_gray() {
-    return s_terminal_has_color ? VTSEQ(37) : "";
+auto terminal_black() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(30) : "";
 }
-const char* terminal_white() { return s_terminal_has_color ? VTSEQ(37) : ""; }
-const char* terminal_light_red() {
-    return s_terminal_has_color ? VTSEQ(91) : "";
+auto terminal_red() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(31) : "";
 }
-const char* terminal_dim() { return s_terminal_has_color ? VTSEQ(2) : ""; }
+auto terminal_green() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(32) : "";
+}
+auto terminal_yellow() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(33) : "";
+}
+auto terminal_blue() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(34) : "";
+}
+auto terminal_purple() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(35) : "";
+}
+auto terminal_cyan() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(36) : "";
+}
+auto terminal_light_gray() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(37) : "";
+}
+auto terminal_white() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(37) : "";
+}
+auto terminal_light_red() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(91) : "";
+}
+auto terminalDim() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(2) : "";
+}
 
 // Formating
-const char* terminal_bold() { return s_terminal_has_color ? VTSEQ(1) : ""; }
-const char* terminal_underline() {
-    return s_terminal_has_color ? VTSEQ(4) : "";
+auto terminal_bold() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(1) : "";
+}
+auto terminal_underline() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(4) : "";
 }
 
 // You should end each line with this!
-const char* terminal_reset() { return s_terminal_has_color ? VTSEQ(0) : ""; }
+auto terminal_reset() -> const char* {
+    return S_TERMINAL_HAS_COLOR ? VTSEQ(0) : "";
+}
 
 // ------------------------------------------------------------------------------
 #if LOGURU_WITH_FILEABS
-void file_reopen(void* user_data);
-inline FILE* to_file(void* user_data) {
+void fileReopen(void* user_data);
+inline FILE* toFile(void* user_data) {
     return reinterpret_cast<FileAbs*>(user_data)->fp;
 }
 #else
-inline FILE* to_file(void* user_data) {
+inline auto toFile(void* user_data) -> FILE* {
     return reinterpret_cast<FILE*>(user_data);
 }
 #endif
 
-void file_log(void* user_data, const Message& message) {
+void fileLog(void* user_data, const Message& message) {
 #if LOGURU_WITH_FILEABS
     FileAbs* file_abs = reinterpret_cast<FileAbs*>(user_data);
     if (file_abs->is_reopening) {
@@ -312,14 +335,14 @@ void file_log(void* user_data, const Message& message) {
     if (duration_cast<seconds>(steady_clock::now() -
                                file_abs->last_check_time) > check_interval) {
         file_abs->last_check_time = steady_clock::now();
-        file_reopen(user_data);
+        fileReopen(user_data);
     }
     FILE* file = to_file(user_data);
     if (!file) {
         return;
     }
 #else
-    FILE* file = to_file(user_data);
+    FILE* file = toFile(user_data);
 #endif
     fprintf(file, "%s%s%s%s\n", message.preamble, message.indentation,
             message.prefix, message.message);
@@ -328,9 +351,9 @@ void file_log(void* user_data, const Message& message) {
     }
 }
 
-void file_close(void* user_data) {
-    FILE* file = to_file(user_data);
-    if (file) {
+void fileClose(void* user_data) {
+    FILE* file = toFile(user_data);
+    if (file != nullptr) {
         fclose(file);
     }
 #if LOGURU_WITH_FILEABS
@@ -338,13 +361,13 @@ void file_close(void* user_data) {
 #endif
 }
 
-void file_flush(void* user_data) {
-    FILE* file = to_file(user_data);
+void fileFlush(void* user_data) {
+    FILE* file = toFile(user_data);
     fflush(file);
 }
 
 #if LOGURU_WITH_FILEABS
-void file_reopen(void* user_data) {
+void fileReopen(void* user_data) {
     FileAbs* file_abs = reinterpret_cast<FileAbs*>(user_data);
     struct stat st;
     int ret;
@@ -387,7 +410,7 @@ void file_reopen(void* user_data) {
 // ------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------
 #if LOGURU_SYSLOG
-void syslog_log(void* /*user_data*/, const Message& message) {
+void syslogLog(void* /*user_data*/, const Message& message) {
     /*
             Level 0: Is reserved for kernel panic type situations.
             Level 1: Is for Major resource failure.
@@ -426,9 +449,9 @@ void syslog_log(void* /*user_data*/, const Message& message) {
            message.message);
 }
 
-void syslog_close(void* /*user_data*/) { closelog(); }
+void syslogClose(void* /*user_data*/) { closelog(); }
 
-void syslog_flush(void* /*user_data*/) {}
+void syslogFlush(void* /*user_data*/) {}
 #endif
 // ------------------------------------------------------------------------------
 // Helpers:
@@ -437,7 +460,7 @@ Text::~Text() { free(str_); }
 
 #if LOGURU_USE_FMTLIB
 #if __cplusplus >= 202002L
-Text vtextprintf(const char* format, std::format_args args) {
+auto vtextprintf(const char* format, std::format_args args) -> Text {
     return Text(STRDUP(std::vformat(format, args).c_str()));
 }
 #else
@@ -472,7 +495,7 @@ Text textprintf(const char* format, ...) {
 #endif
 
 // Overloaded for variadic template matching.
-Text textprintf() { return Text(static_cast<char*>(calloc(1, 1))); }
+auto textprintf() -> Text { return Text(static_cast<char*>(calloc(1, 1))); }
 
 static const char* indentation(unsigned depth) {
     static const char buff[] =
@@ -493,71 +516,71 @@ static const char* indentation(unsigned depth) {
     return buff + INDENTATION_WIDTH * (NUM_INDENTATIONS - depth);
 }
 
-static void parse_args(int& argc, char* argv[], const char* verbosity_flag) {
-    int arg_dest = 1;
-    int out_argc = argc;
+static void parseArgs(int& argc, char* argv[], const char* verbosity_flag) {
+    int argDest = 1;
+    int outArgc = argc;
 
-    for (int arg_it = 1; arg_it < argc; ++arg_it) {
-        auto cmd = argv[arg_it];
-        auto arg_len = strlen(verbosity_flag);
+    for (int argIt = 1; argIt < argc; ++argIt) {
+        auto* cmd = argv[argIt];
+        auto argLen = strlen(verbosity_flag);
 
-        bool last_is_alpha = false;
+        bool lastIsAlpha = false;
 #if LOGURU_USE_LOCALE
         try {  // locale variant of isalpha will throw on error
-            last_is_alpha = std::isalpha(cmd[arg_len], std::locale(""));
+            lastIsAlpha = std::isalpha(cmd[argLen], std::locale(""));
         } catch (...) {
-            last_is_alpha = std::isalpha(static_cast<int>(cmd[arg_len]));
+            lastIsAlpha = std::isalpha(static_cast<int>(cmd[argLen]));
         }
 #else
-        last_is_alpha = std::isalpha(static_cast<int>(cmd[arg_len]));
+        lastIsAlpha = std::isalpha(static_cast<int>(cmd[argLen]));
 #endif
 
-        if (strncmp(cmd, verbosity_flag, arg_len) == 0 && !last_is_alpha) {
-            out_argc -= 1;
-            auto value_str = cmd + arg_len;
-            if (value_str[0] == '\0') {
+        if (strncmp(cmd, verbosity_flag, argLen) == 0 && !lastIsAlpha) {
+            outArgc -= 1;
+            auto* valueStr = cmd + argLen;
+            if (valueStr[0] == '\0') {
                 // Value in separate argument
-                arg_it += 1;
-                CHECK_LT_F(arg_it, argc,
+                argIt += 1;
+                CHECK_LT_F(argIt, argc,
                            "Missing verbosiy level after " LOGURU_FMT(s) "",
                            verbosity_flag);
-                value_str = argv[arg_it];
-                out_argc -= 1;
+                valueStr = argv[argIt];
+                outArgc -= 1;
             }
-            if (*value_str == '=') {
-                value_str += 1;
+            if (*valueStr == '=') {
+                valueStr += 1;
             }
 
-            auto req_verbosity = get_verbosity_from_name(value_str);
-            if (req_verbosity != Verbosity_INVALID) {
-                g_stderr_verbosity = req_verbosity;
+            auto reqVerbosity = get_verbosity_from_name(valueStr);
+            if (reqVerbosity != Verbosity_INVALID) {
+                g_stderr_verbosity = reqVerbosity;
             } else {
                 char* end = 0;
                 g_stderr_verbosity =
-                    static_cast<int>(strtol(value_str, &end, 10));
+                    static_cast<int>(strtol(valueStr, &end, 10));
                 CHECK_F(end && *end == '\0',
                         "Invalid verbosity. Expected integer, INFO, WARNING, "
                         "ERROR or OFF, got '" LOGURU_FMT(s) "'",
-                        value_str);
+                        valueStr);
             }
         } else {
-            argv[arg_dest++] = argv[arg_it];
+            argv[argDest++] = argv[argIt];
         }
     }
 
-    argc = out_argc;
+    argc = outArgc;
     argv[argc] = nullptr;
 }
 
-static long long now_ns() {
+static auto nowNs() -> long long {
     return duration_cast<nanoseconds>(
                high_resolution_clock::now().time_since_epoch())
         .count();
 }
 
 // Returns the part of the path after the last / or \ (if any).
-const char* filename(const char* path) {
-    for (auto ptr = path; *ptr; ++ptr) {
+auto filename(const char* path) -> const char* {
+    for (const auto* ptr = path; *ptr != 0; ++ptr) {
         if (*ptr == '/' || *ptr == '\\') {
             path = ptr + 1;
         }
@@ -567,25 +590,21 @@ const char* filename(const char* path) {
 
 // ------------------------------------------------------------------------------
 
-static void on_atexit() {
+static void onAtexit() {
     VLOG_F(g_internal_verbosity, "atexit");
     flush();
 }
 
-static void install_signal_handlers(const SignalOptions& signal_options);
+static void installSignalHandlers(const SignalOptions& signal_options);
 
-static void write_hex_digit(std::string& out, unsigned num) {
+static void writeHexDigit(std::string& out, unsigned num) {
     DCHECK_LT_F(num, 16u);
-    if (num < 10u) {
-        out.push_back(char('0' + num));
-    } else {
-        out.push_back(char('A' + num - 10));
-    }
+    out.push_back(num < 10u ? char('0' + num) : char('A' + num - 10));
 }
 
-static void write_hex_byte(std::string& out, uint8_t n) {
-    write_hex_digit(out, n >> 4u);
-    write_hex_digit(out, n & 0x0f);
+static void writeHexByte(std::string& out, uint8_t n) {
+    writeHexDigit(out, n >> 4u);
+    writeHexDigit(out, n & 0x0f);
 }
 
 static void escape(std::string& out, const std::string& str) {
@@ -616,14 +635,14 @@ static void escape(std::string& out, const std::string& str) {
             // else if (c < 0x20 || c != (c & 127)) { // ASCII control character
             // or UTF-8:
             out += "\\x";
-            write_hex_byte(out, static_cast<uint8_t>(c));
+            writeHexByte(out, static_cast<uint8_t>(c));
         } else {
             out += c;
         }
     }
 }
 
-Text errno_as_text() {
+auto errno_as_text() -> Text {
     char buff[256];
 #if defined(__GLIBC__) && defined(_GNU_SOURCE)
     // GNU Version
@@ -645,29 +664,29 @@ void init(int& argc, char* argv[], const Options& options) {
     CHECK_GT_F(argc, 0, "Expected proper argc/argv");
     CHECK_EQ_F(argv[argc], nullptr, "Expected proper argc/argv");
 
-    s_argv0_filename = filename(argv[0]);
+    sArgv0Filename = filename(argv[0]);
 
 #ifdef _WIN32
 #define getcwd _getcwd
 #endif
 
-    if (!getcwd(s_current_dir, sizeof(s_current_dir))) {
-        const auto error_text = errno_as_text();
+    if (!getcwd(sCurrentDir, sizeof(sCurrentDir))) {
+        const auto ERROR_TEXT = errno_as_text();
         LOG_F(WARNING,
               "Failed to get current working directory: " LOGURU_FMT(s) "",
-              error_text.c_str());
+              ERROR_TEXT.c_str());
     }
 
-    s_arguments = "";
+    sArguments = "";
     for (int i = 0; i < argc; ++i) {
-        escape(s_arguments, argv[i]);
+        escape(sArguments, argv[i]);
         if (i + 1 < argc) {
-            s_arguments += " ";
+            sArguments += " ";
         }
     }
 
-    if (options.verbosity_flag) {
-        parse_args(argc, argv, options.verbosity_flag);
+    if (options.verbosity_flag != nullptr) {
+        parseArgs(argc, argv, options.verbosity_flag);
     }
 
     if (const auto main_thread_name = options.main_thread_name) {
@@ -694,30 +713,30 @@ void init(int& argc, char* argv[], const Options& options) {
 
     if (g_stderr_verbosity >= Verbosity_INFO) {
         if (g_preamble_header) {
-            char preamble_explain[LOGURU_PREAMBLE_WIDTH];
-            print_preamble_header(preamble_explain, sizeof(preamble_explain));
-            if (g_colorlogtostderr && s_terminal_has_color) {
-                fprintf(stderr, "%s%s%s\n", terminal_reset(), terminal_dim(),
-                        preamble_explain);
+            char preambleExplain[LOGURU_PREAMBLE_WIDTH];
+            printPreambleHeader(preambleExplain, sizeof(preambleExplain));
+            if (g_colorlogtostderr && S_TERMINAL_HAS_COLOR) {
+                fprintf(stderr, "%s%s%s\n", terminal_reset(), terminalDim(),
+                        preambleExplain);
             } else {
-                fprintf(stderr, "%s\n", preamble_explain);
+                fprintf(stderr, "%s\n", preambleExplain);
             }
         }
         fflush(stderr);
     }
     VLOG_F(g_internal_verbosity, "arguments: " LOGURU_FMT(s) "",
-           s_arguments.c_str());
-    if (strlen(s_current_dir) != 0) {
+           sArguments.c_str());
+    if (strlen(sCurrentDir) != 0) {
         VLOG_F(g_internal_verbosity, "Current dir: " LOGURU_FMT(s) "",
-               s_current_dir);
+               sCurrentDir);
     }
     VLOG_F(g_internal_verbosity, "stderr verbosity: " LOGURU_FMT(d) "",
            g_stderr_verbosity);
     VLOG_F(g_internal_verbosity, "-----------------------------------");
 
-    install_signal_handlers(options.signal_options);
+    installSignalHandlers(options.signal_options);
 
-    atexit(on_atexit);
+    atexit(onAtexit);
 }
 
 void shutdown() {
@@ -741,11 +760,11 @@ void write_date_time(char* buff, unsigned long long buff_size) {
              ms_since_epoch % 1000);
 }
 
-const char* argv0_filename() { return s_argv0_filename.c_str(); }
+auto argv0_filename() -> const char* { return sArgv0Filename.c_str(); }
 
-const char* arguments() { return s_arguments.c_str(); }
+auto arguments() -> const char* { return sArguments.c_str(); }
 
-const char* current_dir() { return s_current_dir; }
+auto current_dir() -> const char* { return sCurrentDir; }
 
 const char* home_dir() {
 #ifdef __MINGW32__
@@ -792,7 +811,7 @@ void suggest_log_path(const char* prefix, char* buff,
     strncat_s(buff, buff_size - strlen(buff) - 1, ".log",
               buff_size - strlen(buff) - 1);
 #else
-    strncat(buff, s_argv0_filename.c_str(), buff_size - strlen(buff) - 1);
+    strncat(buff, sArgv0Filename.c_str(), buff_size - strlen(buff) - 1);
     strncat(buff, "/", buff_size - strlen(buff) - 1);
     write_date_time(buff + strlen(buff), buff_size - strlen(buff));
     strncat(buff, ".log", buff_size - strlen(buff) - 1);
@@ -864,22 +883,22 @@ bool add_file(const char* path_in, FileMode mode, Verbosity verbosity) {
     add_callback(path_in, file_log, file_abs, verbosity, file_close,
                  file_flush);
 #else
-    add_callback(path_in, file_log, file, verbosity, file_close, file_flush);
+    add_callback(path_in, fileLog, file, verbosity, fileClose, fileFlush);
 #endif
 
     if (mode == FileMode::Append) {
         fprintf(file, "\n\n\n\n\n");
     }
-    if (!s_arguments.empty()) {
-        fprintf(file, "arguments: %s\n", s_arguments.c_str());
+    if (!sArguments.empty()) {
+        fprintf(file, "arguments: %s\n", sArguments.c_str());
     }
-    if (strlen(s_current_dir) != 0) {
-        fprintf(file, "Current dir: %s\n", s_current_dir);
+    if (strlen(sCurrentDir) != 0) {
+        fprintf(file, "Current dir: %s\n", sCurrentDir);
     }
     fprintf(file, "File verbosity level: %d\n", verbosity);
     if (g_preamble_header) {
         char preamble_explain[LOGURU_PREAMBLE_WIDTH];
-        print_preamble_header(preamble_explain, sizeof(preamble_explain));
+        printPreambleHeader(preamble_explain, sizeof(preamble_explain));
         fprintf(file, "%s\n", preamble_explain);
     }
     fflush(file);
@@ -916,8 +935,8 @@ auto add_syslog(const char* app_name, Verbosity verbosity,
         app_name = argv0_filename();
     }
     openlog(app_name, 0, facility);
-    add_callback("'syslog'", syslog_log, nullptr, verbosity, syslog_close,
-                 syslog_flush);
+    add_callback("'syslog'", syslogLog, nullptr, verbosity, syslogClose,
+                 syslogFlush);
 
     VLOG_F(g_internal_verbosity,
            "Logging to 'syslog' , verbosity: " LOGURU_FMT(d) "", verbosity);
@@ -933,16 +952,16 @@ auto add_syslog(const char* app_name, Verbosity verbosity,
 #endif
 }
 // Will be called right before abort().
-void set_fatal_handler(fatal_handler_t handler) { s_fatal_handler = handler; }
+void set_fatal_handler(fatal_handler_t handler) { sFatalHandler = handler; }
 
-fatal_handler_t get_fatal_handler() { return s_fatal_handler; }
+fatal_handler_t get_fatal_handler() { return sFatalHandler; }
 
 void set_verbosity_to_name_callback(verbosity_to_name_t callback) {
-    s_verbosity_to_name_callback = callback;
+    sVerbosityToNameCallback = callback;
 }
 
 void set_name_to_verbosity_callback(name_to_verbosity_t callback) {
-    s_name_to_verbosity_callback = callback;
+    sNameToVerbosityCallback = callback;
 }
 
 void add_stack_cleanup(const char* find_this, const char* replace_with_this) {
@@ -953,21 +972,21 @@ void add_stack_cleanup(const char* find_this, const char* replace_with_this) {
         return;
     }
 
-    s_user_stack_cleanups.emplace_back(find_this, replace_with_this);
+    sUserStackCleanups.emplace_back(find_this, replace_with_this);
 }
 
 static void on_callback_change() {
-    s_max_out_verbosity = Verbosity_OFF;
-    for (const auto& callback : s_callbacks) {
-        s_max_out_verbosity = std::max(s_max_out_verbosity, callback.verbosity);
+    sMaxOutVerbosity = Verbosity_OFF;
+    for (const auto& callback : sCallbacks) {
+        sMaxOutVerbosity = std::max(sMaxOutVerbosity, callback.verbosity);
     }
 }
 
 void add_callback(const char* id, log_handler_t callback, void* user_data,
                   Verbosity verbosity, close_handler_t on_close,
                   flush_handler_t on_flush) {
-    std::lock_guard lock(s_mutex);
-    s_callbacks.push_back(
+    std::lock_guard lock(sMutex);
+    sCallbacks.push_back(
         Callback{id, callback, user_data, verbosity, on_close, on_flush, 0});
     on_callback_change();
 }
@@ -975,8 +994,8 @@ void add_callback(const char* id, log_handler_t callback, void* user_data,
 // Returns a custom verbosity name if one is available, or nullptr.
 // See also set_verbosity_to_name_callback.
 auto get_verbosity_name(Verbosity verbosity) -> const char* {
-    const auto* name = s_verbosity_to_name_callback
-                           ? (*s_verbosity_to_name_callback)(verbosity)
+    const auto* name = sVerbosityToNameCallback
+                           ? (*sVerbosityToNameCallback)(verbosity)
                            : nullptr;
 
     // Use standard replacements if callback fails:
@@ -998,8 +1017,8 @@ auto get_verbosity_name(Verbosity verbosity) -> const char* {
 // Returns Verbosity_INVALID if the name is not found.
 // See also set_name_to_verbosity_callback.
 auto get_verbosity_from_name(const char* name) -> Verbosity {
-    auto verbosity = s_name_to_verbosity_callback
-                         ? (*s_name_to_verbosity_callback)(name)
+    auto verbosity = sNameToVerbosityCallback
+                         ? (*sNameToVerbosityCallback)(name)
                          : Verbosity_INVALID;
 
     // Use standard replacements if callback fails:
@@ -1021,14 +1040,14 @@ auto get_verbosity_from_name(const char* name) -> Verbosity {
 }
 
 auto remove_callback(const char* id) -> bool {
-    std::lock_guard lock(s_mutex);
-    auto it = std::find_if(begin(s_callbacks), end(s_callbacks),
+    std::lock_guard lock(sMutex);
+    auto it = std::find_if(begin(sCallbacks), end(sCallbacks),
                            [&](const Callback& c) { return c.id == id; });
-    if (it != s_callbacks.end()) {
+    if (it != sCallbacks.end()) {
         if (it->close) {
-            it->close(it->user_data);
+            it->close(it->userData);
         }
-        s_callbacks.erase(it);
+        sCallbacks.erase(it);
         on_callback_change();
         return true;
     }
@@ -1037,20 +1056,20 @@ auto remove_callback(const char* id) -> bool {
 }
 
 void remove_all_callbacks() {
-    std::lock_guard lock(s_mutex);
-    for (auto& callback : s_callbacks) {
+    std::lock_guard lock(sMutex);
+    for (auto& callback : sCallbacks) {
         if (callback.close != nullptr) {
-            callback.close(callback.user_data);
+            callback.close(callback.userData);
         }
     }
-    s_callbacks.clear();
+    sCallbacks.clear();
     on_callback_change();
 }
 
 // Returns the maximum of g_stderr_verbosity and all file/custom outputs.
 auto current_verbosity_cutoff() -> Verbosity {
-    return g_stderr_verbosity > s_max_out_verbosity ? g_stderr_verbosity
-                                                    : s_max_out_verbosity;
+    return g_stderr_verbosity > sMaxOutVerbosity ? g_stderr_verbosity
+                                                 : sMaxOutVerbosity;
 }
 
 // ------------------------------------------------------------------------
@@ -1203,7 +1222,7 @@ void do_replacements(const StringPairList& replacements, std::string& str) {
 std::string prettify_stacktrace(const std::string& input) {
     std::string output = input;
 
-    do_replacements(s_user_stack_cleanups, output);
+    do_replacements(sUserStackCleanups, output);
     do_replacements(REPLACE_LIST, output);
 
     try {
@@ -1288,7 +1307,7 @@ auto stacktrace(int skip) -> Text {
 
 // ------------------------------------------------------------------------
 
-static void print_preamble_header(char* out_buff, size_t out_buff_size) {
+static void printPreambleHeader(char* out_buff, size_t out_buff_size) {
     if (out_buff_size == 0) {
         return;
     }
@@ -1361,13 +1380,13 @@ static void print_preamble(char* out_buff, size_t out_buff_size,
     localtime_r(&secSinceEpoch, &timeInfo);
 
     auto uptimeMs =
-        duration_cast<milliseconds>(steady_clock::now() - s_start_time).count();
+        duration_cast<milliseconds>(steady_clock::now() - S_START_TIME).count();
     auto uptimeSec = static_cast<double>(uptimeMs) / 1000.0;
 
     char threadName[LOGURU_THREADNAME_WIDTH + 1] = {0};
     get_thread_name(threadName, LOGURU_THREADNAME_WIDTH + 1, true);
 
-    if (s_strip_file_path) {
+    if (sStripFilePath) {
         file = filename(file);
     }
 
@@ -1441,7 +1460,7 @@ static void print_preamble(char* out_buff, size_t out_buff_size,
 static void log_message(int stack_trace_skip, Message& message,
                         bool with_indentation, bool abort_if_fatal) {
     const auto verbosity = message.verbosity;
-    std::lock_guard lock(s_mutex);
+    std::lock_guard lock(sMutex);
 
     if (message.verbosity == Verbosity_FATAL) {
         auto st = loguru::stacktrace(stack_trace_skip + 2);
@@ -1456,14 +1475,14 @@ static void log_message(int stack_trace_skip, Message& message,
     }
 
     if (with_indentation) {
-        message.indentation = indentation(s_stderr_indentation);
+        message.indentation = indentation(sStderrIndentation);
     }
 
     if (verbosity <= g_stderr_verbosity) {
-        if (g_colorlogtostderr && s_terminal_has_color) {
+        if (g_colorlogtostderr && S_TERMINAL_HAS_COLOR) {
             if (verbosity > Verbosity_WARNING) {
                 fprintf(stderr, "%s%s%s%s%s%s%s%s\n", terminal_reset(),
-                        terminal_dim(), message.preamble, message.indentation,
+                        terminalDim(), message.preamble, message.indentation,
                         verbosity == Verbosity_INFO ? terminal_reset()
                                                     : "",  // un-dim for info
                         message.prefix, message.message, terminal_reset());
@@ -1482,30 +1501,30 @@ static void log_message(int stack_trace_skip, Message& message,
         if (g_flush_interval_ms == 0) {
             fflush(stderr);
         } else {
-            s_needs_flushing = true;
+            sNeedsFlushing = true;
         }
     }
 
-    for (auto& p : s_callbacks) {
+    for (auto& p : sCallbacks) {
         if (verbosity <= p.verbosity) {
             if (with_indentation) {
                 message.indentation = indentation(p.indentation);
             }
-            p.callback(p.user_data, message);
+            p.callback(p.userData, message);
             if (g_flush_interval_ms == 0) {
                 if (p.flush) {
-                    p.flush(p.user_data);
+                    p.flush(p.userData);
                 }
             } else {
-                s_needs_flushing = true;
+                sNeedsFlushing = true;
             }
         }
     }
 
-    if (g_flush_interval_ms > 0 && (s_flush_thread == nullptr)) {
-        s_flush_thread = new std::thread([]() {
+    if (g_flush_interval_ms > 0 && (sFlushThread == nullptr)) {
+        sFlushThread = new std::thread([]() {
             for (;;) {
-                if (s_needs_flushing) {
+                if (sNeedsFlushing) {
                     flush();
                 }
                 std::this_thread::sleep_for(
@@ -1517,14 +1536,14 @@ static void log_message(int stack_trace_skip, Message& message,
     if (message.verbosity == Verbosity_FATAL) {
         flush();
 
-        if (s_fatal_handler != nullptr) {
-            s_fatal_handler(message);
+        if (sFatalHandler != nullptr) {
+            sFatalHandler(message);
             flush();
         }
 
         if (abort_if_fatal) {
 #if !defined(_WIN32)
-            if (s_signal_options.sigabrt) {
+            if (sSignalOptions.sigabrt) {
                 // Make sure we don't catch our own abort:
                 signal(SIGABRT, SIG_DFL);
             }
@@ -1602,14 +1621,14 @@ void raw_log(Verbosity verbosity, const char* file, unsigned line,
 #endif
 
 void flush() {
-    std::lock_guard lock(s_mutex);
+    std::lock_guard lock(sMutex);
     fflush(stderr);
-    for (const auto& callback : s_callbacks) {
+    for (const auto& callback : sCallbacks) {
         if (callback.flush != nullptr) {
-            callback.flush(callback.user_data);
+            callback.flush(callback.userData);
         }
     }
-    s_needs_flushing = false;
+    sNeedsFlushing = false;
 }
 
 LogScopeRAII::LogScopeRAII(Verbosity verbosity, const char* file, unsigned line,
@@ -1629,11 +1648,11 @@ LogScopeRAII::LogScopeRAII(Verbosity verbosity, const char* file, unsigned line,
 
 LogScopeRAII::~LogScopeRAII() {
     if (_file != nullptr) {
-        std::lock_guard lock(s_mutex);
-        if (_indent_stderr && s_stderr_indentation > 0) {
-            --s_stderr_indentation;
+        std::lock_guard lock(sMutex);
+        if (_indent_stderr && sStderrIndentation > 0) {
+            --sStderrIndentation;
         }
-        for (auto& p : s_callbacks) {
+        for (auto& p : sCallbacks) {
             // Note: Callback indentation cannot change!
             if (_verbosity <= p.verbosity) {
                 // in unlikely case this callback is new
@@ -1643,8 +1662,7 @@ LogScopeRAII::~LogScopeRAII() {
             }
         }
 #if LOGURU_VERBOSE_SCOPE_ENDINGS
-        auto duration_sec =
-            static_cast<double>(now_ns() - _start_time_ns) / 1e9;
+        auto duration_sec = static_cast<double>(nowNs() - _start_time_ns) / 1e9;
 #if LOGURU_USE_FMTLIB
         auto buff = textprintf("{:.{}f} s: {:s}", duration_sec,
                                LOGURU_SCOPE_TIME_PRECISION, _name);
@@ -1661,17 +1679,17 @@ LogScopeRAII::~LogScopeRAII() {
 
 void LogScopeRAII::Init(const char* format, va_list vlist) {
     if (_verbosity <= current_verbosity_cutoff()) {
-        std::lock_guard lock(s_mutex);
+        std::lock_guard lock(sMutex);
         _indent_stderr = (_verbosity <= g_stderr_verbosity);
-        _start_time_ns = now_ns();
+        _start_time_ns = nowNs();
         vsnprintf(_name, sizeof(_name), format, vlist);
         log_to_everywhere(1, _verbosity, _file, _line, "{ ", _name);
 
         if (_indent_stderr) {
-            ++s_stderr_indentation;
+            ++sStderrIndentation;
         }
 
-        for (auto& p : s_callbacks) {
+        for (auto& p : sCallbacks) {
             if (_verbosity <= p.verbosity) {
                 ++p.indentation;
             }
@@ -1776,7 +1794,7 @@ AbortLogger::~AbortLogger() noexcept(false) {
 
 struct StringStream {
     std::string str;
-};
+} ATOM_ALIGNAS(32);
 
 // Use this in your EcPrinter implementations.
 void stream_print(StringStream& out_string_stream, const char* text) {
@@ -1797,23 +1815,23 @@ static LOGURU_THREAD_LOCAL ECPtr thread_ec_ptr = nullptr;
 
 ECPtr& get_thread_ec_head_ref() { return thread_ec_ptr; }
 #else   // !thread_local
-static pthread_once_t s_ec_pthread_once = PTHREAD_ONCE_INIT;
-static pthread_key_t s_ec_pthread_key;
+static pthread_once_t sEcPthreadOnce = PTHREAD_ONCE_INIT;
+static pthread_key_t sEcPthreadKey;
 
-void free_ec_head_ref(void* io_error_context) {
+void freeEcHeadRef(void* io_error_context) {
     delete reinterpret_cast<ECPtr*>(io_error_context);
 }
 
-void ec_make_pthread_key() {
-    (void)pthread_key_create(&s_ec_pthread_key, free_ec_head_ref);
+void ecMakePthreadKey() {
+    (void)pthread_key_create(&sEcPthreadKey, freeEcHeadRef);
 }
 
-ECPtr& get_thread_ec_head_ref() {
-    (void)pthread_once(&s_ec_pthread_once, ec_make_pthread_key);
-    auto ec = reinterpret_cast<ECPtr*>(pthread_getspecific(s_ec_pthread_key));
+auto getThreadEcHeadRef() -> ECPtr& {
+    (void)pthread_once(&sEcPthreadOnce, ecMakePthreadKey);
+    auto* ec = reinterpret_cast<ECPtr*>(pthread_getspecific(sEcPthreadKey));
     if (ec == nullptr) {
         ec = new ECPtr(nullptr);
-        (void)pthread_setspecific(s_ec_pthread_key, ec);
+        (void)pthread_setspecific(sEcPthreadKey, ec);
     }
     return *ec;
 }
@@ -1821,15 +1839,15 @@ ECPtr& get_thread_ec_head_ref() {
 
 // ----------------------------------------------------------------------------
 
-EcHandle get_thread_ec_handle() { return get_thread_ec_head_ref(); }
+auto get_thread_ec_handle() -> EcHandle { return getThreadEcHeadRef(); }
 
-Text get_error_context() {
-    return get_error_context_for(get_thread_ec_head_ref());
+auto get_error_context() -> Text {
+    return get_error_context_for(getThreadEcHeadRef());
 }
 
-Text get_error_context_for(const EcEntryBase* ec_head) {
+auto get_error_context_for(const EcEntryBase* ec_head) -> Text {
     std::vector<const EcEntryBase*> stack;
-    while (ec_head) {
+    while (ec_head != nullptr) {
         stack.push_back(ec_head);
         ec_head = ec_head->_previous;
     }
@@ -1838,12 +1856,12 @@ Text get_error_context_for(const EcEntryBase* ec_head) {
     StringStream result;
     if (!stack.empty()) {
         result.str += "------------------------------------------------\n";
-        for (auto entry : stack) {
-            const auto description = std::string(entry->_descr) + ":";
+        for (const auto* entry : stack) {
+            const auto DESCRIPTION = std::string(entry->_descr) + ":";
 #if LOGURU_USE_FMTLIB
             auto prefix = textprintf(
                 "[ErrorContext] {.{}s}:{:-5u} {:-20s} ", filename(entry->_file),
-                LOGURU_FILENAME_WIDTH, entry->_line, description.c_str());
+                LOGURU_FILENAME_WIDTH, entry->_line, DESCRIPTION.c_str());
 #else
             auto prefix = textprintf(
                 "[ErrorContext] %*s:%-5u %-20s ", LOGURU_FILENAME_WIDTH,
@@ -1860,16 +1878,16 @@ Text get_error_context_for(const EcEntryBase* ec_head) {
 
 EcEntryBase::EcEntryBase(const char* file, unsigned line, const char* descr)
     : _file(file), _line(line), _descr(descr) {
-    EcEntryBase*& ec_head = get_thread_ec_head_ref();
-    _previous = ec_head;
-    ec_head = this;
+    EcEntryBase*& ecHead = getThreadEcHeadRef();
+    _previous = ecHead;
+    ecHead = this;
 }
 
-EcEntryBase::~EcEntryBase() { get_thread_ec_head_ref() = _previous; }
+EcEntryBase::~EcEntryBase() { getThreadEcHeadRef() = _previous; }
 
 // ------------------------------------------------------------------------
 
-Text ec_to_text(const char* value) {
+auto ec_to_text(const char* value) -> Text {
     // Add quotes around the string to make it obvious where it begin and ends.
     // This is great for detecting erroneous leading or trailing spaces in e.g.
     // an identifier.
@@ -1877,12 +1895,12 @@ Text ec_to_text(const char* value) {
     return Text{STRDUP(str.c_str())};
 }
 
-Text ec_to_text(char c) {
+auto ec_to_text(char c) -> Text {
     // Add quotes around the character to make it obvious where it begin and
     // ends.
     std::string str = "'";
 
-    auto write_hex_digit = [&](unsigned num) {
+    auto writeHexDigit = [&](unsigned num) {
         if (num < 10u) {
             str += char('0' + num);
         } else {
@@ -1890,11 +1908,11 @@ Text ec_to_text(char c) {
         }
     };
 
-    auto write_hex_16 = [&](uint16_t n) {
-        write_hex_digit((n >> 12u) & 0x0f);
-        write_hex_digit((n >> 8u) & 0x0f);
-        write_hex_digit((n >> 4u) & 0x0f);
-        write_hex_digit((n >> 0u) & 0x0f);
+    auto writeHex16 = [&](uint16_t n) {
+        writeHexDigit((n >> 12u) & 0x0f);
+        writeHexDigit((n >> 8u) & 0x0f);
+        writeHexDigit((n >> 4u) & 0x0f);
+        writeHexDigit((n >> 0u) & 0x0f);
     };
 
     if (c == '\\') {
@@ -1917,7 +1935,7 @@ Text ec_to_text(char c) {
         str += "\\t";
     } else if (0 <= c && c < 0x20) {
         str += "\\u";
-        write_hex_16(static_cast<uint16_t>(c));
+        writeHex16(static_cast<uint16_t>(c));
     } else {
         str += c;
     }
@@ -1945,18 +1963,18 @@ DEFINE_EC(long double)
 
 #undef DEFINE_EC
 
-Text ec_to_text(EcHandle ec_handle) {
-    Text parent_ec = get_error_context_for(ec_handle);
-    size_t buffer_size = strlen(parent_ec.c_str()) + 2;
-    char* with_newline = reinterpret_cast<char*>(malloc(buffer_size));
-    with_newline[0] = '\n';
+auto ec_to_text(EcHandle ec_handle) -> Text {
+    Text parentEc = get_error_context_for(ec_handle);
+    size_t bufferSize = strlen(parentEc.c_str()) + 2;
+    char* withNewline = reinterpret_cast<char*>(malloc(bufferSize));
+    withNewline[0] = '\n';
 #ifdef _WIN32
     strncpy_s(with_newline + 1, buffer_size, parent_ec.c_str(),
               buffer_size - 2);
 #else
-    strcpy(with_newline + 1, parent_ec.c_str());
+    strcpy(withNewline + 1, parentEc.c_str());
 #endif
-    return Text(with_newline);
+    return Text(withNewline);
 }
 
 // ----------------------------------------------------------------------------
@@ -1971,115 +1989,193 @@ Text ec_to_text(EcHandle ec_handle) {
 // ----------------------------------------------------------------------------
 
 #ifdef _WIN32
+#include <dbghelp.h>
+#include <windows.h>
+#include <csignal>
+
 namespace loguru {
-void install_signal_handlers(const SignalOptions& signal_options) {
-    (void)signal_options;
-    // TODO: implement signal handlers on windows
+
+LONG WINAPI windowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
+    const char* signalName = "UNKNOWN EXCEPTION";
+
+    switch (ExceptionInfo->ExceptionRecord->ExceptionCode) {
+        case EXCEPTION_ACCESS_VIOLATION:
+            signalName = "EXCEPTION_ACCESS_VIOLATION";
+            break;
+        case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+            signalName = "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
+            break;
+        case EXCEPTION_BREAKPOINT:
+            signalName = "EXCEPTION_BREAKPOINT";
+            break;
+        case EXCEPTION_DATATYPE_MISALIGNMENT:
+            signalName = "EXCEPTION_DATATYPE_MISALIGNMENT";
+            break;
+        case EXCEPTION_FLT_DENORMAL_OPERAND:
+            signalName = "EXCEPTION_FLT_DENORMAL_OPERAND";
+            break;
+        case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+            signalName = "EXCEPTION_FLT_DIVIDE_BY_ZERO";
+            break;
+        case EXCEPTION_FLT_INEXACT_RESULT:
+            signalName = "EXCEPTION_FLT_INEXACT_RESULT";
+            break;
+        case EXCEPTION_FLT_INVALID_OPERATION:
+            signalName = "EXCEPTION_FLT_INVALID_OPERATION";
+            break;
+        case EXCEPTION_FLT_OVERFLOW:
+            signalName = "EXCEPTION_FLT_OVERFLOW";
+            break;
+        case EXCEPTION_FLT_STACK_CHECK:
+            signalName = "EXCEPTION_FLT_STACK_CHECK";
+            break;
+        case EXCEPTION_FLT_UNDERFLOW:
+            signalName = "EXCEPTION_FLT_UNDERFLOW";
+            break;
+        case EXCEPTION_ILLEGAL_INSTRUCTION:
+            signalName = "EXCEPTION_ILLEGAL_INSTRUCTION";
+            break;
+        case EXCEPTION_IN_PAGE_ERROR:
+            signalName = "EXCEPTION_IN_PAGE_ERROR";
+            break;
+        case EXCEPTION_INT_DIVIDE_BY_ZERO:
+            signalName = "EXCEPTION_INT_DIVIDE_BY_ZERO";
+            break;
+        case EXCEPTION_INT_OVERFLOW:
+            signalName = "EXCEPTION_INT_OVERFLOW";
+            break;
+        case EXCEPTION_INVALID_DISPOSITION:
+            signalName = "EXCEPTION_INVALID_DISPOSITION";
+            break;
+        case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+            signalName = "EXCEPTION_NONCONTINUABLE_EXCEPTION";
+            break;
+        case EXCEPTION_PRIV_INSTRUCTION:
+            signalName = "EXCEPTION_PRIV_INSTRUCTION";
+            break;
+        case EXCEPTION_SINGLE_STEP:
+            signalName = "EXCEPTION_SINGLE_STEP";
+            break;
+        case EXCEPTION_STACK_OVERFLOW:
+            signalName = "EXCEPTION_STACK_OVERFLOW";
+            break;
+    }
+
+    writeToStderr("\n");
+    writeToStderr("Loguru caught an exception: ");
+    writeToStderr(signalName);
+    writeToStderr("\n");
+
+    if (sSignalOptions.unsafe_signal_handler) {
+        flush();
+        char preamble_buff[LOGURU_PREAMBLE_WIDTH];
+        print_preamble(preamble_buff, sizeof(preamble_buff), Verbosity_FATAL,
+                       "", 0);
+        auto message = Message{Verbosity_FATAL, "",        0, preamble_buff, "",
+                               "Exception: ",   signalName};
+        try {
+            log_message(1, message, false, false);
+        } catch (...) {
+            writeToStderr(
+                "Exception caught and ignored by Loguru exception handler.\n");
+        }
+        flush();
+    }
+
+    return EXCEPTION_EXECUTE_HANDLER;
 }
+
+void install_signal_handlers(const SignalOptions& signal_options) {
+    sSignalOptions = signal_options;
+    SetUnhandledExceptionFilter(windowsExceptionHandler);
+}
+
 }  // namespace loguru
 
 #else  // _WIN32
 
 namespace loguru {
-void write_to_stderr(const char* data, size_t size) {
+void writeToStderr(const char* data, size_t size) {
     auto result = write(STDERR_FILENO, data, size);
     (void)result;  // Ignore errors.
 }
 
-void write_to_stderr(const char* data) { write_to_stderr(data, strlen(data)); }
+void writeToStderr(const char* data) { writeToStderr(data, strlen(data)); }
 
-void call_default_signal_handler(int signal_number) {
-    struct sigaction sig_action;
-    memset(&sig_action, 0, sizeof(sig_action));
-    sigemptyset(&sig_action.sa_mask);
-    sig_action.sa_handler = SIG_DFL;
-    sigaction(signal_number, &sig_action, NULL);
+void callDefaultSignalHandler(int signal_number) {
+    struct sigaction sigAction;
+    memset(&sigAction, 0, sizeof(sigAction));
+    sigemptyset(&sigAction.sa_mask);
+    sigAction.sa_handler = SIG_DFL;
+    sigaction(signal_number, &sigAction, NULL);
     kill(getpid(), signal_number);
 }
 
-void signal_handler(int signal_number, siginfo_t*, void*) {
-    const char* signal_name = "UNKNOWN SIGNAL";
+void signalHandler(int signal_number, siginfo_t*, void*) {
+    const char* signalName = "UNKNOWN SIGNAL";
 
     if (signal_number == SIGABRT) {
-        signal_name = "SIGABRT";
+        signalName = "SIGABRT";
     }
     if (signal_number == SIGBUS) {
-        signal_name = "SIGBUS";
+        signalName = "SIGBUS";
     }
     if (signal_number == SIGFPE) {
-        signal_name = "SIGFPE";
+        signalName = "SIGFPE";
     }
     if (signal_number == SIGILL) {
-        signal_name = "SIGILL";
+        signalName = "SIGILL";
     }
     if (signal_number == SIGINT) {
-        signal_name = "SIGINT";
+        signalName = "SIGINT";
     }
     if (signal_number == SIGSEGV) {
-        signal_name = "SIGSEGV";
+        signalName = "SIGSEGV";
     }
     if (signal_number == SIGTERM) {
-        signal_name = "SIGTERM";
+        signalName = "SIGTERM";
     }
 
-    // --------------------------------------------------------------------
-    /* There are few things that are safe to do in a signal handler,
-       but writing to stderr is one of them.
-       So we first print out what happened to stderr so we're sure that gets
-       out, then we do the unsafe things, like logging the stack trace.
-    */
-
-    if (g_colorlogtostderr && s_terminal_has_color) {
-        write_to_stderr(terminal_reset());
-        write_to_stderr(terminal_bold());
-        write_to_stderr(terminal_light_red());
+    if (g_colorlogtostderr && S_TERMINAL_HAS_COLOR) {
+        writeToStderr(terminal_reset());
+        writeToStderr(terminal_bold());
+        writeToStderr(terminal_light_red());
     }
-    write_to_stderr("\n");
-    write_to_stderr("Loguru caught a signal: ");
-    write_to_stderr(signal_name);
-    write_to_stderr("\n");
-    if (g_colorlogtostderr && s_terminal_has_color) {
-        write_to_stderr(terminal_reset());
+    writeToStderr("\n");
+    writeToStderr("Loguru caught a signal: ");
+    writeToStderr(signalName);
+    writeToStderr("\n");
+    if (g_colorlogtostderr && S_TERMINAL_HAS_COLOR) {
+        writeToStderr(terminal_reset());
     }
 
-    // --------------------------------------------------------------------
-
-    if (s_signal_options.unsafe_signal_handler) {
-        // --------------------------------------------------------------------
-        /* Now we do unsafe things. This can for example lead to deadlocks if
-           the signal was triggered from the system's memory management
-           functions and the code below tries to do allocations.
-        */
-
+    if (sSignalOptions.unsafe_signal_handler) {
         flush();
         char preamble_buff[LOGURU_PREAMBLE_WIDTH];
         print_preamble(preamble_buff, sizeof(preamble_buff), Verbosity_FATAL,
                        "", 0);
-        auto message = Message{
-            Verbosity_FATAL, "", 0, preamble_buff, "", "Signal: ", signal_name};
+        auto message = Message{Verbosity_FATAL, "",        0, preamble_buff, "",
+                               "Signal: ",      signalName};
         try {
             log_message(1, message, false, false);
         } catch (...) {
-            // This can happed due to s_fatal_handler.
-            write_to_stderr(
+            writeToStderr(
                 "Exception caught and ignored by Loguru signal handler.\n");
         }
         flush();
-
-        // --------------------------------------------------------------------
     }
 
-    call_default_signal_handler(signal_number);
+    callDefaultSignalHandler(signal_number);
 }
 
-void install_signal_handlers(const SignalOptions& signal_options) {
-    s_signal_options = signal_options;
+void installSignalHandlers(const SignalOptions& signal_options) {
+    sSignalOptions = signal_options;
 
     struct sigaction sig_action;
     memset(&sig_action, 0, sizeof(sig_action));
     sigemptyset(&sig_action.sa_mask);
     sig_action.sa_flags |= SA_SIGINFO;
-    sig_action.sa_sigaction = &signal_handler;
+    sig_action.sa_sigaction = &signalHandler;
 
     if (signal_options.sigabrt) {
         CHECK_F(sigaction(SIGABRT, &sig_action, NULL) != -1,

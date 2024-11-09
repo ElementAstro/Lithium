@@ -163,6 +163,13 @@ public:
     auto setValue(const std::string& key_path, const json& value) -> bool;
 
     /**
+     * @brief Sets the value for the specified key path.
+     * @param key_path The path to set the configuration value.
+     * @param value The JSON value to set.
+     * @return bool True if the value was successfully set, false otherwise.
+     */
+    auto setValue(const std::string& key_path, json&& value) -> bool;
+    /**
      * @brief Appends a value to an array at the specified key path.
      * @param key_path The path to the array.
      * @param value The JSON value to append.

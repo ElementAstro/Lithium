@@ -18,6 +18,7 @@ Description: AtomCamera Simulator and Basic Definition
 
 #include <atomic>
 #include <optional>
+#include <utility>
 
 #ifdef ENABLE_SHARED_MEMORY
 #include "shared_memory.hpp"
@@ -109,7 +110,7 @@ public:
 
     virtual auto isISOAvailable() -> bool = 0;
 
-    virtual auto getFrame() -> bool = 0;
+    virtual auto getFrame() -> std::optional<std::pair<int, int>>;
 
     virtual auto setFrame(const int &x, const int &y, const int &w,
                           const int &h) -> bool = 0;

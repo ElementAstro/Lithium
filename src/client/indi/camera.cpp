@@ -12,11 +12,11 @@
 #include "atom/components/registry.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/macro.hpp"
 #include "components/component.hpp"
 #include "device/template/camera.hpp"
 #include "function/conversion.hpp"
 #include "function/type_info.hpp"
-#include "atom/macro.hpp"
 
 INDICamera::INDICamera(std::string deviceName)
     : AtomCamera(name_), name_(std::move(deviceName)) {}
@@ -413,6 +413,95 @@ auto INDICamera::abortExposure() -> bool {
     return true;
 }
 
+auto INDICamera::getExposureStatus() -> bool {
+    INDI::PropertySwitch ccdExposure = device_.getProperty("CCD_EXPOSURE");
+    if (!ccdExposure.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_EXPOSURE property...");
+        return false;
+    }
+    if (ccdExposure[0].getState() == ISS_ON) {
+        LOG_F(INFO, "Exposure is in progress...");
+        return true;
+    }
+    LOG_F(INFO, "Exposure is not in progress...");
+    return false;
+}
+
+auto INDICamera::getExposureResult() -> bool {
+    /*
+    TODO: Implement getExposureResult
+    INDI::PropertySwitch ccdExposure = device_.getProperty("CCD_EXPOSURE");
+    if (!ccdExposure.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_EXPOSURE property...");
+        return false;
+    }
+    if (ccdExposure[0].getState() == ISS_ON) {
+        LOG_F(INFO, "Exposure is in progress...");
+        return false;
+    }
+    LOG_F(INFO, "Exposure is not in progress...");
+    */
+    return true;
+}
+
+auto INDICamera::saveExposureResult() -> bool {
+    /*
+    TODO: Implement saveExposureResult
+    */
+    return true;
+}
+
+// TODO: Check these functions for correctness
+auto INDICamera::startVideo() -> bool {
+    INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
+    if (!ccdVideo.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_VIDEO_STREAM property...");
+        return false;
+    }
+    ccdVideo[0].setState(ISS_ON);
+    sendNewProperty(ccdVideo);
+    return true;
+}
+
+auto INDICamera::stopVideo() -> bool {
+    INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
+    if (!ccdVideo.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_VIDEO_STREAM property...");
+        return false;
+    }
+    ccdVideo[0].setState(ISS_OFF);
+    sendNewProperty(ccdVideo);
+    return true;
+}
+
+auto INDICamera::getVideoStatus() -> bool {
+    INDI::PropertySwitch ccdVideo = device_.getProperty("CCD_VIDEO_STREAM");
+    if (!ccdVideo.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_VIDEO_STREAM property...");
+        return false;
+    }
+    if (ccdVideo[0].getState() == ISS_ON) {
+        LOG_F(INFO, "Video is in progress...");
+        return true;
+    }
+    LOG_F(INFO, "Video is not in progress...");
+    return false;
+}
+
+auto INDICamera::getVideoResult() -> bool {
+    /*
+    TODO: Implement getVideoResult
+    */
+    return true;
+}
+
+auto INDICamera::saveVideoResult() -> bool {
+    /*
+    TODO: Implement saveVideoResult
+    */
+    return true;
+}
+
 auto INDICamera::startCooling() -> bool { return setCooling(true); }
 
 auto INDICamera::stopCooling() -> bool { return setCooling(false); }
@@ -430,6 +519,36 @@ auto INDICamera::setCooling(bool enable) -> bool {
     }
     sendNewProperty(ccdCooler);
     return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::getCoolingStatus() -> bool {
+    INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
+    if (!ccdCooler.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_COOLER property...");
+        return false;
+    }
+    if (ccdCooler[0].getState() == ISS_ON) {
+        LOG_F(INFO, "Cooler is ON");
+        return true;
+    }
+    LOG_F(INFO, "Cooler is OFF");
+    return false;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::isCoolingAvailable() -> bool {
+    INDI::PropertySwitch ccdCooler = device_.getProperty("CCD_COOLER");
+    if (!ccdCooler.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_COOLER property...");
+        return false;
+    }
+    if (ccdCooler[0].getState() == ISS_ON) {
+        LOG_F(INFO, "Cooler is available");
+        return true;
+    }
+    LOG_F(INFO, "Cooler is not available");
+    return false;
 }
 
 auto INDICamera::getTemperature() -> std::optional<double> {
@@ -463,6 +582,32 @@ auto INDICamera::setTemperature(const double &value) -> bool {
     LOG_F(INFO, "Setting temperature to {} C...", value);
     ccdTemperature[0].setValue(value);
     sendNewProperty(ccdTemperature);
+    return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::getCoolingPower() -> bool {
+    INDI::PropertyNumber ccdCoolerPower =
+        device_.getProperty("CCD_COOLER_POWER");
+    if (!ccdCoolerPower.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_COOLER_POWER property...");
+        return false;
+    }
+    LOG_F(INFO, "Cooling power: {}", ccdCoolerPower[0].getValue());
+    return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::setCoolingPower(const double &value) -> bool {
+    INDI::PropertyNumber ccdCoolerPower =
+        device_.getProperty("CCD_COOLER_POWER");
+    if (!ccdCoolerPower.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_COOLER_POWER property...");
+        return false;
+    }
+    LOG_F(INFO, "Setting cooling power to {}...", value);
+    ccdCoolerPower[0].setValue(value);
+    sendNewProperty(ccdCoolerPower);
     return true;
 }
 
@@ -544,6 +689,17 @@ auto INDICamera::setGain(const int &value) -> bool {
     return true;
 }
 
+// TODO: Check this functions for correctness
+auto INDICamera::isGainAvailable() -> bool {
+    INDI::PropertyNumber ccdGain = device_.getProperty("CCD_GAIN");
+
+    if (!ccdGain.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_GAIN property...");
+        return false;
+    }
+    return true;
+}
+
 auto INDICamera::getOffset() -> std::optional<double> {
     INDI::PropertyNumber ccdOffset = device_.getProperty("CCD_OFFSET");
 
@@ -568,6 +724,140 @@ auto INDICamera::setOffset(const int &value) -> bool {
     LOG_F(INFO, "Setting offset to {}...", value);
     ccdOffset[0].setValue(value);
     sendNewProperty(ccdOffset);
+    return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::isOffsetAvailable() -> bool {
+    INDI::PropertyNumber ccdOffset = device_.getProperty("CCD_OFFSET");
+
+    if (!ccdOffset.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_OFFSET property...");
+        return false;
+    }
+    return true;
+}
+
+auto INDICamera::getISO() -> bool {
+    /*
+    TODO: Implement getISO
+    */
+    return true;
+}
+
+auto INDICamera::setISO(const int &iso) -> bool {
+    /*
+    TODO: Implement setISO
+    */
+    return true;
+}
+
+auto INDICamera::isISOAvailable() -> bool {
+    /*
+    TODO: Implement isISOAvailable
+    */
+    return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::getFrame() -> std::optional<std::pair<int, int>> {
+    INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
+
+    if (!ccdFrame.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_FRAME property...");
+        return std::nullopt;
+    }
+
+    frameX_ = ccdFrame[0].getValue();
+    frameY_ = ccdFrame[1].getValue();
+    frameWidth_ = ccdFrame[2].getValue();
+    frameHeight_ = ccdFrame[3].getValue();
+    LOG_F(INFO, "Current frame: X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", frameX_,
+          frameY_, frameWidth_, frameHeight_);
+    return std::make_pair(frameWidth_, frameHeight_);
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::setFrame(const int &x, const int &y, const int &w,
+                          const int &h) -> bool {
+    INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
+
+    if (!ccdFrame.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_FRAME property...");
+        return false;
+    }
+    LOG_F(INFO, "Setting frame to X: {}, Y: {}, WIDTH: {}, HEIGHT: {}", x, y, w,
+          h);
+    ccdFrame[0].setValue(x);
+    ccdFrame[1].setValue(y);
+    ccdFrame[2].setValue(w);
+    ccdFrame[3].setValue(h);
+    sendNewProperty(ccdFrame);
+    return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::isFrameSettingAvailable() -> bool {
+    INDI::PropertyNumber ccdFrame = device_.getProperty("CCD_FRAME");
+
+    if (!ccdFrame.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_FRAME property...");
+        return false;
+    }
+    return true;
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::getFrameType() -> bool {
+    INDI::PropertySwitch ccdFrameType = device_.getProperty("CCD_FRAME_TYPE");
+
+    if (!ccdFrameType.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_FRAME_TYPE property...");
+        return false;
+    }
+
+    if (ccdFrameType[0].getState() == ISS_ON) {
+        LOG_F(INFO, "Frame type: Light");
+        return "Light";
+    } else if (ccdFrameType[1].getState() == ISS_ON) {
+        LOG_F(INFO, "Frame type: Bias");
+        return "Bias";
+    } else if (ccdFrameType[2].getState() == ISS_ON) {
+        LOG_F(INFO, "Frame type: Dark");
+        return "Dark";
+    } else if (ccdFrameType[3].getState() == ISS_ON) {
+        LOG_F(INFO, "Frame type: Flat");
+        return "Flat";
+    } else {
+        LOG_F(ERROR, "Frame type: Unknown");
+        return "Unknown";
+    }
+}
+
+// TODO: Check this functions for correctness
+auto INDICamera::setFrameType(FrameType type) -> bool {
+    INDI::PropertySwitch ccdFrameType = device_.getProperty("CCD_FRAME_TYPE");
+
+    if (!ccdFrameType.isValid()) {
+        LOG_F(ERROR, "Error: unable to find CCD_FRAME_TYPE property...");
+        return false;
+    }
+
+    sendNewProperty(ccdFrameType);
+    return true;
+}
+
+auto INDICamera::getUploadMode() -> bool {
+    /*
+    TODO: Implement getUploadMode
+    */
+    return true;
+}
+
+auto INDICamera::setUploadMode(UploadMode mode) -> bool {
+    /*
+    TODO: Implement setUploadMode
+    */
     return true;
 }
 

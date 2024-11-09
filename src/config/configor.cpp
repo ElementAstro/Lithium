@@ -343,6 +343,39 @@ auto ConfigManager::setValue(const std::string& key_path,
     return false;
 }
 
+auto ConfigManager::setValue(const std::string& key_path,
+                             json&& value) -> bool {
+    std::unique_lock lock(m_impl_->rwMutex);
+
+    // Check if the key_path is "/" and set the root value directly
+    if (key_path == "/") {
+        m_impl_->config = std::move(value);
+        LOG_F(INFO, "Set root config: {}", m_impl_->config.dump());
+        return true;
+    }
+
+    json* p = &m_impl_->config;
+    auto keys = key_path | std::views::split('/');
+
+    for (auto it = keys.begin(); it != keys.end(); ++it) {
+        std::string keyStr = std::string((*it).begin(), (*it).end());
+        LOG_F(INFO, "Set config: {}", keyStr);
+
+        if (std::next(it) == keys.end()) {  // If this is the last key
+            (*p)[keyStr] = std::move(value);
+            LOG_F(INFO, "Final config: {}", m_impl_->config.dump());
+            return true;
+        }
+
+        if (!p->contains(keyStr) || !(*p)[keyStr].is_object()) {
+            (*p)[keyStr] = json::object();
+        }
+        p = &(*p)[keyStr];
+        LOG_F(INFO, "Current config: {}", p->dump());
+    }
+    return false;
+}
+
 auto ConfigManager::appendValue(const std::string& key_path,
                                 const json& value) -> bool {
     std::unique_lock lock(m_impl_->rwMutex);

@@ -256,12 +256,11 @@ public:
                             std::make_format_args(std::forward<Args>(args)...));
     }
 };
+}  // namespace atom::utils
 
 constexpr auto operator""_fmt(const char* str, std::size_t len) {
-    return FormatLiteral(std::string_view(str, len));
+    return atom::utils::FormatLiteral(std::string_view(str, len));
 }
-
-}  // namespace atom::utils
 
 #if __cplusplus >= 202302L
 namespace std {

@@ -1,13 +1,27 @@
 #include "Peer.hpp"
 
+#include <array>
 #include <utility>
 #include "Room.hpp"
 
-#include "base/Log.hpp"
+#include "async/message_bus.hpp"
+#include "config/configor.hpp"
 #include "dto/DTOs.hpp"
 #include "oatpp/encoding/Base64.hpp"
 
+#include "middleware/indi_server.hpp"
+
+#include "matchit/matchit.h"
+
+#include "atom/error/exception.hpp"
+#include "atom/function/global_ptr.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "atom/utils/print.hpp"
+#include "atom/utils/string.hpp"
+
+#include "utils/constant.hpp"
+
 using json = nlohmann::json;
 
 void Peer::sendMessageAsync(const oatpp::Object<MessageDto>& message) {
@@ -218,258 +232,232 @@ auto Peer::handleFileChunkMessage(const oatpp::Object<MessageDto>& message)
 
 auto Peer::handleQTextMessage(const std::string& message)
     -> oatpp::async::CoroutineStarter {
-    std::vector<std::string> parts;
-    std::stringstream ss(message);
-    std::string part;
-    while (std::getline(ss, part, ':')) {
-        parts.push_back(part);
+    std::vector<std::string> parts = atom::utils::splitString(message, ':');
+    // Check if the message is in the correct format
+    if (parts.size() != 2 || parts.size() != 3) {
+        LOG_F(ERROR, "Invalid message format. {}", message);
+        return onApiError("Invalid message format.");
     }
+    parts[0] = atom::utils::trim(parts[0]);
 
-    auto trim = [](std::string& s) -> std::string {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-                    return !std::isspace(ch);
-                }));
-        s.erase(std::find_if(s.rbegin(), s.rend(),
-                             [](int ch) { return !std::isspace(ch); })
-                    .base(),
-                s.end());
-        return s;
-    };
-
-    /*
-    if (parts.size() == 2 && trim(parts[0]) == "ConfirmIndiDriver") {
-        std::string driverName = trim(parts[1]);
-        indi_Driver_Confirm(driverName);
-    } else if (parts.size() == 2 && trim(parts[0]) == "ConfirmIndiDevice") {
-        std::string deviceName = trim(parts[1]);
-        indi_Device_Confirm(deviceName);
-    } else if (parts.size() == 3 && trim(parts[0]) == "SelectIndiDriver") {
-        std::string Group = trim(parts[1]);
-        int ListNum = std::stoi(trim(parts[2]));
-        printDevGroups2(drivers_list, ListNum, Group);
-    } else if (parts.size() == 2 && trim(parts[0]) == "takeExposure") {
-        int ExpTime = std::stoi(trim(parts[1]));
-        std::cout << ExpTime << std::endl;
-        INDI_Capture(ExpTime);
-        glExpTime = ExpTime;
-    } else if (parts.size() == 2 && trim(parts[0]) == "focusSpeed") {
-        int Speed = std::stoi(trim(parts[1]));
-        std::cout << Speed << std::endl;
-        int Speed_ = FocuserControl_setSpeed(Speed);
-        wsThread->sendMessageToClient("FocusChangeSpeedSuccess:" +
-    std::to_string(Speed_)); } else if (parts.size() == 3 && trim(parts[0]) ==
-    "focusMove") { std::string LR = trim(parts[1]); int Steps =
-    std::stoi(trim(parts[2])); if (LR == "Left") { FocusMoveAndCalHFR(true,
-    Steps); } else if (LR == "Right") { FocusMoveAndCalHFR(false, Steps); } else
-    if (LR == "Target") { FocusGotoAndCalFWHM(Steps);
-        }
-    } else if (parts.size() == 5 && trim(parts[0]) == "RedBox") {
-        int x = std::stoi(trim(parts[1]));
-        int y = std::stoi(trim(parts[2]));
-        int width = std::stoi(trim(parts[3]));
-        int height = std::stoi(trim(parts[4]));
-        glROI_x = x;
-        glROI_y = y;
-        CaptureViewWidth = width;
-        CaptureViewHeight = height;
-        std::cout << "RedBox:" << glROI_x << glROI_y << CaptureViewWidth <<
-    CaptureViewHeight << std::endl; } else if (parts.size() == 2 &&
-    trim(parts[0]) == "RedBoxSizeChange") { BoxSideLength =
-    std::stoi(trim(parts[1])); std::cout << "BoxSideLength:" << BoxSideLength <<
-    std::endl; wsThread->sendMessageToClient("MainCameraSize:" +
-    std::to_string(glMainCCDSizeX) + ":" + std::to_string(glMainCCDSizeY)); }
-    else if (message == "AutoFocus") { AutoFocus(); } else if (message ==
-    "StopAutoFocus") { StopAutoFocus = true; } else if (message ==
-    "abortExposure") { INDI_AbortCapture(); } else if (message ==
-    "connectAllDevice") { DeviceConnect(); } else if (message == "CS") {
-        // std::string Dev = connectIndiServer();
-        // websocket->messageSend("AddDevice:" + Dev);
-    } else if (message == "DS") {
-        disconnectIndiServer();
-    } else if (message == "MountMoveWest") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeMoveWE(dpMount, "WEST");
-        }
-    } else if (message == "MountMoveEast") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeMoveWE(dpMount, "EAST");
-        }
-    } else if (message == "MountMoveNorth") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeMoveNS(dpMount, "NORTH");
-        }
-    } else if (message == "MountMoveSouth") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeMoveNS(dpMount, "SOUTH");
-        }
-    } else if (message == "MountMoveAbort") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeAbortMotion(dpMount);
-        }
-    } else if (message == "MountPark") {
-        if (dpMount != NULL) {
-            bool isPark = TelescopeControl_Park();
-            if (isPark) {
-                wsThread->sendMessageToClient("TelescopePark:ON");
-            } else {
-                wsThread->sendMessageToClient("TelescopePark:OFF");
-            }
-        }
-    } else if (message == "MountTrack") {
-        if (dpMount != NULL) {
-            bool isTrack = TelescopeControl_Track();
-            if (isTrack) {
-                wsThread->sendMessageToClient("TelescopeTrack:ON");
-            } else {
-                wsThread->sendMessageToClient("TelescopeTrack:OFF");
-            }
-        }
-    } else if (message == "MountHome") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeHomeInit(dpMount, "SLEWHOME");
-        }
-    } else if (message == "MountSYNC") {
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeHomeInit(dpMount, "SYNCHOME");
-        }
-    } else if (parts.size() == 2 && trim(parts[0]) == "MountSpeedSet") {
-        int Speed = std::stoi(trim(parts[1]));
-        std::cout << "MountSpeedSet:" << Speed << std::endl;
-        if (dpMount != NULL) {
-            indi_Client->setTelescopeSlewRate(dpMount, Speed - 1);
-            int Speed_;
-            indi_Client->getTelescopeSlewRate(dpMount, Speed_);
-            wsThread->sendMessageToClient("MountSetSpeedSuccess:" +
-    std::to_string(Speed_));
-        }
-    } else if (parts.size() == 2 && trim(parts[0]) == "ImageGainR") {
-        ImageGainR = std::stod(trim(parts[1]));
-        std::cout << "GainR is set to " << ImageGainR << std::endl;
-    } else if (parts.size() == 2 && trim(parts[0]) == "ImageGainB") {
-        ImageGainB = std::stod(trim(parts[1]));
-        std::cout << "GainB is set to " << ImageGainB << std::endl;
-    } else if (trim(parts[0]) == "ScheduleTabelData") {
-        ScheduleTabelData(message);
-    } else if (parts.size() == 4 && trim(parts[0]) == "MountGoto") {
-        std::vector<std::string> RaDecList;
-        std::stringstream ss2(message);
-        std::string part2;
-        while (std::getline(ss2, part2, ',')) {
-            RaDecList.push_back(part2);
-        }
-        std::vector<std::string> RaList;
-        std::stringstream ss3(RaDecList[0]);
-        while (std::getline(ss3, part2, ':')) {
-            RaList.push_back(part2);
-        }
-        std::vector<std::string> DecList;
-        std::stringstream ss4(RaDecList[1]);
-        while (std::getline(ss4, part2, ':')) {
-            DecList.push_back(part2);
-        }
-
-        double Ra_Rad = std::stod(trim(RaList[2]));
-        double Dec_Rad = std::stod(trim(DecList[1]));
-
-        std::cout << "RaDec(Rad):" << Ra_Rad << "," << Dec_Rad << std::endl;
-
-        double Ra_Hour = Tools::RadToHour(Ra_Rad);
-        double Dec_Degree = Tools::RadToDegree(Dec_Rad);
-
-        MountGoto(Ra_Hour, Dec_Degree);
-    } else if (message == "StopSchedule") {
-        StopSchedule = true;
-    } else if (message == "CaptureImageSave") {
-        CaptureImageSave();
-    } else if (message == "getConnectedDevices") {
-        getConnectedDevices();
-    } else if (message == "getStagingImage") {
-                getStagingImage();
-    } else if (trim(parts[0]) == "StagingScheduleData") {
-        isStagingScheduleData = true;
-        StagingScheduleData = message;
-    } else if (message == "getStagingScheduleData") {
-        getStagingScheduleData();
-    } else if (trim(parts[0]) == "ExpTimeList") {
-        Tools::saveExpTimeList(message);
-    } else if (message == "getExpTimeList") {
-        std::string expTimeList = Tools::readExpTimeList();
-        if (!expTimeList.empty()) {
-            wsThread->sendMessageToClient(expTimeList);
-        }
-    } else if (message == "getCaptureStatus") {
-        std::cout << "MainCameraStatu: " << glMainCameraStatu << std::endl;
-        if (glMainCameraStatu == "Exposuring") {
-            wsThread->sendMessageToClient("CameraInExposuring:True");
-        }
-    } else if (parts.size() == 2 && trim(parts[0]) == "SetCFWPosition") {
-        int pos = std::stoi(trim(parts[1]));
-        if (dpCFW != NULL) {
-            indi_Client->setCFWPosition(dpCFW, pos);
-            wsThread->sendMessageToClient("SetCFWPositionSuccess:" +
-    std::to_string(pos)); std::cout << "Set CFW Position to " << pos << "
-    Success!!!" << std::endl;
-        }
-    } else if (parts.size() == 2 && trim(parts[0]) == "CFWList") {
-        if (dpCFW != NULL) {
-            Tools::saveCFWList(std::string(dpCFW->getDeviceName()), parts[1]);
-        }
-    } else if (message == "getCFWList") {
-        if (dpCFW != NULL) {
-            int min, max, pos;
-            indi_Client->getCFWPosition(dpCFW, pos, min, max);
-            wsThread->sendMessageToClient("CFWPositionMax:" +
-    std::to_string(max)); std::string cfwList =
-    Tools::readCFWList(std::string(dpCFW->getDeviceName())); if
-    (!cfwList.empty()) { wsThread->sendMessageToClient("getCFWList:" + cfwList);
-            }
-        }
-    } else if (message == "ClearCalibrationData") {
-        ClearCalibrationData = true;
-        std::cout << "ClearCalibrationData: " << ClearCalibrationData <<
-    std::endl; } else if (message == "GuiderSwitch") { if (isGuiding) {
-            isGuiding = false;
-            call_phd_StopLooping();
-            wsThread->sendMessageToClient("GuiderStatus:false");
-        } else {
-            isGuiding = true;
-            if (ClearCalibrationData) {
-                ClearCalibrationData = false;
-                call_phd_ClearCalibration();
-            }
-            call_phd_StartLooping();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            call_phd_AutoFindStar();
-            call_phd_StartGuiding();
-            wsThread->sendMessageToClient("GuiderStatus:true");
-        }
-    } else if (parts.size() == 2 && trim(parts[0]) == "GuiderExpTimeSwitch") {
-        call_phd_setExposureTime(std::stoi(trim(parts[1])));
-    } else if (message == "getGuiderStatus") {
-        if (isGuiding) {
-            wsThread->sendMessageToClient("GuiderStatus:true");
-        } else {
-            wsThread->sendMessageToClient("GuiderStatus:false");
-        }
-    } else if (parts.size() == 4 && trim(parts[0]) == "SolveSYNC") {
-        glFocalLength = std::stoi(trim(parts[1]));
-        glCameraSize_width = std::stod(trim(parts[2]));
-        glCameraSize_height = std::stod(trim(parts[3]));
-        TelescopeControl_SolveSYNC();
-    } else if (message == "ClearDataPoints") {
-        dataPoints.clear();
-    } else if (message == "ShowAllImageFolder") {
-        std::string allFile = GetAllFile();
-        std::cout << allFile << std::endl;
-        wsThread->sendMessageToClient("ShowAllImageFolder:" + allFile);
-    } else if (parts.size() == 2 && trim(parts[0]) == "MoveFileToUSB") {
-        std::vector<std::string> ImagePath = parseString(parts[1],
-    ImageSaveBasePath); RemoveImageToUsb(ImagePath); } else if (parts.size() ==
-    2 && trim(parts[0]) == "DeleteFile") { std::vector<std::string> ImagePath =
-    parseString(parts[1], ImageSaveBasePath); DeleteImage(ImagePath); } else if
-    (message == "USBCheck") { USBCheck();
-    }
-    */
+    using namespace matchit;
+    using namespace lithium::middleware;
+    match(parts[0])(
+        pattern | "ConfirmIndiDriver" =
+            [parts] {
+                std::string driverName = atom::utils::trim(parts[1]);
+                indiDriverConfirm(driverName);
+            },
+        pattern | "ConfirmIndiDevice" =
+            [parts] {
+                std::string deviceName = atom::utils::trim(parts[1]);
+                std::string driverName = atom::utils::trim(parts[2]);
+                indiDeviceConfirm(deviceName, driverName);
+            },
+        pattern | "SelectIndiDriver" =
+            [parts] {
+                std::string driverName = atom::utils::trim(parts[1]);
+                int listNum = std::stoi(atom::utils::trim(parts[2]));
+                std::shared_ptr<lithium::device::DriversList> driversList;
+                GET_OR_CREATE_PTR(driversList, lithium::device::DriversList,
+                                  Constants::DRIVERS_LIST)
+                printDevGroups2(*driversList, listNum, driverName);
+            },
+        pattern | "takeExposure" =
+            [parts] {
+                int expTime = std::stoi(atom::utils::trim(parts[1]));
+                LOG_F(INFO, "takeExposure: {}", expTime);
+                indiCapture(expTime);
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue(
+                    "/lithium/device/camera/current_exposure", expTime);
+            },
+        pattern | "focusSpeed" =
+            [parts] {
+                int speed = std::stoi(atom::utils::trim(parts[1]));
+                LOG_F(INFO, "focusSpeed: {}", speed);
+                int result = setFocusSpeed(speed);
+                LOG_F(INFO, "focusSpeed result: {}", result);
+                std::shared_ptr<atom::async::MessageBus> messageBusPtr;
+                GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
+                                  Constants::MESSAGE_BUS)
+                messageBusPtr->publish(
+                    "main", "FocusChangeSpeedSuccess:{}"_fmt(result));
+            },
+        pattern | "focusMove" =
+            [parts] {
+                std::string direction = atom::utils::trim(parts[1]);
+                int steps = std::stoi(atom::utils::trim(parts[2]));
+                LOG_F(INFO, "focusMove: {} {}", direction, steps);
+                match(direction)(
+                    pattern | "Left" =
+                        [steps] {
+                            LOG_F(INFO, "focusMove: Left {}", steps);
+                            focusMoveAndCalHFR(true, steps);
+                        },
+                    pattern | "Right" =
+                        [steps] {
+                            LOG_F(INFO, "focusMove: Right {}", steps);
+                            focusMoveAndCalHFR(false, steps);
+                        },
+                    pattern | "Target" =
+                        [steps] {
+                            LOG_F(INFO, "focusMove: Up {}", steps);
+                            // TODO: Implement FocusGotoAndCalFWHM
+                        });
+            },
+        pattern | "RedBox" =
+            [parts] {
+                int x = std::stoi(atom::utils::trim(parts[1]));
+                int y = std::stoi(atom::utils::trim(parts[2]));
+                int w = std::stoi(atom::utils::trim(parts[3]));
+                int h = std::stoi(atom::utils::trim(parts[4]));
+                LOG_F(INFO, "RedBox: {} {} {} {}", x, y, w, h);
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue("/lithium/device/camera/roi",
+                                        std::array<int, 2>({x, y}));
+                configManager->setValue("/lithium/device/camera/frame",
+                                        std::array<int, 2>({w, h}));
+            },
+        pattern | "RedBoxSizeChange" =
+            [parts] {
+                int boxSideLength = std::stoi(atom::utils::trim(parts[1]));
+                LOG_F(INFO, "RedBoxSizeChange: {}", boxSideLength);
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue(
+                    "/lithium/device/camera/box_side_length", boxSideLength);
+                auto [x, y] =
+                    configManager->getValue("/lithium/device/camera/frame")
+                        ->get<std::array<int, 2>>();
+                std::shared_ptr<atom::async::MessageBus> messageBusPtr;
+                GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
+                                  Constants::MESSAGE_BUS)
+                messageBusPtr->publish("main",
+                                       "MainCameraSize:{}:{}"_fmt(x, y));
+            },
+        pattern | "AutoFocus" =
+            [parts] {
+                LOG_F(INFO, "Start AutoFocus");
+                autofocus();
+            },
+        pattern | "StopAutoFocus" =
+            [parts] {
+                LOG_F(INFO, "Stop AutoFocus");
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue("/lithium/device/focuser/auto_focus",
+                                        false);
+            },
+        pattern | "abortExposure" =
+            [parts] {
+                LOG_F(INFO, "abortExposure");
+                indiAbortCapture();
+            },
+        pattern | "connectAllDevice" =
+            [parts] {
+                LOG_F(INFO, "connectAllDevice");
+                deviceConnect();
+            },
+        pattern | "CS" = [parts] { LOG_F(INFO, "CS"); },
+        pattern | "disconnectAllDevice" =
+            [parts] { LOG_F(INFO, "disconnectAllDevice"); },
+        pattern | "MountMoveWest" = [this, parts] {},
+        pattern | "MountMoveEast" = [this, parts] {},
+        pattern | "MountMoveNorth" = [this, parts] {},
+        pattern | "MountMoveSouth" = [this, parts] {},
+        pattern | "MountMoveAbort" = [this, parts] {},
+        pattern | "MountPark" = [this, parts] {},
+        pattern | "MountTrack" = [this, parts] {},
+        pattern | "MountHome" = [this, parts] {},
+        pattern | "MountSYNC" = [this, parts] {},
+        pattern | "MountSpeedSwitch" = [this, parts] {},
+        pattern | "ImageGainR" = [this, parts] {},
+        pattern | "ImageGainB" = [this, parts] {},
+        pattern | "ScheduleTabelData" = [this, parts] {},
+        pattern | "MountGoto" = [this, parts] {},
+        pattern | "StopSchedule" = [this, parts] {},
+        pattern | "CaptureImageSave" = [this, parts] {},
+        pattern | "getConnectedDevices" = [this, parts] {},
+        pattern | "getStagingImage" = [this, parts] {},
+        pattern | "StagingScheduleData" = [this, parts] {},
+        pattern | "getStagingGuiderData" = [this, parts] {},
+        pattern | "ExpTimeList" = [this, parts] {},
+        pattern | "getExpTimeList" = [this, parts] {},
+        pattern | "getCaptureStatus" = [this, parts] {},
+        pattern | "SetCFWPosition" = [this, parts] {},
+        pattern | "CFWList" = [this, parts] {},
+        pattern | "getCFWList" = [this, parts] {},
+        pattern | "ClearCalibrationData" = [this, parts] {},
+        pattern | "GuiderSwitch" = [this, parts] {},
+        pattern | "GuiderLoopExpSwitch" = [this, parts] {},
+        pattern | "PHD2Recalibrate" = [this, parts] {},
+        pattern | "GuiderExpTimeSwitch" = [this, parts] {},
+        pattern | "SolveSYNC" = [this, parts] {},
+        pattern | "ClearDataPoints" = [this, parts] {},
+        pattern | "ShowAllImageFolder" = [this, parts] {},
+        pattern | "MoveFileToUSB" = [this, parts] {},
+        pattern | "DeleteFile" = [this, parts] {},
+        pattern | "USBCheck" =
+            [parts] {
+                LOG_F(INFO, "USBCheck");
+                usbCheck();
+            },
+        pattern | "SolveImage" = [this, parts] {},
+        pattern | "startLoopSolveImage" = [this, parts] {},
+        pattern | "stopLoopSolveImage" = [this, parts] {},
+        pattern | "StartLoopCapture" = [this, parts] {},
+        pattern | "StopLoopCapture" = [this, parts] {},
+        pattern | "getStagingSolveResult" = [this, parts] {},
+        pattern | "ClearSloveResultList" = [this, parts] {},
+        pattern | "getOriginalImage" = [this, parts] {},
+        pattern | "saveCurrentLocation" =
+            [parts] {
+                LOG_F(INFO, "saveCurrentLocation");
+                double lat = std::stod(atom::utils::trim(parts[1]));
+                double lng = std::stod(atom::utils::trim(parts[2]));
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue("/lithium/location/lat", lat);
+                configManager->setValue("/lithium/location/lng", lng);
+            },
+        pattern | "getCurrentLocation" =
+            [parts] {
+                LOG_F(INFO, "getCurrentLocation");
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                double lat = configManager->getValue("/lithium/location/lat")
+                                 ->get<double>();
+                double lng = configManager->getValue("/lithium/location/lng")
+                                 ->get<double>();
+                std::shared_ptr<atom::async::MessageBus> messageBusPtr;
+                GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
+                                  Constants::MESSAGE_BUS)
+                messageBusPtr->publish(
+                    "main", "SetCurrentLocation:{}:{}"_fmt(lat, lng));
+            },
+        pattern | "getGPIOsStatus" =
+            [parts] {
+                LOG_F(INFO, "getGPIOsStatus");
+                getGPIOsStatus();
+            },
+        pattern | "SwitchOutPutPower" =
+            [parts] {
+                LOG_F(INFO, "SwitchOutPutPower: {}", parts[1]);
+                int gpio = std::stoi(atom::utils::trim(parts[1]));
+                switchOutPutPower(gpio);
+            },
+        pattern | "SetBinning" = [this, parts] {},
+        pattern | "GuiderCanvasClick" = [this, parts] {},
+        pattern | "getQTClientVersion" = [this, parts] {});
 }
 
 auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)

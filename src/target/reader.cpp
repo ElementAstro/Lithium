@@ -35,10 +35,10 @@ public:
           encoding_(encoding),
           delimiter_(dialect_.delimiter) {  // 初始化 delimiter_
         if (fieldnames_.empty()) {
-            throw std::invalid_argument("字段名不能为空。");
+            THROW_INVALID_ARGUMENT("字段名不能为空。");
         }
         if (!detectDialect(input)) {
-            throw std::runtime_error("方言检测失败。");
+            THROW_RUNTIME_ERROR("方言检测失败。");
         }
 
         // 如果提供了字段名，跳过第一行头部
@@ -97,7 +97,8 @@ private:
         return false;
     }
 
-    [[nodiscard]] auto parseLine(const std::string& line) const -> std::vector<std::string> {
+    [[nodiscard]] auto parseLine(const std::string& line) const
+        -> std::vector<std::string> {
         std::vector<std::string> result;
         std::string cell;
         bool insideQuotes = false;
@@ -195,9 +196,8 @@ private:
     }
 
     [[nodiscard]] auto needsQuotes(const std::string& field) const -> bool {
-        return field.find(dialect_.delimiter) != std::string::npos ||
-               field.find(dialect_.quotechar) != std::string::npos ||
-               field.find('\n') != std::string::npos;
+        return field.contains(dialect_.delimiter) ||
+               field.contains(dialect_.quotechar) || field.contains('\n');
     }
 
     [[nodiscard]] auto escape(const std::string& field) const -> std::string {

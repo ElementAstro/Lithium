@@ -16,10 +16,14 @@ void indiAbortCapture();
 auto setFocusSpeed(int speed) -> int;
 auto focusMoveAndCalHFR(bool isInward, int steps) -> double;
 void autofocus();
+void showAllImageFolder();
+void moveImageToUSB(const std::string& path);
+void deleteFile(const std::string& path);
 void usbCheck();
 void deviceConnect();
 void getGPIOsStatus();
 void switchOutPutPower(int id);
+void getQTClientVersion();
 }  // namespace lithium::middleware
 
 #endif

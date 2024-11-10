@@ -5,11 +5,13 @@
 #include <cmath>
 #include <mutex>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
 #include <eigen3/Eigen/Dense>
 
+// 自定义异常类
 class RecommendationEngineException : public std::runtime_error {
 public:
     explicit RecommendationEngineException(const std::string& message)
@@ -30,17 +32,22 @@ public:
 
 class AdvancedRecommendationEngine {
 private:
+    // 索引映射
     std::unordered_map<std::string, int> userIndex_;
     std::unordered_map<std::string, int> itemIndex_;
+    std::unordered_map<std::string, int> featureIndex_;
+
+    // 评分数据和特征数据
     std::vector<
         std::tuple<int, int, double, std::chrono::system_clock::time_point>>
         ratings_;
+    std::unordered_map<int, std::unordered_map<int, double>> itemFeatures_;
+
+    // 矩阵分解参数
     Eigen::MatrixXd userFactors_;
     Eigen::MatrixXd itemFactors_;
-    std::unordered_map<std::string, std::unordered_map<std::string, double>>
-        itemFeatures_;
-    std::vector<std::vector<int>> userItemGraph_;
 
+    // 参数
     static constexpr int LATENT_FACTORS = 20;
     static constexpr double LEARNING_RATE = 0.01;
     static constexpr double REGULARIZATION = 0.02;
@@ -55,34 +62,38 @@ private:
     static constexpr int PPR_ITERATIONS = 20;
     static constexpr int ALS_ITERATIONS = 10;
 
-    std::mutex mtx_;  // 互斥锁确保线程安全
+    mutable std::mutex mtx_;  // 互斥锁确保线程安全
 
+    // 内部方法
     auto getUserId(const std::string& user) -> int;
     auto getItemId(const std::string& item) -> int;
+    auto getFeatureId(const std::string& feature) -> int;
     auto calculateTimeFactor(const std::chrono::system_clock::time_point&
                                  ratingTime) const -> double;
     void updateMatrixFactorization();
-    void buildUserItemGraph();
-    auto personalizedPageRank(int userId, double alpha = PPR_ALPHA,
-                              int numIterations = PPR_ITERATIONS)
-        -> std::vector<double>;
     void normalizeRatings();
 
 public:
+    AdvancedRecommendationEngine() = default;
+    ~AdvancedRecommendationEngine() = default;
+
+    // 添加数据的方法
     void addRating(const std::string& user, const std::string& item,
                    double rating);
     void addImplicitFeedback(const std::string& user, const std::string& item);
+    void addItem(const std::string& item,
+                 const std::vector<std::string>& features);
     void addItemFeature(const std::string& item, const std::string& feature,
                         double value);
+
+    // 训练和预测的方法
     void train();
-    void incrementTrain(int numIterations = ALS_ITERATIONS);
-    auto evaluate(
-        const std::vector<std::tuple<std::string, std::string, double>>&
-            testRatings) -> std::pair<double, double>;  // 准确率和召回率
     auto recommendItems(const std::string& user, int topN = 5)
         -> std::vector<std::pair<std::string, double>>;
     auto predictRating(const std::string& user,
                        const std::string& item) -> double;
+
+    // 模型持久化
     void saveModel(const std::string& filename);
     void loadModel(const std::string& filename);
 };

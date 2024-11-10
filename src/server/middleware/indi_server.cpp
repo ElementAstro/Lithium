@@ -1,4 +1,7 @@
 #include "indi_server.hpp"
+
+#include "config.h"
+
 #include <memory>
 
 #include "config/configor.hpp"
@@ -9,6 +12,7 @@
 #include "atom/async/timer.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
+#include "atom/io/file_permission.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/sysinfo/disk.hpp"
 #include "atom/system/command.hpp"
@@ -563,6 +567,109 @@ auto callPHDWhichCamera(const std::string& Camera) -> bool {
         return QHYCCD_SUCCESS;
     */
     return true;
+}
+
+auto parseString(const std::string& input,
+                 const std::string& imgFilePath) -> std::vector<std::string> {
+    std::vector<std::string> paths;
+    std::string baseString;
+
+    // 查找第一个'{'
+    size_t pos = input.find('{');
+    if (pos != std::string::npos) {
+        // 获取 baseString
+        baseString = input.substr(0, pos);
+
+        // 获取 '{' 后的内容
+        std::string content = input.substr(pos + 1);
+
+        // 查找配对的 '}'
+        size_t endPos = content.find('}');
+        if (endPos != std::string::npos) {
+            content = content.substr(0, endPos);
+
+            // 去掉末尾的分号（如果有的话）
+            if (!content.empty() && content.back() == ';') {
+                content.pop_back();
+            }
+
+            // 分割 content
+            size_t start = 0;
+            size_t end;
+            while ((end = content.find(';', start)) != std::string::npos) {
+                std::string part = content.substr(start, end - start);
+                // 去掉可能的空部分
+                if (!part.empty()) {
+                    // 拼接完整的路径并添加到路径列表
+                    paths.push_back(std::filesystem::path(imgFilePath) /
+                                    baseString / part);
+                }
+                start = end + 1;
+            }
+            // 添加最后一个部分（如果存在）
+            if (start < content.size()) {
+                std::string part = content.substr(start);
+                if (!part.empty()) {
+                    paths.push_back(std::filesystem::path(imgFilePath) /
+                                    baseString / part);
+                }
+            }
+        }
+    }
+    return paths;
+}
+
+bool remountReadWrite(const std::string& mountPoint,
+                      const std::string& password) {
+    std::ostringstream commandStream;
+    commandStream << "echo '" << password << "' | sudo -S mount -o remount,rw "
+                  << mountPoint;
+    std::string command = commandStream.str();
+    return system(command.c_str()) == 0;
+}
+
+long long getUSBSpace(const std::string& path) {
+    try {
+        auto spaceInfo = fs::space(path);
+        return spaceInfo.available;
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Filesystem error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+long long getTotalSize(const std::vector<std::string>& paths) {
+    long long totalSize = 0;
+    for (const auto& path : paths) {
+        try {
+            totalSize += fs::file_size(path);
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "Filesystem error: " << e.what() << std::endl;
+        }
+    }
+    return totalSize;
+}
+
+auto getAllFile() -> std::string {
+    std::shared_ptr<ConfigManager> configManager;
+    GET_OR_CREATE_PTR(configManager, ConfigManager, Constants::CONFIG_MANAGER)
+    std::string imageSaveBasePath =
+        configManager->getValue("/lithium/server/image_save_path")
+            ->get<std::string>();
+    std::string capturePath = imageSaveBasePath + "/CaptureImage/";
+    std::string planPath = imageSaveBasePath + "/ScheduleImage/";
+
+    auto getFiles = [](const std::string& path) {
+        std::ostringstream oss;
+        for (const auto& entry : fs::directory_iterator(path)) {
+            oss << entry.path().filename().string() << ";";
+        }
+        return oss.str();
+    };
+
+    std::string captureString = "CaptureImage{" + getFiles(capturePath) + "}";
+    std::string planString = "ScheduleImage{" + getFiles(planPath) + "}";
+    return captureString + ":" + planString;
 }
 
 }  // namespace internal
@@ -1215,5 +1322,157 @@ void switchOutPutPower(int id) {
         messageBusPtr->publish("main",
                                "OutPutPowerStatus:{}:{}"_fmt(id, newValue));
     }
+}
+
+void showAllImageFolder() {
+    auto files = internal::getAllFile();
+    std::shared_ptr<atom::async::MessageBus> messageBusPtr;
+    GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
+                      Constants::MESSAGE_BUS)
+    messageBusPtr->publish("main", "ShowAllImageFolder:" + files);
+}
+
+void moveImageToUSB(const std::string& path) {
+    std::shared_ptr<ConfigManager> configManager;
+    GET_OR_CREATE_PTR(configManager, ConfigManager, Constants::CONFIG_MANAGER)
+    std::string imageBasePath =
+        configManager->getValue("/lithium/image/base_path")
+            .value_or("~/images");
+    std::vector<std::string> files = internal::parseString(path, imageBasePath);
+
+    std::string basePath = "/media/" + std::string(getenv("USER"));
+    if (!fs::exists(basePath)) {
+        std::cerr << "Base directory does not exist." << std::endl;
+        return;
+    }
+
+    std::vector<std::string> folderList;
+    for (const auto& entry : fs::directory_iterator(basePath)) {
+        if (entry.is_directory() && entry.path().filename() != "CDROM") {
+            folderList.push_back(entry.path().string());
+        }
+    }
+
+    if (folderList.size() != 1) {
+        std::string errorMsg = folderList.empty()
+                                   ? "ImageSaveError:USB-Null"
+                                   : "ImageSaveError:USB-Multiple";
+        std::cerr << errorMsg << std::endl;
+        return;
+    }
+
+    std::string usb_mount_point = folderList.front();
+    std::cout << "USB mount point: " << usb_mount_point << std::endl;
+
+    const std::string password = "quarcs";  // sudo 密码
+
+    if (!fs::exists(usb_mount_point) || !fs::is_directory(usb_mount_point)) {
+        std::cerr << "指定路径不是有效的文件系统或未准备好" << std::endl;
+        return;
+    }
+
+    if ((fs::status(usb_mount_point).permissions() & fs::perms::owner_write) !=
+        fs::perms::none) {
+        if (!internal::remountReadWrite(usb_mount_point, password)) {
+            LOG_F(ERROR, "Failed to remount filesystem as read-write");
+            return;
+        }
+        LOG_F(INFO, "Filesystem remounted as read-write successfully");
+    }
+
+    long long remainingSpace = internal::getUSBSpace(usb_mount_point);
+    if (remainingSpace == -1) {
+        LOG_F(ERROR, "Failed to get USB space");
+        return;
+    }
+
+    long long totalSize = internal::getTotalSize(files);
+    if (totalSize >= remainingSpace) {
+        LOG_F(ERROR, "Insufficient space on USB drive");
+        return;
+    }
+
+    std::string folderPath = usb_mount_point + "/QUARCS_ImageSave";
+    int sumMoveImage = 0;
+
+    for (const auto& imgPath : files) {
+        fs::path sourcePath(imgPath);
+        fs::path destinationPath = fs::path(folderPath) / sourcePath.filename();
+
+        std::ostringstream mkdirCommand;
+        mkdirCommand << "echo '" << password << "' | sudo -S mkdir -p "
+                     << destinationPath.parent_path().string();
+        if (system(mkdirCommand.str().c_str()) != 0) {
+            LOG_F(ERROR, "Failed to create directory: {}",
+                  destinationPath.parent_path().string());
+            continue;
+        }
+
+        std::ostringstream cpCommand;
+        cpCommand << "echo '" << password << "' | sudo -S cp -r "
+                  << sourcePath.string() << " " << destinationPath.string();
+        if (system(cpCommand.str().c_str()) != 0) {
+            LOG_F(ERROR, "Failed to copy file: {} to {}", sourcePath.string(),
+                  destinationPath.string());
+            continue;
+        }
+
+        std::cout << "Copied file: " << sourcePath.string() << " to "
+                  << destinationPath.string() << std::endl;
+        sumMoveImage++;
+    }
+    LOG_F(INFO, "Total moved images: {}", sumMoveImage);
+}
+
+void deleteFile(const std::string& path) {
+    std::shared_ptr<ConfigManager> configManager;
+    GET_OR_CREATE_PTR(configManager, ConfigManager, Constants::CONFIG_MANAGER)
+    std::string imageBasePath =
+        configManager->getValue("/lithium/image/base_path")
+            .value_or("~/images");
+    std::vector<std::string> files = internal::parseString(path, imageBasePath);
+
+    // Max: Although QuarcS is an open-source project, it is not recommended to
+    // use the sudo command in the code.
+    // std::string password = "quarcs";  //
+    // sudo 密码
+    for (const auto& file : files) {
+        if (auto opt = atom::io::compareFileAndSelfPermissions(file)) {
+            LOG_F(ERROR, "Failed to compare file permissions: {}", file);
+            continue;
+        } else {
+            std::string command;
+            if (!opt.value()) {
+                std::string password =
+                    configManager->getValue("/lithium/password")
+                        .value_or("lithium");
+                LOG_F(ERROR, "No permission to delete file: {}", file);
+                command = std::format("echo '{}' | sudo -S rm -rf \"{}\"",
+                                      password, file);
+            } else {
+                command = std::format("rm -rf \"{}\"", file);
+            }
+            LOG_F(INFO, "Using command: {}", command);
+
+            // 执行系统命令删除文件
+            auto result =
+                atom::system::executeCommandWithStatus(command).second;
+
+            if (result == 0) {
+                LOG_F(INFO, "Deleted file: {}", file);
+            } else {
+                LOG_F(ERROR, "Failed to delete file: {}", file);
+            }
+        }
+    }
+}
+
+void getQTClientVersion() {
+    std::shared_ptr<atom::async::MessageBus> messageBusPtr;
+    GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
+                      Constants::MESSAGE_BUS)
+
+    messageBusPtr->publish(
+        "main", "QTClientVersion:" + std::string(LITHIUM_VERSION_STRING));
 }
 }  // namespace lithium::middleware

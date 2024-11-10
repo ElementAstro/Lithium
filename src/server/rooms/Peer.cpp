@@ -368,55 +368,65 @@ auto Peer::handleQTextMessage(const std::string& message)
         pattern | "CS" = [parts] { LOG_F(INFO, "CS"); },
         pattern | "disconnectAllDevice" =
             [parts] { LOG_F(INFO, "disconnectAllDevice"); },
-        pattern | "MountMoveWest" = [this, parts] {},
-        pattern | "MountMoveEast" = [this, parts] {},
-        pattern | "MountMoveNorth" = [this, parts] {},
-        pattern | "MountMoveSouth" = [this, parts] {},
-        pattern | "MountMoveAbort" = [this, parts] {},
-        pattern | "MountPark" = [this, parts] {},
-        pattern | "MountTrack" = [this, parts] {},
-        pattern | "MountHome" = [this, parts] {},
-        pattern | "MountSYNC" = [this, parts] {},
-        pattern | "MountSpeedSwitch" = [this, parts] {},
-        pattern | "ImageGainR" = [this, parts] {},
-        pattern | "ImageGainB" = [this, parts] {},
-        pattern | "ScheduleTabelData" = [this, parts] {},
-        pattern | "MountGoto" = [this, parts] {},
-        pattern | "StopSchedule" = [this, parts] {},
-        pattern | "CaptureImageSave" = [this, parts] {},
-        pattern | "getConnectedDevices" = [this, parts] {},
-        pattern | "getStagingImage" = [this, parts] {},
-        pattern | "StagingScheduleData" = [this, parts] {},
-        pattern | "getStagingGuiderData" = [this, parts] {},
-        pattern | "ExpTimeList" = [this, parts] {},
-        pattern | "getExpTimeList" = [this, parts] {},
-        pattern | "getCaptureStatus" = [this, parts] {},
-        pattern | "SetCFWPosition" = [this, parts] {},
-        pattern | "CFWList" = [this, parts] {},
-        pattern | "getCFWList" = [this, parts] {},
-        pattern | "ClearCalibrationData" = [this, parts] {},
-        pattern | "GuiderSwitch" = [this, parts] {},
-        pattern | "GuiderLoopExpSwitch" = [this, parts] {},
-        pattern | "PHD2Recalibrate" = [this, parts] {},
-        pattern | "GuiderExpTimeSwitch" = [this, parts] {},
-        pattern | "SolveSYNC" = [this, parts] {},
-        pattern | "ClearDataPoints" = [this, parts] {},
-        pattern | "ShowAllImageFolder" = [this, parts] {},
-        pattern | "MoveFileToUSB" = [this, parts] {},
-        pattern | "DeleteFile" = [this, parts] {},
+        pattern | "MountMoveWest" = [parts] {},
+        pattern | "MountMoveEast" = [parts] {},
+        pattern | "MountMoveNorth" = [parts] {},
+        pattern | "MountMoveSouth" = [parts] {},
+        pattern | "MountMoveAbort" = [parts] {},
+        pattern | "MountPark" = [parts] {}, pattern | "MountTrack" = [parts] {},
+        pattern | "MountHome" = [parts] {}, pattern | "MountSYNC" = [parts] {},
+        pattern | "MountSpeedSwitch" = [parts] {},
+        pattern | "ImageGainR" = [parts] {},
+        pattern | "ImageGainB" = [parts] {},
+        pattern | "ScheduleTabelData" = [parts] {},
+        pattern | "MountGoto" = [parts] {},
+        pattern | "StopSchedule" = [parts] {},
+        pattern | "CaptureImageSave" = [parts] {},
+        pattern | "getConnectedDevices" = [parts] {},
+        pattern | "getStagingImage" = [parts] {},
+        pattern | "StagingScheduleData" = [parts] {},
+        pattern | "getStagingGuiderData" = [parts] {},
+        pattern | "ExpTimeList" = [parts] {},
+        pattern | "getExpTimeList" = [parts] {},
+        pattern | "getCaptureStatus" = [parts] {},
+        pattern | "SetCFWPosition" = [parts] {},
+        pattern | "CFWList" = [parts] {}, pattern | "getCFWList" = [parts] {},
+        pattern | "ClearCalibrationData" = [parts] {},
+        pattern | "GuiderSwitch" = [parts] {},
+        pattern | "GuiderLoopExpSwitch" = [parts] {},
+        pattern | "PHD2Recalibrate" = [parts] {},
+        pattern | "GuiderExpTimeSwitch" = [parts] {},
+        pattern | "SolveSYNC" = [parts] {},
+        pattern | "ClearDataPoints" = [parts] {},
+        pattern | "ShowAllImageFolder" = [parts] {
+            LOG_F(INFO, "ShowAllImageFolder");
+            showAllImageFolder();
+        },
+        pattern | "MoveFileToUSB" =
+            [parts] {
+                LOG_F(INFO, "MoveFileToUSB: {}", parts[1]);
+                std::string fileName = atom::utils::trim(parts[1]);
+                moveImageToUSB(fileName);
+            },
+        pattern | "DeleteFile" =
+            [parts] {
+                LOG_F(INFO, "DeleteFile: {}", parts[1]);
+                std::string fileName = atom::utils::trim(parts[1]);
+                deleteFile(fileName);
+            },
         pattern | "USBCheck" =
             [parts] {
                 LOG_F(INFO, "USBCheck");
                 usbCheck();
             },
-        pattern | "SolveImage" = [this, parts] {},
-        pattern | "startLoopSolveImage" = [this, parts] {},
-        pattern | "stopLoopSolveImage" = [this, parts] {},
-        pattern | "StartLoopCapture" = [this, parts] {},
-        pattern | "StopLoopCapture" = [this, parts] {},
-        pattern | "getStagingSolveResult" = [this, parts] {},
-        pattern | "ClearSloveResultList" = [this, parts] {},
-        pattern | "getOriginalImage" = [this, parts] {},
+        pattern | "SolveImage" = [parts] {},
+        pattern | "startLoopSolveImage" = [parts] {},
+        pattern | "stopLoopSolveImage" = [parts] {},
+        pattern | "StartLoopCapture" = [parts] {},
+        pattern | "StopLoopCapture" = [parts] {},
+        pattern | "getStagingSolveResult" = [parts] {},
+        pattern | "ClearSloveResultList" = [parts] {},
+        pattern | "getOriginalImage" = [parts] {},
         pattern | "saveCurrentLocation" =
             [parts] {
                 LOG_F(INFO, "saveCurrentLocation");
@@ -455,9 +465,9 @@ auto Peer::handleQTextMessage(const std::string& message)
                 int gpio = std::stoi(atom::utils::trim(parts[1]));
                 switchOutPutPower(gpio);
             },
-        pattern | "SetBinning" = [this, parts] {},
-        pattern | "GuiderCanvasClick" = [this, parts] {},
-        pattern | "getQTClientVersion" = [this, parts] {});
+        pattern | "SetBinning" = [parts] {},
+        pattern | "GuiderCanvasClick" = [parts] {},
+        pattern | "getQTClientVersion" = [parts] { getQTClientVersion(); });
 }
 
 auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)

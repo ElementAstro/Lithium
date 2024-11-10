@@ -1,1884 +1,2046 @@
-/**
- * @file task_interpreter.cpp
- * @brief Task Interpreter for managing and executing scripts.
- *
- * This file defines the `TaskInterpreter` class, which is responsible for
- * loading, managing, and executing tasks represented as JSON scripts. The
- * `TaskInterpreter` class provides functionality to register functions and
- * exception handlers, set and retrieve variables, and control script execution
- * flow (e.g., pause, resume, stop). It supports various script operations such
- * as parsing labels, executing steps, handling exceptions, and evaluating
- * expressions.
- *
- * The class also supports asynchronous operations and event handling, making it
- * suitable for dynamic and complex scripting environments.
- *
- * @date 2023-04-03
- * @author Max Qian <lightapt.com>
- * @copyright Copyright (C) 2023-2024 Max Qian
- */
-
-#include "config.h"
-
-#include "generator.hpp"
 #include "manager.hpp"
-#include "task.hpp"
 
-#include <atomic>
-#include <condition_variable>
-#include <exception>
-#include <functional>
+#include <cctype>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
-#include <optional>
-#include <queue>
 #include <ranges>
-#include <shared_mutex>
-#include <stack>
+#include <stdexcept>
 #include <string>
-#include <system_error>
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
-#include "atom/async/pool.hpp"
+#include <dlfcn.h>
+#include <ffi.h>
+
 #include "atom/error/exception.hpp"
-#include "atom/function/abi.hpp"
-#include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/system/env.hpp"
+#include "atom/macro.hpp"
 
-#include "task/loader.hpp"
-
-#include "utils/constant.hpp"
-
-#include "matchit/matchit.h"
-
-// #define ENABLE_DEBUG 1
-
-#if ENABLE_DEBUG
-#include <iostream>
-#endif
-
-using namespace std::literals;
-
-auto operator<<(std::ostream& outputStream,
-                const std::error_code& errorCode) -> std::ostream& {
-    outputStream << "Error Code: " << errorCode.value()
-                 << ", Category: " << errorCode.category().name()
-                 << ", Message: " << errorCode.message();
-    return outputStream;
-}
+namespace fs = std::filesystem;
 
 namespace lithium {
-
-auto determineType(const json& value) -> VariableType {
-    if (value.is_number()) {
-        return VariableType::NUMBER;
-    }
-    if (value.is_string()) {
-        return VariableType::STRING;
-    }
-    if (value.is_boolean()) {
-        return VariableType::BOOLEAN;
-    }
-    if (value.is_object() || value.is_array()) {
-        return VariableType::JSON;
-    }
-    return VariableType::UNKNOWN;
-}
-
-class TaskInterpreterImpl {
-public:
-    std::unordered_map<std::string, json> scripts;
-    std::unordered_map<std::string, json> scriptHeaders;  // 存储脚本头部信息
-    std::unordered_map<std::string, std::pair<VariableType, json>> variables;
-    std::unordered_map<std::string, std::error_code> customErrors;
-    std::unordered_map<std::string, std::function<json(const json&)>> functions;
-    std::unordered_map<std::string, size_t> labels;
-    std::unordered_map<std::string, std::function<void(const std::exception&)>>
-        exceptionHandlers;
-    std::atomic<bool> stopRequested{false};
-    std::atomic<bool> pauseRequested{false};
-    std::atomic<bool> isRunning{false};
-    std::jthread executionThread;
-    std::vector<std::string> callStack;
-    mutable std::shared_timed_mutex mtx;
-    std::condition_variable_any cv;
-    std::queue<std::pair<std::string, json>> eventQueue;
-
-    std::shared_ptr<TaskGenerator> taskGenerator;
-    std::shared_ptr<atom::async::ThreadPool<>> threadPool;
-
-    std::unordered_map<std::string, std::coroutine_handle<>> coroutines;
-    std::vector<std::function<void()>> transactionRollbackActions;
+// Token种类
+enum class TokenType {
+    NUMBER,             // 数字（整数和浮点数）
+    STRING,             // 字符串字面量
+    PLUS,               // +
+    MINUS,              // -
+    MULTIPLY,           // *
+    DIVIDE,             // /
+    IDENTIFIER,         // 标识符
+    ASSIGNMENT,         // =
+    SEMICOLON,          // ;
+    COLON,              // :
+    DOUBLE_COLON,       // ::
+    LEFT_PARENTHESIS,   // (
+    RIGHT_PARENTHESIS,  // )
+    LEFT_BRACKET,       // [
+    RIGHT_BRACKET,      // ]
+    LEFT_BRACE,         // {
+    RIGHT_BRACE,        // }
+    IF,                 // if
+    ELSE,               // else
+    WHILE,              // while
+    FOR,                // for
+    SWITCH,             // switch
+    CASE,               // case
+    FUNCTION,           // function
+    RETURN,             // return
+    IMPORT,             // import
+    AS,                 // as
+    TRY,                // try
+    CATCH,              // catch
+    THROW,              // throw
+    GOTO,               // goto
+    LABEL,              // label
+    CLASS,              // class
+    ENUM_CLASS,         // enum class
+    COMMA,              // ,
+    GREATER,            // >
+    LESS,               // <
+    GREATER_EQUAL,      // >=
+    LESS_EQUAL,         // <=
+    EQUAL,              // ==
+    NOT_EQUAL,          // !=
+    AND,                // &&
+    OR,                 // ||
+    NOT,                // !
+    END_OF_FILE,        // 文件结束
 };
 
-TaskInterpreter::TaskInterpreter()
-    : impl_(std::make_unique<TaskInterpreterImpl>()) {
-    if (auto ptr = GetPtrOrCreate<atom::async::ThreadPool<>>(
-            "lithium.task.pool",
-            [] { return std::make_shared<atom::async::ThreadPool<>>(); });
-        ptr) {
-        impl_->threadPool = ptr;
-    } else {
-        THROW_RUNTIME_ERROR("Failed to create task pool.");
+// Token结构
+struct Token {
+    TokenType type;
+    std::string value;
+} ATOM_ALIGNAS(64);
+
+// AST节点基类
+struct ASTNode {
+    virtual ~ASTNode() = default;
+    [[nodiscard]] virtual auto clone() const -> std::shared_ptr<ASTNode> = 0;
+};
+
+// 数字节点
+struct Number : ASTNode {
+private:
+    std::string value_;
+
+public:
+    explicit Number(std::string val) : value_(std::move(val)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<Number>(*this);
     }
-    if (auto ptr = GetPtrOrCreate<TaskGenerator>("lithium.task.generator", [] {
-            return std::make_shared<TaskGenerator>();
-        })) {
-        impl_->taskGenerator = ptr;
-    } else {
-        THROW_RUNTIME_ERROR("Failed to create task generator.");
+
+    [[nodiscard]] auto getValue() const -> const std::string& { return value_; }
+} ATOM_ALIGNAS(32);
+
+// 字符串节点
+struct StringLiteral : ASTNode {
+private:
+    std::string value_;
+
+public:
+    explicit StringLiteral(std::string val) : value_(std::move(val)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<StringLiteral>(*this);
     }
-}
 
-TaskInterpreter::~TaskInterpreter() {
-    if (impl_->executionThread.joinable()) {
-        stop();
-        // impl_->executionThread_.join();
+    [[nodiscard]] auto getValue() const -> const std::string& { return value_; }
+} ATOM_ALIGNAS(32);
+
+// 标识符节点
+struct Identifier : ASTNode {
+private:
+    std::string name_;
+
+public:
+    explicit Identifier(std::string n) : name_(std::move(n)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<Identifier>(*this);
     }
-}
 
-auto TaskInterpreter::createShared() -> std::shared_ptr<TaskInterpreter> {
-    return std::make_shared<TaskInterpreter>();
-}
+    [[nodiscard]] auto getName() const -> const std::string& { return name_; }
+} ATOM_ALIGNAS(32);
 
-void TaskInterpreter::loadScript(const std::string& name, const json& script) {
-    LOG_F(INFO, "Loading script: {} with {}", name, script.dump());
+// 二元操作节点
+struct BinaryOp : ASTNode {
+private:
+    std::shared_ptr<ASTNode> left_;
+    std::shared_ptr<ASTNode> right_;
+    Token opToken_;
 
-    std::unique_lock lock(impl_->mtx);
-    impl_->scripts[name] = script.contains("steps") ? script["steps"] : script;
-    lock.unlock();
-    if (prepareScript(impl_->scripts[name])) {
-        parseLabels(impl_->scripts[name]);
-        if (script.contains("header")) {
-            const auto& header = script["header"];
-            LOG_F(INFO, "Loading script: {} (version: {}, author: {})",
-                  header.contains("name") ? header["name"].get<std::string>()
-                                          : name,
-                  header.contains("version")
-                      ? header["version"].get<std::string>()
-                      : "unknown",
-                  header.contains("author")
-                      ? header["author"].get<std::string>()
-                      : "unknown");
+public:
+    BinaryOp(std::shared_ptr<ASTNode> lhs, Token opr,
+             std::shared_ptr<ASTNode> rhs)
+        : left_(std::move(lhs)),
+          right_(std::move(rhs)),
+          opToken_(std::move(opr)) {}
 
-            impl_->scriptHeaders[name] = header;
-            if (header.contains("auto_execute") &&
-                header["auto_execute"].is_boolean() &&
-                header["auto_execute"].get<bool>()) {
-                LOG_F(INFO, "Auto-executing script '{}'.", name);
-                execute(name);
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<BinaryOp>(left_->clone(), opToken_,
+                                          right_->clone());
+    }
+
+    [[nodiscard]] auto getLeft() const -> const std::shared_ptr<ASTNode>& {
+        return left_;
+    }
+
+    [[nodiscard]] auto getRight() const -> const std::shared_ptr<ASTNode>& {
+        return right_;
+    }
+
+    [[nodiscard]] auto getOp() const -> const Token& { return opToken_; }
+} ATOM_ALIGNAS(128);
+
+// 赋值语句节点
+struct Assignment : ASTNode {
+private:
+    std::shared_ptr<Identifier> identifier_;
+    std::shared_ptr<ASTNode> value_;
+
+public:
+    Assignment(std::shared_ptr<Identifier> ident, std::shared_ptr<ASTNode> val)
+        : identifier_(std::move(ident)), value_(std::move(val)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<Assignment>(
+            std::dynamic_pointer_cast<Identifier>(identifier_->clone()),
+            value_->clone());
+    }
+
+    [[nodiscard]] auto getIdentifier() const
+        -> const std::shared_ptr<Identifier>& {
+        return identifier_;
+    }
+
+    [[nodiscard]] auto getValue() const -> const std::shared_ptr<ASTNode>& {
+        return value_;
+    }
+} ATOM_ALIGNAS(32);
+
+// 表达式语句节点
+struct ExpressionStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> expression_;
+
+public:
+    explicit ExpressionStatement(std::shared_ptr<ASTNode> expr)
+        : expression_(std::move(expr)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<ExpressionStatement>(expression_->clone());
+    }
+
+    [[nodiscard]] auto getExpression() const
+        -> const std::shared_ptr<ASTNode>& {
+        return expression_;
+    }
+} ATOM_ALIGNAS(16);
+
+// 块语句节点
+struct BlockStatement : ASTNode {
+private:
+    std::vector<std::shared_ptr<ASTNode>> statements_;
+
+public:
+    BlockStatement() = default;
+
+    void addStatement(std::shared_ptr<ASTNode> stmt) {
+        statements_.push_back(std::move(stmt));
+    }
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        auto newBlock = std::make_shared<BlockStatement>();
+        for (const auto& stmt : statements_) {
+            newBlock->addStatement(stmt->clone());
+        }
+        return newBlock;
+    }
+
+    [[nodiscard]] auto getStatements() const
+        -> const std::vector<std::shared_ptr<ASTNode>>& {
+        return statements_;
+    }
+} ATOM_ALIGNAS(32);
+
+// if语句节点
+struct IfStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> condition_;
+    std::shared_ptr<ASTNode> thenBranch_;
+    std::shared_ptr<ASTNode> elseBranch_;
+
+public:
+    IfStatement(std::shared_ptr<ASTNode> cond, std::shared_ptr<ASTNode> thenBr,
+                std::shared_ptr<ASTNode> elseBr = nullptr)
+        : condition_(std::move(cond)),
+          thenBranch_(std::move(thenBr)),
+          elseBranch_(std::move(elseBr)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<IfStatement>(
+            condition_->clone(), thenBranch_->clone(),
+            elseBranch_ ? elseBranch_->clone() : nullptr);
+    }
+
+    [[nodiscard]] auto getCondition() const -> const std::shared_ptr<ASTNode>& {
+        return condition_;
+    }
+
+    [[nodiscard]] auto getThenBranch() const
+        -> const std::shared_ptr<ASTNode>& {
+        return thenBranch_;
+    }
+
+    [[nodiscard]] auto getElseBranch() const
+        -> const std::shared_ptr<ASTNode>& {
+        return elseBranch_;
+    }
+} ATOM_ALIGNAS(64);
+
+// while语句节点
+struct WhileStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> condition_;
+    std::shared_ptr<ASTNode> body_;
+
+public:
+    WhileStatement(std::shared_ptr<ASTNode> cond,
+                   std::shared_ptr<ASTNode> bodyStmt)
+        : condition_(std::move(cond)), body_(std::move(bodyStmt)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<WhileStatement>(condition_->clone(),
+                                                body_->clone());
+    }
+
+    [[nodiscard]] auto getCondition() const -> const std::shared_ptr<ASTNode>& {
+        return condition_;
+    }
+
+    [[nodiscard]] auto getBody() const -> const std::shared_ptr<ASTNode>& {
+        return body_;
+    }
+} ATOM_ALIGNAS(32);
+
+// for语句节点
+struct ForStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> initializer_;
+    std::shared_ptr<ASTNode> condition_;
+    std::shared_ptr<ASTNode> increment_;
+    std::shared_ptr<ASTNode> body_;
+
+public:
+    ForStatement(std::shared_ptr<ASTNode> init, std::shared_ptr<ASTNode> cond,
+                 std::shared_ptr<ASTNode> incr, std::shared_ptr<ASTNode> body)
+        : initializer_(std::move(init)),
+          condition_(std::move(cond)),
+          increment_(std::move(incr)),
+          body_(std::move(body)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<ForStatement>(
+            initializer_->clone(), condition_->clone(), increment_->clone(),
+            body_->clone());
+    }
+
+    [[nodiscard]] auto getInitializer() const
+        -> const std::shared_ptr<ASTNode>& {
+        return initializer_;
+    }
+    [[nodiscard]] auto getCondition() const -> const std::shared_ptr<ASTNode>& {
+        return condition_;
+    }
+    [[nodiscard]] auto getIncrement() const -> const std::shared_ptr<ASTNode>& {
+        return increment_;
+    }
+    [[nodiscard]] auto getBody() const -> const std::shared_ptr<ASTNode>& {
+        return body_;
+    }
+} ATOM_ALIGNAS(64);
+
+// switch-case语句节点
+struct SwitchStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> condition_;
+    std::vector<
+        std::pair<std::shared_ptr<ASTNode>, std::shared_ptr<BlockStatement>>>
+        cases_;
+
+public:
+    SwitchStatement(std::shared_ptr<ASTNode> cond,
+                    std::vector<std::pair<std::shared_ptr<ASTNode>,
+                                          std::shared_ptr<BlockStatement>>>
+                        cases)
+        : condition_(std::move(cond)), cases_(std::move(cases)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        std::vector<std::pair<std::shared_ptr<ASTNode>,
+                              std::shared_ptr<BlockStatement>>>
+            clonedCases;
+        clonedCases.reserve(cases_.size());
+        for (const auto& [caseValue, caseBlock] : cases_) {
+            clonedCases.emplace_back(
+                caseValue->clone(),
+                std::dynamic_pointer_cast<BlockStatement>(caseBlock->clone()));
+        }
+        return std::make_shared<SwitchStatement>(condition_->clone(),
+                                                 std::move(clonedCases));
+    }
+
+    [[nodiscard]] auto getCondition() const -> const std::shared_ptr<ASTNode>& {
+        return condition_;
+    }
+
+    [[nodiscard]] auto getCases() const
+        -> const std::vector<std::pair<std::shared_ptr<ASTNode>,
+                                       std::shared_ptr<BlockStatement>>>& {
+        return cases_;
+    }
+} ATOM_ALIGNAS(64);
+
+// 函数定义节点
+struct FunctionDef : ASTNode {
+private:
+    std::string name_;
+    std::vector<std::string> params_;
+    std::shared_ptr<BlockStatement> body_;
+
+public:
+    FunctionDef(std::string funcName, std::vector<std::string> paramList,
+                std::shared_ptr<BlockStatement> bodyStmt)
+        : name_(std::move(funcName)),
+          params_(std::move(paramList)),
+          body_(std::move(bodyStmt)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<FunctionDef>(
+            name_, params_,
+            std::dynamic_pointer_cast<BlockStatement>(body_->clone()));
+    }
+
+    [[nodiscard]] auto getName() const -> const std::string& { return name_; }
+
+    [[nodiscard]] auto getParams() const -> const std::vector<std::string>& {
+        return params_;
+    }
+
+    [[nodiscard]] auto getBody() const
+        -> const std::shared_ptr<BlockStatement>& {
+        return body_;
+    }
+} ATOM_ALIGNAS(128);
+
+struct ClassDefinition : ASTNode {
+private:
+    std::string name_;
+    std::unordered_map<std::string, std::shared_ptr<ASTNode>> members_;
+
+public:
+    ClassDefinition(
+        std::string className,
+        std::unordered_map<std::string, std::shared_ptr<ASTNode>> members)
+        : name_(std::move(className)), members_(std::move(members)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        std::unordered_map<std::string, std::shared_ptr<ASTNode>> clonedMembers;
+        for (const auto& [name, member] : members_) {
+            clonedMembers[name] = member->clone();
+        }
+        return std::make_shared<ClassDefinition>(name_,
+                                                 std::move(clonedMembers));
+    }
+
+    auto getName() const -> const std::string& { return name_; }
+    auto getMembers() const
+        -> const std::unordered_map<std::string, std::shared_ptr<ASTNode>>& {
+        return members_;
+    }
+} ATOM_ALIGNAS(128);
+
+// 枚举类定义节点
+struct EnumClassDefinition : ASTNode {
+private:
+    std::string name_;
+    std::vector<std::string> enumerators_;
+
+public:
+    EnumClassDefinition(std::string enumName,
+                        std::vector<std::string> enumerators)
+        : name_(std::move(enumName)), enumerators_(std::move(enumerators)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<EnumClassDefinition>(name_, enumerators_);
+    }
+
+    [[nodiscard]] auto getName() const -> const std::string& { return name_; }
+    [[nodiscard]] auto getEnumerators() const
+        -> const std::vector<std::string>& {
+        return enumerators_;
+    }
+} ATOM_ALIGNAS(64);
+
+// 返回语句节点
+struct ReturnStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> value_;
+
+public:
+    explicit ReturnStatement(std::shared_ptr<ASTNode> val)
+        : value_(std::move(val)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<ReturnStatement>(value_->clone());
+    }
+
+    [[nodiscard]] auto getValue() const -> const std::shared_ptr<ASTNode>& {
+        return value_;
+    }
+} ATOM_ALIGNAS(16);
+
+// Import语句节点
+struct ImportStatement : ASTNode {
+private:
+    std::string moduleName_;
+    std::string alias_;
+
+public:
+    ImportStatement(std::string modName, std::string aliasName)
+        : moduleName_(std::move(modName)), alias_(std::move(aliasName)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<ImportStatement>(moduleName_, alias_);
+    }
+
+    [[nodiscard]] auto getModuleName() const -> const std::string& {
+        return moduleName_;
+    }
+
+    [[nodiscard]] auto getAlias() const -> const std::string& { return alias_; }
+} ATOM_ALIGNAS(64);
+
+// try-catch语句节点
+struct TryCatchStatement : ASTNode {
+private:
+    std::shared_ptr<BlockStatement> tryBlock_;
+    std::shared_ptr<BlockStatement> catchBlock_;
+
+public:
+    TryCatchStatement(std::shared_ptr<BlockStatement> tryBlk,
+                      std::shared_ptr<BlockStatement> catchBlk)
+        : tryBlock_(std::move(tryBlk)), catchBlock_(std::move(catchBlk)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<TryCatchStatement>(
+            std::dynamic_pointer_cast<BlockStatement>(tryBlock_->clone()),
+            std::dynamic_pointer_cast<BlockStatement>(catchBlock_->clone()));
+    }
+
+    [[nodiscard]] auto getTryBlock() const
+        -> const std::shared_ptr<BlockStatement>& {
+        return tryBlock_;
+    }
+
+    [[nodiscard]] auto getCatchBlock() const
+        -> const std::shared_ptr<BlockStatement>& {
+        return catchBlock_;
+    }
+} ATOM_ALIGNAS(32);
+
+// throw语句节点
+struct ThrowStatement : ASTNode {
+private:
+    std::shared_ptr<ASTNode> expression_;
+
+public:
+    explicit ThrowStatement(std::shared_ptr<ASTNode> expr)
+        : expression_(std::move(expr)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<ThrowStatement>(expression_->clone());
+    }
+
+    [[nodiscard]] auto getExpression() const
+        -> const std::shared_ptr<ASTNode>& {
+        return expression_;
+    }
+} ATOM_ALIGNAS(16);
+
+// goto语句节点
+struct GotoStatement : ASTNode {
+private:
+    std::string label_;
+
+public:
+    explicit GotoStatement(std::string label) : label_(std::move(label)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<GotoStatement>(label_);
+    }
+
+    [[nodiscard]] auto getLabel() const -> const std::string& { return label_; }
+} ATOM_ALIGNAS(32);
+
+// 标签语句节点
+struct LabelStatement : ASTNode {
+private:
+    std::string label_;
+
+public:
+    explicit LabelStatement(std::string label) : label_(std::move(label)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        return std::make_shared<LabelStatement>(label_);
+    }
+
+    [[nodiscard]] auto getLabel() const -> const std::string& { return label_; }
+} ATOM_ALIGNAS(32);
+
+// 函数调用节点
+struct FunctionCall : ASTNode {
+private:
+    std::string name_;
+    std::vector<std::shared_ptr<ASTNode>> arguments_;
+
+public:
+    FunctionCall(std::string funcName,
+                 std::vector<std::shared_ptr<ASTNode>> args)
+        : name_(std::move(funcName)), arguments_(std::move(args)) {}
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        std::vector<std::shared_ptr<ASTNode>> clonedArgs;
+        clonedArgs.reserve(arguments_.size());
+        for (const auto& arg : arguments_) {
+            clonedArgs.push_back(arg->clone());
+        }
+        return std::make_shared<FunctionCall>(name_, std::move(clonedArgs));
+    }
+
+    [[nodiscard]] auto getName() const -> const std::string& { return name_; }
+
+    [[nodiscard]] auto getArguments() const
+        -> const std::vector<std::shared_ptr<ASTNode>>& {
+        return arguments_;
+    }
+} ATOM_ALIGNAS(64);
+
+// 程序节点
+struct Program : ASTNode {
+private:
+    std::vector<std::shared_ptr<ASTNode>> statements_;
+
+public:
+    Program() = default;
+
+    explicit Program(std::vector<std::shared_ptr<ASTNode>> stmts)
+        : statements_(std::move(stmts)) {}
+
+    void addStatement(std::shared_ptr<ASTNode> stmt) {
+        statements_.push_back(std::move(stmt));
+    }
+
+    [[nodiscard]] auto clone() const -> std::shared_ptr<ASTNode> override {
+        auto newProgram = std::make_shared<Program>();
+        for (const auto& stmt : statements_) {
+            newProgram->addStatement(stmt->clone());
+        }
+        return newProgram;
+    }
+
+    [[nodiscard]] auto getStatements() const
+        -> const std::vector<std::shared_ptr<ASTNode>>& {
+        return statements_;
+    }
+} ATOM_ALIGNAS(32);
+
+// Lexer类
+class Lexer {
+public:
+    explicit Lexer(std::string source) : src_(std::move(source)) {}
+
+    auto nextToken() -> Token {
+        while (current_ < src_.size()) {
+            char ch = src_[current_];
+
+            if (std::isspace(ch) != 0) {
+                ++current_;
+                continue;
+            }
+
+            if (ch == '"') {
+                return stringLiteral();
+            }
+
+            if (ch == '[') {
+                ++current_;
+                return {TokenType::LEFT_BRACKET, "["};
+            }
+
+            if (ch == ']') {
+                ++current_;
+                return {TokenType::RIGHT_BRACKET, "]"};
+            }
+
+            if (std::isdigit(ch) || (ch == '.' && current_ + 1 < src_.size() &&
+                                     (std::isdigit(src_[current_ + 1]) != 0))) {
+                return number();
+            }
+
+            if ((std::isalpha(ch) != 0) || ch == '_') {
+                return identifier();
+            }
+
+            // 处理单行注释
+            if (ch == '/' && peekNext() == '/') {
+                while (current_ < src_.size() && src_[current_] != '\n') {
+                    ++current_;
+                }
+                continue;
+            }
+
+            // 处理多行注释
+            if (ch == '/' && peekNext() == '*') {
+                current_ += 2;  // 跳过 /*
+                while (current_ < src_.size() &&
+                       !(src_[current_] == '*' && peekNext() == '/')) {
+                    ++current_;
+                }
+                if (current_ < src_.size()) {
+                    current_ += 2;  // 跳过 */
+                }
+                continue;
+            }
+
+            // 处理多字符运算符
+            if (ch == '>') {
+                if (peekNext() == '=') {
+                    current_ += 2;
+                    return {TokenType::GREATER_EQUAL, ">="};
+                }
+                ++current_;
+                return {TokenType::GREATER, ">"};
+            }
+
+            if (ch == '<') {
+                if (peekNext() == '=') {
+                    current_ += 2;
+                    return {TokenType::LESS_EQUAL, "<="};
+                }
+                ++current_;
+                return {TokenType::LESS, "<"};
+            }
+
+            if (ch == '=') {
+                if (peekNext() == '=') {
+                    current_ += 2;
+                    return {TokenType::EQUAL, "=="};
+                }
+                ++current_;
+                return {TokenType::ASSIGNMENT, "="};
+            }
+
+            if (ch == '!') {
+                if (peekNext() == '=') {
+                    current_ += 2;
+                    return {TokenType::NOT_EQUAL, "!="};
+                }
+                ++current_;
+                return {TokenType::NOT, "!"};
+            }
+
+            if (ch == ':' && peekNext() == ':') {
+                current_ += 2;
+                return {TokenType::DOUBLE_COLON, "::"};
+            }
+
+            if (ch == ':') {
+                ++current_;
+                return {TokenType::COLON, ":"};
+            }
+
+            if (ch == '&' && peekNext() == '&') {
+                current_ += 2;
+                return {TokenType::AND, "&&"};
+            }
+
+            if (ch == '|' && peekNext() == '|') {
+                current_ += 2;
+                return {TokenType::OR, "||"};
+            }
+
+            // 单字符Token
+            switch (ch) {
+                case '+':
+                    ++current_;
+                    return {TokenType::PLUS, "+"};
+                case '-':
+                    ++current_;
+                    return {TokenType::MINUS, "-"};
+                case '*':
+                    ++current_;
+                    return {TokenType::MULTIPLY, "*"};
+                case '/':
+                    ++current_;
+                    return {TokenType::DIVIDE, "/"};
+                case ';':
+                    ++current_;
+                    return {TokenType::SEMICOLON, ";"};
+                case '(':
+                    ++current_;
+                    return {TokenType::LEFT_PARENTHESIS, "("};
+                case ')':
+                    ++current_;
+                    return {TokenType::RIGHT_PARENTHESIS, ")"};
+                case '{':
+                    ++current_;
+                    return {TokenType::LEFT_BRACE, "{"};
+                case '}':
+                    ++current_;
+                    return {TokenType::RIGHT_BRACE, "}"};
+                case ',':
+                    ++current_;
+                    return {TokenType::COMMA, ","};
+                default:
+                    throw std::runtime_error(
+                        std::string("Unexpected character: ") + ch);
+            }
+        }
+
+        return {TokenType::END_OF_FILE, ""};
+    }
+
+private:
+    std::string src_;
+    size_t current_ = 0;
+
+    auto peekNext() const -> char {
+        if (current_ + 1 < src_.size()) {
+            return src_[current_ + 1];
+        }
+        return '\0';
+    }
+
+    [[nodiscard]] auto number() -> Token {
+        size_t start = current_;
+        bool hasDot = false;
+        while (current_ < src_.size() &&
+               ((std::isdigit(src_[current_]) != 0) || src_[current_] == '.')) {
+            if (src_[current_] == '.') {
+                if (hasDot) {
+                    throw std::runtime_error(
+                        "Invalid number format with multiple dots");
+                }
+                hasDot = true;
+            }
+            ++current_;
+        }
+        return {TokenType::NUMBER, src_.substr(start, current_ - start)};
+    }
+
+    [[nodiscard]] auto stringLiteral() -> Token {
+        ++current_;  // 跳过起始的双引号
+        size_t start = current_;
+        while (current_ < src_.size() && src_[current_] != '"') {
+            if (src_[current_] == '\\' && current_ + 1 < src_.size()) {
+                current_ += 2;  // 跳过转义字符
+            } else {
+                ++current_;
+            }
+        }
+        if (current_ >= src_.size()) {
+            throw std::runtime_error("Unterminated string literal");
+        }
+        std::string str = src_.substr(start, current_ - start);
+        ++current_;  // 跳过结束的双引号
+        return {TokenType::STRING, str};
+    }
+
+    [[nodiscard]] auto identifier() -> Token {
+        size_t start = current_;
+        while (current_ < src_.size() &&
+               ((std::isalnum(src_[current_]) != 0) || src_[current_] == '_')) {
+            ++current_;
+        }
+        std::string word = src_.substr(start, current_ - start);
+
+        if (word == "if") {
+            return {TokenType::IF, word};
+        }
+        if (word == "else") {
+            return {TokenType::ELSE, word};
+        }
+        if (word == "while") {
+            return {TokenType::WHILE, word};
+        }
+        if (word == "switch") {
+            return {TokenType::SWITCH, word};
+        }
+        if (word == "case") {
+            return {TokenType::CASE, word};
+        }
+        if (word == "function") {
+            return {TokenType::FUNCTION, word};
+        }
+        if (word == "return") {
+            return {TokenType::RETURN, word};
+        }
+        if (word == "import") {
+            return {TokenType::IMPORT, word};
+        }
+        if (word == "as") {
+            return {TokenType::AS, word};
+        }
+        if (word == "try") {
+            return {TokenType::TRY, word};
+        }
+        if (word == "catch") {
+            return {TokenType::CATCH, word};
+        }
+        if (word == "throw") {
+            return {TokenType::THROW, word};
+        }
+        if (word == "goto") {
+            return {TokenType::GOTO, word};
+        }
+        if (word == "class") {
+            return {TokenType::CLASS, word};
+        }
+        if (word == "enum") {
+            if (peekNext() == ' ' && src_.substr(current_ + 1, 5) == "class") {
+                current_ += 6;  // 跳过 "enum class"
+                return {TokenType::ENUM_CLASS, "enum class"};
+            }
+        }
+        if (word == "for") {
+            return {TokenType::FOR, word};
+        }
+
+        return {TokenType::IDENTIFIER, word};
+    }
+};
+
+// Parser类
+class Parser {
+public:
+    explicit Parser(Lexer& lex)
+        : lexer_(lex), currentToken_(lexer_.nextToken()) {}
+
+    [[nodiscard]] auto parse() -> std::shared_ptr<Program> {
+        auto program = std::make_shared<Program>();
+        while (currentToken_.type != TokenType::END_OF_FILE) {
+            program->addStatement(statement());
+        }
+        return program;
+    }
+
+private:
+    Lexer& lexer_;
+    Token currentToken_;
+
+    void consume(TokenType type) {
+        if (currentToken_.type == type) {
+            currentToken_ = lexer_.nextToken();
+        } else {
+            throw std::runtime_error("Unexpected token: " +
+                                     currentToken_.value);
+        }
+    }
+
+    [[nodiscard]] auto statement() -> std::shared_ptr<ASTNode> {
+        if (currentToken_.type == TokenType::IDENTIFIER) {
+            // 可能是赋值或函数调用
+            std::string identifierName = currentToken_.value;
+            consume(TokenType::IDENTIFIER);
+            if (currentToken_.type == TokenType::ASSIGNMENT) {
+                // 赋值语句
+                auto idNode = std::make_shared<Identifier>(identifierName);
+                consume(TokenType::ASSIGNMENT);
+                auto value = expression();
+                consume(TokenType::SEMICOLON);
+                return std::make_shared<Assignment>(std::move(idNode),
+                                                    std::move(value));
+            }
+            if (currentToken_.type == TokenType::LEFT_PARENTHESIS) {
+                // 函数调用语句
+                auto funcCall = parseFunctionCall(identifierName);
+                consume(TokenType::SEMICOLON);
+                return std::make_shared<ExpressionStatement>(
+                    std::move(funcCall));
+            }
+            if (currentToken_.type == TokenType::COLON) {
+                // 标签语句
+                consume(TokenType::COLON);
+                return std::make_shared<LabelStatement>(identifierName);
+            }
+            throw std::runtime_error("Unexpected token after identifier: " +
+                                     currentToken_.value);
+        }
+        if (currentToken_.type == TokenType::IF) {
+            return ifStatement();
+        }
+        if (currentToken_.type == TokenType::WHILE) {
+            return whileStatement();
+        }
+        if (currentToken_.type == TokenType::FOR) {
+            return forStatement();
+        }
+        if (currentToken_.type == TokenType::FUNCTION) {
+            return functionDefinition();
+        }
+        if (currentToken_.type == TokenType::RETURN) {
+            return returnStatement();
+        }
+        if (currentToken_.type == TokenType::IMPORT) {
+            return importStatement();
+        }
+        if (currentToken_.type == TokenType::TRY) {
+            return tryCatchStatement();
+        }
+        if (currentToken_.type == TokenType::THROW) {
+            return throwStatement();
+        }
+        if (currentToken_.type == TokenType::GOTO) {
+            return gotoStatement();
+        }
+        if (currentToken_.type == TokenType::LEFT_BRACE) {
+            return blockStatement();
+        }
+        if (currentToken_.type == TokenType::CLASS) {
+            return classDefinition();
+        }
+        if (currentToken_.type == TokenType::ENUM_CLASS) {
+            return enumClassDefinition();
+        }
+        // 表达式语句
+        return expressionStatement();
+    }
+
+    [[nodiscard]] auto ifStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::IF);
+        consume(TokenType::LEFT_PARENTHESIS);
+        auto condition = expression();
+        consume(TokenType::RIGHT_PARENTHESIS);
+        auto thenBranch = statement();
+        std::shared_ptr<ASTNode> elseBranch = nullptr;
+        if (currentToken_.type == TokenType::ELSE) {
+            consume(TokenType::ELSE);
+            elseBranch = statement();
+        }
+        return std::make_shared<IfStatement>(
+            std::move(condition), std::move(thenBranch), std::move(elseBranch));
+    }
+
+    [[nodiscard]] auto whileStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::WHILE);
+        consume(TokenType::LEFT_PARENTHESIS);
+        auto condition = expression();
+        consume(TokenType::RIGHT_PARENTHESIS);
+        auto body = statement();
+        return std::make_shared<WhileStatement>(std::move(condition),
+                                                std::move(body));
+    }
+
+    [[nodiscard]] auto forStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::FOR);
+        consume(TokenType::LEFT_PARENTHESIS);
+        auto initializer = statement();
+        auto condition = expression();
+        consume(TokenType::SEMICOLON);
+        auto increment = statement();
+        consume(TokenType::RIGHT_PARENTHESIS);
+        auto body = statement();
+        return std::make_shared<ForStatement>(
+            std::move(initializer), std::move(condition), std::move(increment),
+            std::move(body));
+    }
+
+    [[nodiscard]] auto switchStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::SWITCH);
+        consume(TokenType::LEFT_PARENTHESIS);
+        auto condition = expression();
+        consume(TokenType::RIGHT_PARENTHESIS);
+        consume(TokenType::LEFT_BRACE);
+        std::vector<std::pair<std::shared_ptr<ASTNode>,
+                              std::shared_ptr<BlockStatement>>>
+            cases;
+        while (currentToken_.type == TokenType::CASE) {
+            consume(TokenType::CASE);
+            auto caseValue = expression();
+            consume(TokenType::COLON);
+            auto caseBlock = blockStatement();
+            cases.emplace_back(std::move(caseValue), std::move(caseBlock));
+        }
+        consume(TokenType::RIGHT_BRACE);
+        return std::make_shared<SwitchStatement>(std::move(condition),
+                                                 std::move(cases));
+    }
+
+    [[nodiscard]] auto functionDefinition() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::FUNCTION);
+        std::string name = currentToken_.value;  // Function name
+        consume(TokenType::IDENTIFIER);
+        consume(TokenType::LEFT_PARENTHESIS);
+        std::vector<std::string> params;
+
+        if (currentToken_.type != TokenType::RIGHT_PARENTHESIS) {
+            do {
+                if (currentToken_.type != TokenType::IDENTIFIER) {
+                    throw std::runtime_error("Expected parameter name");
+                }
+                params.push_back(currentToken_.value);
+                consume(TokenType::IDENTIFIER);
+                if (currentToken_.type == TokenType::COMMA) {
+                    consume(TokenType::COMMA);
+                } else {
+                    break;
+                }
+            } while (true);
+        }
+
+        consume(TokenType::RIGHT_PARENTHESIS);
+        auto bodyNode = blockStatement();
+        return std::make_shared<FunctionDef>(name, std::move(params), bodyNode);
+    }
+
+    [[nodiscard]] auto classDefinition() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::CLASS);
+        std::string className = currentToken_.value;
+        consume(TokenType::IDENTIFIER);
+        consume(TokenType::LEFT_BRACE);
+        std::unordered_map<std::string, std::shared_ptr<ASTNode>> members;
+        while (currentToken_.type != TokenType::RIGHT_BRACE) {
+            if (currentToken_.type == TokenType::FUNCTION) {
+                auto funcDef = functionDefinition();
+                auto funcName =
+                    std::dynamic_pointer_cast<FunctionDef>(funcDef)->getName();
+                members[funcName] = std::move(funcDef);
+            } else if (currentToken_.type == TokenType::IDENTIFIER) {
+                std::string varName = currentToken_.value;
+                consume(TokenType::IDENTIFIER);
+                consume(TokenType::ASSIGNMENT);
+                auto value = expression();
+                consume(TokenType::SEMICOLON);
+                members[varName] = std::make_shared<Assignment>(
+                    std::make_shared<Identifier>(varName), std::move(value));
+            } else {
+                throw std::runtime_error(
+                    "Unexpected token in class definition");
+            }
+        }
+        consume(TokenType::RIGHT_BRACE);
+        return std::make_shared<ClassDefinition>(className, std::move(members));
+    }
+
+    [[nodiscard]] auto enumClassDefinition() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::ENUM_CLASS);
+        std::string enumName = currentToken_.value;
+        consume(TokenType::IDENTIFIER);
+        consume(TokenType::LEFT_BRACE);
+        std::vector<std::string> enumerators;
+        while (currentToken_.type != TokenType::RIGHT_BRACE) {
+            enumerators.push_back(currentToken_.value);
+            consume(TokenType::IDENTIFIER);
+            if (currentToken_.type == TokenType::COMMA) {
+                consume(TokenType::COMMA);
+            } else {
+                break;
+            }
+        }
+        consume(TokenType::RIGHT_BRACE);
+        return std::make_shared<EnumClassDefinition>(enumName,
+                                                     std::move(enumerators));
+    }
+
+    [[nodiscard]] auto returnStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::RETURN);
+        auto value = expression();
+        consume(TokenType::SEMICOLON);
+        return std::make_shared<ReturnStatement>(std::move(value));
+    }
+
+    [[nodiscard]] auto importStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::IMPORT);
+        std::string moduleName = currentToken_.value;
+        consume(TokenType::IDENTIFIER);
+        std::string alias;
+        if (currentToken_.type == TokenType::AS) {
+            consume(TokenType::AS);
+            alias = currentToken_.value;
+            consume(TokenType::IDENTIFIER);
+        } else {
+            alias = moduleName;
+        }
+        consume(TokenType::SEMICOLON);
+        return std::make_shared<ImportStatement>(moduleName, alias);
+    }
+
+    [[nodiscard]] auto tryCatchStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::TRY);
+        auto tryBlock = blockStatement();
+        consume(TokenType::CATCH);
+        auto catchBlock = blockStatement();
+        return std::make_shared<TryCatchStatement>(std::move(tryBlock),
+                                                   std::move(catchBlock));
+    }
+
+    [[nodiscard]] auto throwStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::THROW);
+        auto expr = expression();
+        consume(TokenType::SEMICOLON);
+        return std::make_shared<ThrowStatement>(std::move(expr));
+    }
+
+    [[nodiscard]] auto gotoStatement() -> std::shared_ptr<ASTNode> {
+        consume(TokenType::GOTO);
+        std::string label = currentToken_.value;
+        consume(TokenType::IDENTIFIER);
+        consume(TokenType::SEMICOLON);
+        return std::make_shared<GotoStatement>(label);
+    }
+
+    [[nodiscard]] auto blockStatement() -> std::shared_ptr<BlockStatement> {
+        consume(TokenType::LEFT_BRACE);
+        auto block = std::make_shared<BlockStatement>();
+        while (currentToken_.type != TokenType::RIGHT_BRACE) {
+            block->addStatement(statement());
+        }
+        consume(TokenType::RIGHT_BRACE);
+        return block;
+    }
+
+    [[nodiscard]] auto expressionStatement() -> std::shared_ptr<ASTNode> {
+        auto expr = expression();
+        consume(TokenType::SEMICOLON);
+        return std::make_shared<ExpressionStatement>(std::move(expr));
+    }
+
+    [[nodiscard]] auto logical() -> std::shared_ptr<ASTNode> {
+        auto node = comparison();
+        while (currentToken_.type == TokenType::AND ||
+               currentToken_.type == TokenType::OR) {
+            Token opToken = currentToken_;
+            consume(currentToken_.type);
+            auto right = comparison();
+            node = std::make_shared<BinaryOp>(std::move(node), opToken,
+                                              std::move(right));
+        }
+        return node;
+    }
+
+    [[nodiscard]] auto expression() -> std::shared_ptr<ASTNode> {
+        return logical();
+    }
+
+    [[nodiscard]] auto comparison() -> std::shared_ptr<ASTNode> {
+        auto node = additive();
+        while (currentToken_.type == TokenType::GREATER ||
+               currentToken_.type == TokenType::LESS ||
+               currentToken_.type == TokenType::GREATER_EQUAL ||
+               currentToken_.type == TokenType::LESS_EQUAL ||
+               currentToken_.type == TokenType::EQUAL ||
+               currentToken_.type == TokenType::NOT_EQUAL) {
+            Token opToken = currentToken_;
+            consume(currentToken_.type);
+            auto right = additive();
+            node = std::make_shared<BinaryOp>(std::move(node), opToken,
+                                              std::move(right));
+        }
+        return node;
+    }
+
+    [[nodiscard]] auto additive() -> std::shared_ptr<ASTNode> {
+        auto node = multiplicative();
+        while (currentToken_.type == TokenType::PLUS ||
+               currentToken_.type == TokenType::MINUS) {
+            Token opToken = currentToken_;
+            consume(currentToken_.type);
+            node = std::make_shared<BinaryOp>(std::move(node), opToken,
+                                              multiplicative());
+        }
+        return node;
+    }
+
+    [[nodiscard]] auto multiplicative() -> std::shared_ptr<ASTNode> {
+        auto node = primary();
+        while (currentToken_.type == TokenType::MULTIPLY ||
+               currentToken_.type == TokenType::DIVIDE) {
+            Token opToken = currentToken_;
+            consume(currentToken_.type);
+            node =
+                std::make_shared<BinaryOp>(std::move(node), opToken, primary());
+        }
+        return node;
+    }
+
+    [[nodiscard]] auto primary() -> std::shared_ptr<ASTNode> {
+        if (currentToken_.type == TokenType::NUMBER) {
+            auto numNode = std::make_shared<Number>(currentToken_.value);
+            consume(TokenType::NUMBER);
+            return numNode;
+        }
+        if (currentToken_.type == TokenType::STRING) {
+            auto strNode = std::make_shared<StringLiteral>(currentToken_.value);
+            consume(TokenType::STRING);
+            return strNode;
+        }
+        if (currentToken_.type == TokenType::IDENTIFIER) {
+            std::string name = currentToken_.value;
+            consume(TokenType::IDENTIFIER);
+            if (currentToken_.type == TokenType::DOUBLE_COLON) {
+                consume(TokenType::DOUBLE_COLON);
+                std::string funcName = currentToken_.value;
+                consume(TokenType::IDENTIFIER);
+                if (currentToken_.type == TokenType::LEFT_PARENTHESIS) {
+                    return parseFunctionCall(name + "::" + funcName);
+                }
+                throw std::runtime_error(
+                    "Expected '(' after external function name");
+            }
+            if (currentToken_.type == TokenType::LEFT_PARENTHESIS) {
+                // 函数调用
+                return parseFunctionCall(name);
+            }
+            return std::make_shared<Identifier>(name);
+        }
+        if (currentToken_.type == TokenType::LEFT_PARENTHESIS) {
+            consume(TokenType::LEFT_PARENTHESIS);
+            auto node = expression();
+            consume(TokenType::RIGHT_PARENTHESIS);
+            return node;
+        }
+        throw std::runtime_error("Unexpected token in primary expression: " +
+                                 currentToken_.value);
+    }
+
+    [[nodiscard]] auto parseFunctionCall(const std::string& name)
+        -> std::shared_ptr<FunctionCall> {
+        consume(TokenType::LEFT_PARENTHESIS);
+        std::vector<std::shared_ptr<ASTNode>> args;
+        if (currentToken_.type != TokenType::RIGHT_PARENTHESIS) {
+            do {
+                args.push_back(expression());
+                if (currentToken_.type == TokenType::COMMA) {
+                    consume(TokenType::COMMA);
+                } else {
+                    break;
+                }
+            } while (true);
+        }
+        consume(TokenType::RIGHT_PARENTHESIS);
+        return std::make_shared<FunctionCall>(name, std::move(args));
+    }
+};
+
+// 处理返回值的异常类
+struct ReturnException : public std::exception {
+    std::variant<int, double, std::string> value;
+
+    explicit ReturnException(std::variant<int, double, std::string> val)
+        : value(std::move(val)) {}
+
+    [[nodiscard]] auto what() const noexcept -> const char* override {
+        return "Return statement executed";
+    }
+} ATOM_ALIGNAS(64);
+
+// GotoException类
+struct GotoException : public std::exception {
+    std::string label;
+
+    explicit GotoException(std::string lbl) : label(std::move(lbl)) {}
+
+    [[nodiscard]] auto what() const noexcept -> const char* override {
+        return "Goto statement executed";
+    }
+} ATOM_ALIGNAS(32);
+
+// Interpreter类
+class Interpreter::Impl {
+public:
+    Impl() {
+        registerBuiltInFunctions();
+        registerInternalModules();
+    }
+
+    void loadScript(const std::string& filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open script file: " + filename);
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string script = buffer.str();
+        Lexer lexer(script);
+        Parser parser(lexer);
+        auto program = parser.parse();
+        scripts_[filename] = program;
+    }
+
+    void interpretScript(const std::string& filename) {
+        auto it = scripts_.find(filename);
+        if (it == scripts_.end()) {
+            throw std::runtime_error("Script not loaded: " + filename);
+        }
+        interpret(it->second);
+    }
+
+    void interpret(const std::shared_ptr<Program>& ast) {
+        // 首先收集所有函数定义
+        for (const auto& stmt : ast->getStatements()) {
+            if (auto* funcDef = dynamic_cast<FunctionDef*>(stmt.get())) {
+                functions_[funcDef->getName()] =
+                    std::dynamic_pointer_cast<FunctionDef>(funcDef->clone());
+                log("Function '" + funcDef->getName() + "' defined.");
+            }
+        }
+
+        // 执行所有非函数的语句
+        for (size_t i = 0; i < ast->getStatements().size(); ++i) {
+            const auto& stmt = ast->getStatements()[i];
+            if (dynamic_cast<FunctionDef*>(stmt.get()) == nullptr) {
+                try {
+                    execute(stmt.get());
+                } catch (const GotoException& e) {
+                    log("Goto exception caught, searching for label: " +
+                        e.label);
+                    // 搜索标签
+                    for (size_t j = 0; j < ast->getStatements().size(); ++j) {
+                        if (auto* labelStmt = dynamic_cast<LabelStatement*>(
+                                ast->getStatements()[j].get())) {
+                            if (labelStmt->getLabel() == e.label) {
+                                i = j;  // 跳转到标签位置
+                                break;
+                            }
+                        }
+                    }
+                } catch (const std::exception& e) {
+                    printStackTrace();
+                    throw;
+                }
+            }
+        }
+    }
+
+private:
+    // 函数表
+    std::unordered_map<std::string, std::shared_ptr<FunctionDef>> functions_;
+
+    // 全局变量
+    std::unordered_map<std::string, std::variant<int, double, std::string>>
+        globals_;
+
+    // 变量栈，用于函数调用的局部变量
+    std::vector<
+        std::unordered_map<std::string, std::variant<int, double, std::string>>>
+        locals_;
+
+    // 调用堆栈
+    std::vector<std::string> callStack_;
+
+    // 脚本表
+    std::unordered_map<std::string, std::shared_ptr<Program>> scripts_;
+
+    // 日志输出
+    static void log(const std::string& message) {
+        std::cout << "[LOG] " << message << std::endl;
+    }
+
+    void printStackTrace() const {
+        std::cerr << "Stack trace:" << std::endl;
+        for (const auto& funcName : callStack_) {
+            std::cerr << "  at " << funcName << std::endl;
+        }
+    }
+
+    // 评估表达式
+    [[nodiscard]] auto evaluate(ASTNode* node)
+        -> std::variant<int, double, std::string> {
+        if (auto* binaryOp = dynamic_cast<BinaryOp*>(node)) {
+            auto left = evaluate(binaryOp->getLeft().get());
+            auto right = evaluate(binaryOp->getRight().get());
+            log("Evaluating binary operation: " +
+                tokenTypeToString(binaryOp->getOp().type));
+
+            return evaluateBinaryOp(binaryOp->getOp().type, left, right);
+        }
+        if (auto* numberNode = dynamic_cast<Number*>(node)) {
+            const auto& value = numberNode->getValue();
+            if (value.contains('.')) {
+                double val = std::stod(value);
+                log("Number literal (double): " + std::to_string(val));
+                return val;
+            }
+            int val = std::stoi(value);
+            log("Number literal (int): " + std::to_string(val));
+            return val;
+        }
+        if (auto* strNode = dynamic_cast<StringLiteral*>(node)) {
+            log("String literal: \"" + strNode->getValue() + "\"");
+            return strNode->getValue();
+        }
+        if (auto* idNode = dynamic_cast<Identifier*>(node)) {
+            auto val = getVariable(idNode->getName());
+            log("Variable '" + idNode->getName() +
+                "' accessed with value: " + variantToString(val));
+            return val;
+        }
+        if (auto* funcCall = dynamic_cast<FunctionCall*>(node)) {
+            log("Function call: " + funcCall->getName());
+            return callFunction(funcCall->getName(), funcCall->getArguments());
+        }
+        throw std::runtime_error("Unknown expression type");
+    }
+
+    // 执行语句
+    void execute(ASTNode* node) {
+        if (auto* exprStmt = dynamic_cast<ExpressionStatement*>(node)) {
+            auto result = evaluate(exprStmt->getExpression().get());
+            log("Expression statement executed with result: " +
+                variantToString(result));
+        } else if (auto* assignStmt = dynamic_cast<Assignment*>(node)) {
+            auto value = evaluate(assignStmt->getValue().get());
+            setVariable(assignStmt->getIdentifier()->getName(), value);
+            log("Assigned value to variable '" +
+                assignStmt->getIdentifier()->getName() +
+                "': " + variantToString(value));
+        } else if (auto* ifStmt = dynamic_cast<IfStatement*>(node)) {
+            auto condition = evaluate(ifStmt->getCondition().get());
+            bool cond = variantToBool(condition);
+            log("If statement condition evaluated to: " +
+                std::string(cond ? "true" : "false"));
+            if (cond) {
+                execute(ifStmt->getThenBranch().get());
+            } else if (ifStmt->getElseBranch()) {
+                execute(ifStmt->getElseBranch().get());
+            }
+        } else if (auto* whileStmt = dynamic_cast<WhileStatement*>(node)) {
+            while (variantToBool(evaluate(whileStmt->getCondition().get()))) {
+                log("While loop condition true, executing body.");
+                execute(whileStmt->getBody().get());
+            }
+            log("While loop condition false, exiting loop.");
+        } else if (auto* forStmt = dynamic_cast<ForStatement*>(node)) {
+            for (execute(forStmt->getInitializer().get());
+                 variantToBool(evaluate(forStmt->getCondition().get()));
+                 execute(forStmt->getIncrement().get())) {
+                log("For loop condition true, executing body.");
+                execute(forStmt->getBody().get());
+            }
+            log("For loop condition false, exiting loop.");
+        } else if (auto* switchStmt = dynamic_cast<SwitchStatement*>(node)) {
+            auto condition = evaluate(switchStmt->getCondition().get());
+            for (const auto& [caseValue, caseBlock] : switchStmt->getCases()) {
+                if (evaluate(caseValue.get()) == condition) {
+                    execute(caseBlock.get());
+                    break;
+                }
+            }
+        } else if (auto* blockStmt = dynamic_cast<BlockStatement*>(node)) {
+            for (const auto& stmt : blockStmt->getStatements()) {
+                execute(stmt.get());
+            }
+        } else if (auto* returnStmt = dynamic_cast<ReturnStatement*>(node)) {
+            auto value = evaluate(returnStmt->getValue().get());
+            log("Return statement executed with value: " +
+                variantToString(value));
+            throw ReturnException(value);
+        } else if (auto* importStmt = dynamic_cast<ImportStatement*>(node)) {
+            importModule(importStmt->getModuleName(), importStmt->getAlias());
+        } else if (auto* tryCatchStmt =
+                       dynamic_cast<TryCatchStatement*>(node)) {
+            try {
+                execute(tryCatchStmt->getTryBlock().get());
+            } catch (const std::exception& e) {
+                log("Exception caught: " + std::string(e.what()));
+                execute(tryCatchStmt->getCatchBlock().get());
+            }
+        } else if (auto* throwStmt = dynamic_cast<ThrowStatement*>(node)) {
+            auto value = evaluate(throwStmt->getExpression().get());
+            log("Throw statement executed with value: " +
+                variantToString(value));
+            throw std::runtime_error(variantToString(value));
+        } else if (auto* gotoStmt = dynamic_cast<GotoStatement*>(node)) {
+            auto label = gotoStmt->getLabel();
+            log("Goto statement executed, jumping to label: " + label);
+            throw GotoException(label);
+        } else if (auto* labelStmt = dynamic_cast<LabelStatement*>(node)) {
+            // 标签语句不执行任何操作
+        } else if (auto* classDef = dynamic_cast<ClassDefinition*>(node)) {
+            log("Class definition: " + classDef->getName());
+            for (const auto& [name, member] : classDef->getMembers()) {
+                execute(member.get());
+            }
+        } else if (auto* enumClassDef =
+                       dynamic_cast<EnumClassDefinition*>(node)) {
+            log("Enum class definition: " + enumClassDef->getName());
+            for (const auto& enumerator : enumClassDef->getEnumerators()) {
+                log("Enumerator: " + enumerator);
             }
         } else {
-            LOG_F(INFO, "Loading script: {} (no header information)", name);
-        }
-    } else {
-        THROW_RUNTIME_ERROR("Failed to prepare script: " + name);
-    }
-}
-
-void TaskInterpreter::unloadScript(const std::string& name) {
-    std::unique_lock lock(impl_->mtx);
-    impl_->scripts.erase(name);
-}
-
-auto TaskInterpreter::hasScript(const std::string& name) const noexcept
-    -> bool {
-    std::shared_lock lock(impl_->mtx);
-    return impl_->scripts.contains(name);
-}
-
-auto TaskInterpreter::getScript(const std::string& name) const noexcept
-    -> std::optional<json> {
-    std::shared_lock lock(impl_->mtx);
-    if (impl_->scripts.contains(name)) {
-        return impl_->scripts.at(name);
-    }
-    return std::nullopt;
-}
-
-auto TaskInterpreter::prepareScript(json& script) -> bool {
-    try {
-        impl_->taskGenerator->processJson(script);
-    } catch (const json::parse_error& e) {
-        LOG_F(ERROR, "Failed to parse script: {}", e.what());
-        return false;
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to process script: {}", e.what());
-        return false;
-    }
-    return true;
-}
-
-void TaskInterpreter::registerFunction(const std::string& name,
-                                       std::function<json(const json&)> func) {
-    std::unique_lock lock(impl_->mtx);
-    if (impl_->functions.find(name) != impl_->functions.end()) {
-        THROW_RUNTIME_ERROR("Function '" + name + "' is already registered.");
-    }
-    impl_->functions[name] = std::move(func);
-    LOG_F(INFO, "Function registered: {}", name);
-}
-
-void TaskInterpreter::registerExceptionHandler(
-    const std::string& name,
-    std::function<void(const std::exception&)> handler) {
-    std::unique_lock lock(impl_->mtx);
-    impl_->exceptionHandlers[name] = std::move(handler);
-}
-
-void TaskInterpreter::setVariable(const std::string& name, const json& value,
-                                  VariableType type) {
-    std::unique_lock lock(impl_->mtx);
-    impl_->cv.wait(lock, [this]() { return !impl_->isRunning; });
-
-    VariableType currentType = determineType(value);
-    if (currentType != type) {
-        THROW_RUNTIME_ERROR(
-            "Type mismatch when setting variable '" + name + "'. Expected " +
-            std::to_string(static_cast<int>(type)) + ", got " +
-            std::to_string(static_cast<int>(currentType)) + ".");
-    }
-
-    if (impl_->variables.find(name) != impl_->variables.end()) {
-        if (impl_->variables[name].first != type) {
-            THROW_RUNTIME_ERROR("Type mismatch: Variable '" + name +
-                                "' already exists with a different type.");
+            throw std::runtime_error("Unknown statement type");
         }
     }
 
-    impl_->variables[name] = {type, value};
-}
+    void registerBuiltInFunctions() {
+        functions_["print"] = std::make_shared<FunctionDef>(
+            "print", std::vector<std::string>{"message"},
+            std::make_shared<BlockStatement>());
 
-auto TaskInterpreter::getVariableImmediate(const std::string& name) const
-    -> json {
-    std::shared_lock lock(impl_->mtx);
-    if (impl_->variables.find(name) == impl_->variables.end()) {
-        THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
-    }
-    return impl_->variables.at(name).second;
-}
+        functions_["len"] = std::make_shared<FunctionDef>(
+            "len", std::vector<std::string>{"value"},
+            std::make_shared<BlockStatement>());
 
-auto TaskInterpreter::getVariable(const std::string& name) const -> json {
-    std::unique_lock lock(impl_->mtx);
-    impl_->cv.wait(lock, [this]() { return !impl_->isRunning; });
+        functions_["toInt"] = std::make_shared<FunctionDef>(
+            "toInt", std::vector<std::string>{"value"},
+            std::make_shared<BlockStatement>());
 
-    if (impl_->variables.find(name) == impl_->variables.end()) {
-        THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
-    }
-    return impl_->variables.at(name).second;
-}
-
-void TaskInterpreter::parseLabels(const json& script) {
-    std::unique_lock lock(impl_->mtx);
-    LOG_F(INFO, "Parsing labels...");
-    std::for_each(script.begin(), script.end(),
-                  [this, index = 0](const auto& item) mutable {
-                      if (item.contains("label")) {
-                          impl_->labels[item["label"]] = index;
-                      }
-                      ++index;
-                  });
-}
-
-void TaskInterpreter::execute(const std::string& scriptName) {
-    LOG_F(INFO, "Executing script: {}", scriptName);
-    impl_->stopRequested = false;
-    impl_->isRunning = true;
-    if (impl_->executionThread.joinable()) {
-        impl_->executionThread.join();
+        functions_["toDouble"] = std::make_shared<FunctionDef>(
+            "toDouble", std::vector<std::string>{"value"},
+            std::make_shared<BlockStatement>());
     }
 
-    if (!impl_->scripts.contains(scriptName)) {
-        THROW_RUNTIME_ERROR("Script '" + scriptName + "' not found.");
+    void registerInternalModules() {
+        // 注册多线程模块
+        functions_["thread::create"] = std::make_shared<FunctionDef>(
+            "thread::create", std::vector<std::string>{"function"},
+            std::make_shared<BlockStatement>());
     }
 
-    impl_->executionThread = std::jthread([this, scriptName]() {
-        std::exception_ptr exPtr = nullptr;
-        try {
-            std::shared_lock lock(impl_->mtx);
-            const json& script = impl_->scripts.at(scriptName);
-            lock.unlock();
-
-            size_t i = 0;
-            while (i < script.size() && !impl_->stopRequested) {
-                const auto& step = script[i];
-                if (step.contains("type") && step["type"] == "coroutine") {
-                    if (!step.contains("name") || !step["name"].is_string()) {
-                        throw std::runtime_error(
-                            "Coroutine step must have a 'name' field");
-                    }
-                    std::string coroutineName = step["name"];
-                    auto handle = executeCoroutine(step).handle();
-                    impl_->coroutines[coroutineName] = handle;
-                } else if (!executeStep(step, i, script)) {
-                    break;
-                }
-                ++i;
+    void callBuiltInFunction(
+        const std::string& name,
+        const std::vector<std::shared_ptr<ASTNode>>& args) {
+        if (name == "print") {
+            if (args.size() != 1) {
+                throw std::runtime_error("print function expects 1 argument");
             }
-        } catch (...) {
-            exPtr = std::current_exception();
-        }
-
-        impl_->isRunning = false;
-        impl_->cv.notify_all();
-
-        if (exPtr) {
-            try {
-                std::rethrow_exception(exPtr);
-            } catch (const std::exception& e) {
-                handleException(scriptName, e);
+            auto message = evaluate(args[0].get());
+            std::visit([](auto&& arg) { std::cout << arg << std::endl; },
+                       message);
+        } else if (name == "len") {
+            if (args.size() != 1) {
+                throw std::runtime_error("len function expects 1 argument");
             }
-        }
-    });
-}
-
-void TaskInterpreter::stop() {
-    impl_->stopRequested = true;
-    if (impl_->executionThread.joinable()) {
-        impl_->executionThread.join();
-    }
-}
-
-void TaskInterpreter::pause() {
-    LOG_F(INFO, "Pausing task interpreter...");
-    impl_->pauseRequested = true;
-}
-
-void TaskInterpreter::resume() {
-    LOG_F(INFO, "Resuming task interpreter...");
-    impl_->pauseRequested = false;
-    impl_->cv.notify_all();
-}
-
-void TaskInterpreter::queueEvent(const std::string& eventName,
-                                 const json& eventData) {
-    std::unique_lock lock(impl_->mtx);
-    impl_->eventQueue.emplace(eventName, eventData);
-    impl_->cv.notify_all();
-}
-
-auto TaskInterpreter::executeStep(const json& step, size_t& idx,
-                                  const json& script) -> bool {
-    if (impl_->stopRequested) {
-        return false;
-    }
-
-    try {
-        using namespace matchit;
-        std::string type = step["type"];
-        match(type)(
-            pattern | "call" = [this, &step] { executeCall(step); },
-            pattern | "condition" =
-                [this, &step, &idx, &script] {
-                    executeCondition(step, idx, script);
-                },
-            pattern | "loop" = [this, &step, &idx,
-                                &script] { executeLoop(step, idx, script); },
-            pattern |
-                "while" = [this, &step, &idx,
-                           &script] { executeWhileLoop(step, idx, script); },
-            pattern | "goto" = [this, &step, &idx,
-                                &script] { executeGoto(step, idx, script); },
-            pattern |
-                "switch" = [this, &step, &idx,
-                            &script] { executeSwitch(step, idx, script); },
-            pattern | "delay" = [this, &step] { executeDelay(step); },
-            pattern |
-                "parallel" = [this, &step, &idx,
-                              &script] { executeParallel(step, idx, script); },
-            pattern |
-                "nested_script" = [this, &step] { executeNestedScript(step); },
-            pattern | "assign" = [this, &step] { executeAssign(step); },
-            pattern | "import" = [this, &step] { executeImport(step); },
-            pattern | "wait_event" = [this, &step] { executeWaitEvent(step); },
-            pattern | "print" = [this, &step] { executePrint(step); },
-            pattern | "async" = [this, &step] { executeAsync(step); },
-            pattern | "try" = [this, &step, &idx,
-                               &script] { executeTryCatch(step, idx, script); },
-            pattern | "function" = [this, &step] { executeFunction(step); },
-            pattern |
-                "return" = [this, &step, &idx] { executeReturn(step, idx); },
-            pattern |
-                "break" = [this, &step, &idx] { executeBreak(step, idx); },
-            pattern | "continue" = [this, &step,
-                                    &idx] { executeContinue(step, idx); },
-            pattern | "message" = [this, &step] { executeMessage(step); },
-            pattern | "broadcast_event" =
-                [this, &step] { executeBroadcastEvent(step); },
-            pattern | "listen_event" =
-                [this, &step, &idx] { executeListenEvent(step, idx); },
-            pattern | "retry" = [this, &step, &idx,
-                                 &script] { executeRetry(step, idx, script); },
-            pattern |
-                "schedule" = [this, &step, &idx,
-                              &script] { executeSchedule(step, idx, script); },
-            pattern | "scope" = [this, &step, &idx,
-                                 &script] { executeScope(step, idx, script); },
-            pattern |
-                "function_def" = [this, &step] { executeFunctionDef(step); },
-            pattern | "throw" = [this, &step] { executeThrow(step); },
-            pattern | _ =
-                [&step] {
-                    THROW_RUNTIME_ERROR("Unknown step type: " +
-                                        step["type"].get<std::string>());
-                });
-        return true;
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during step {} execution: {}",
-              step["type"].get<std::string>(), e.what());
-        handleException(script["name"], e);
-        return false;
-    }
-}
-
-void TaskInterpreter::executeCondition(const json& step, size_t& idx,
-                                       const json& script) {
-    try {
-        if (!step.contains("condition")) {
-            THROW_INVALID_ARGUMENT(
-                "Condition step is missing 'condition' field.");
-        }
-
-        json conditionResult = evaluate(step["condition"]);
-
-        if (!conditionResult.is_boolean()) {
-            THROW_INVALID_ARGUMENT("Condition result must be boolean.");
-        }
-
-        // 根据条件执行分支
-        if (conditionResult.get<bool>()) {
-            executeStep(step["true"], idx, script);
-        } else if (step.contains("false")) {
-            executeStep(step["false"], idx, script);
-        }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeCondition: {}", e.what());
-        throw;
-    }
-}
-
-auto TaskInterpreter::executeLoop(const json& step, size_t& idx,
-                                  const json& script) -> bool {
-    try {
-        if (!step.contains("loop_iterations")) {
-            THROW_INVALID_ARGUMENT(
-                "Loop step is missing 'loop_iterations' field.");
-        }
-
-        int iterations = evaluate(step["loop_iterations"]).get<int>();
-
-        for (int i = 0; i < iterations && !impl_->stopRequested; i++) {
-            for (const auto& nestedStep : step["steps"]) {
-                if (!executeStep(nestedStep, idx, script)) {
-                    return false;
-                }
-            }
-        }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeLoop: {}", e.what());
-        throw;
-    }
-
-    return true;
-}
-
-/*
-{
-    "type": "while",
-    "condition": {"type": "greater_than", "left": "$x", "right": 0},
-    "steps": [
-        {"type": "print", "message": "x is: $x"},
-        {"type": "assign", "variable": "x", "value": {"$sub": ["$x", 1]}}
-    ]
-}
-*/
-void TaskInterpreter::executeWhileLoop(const json& step, size_t& idx,
-                                       const json& script) {
-    LOG_F(INFO, "Executing while loop...");
-    try {
-        while (evaluate(step["condition"]).get<bool>()) {
-            executeSteps(step["steps"], idx, script);
-        }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeWhileLoop: {}", e.what());
-        throw;
-    }
-}
-
-void TaskInterpreter::executeGoto(const json& step, size_t& idx,
-                                  const json& script) {
-    static const int MAX_GOTO_DEPTH = 100;  // 设置最大跳转深度
-    static std::unordered_map<std::string, int>
-        gotoDepthCounter;  // 跳转深度计数器
-    static std::unordered_map<std::string, size_t> labelCache;  // 标签位置缓存
-
-    // 标签字段验证
-    if (!step.contains("label") || !step["label"].is_string()) {
-        THROW_INVALID_ARGUMENT("Goto step is missing a valid 'label' field.");
-    }
-
-    // 获取标签和当前上下文
-    std::string label = step["label"];
-    std::string currentContext =
-        script.contains("context") ? script["context"].get<std::string>() : "";
-    std::string fullLabel =
-        currentContext.empty() ? label : currentContext + "::" + label;
-
-    // 检查缓存
-    if (labelCache.find(fullLabel) != labelCache.end()) {
-        idx = labelCache[fullLabel];
-        gotoDepthCounter[fullLabel]++;
-        if (gotoDepthCounter[fullLabel] > MAX_GOTO_DEPTH) {
-            THROW_RUNTIME_ERROR("Exceeded maximum GOTO depth for label '" +
-                                fullLabel + "'. Possible infinite loop.");
-        }
-        return;
-    }
-
-    // 查找标签并验证存在性
-    if (impl_->labels.find(fullLabel) == impl_->labels.end()) {
-        THROW_RUNTIME_ERROR("Label '" + fullLabel +
-                            "' not found in the script.");
-    }
-
-    // 更新索引并缓存结果
-    idx = impl_->labels.at(fullLabel);
-    labelCache[fullLabel] = idx;
-
-    // 更新跳转深度计数器
-    gotoDepthCounter[fullLabel] = 1;
-}
-
-void TaskInterpreter::executeSwitch(const json& step, size_t& idx,
-                                    const json& script) {
-    try {
-        if (!step.contains("variable") || !step["variable"].is_string()) {
-            THROW_MISSING_ARGUMENT("Missing 'variable' parameter.");
-        }
-        std::string variable = step["variable"];
-        if (!impl_->variables.contains(variable)) {
-            THROW_OBJ_NOT_EXIST("Variable '" + variable + "' not found.");
-        }
-
-        json value = evaluate(impl_->variables[variable]);
-
-        bool caseFound = false;
-
-        if (step.contains("cases")) {
-            for (const auto& caseBlock : step["cases"]) {
-                if (caseBlock["case"] == value) {
-                    for (const auto& nestedStep : caseBlock["steps"]) {
-                        executeStep(nestedStep, idx, script);
-                    }
-                    caseFound = true;
-                    break;
-                }
-            }
-        }
-
-        if (!caseFound && step.contains("default") &&
-            step["default"].contains("steps")) {
-            for (const auto& nestedStep : step["default"]["steps"]) {
-                executeStep(nestedStep, idx, script);
-            }
-        } else if (!caseFound) {
-            LOG_F(WARNING, "No matching case found for variable '{}'",
-                  variable);
-        }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeSwitch: {}", e.what());
-        throw;
-    }
-}
-
-void TaskInterpreter::executeDelay(const json& step) {
-    if (!step.contains("milliseconds")) {
-        THROW_MISSING_ARGUMENT("Missing 'milliseconds' parameter.");
-    }
-    if (!step["milliseconds"].is_number()) {
-        THROW_INVALID_ARGUMENT("'milliseconds' must be a number.");
-    }
-    auto milliseconds =
-        std::chrono::milliseconds(evaluate(step["milliseconds"]).get<int>());
-    std::this_thread::sleep_for(milliseconds);
-}
-
-void TaskInterpreter::executeParallel(const json& step,
-                                      [[maybe_unused]] size_t& idx,
-                                      const json& script) {
-    try {
-        if (!step.contains("steps") || !step["steps"].is_array()) {
-            THROW_INVALID_ARGUMENT(
-                "Parallel step is missing a valid 'steps' array.");
-        }
-        std::vector<std::future<void>> futures;
-
-        for (const auto& nestedStep : step["steps"]) {
-            futures.emplace_back(
-                impl_->threadPool->enqueue([this, nestedStep, &script]() {
-                    try {
-                        size_t nestedIdx = 0;
-                        executeStep(nestedStep, nestedIdx, script);
-                    } catch (const std::exception& e) {
-                        LOG_F(ERROR, "Error during parallel task execution: {}",
-                              e.what());
-                        throw;
-                    }
-                }));
-        }
-
-        for (auto& future : futures) {
-            future.get();
-        }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeParallel: {}", e.what());
-        std::throw_with_nested(e);
-    }
-}
-
-void TaskInterpreter::executeCall(const json& step) {
-    LOG_F(INFO, "Executing call step");
-
-    try {
-        if (!step.contains("function") || !step["function"].is_string()) {
-            THROW_MISSING_ARGUMENT(
-                "Call step is missing a valid 'function' field.");
-        }
-        std::string functionName = step["function"];
-
-        json params = step.contains("params") ? step["params"] : json::object();
-
-        // 评估参数的值
-        for (const auto& [key, value] : params.items()) {
-            params[key] = evaluate(value);
-        }
-
-        std::string targetVariable =
-            step.contains("result") ? step["result"].get<std::string>() : "";
-
-        json returnValue;
-
-        // 仅在查找函数时加锁，执行时不加锁以避免卡死
-        {
-            std::shared_lock lock(impl_->mtx);
-            if (impl_->functions.contains(functionName)) {
-                lock.unlock();
-                returnValue = impl_->functions[functionName](params);
+            auto value = evaluate(args[0].get());
+            if (std::holds_alternative<std::string>(value)) {
+                std::cout << std::get<std::string>(value).size() << std::endl;
             } else {
-                THROW_RUNTIME_ERROR("Function '" + functionName +
-                                    "' not found.");
+                throw std::runtime_error(
+                    "len function expects a string argument");
             }
+        } else if (name == "toInt") {
+            if (args.size() != 1) {
+                throw std::runtime_error("toInt function expects 1 argument");
+            }
+            auto value = evaluate(args[0].get());
+            if (std::holds_alternative<std::string>(value)) {
+                std::cout << std::stoi(std::get<std::string>(value))
+                          << std::endl;
+            } else if (std::holds_alternative<double>(value)) {
+                std::cout << static_cast<int>(std::get<double>(value))
+                          << std::endl;
+            } else {
+                throw std::runtime_error(
+                    "toInt function expects a string or double argument");
+            }
+        } else if (name == "toDouble") {
+            if (args.size() != 1) {
+                throw std::runtime_error(
+                    "toDouble function expects 1 argument");
+            }
+            auto value = evaluate(args[0].get());
+            if (std::holds_alternative<std::string>(value)) {
+                std::cout << std::stod(std::get<std::string>(value))
+                          << std::endl;
+            } else if (std::holds_alternative<int>(value)) {
+                std::cout << static_cast<double>(std::get<int>(value))
+                          << std::endl;
+            } else {
+                throw std::runtime_error(
+                    "toDouble function expects a string or int argument");
+            }
+        } else if (name == "thread::create") {
+            if (args.size() != 1) {
+                throw std::runtime_error(
+                    "thread::create function expects 1 argument");
+            }
+            auto funcName = std::get<std::string>(evaluate(args[0].get()));
+            auto funcIt = functions_.find(funcName);
+            if (funcIt == functions_.end()) {
+                throw std::runtime_error("Undefined function: " + funcName);
+            }
+            auto* func = funcIt->second.get();
+            std::thread([this, func]() {
+                try {
+                    for (const auto& stmt : func->getBody()->getStatements()) {
+                        execute(stmt.get());
+                    }
+                } catch (const ReturnException&) {
+                    // 忽略返回值
+                }
+            }).detach();
+        } else {
+            throw std::runtime_error("Unknown built-in function: " + name);
+        }
+    }
+
+    // 调用函数
+    // 调用函数
+    [[nodiscard]] auto callFunction(
+        const std::string& name,
+        const std::vector<std::shared_ptr<ASTNode>>& args)
+        -> std::variant<int, double, std::string> {
+        // 检查是否是内置函数
+        if (functions_.find(name) == functions_.end()) {
+            callBuiltInFunction(name, args);
+            return 0;
+        }
+        // 查找函数定义
+        auto funcIt = functions_.find(name);
+        if (funcIt == functions_.end()) {
+            return callExternalFunction(name, args);
+        }
+        auto* func = funcIt->second.get();
+
+        if (args.size() != func->getParams().size()) {
+            throw std::runtime_error("Function " + name + " expects " +
+                                     std::to_string(func->getParams().size()) +
+                                     " arguments, got " +
+                                     std::to_string(args.size()));
         }
 
-        // 如果指定了目标变量名，则将返回值存储到该变量中
-        if (!targetVariable.empty()) {
-            std::unique_lock ulock(impl_->mtx);
-            impl_->variables[targetVariable] = {determineType(returnValue),
-                                                returnValue};
+        log("Calling function '" + name + "' with " +
+            std::to_string(args.size()) + " arguments.");
+
+        // 创建新的局部作用域
+        locals_.emplace_back();
+
+        // 绑定参数
+        for (size_t idx = 0; idx < args.size(); ++idx) {
+            auto argValue = evaluate(args[idx].get());
+            locals_.back()[func->getParams()[idx]] = argValue;
+            log("Function parameter '" + func->getParams()[idx] +
+                "' assigned value: " + variantToString(argValue));
         }
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeCall: {}", e.what());
-        throw;
-    }
-}
 
-/*
-{
-    "type": "function_def",
-    "name": "add",
-    "params": ["a", "b"],
-    "default_values": {
-        "b": 10
-    },
-    "steps": [
-        { "type": "assign", "variable": "result", "value": { "$add": ["$a",
-"$b"] } }
-    ],
-    "return": "$result"
-}
-{
-    "type": "call",
-    "function": "add",
-    "params": {
-        "a": 5
-    },
-    "result": "sum"
-}
-
-*/
-void TaskInterpreter::executeFunctionDef(const json& step) {
-    LOG_F(INFO, "Executing function_def step");
-    if (!step.contains("name") || !step["name"].is_string()) {
-        THROW_INVALID_ARGUMENT("Function definition requires a 'name' field.");
-    }
-
-    std::string functionName = step["name"];
-    std::vector<std::string> paramNames;
-    if (step.contains("params") && step["params"].is_array()) {
-        paramNames = step["params"].get<std::vector<std::string>>();
-    }
-
-    json defaultValues = step.contains("default_values")
-                             ? step["default_values"]
-                             : json::object();
-    json closure = captureClosureVariables();
-
-    impl_->functions[functionName] =
-        [this, step, paramNames, defaultValues,
-         closure](const json& passedParams) mutable -> json {
-        size_t idx = 0;
-        json mergedParams = defaultValues;
+        // 添加到调用堆栈
+        callStack_.push_back(name);
 
         try {
-            // 合并传递的参数和默认值
-            for (const auto& paramName : paramNames) {
-                if (passedParams.contains(paramName)) {
-                    mergedParams[paramName] = passedParams[paramName];
-                }
-            }
-
-            // 恢复闭包变量
-            restoreClosureVariables(closure);
-
-            // 设置函数参数
-            for (const auto& [key, value] : mergedParams.items()) {
-                std::unique_lock lock(impl_->mtx);
-                impl_->variables[key] = {
-                    determineType(value),
-                    value,
-                };
-            }
-
             // 执行函数体
-            json returnValue;
-            executeSteps(step["steps"], idx, step);
-
-            // 如果存在返回值
-            if (impl_->variables.contains("__return_value__")) {
-                returnValue = impl_->variables.at("__return_value__").second;
-                impl_->variables.erase("__return_value__");
+            for (const auto& stmt : func->getBody()->getStatements()) {
+                execute(stmt.get());
             }
-
-            return returnValue;  // 返回结果
+        } catch (const ReturnException& ret) {
+            // 弹出局部作用域
+            locals_.pop_back();
+            // 从调用堆栈中移除
+            callStack_.pop_back();
+            log("Function '" + name +
+                "' returned with value: " + variantToString(ret.value));
+            return ret.value;
         } catch (const std::exception& e) {
-            LOG_F(ERROR, "Error during function execution: {}", e.what());
+            // 从调用堆栈中移除
+            callStack_.pop_back();
             throw;
         }
-    };
-}
 
-auto TaskInterpreter::captureClosureVariables() const -> json {
-    json closure;
-    for (const auto& var : impl_->variables) {
-        closure[var.first] =
-            var.second.second;  // Capture the current value of the variable
+        // 如果函数没有返回语句，默认返回0
+        locals_.pop_back();
+        // 从调用堆栈中移除
+        callStack_.pop_back();
+        log("Function '" + name +
+            "' completed without return statement, defaulting to 0.");
+        return 0;
     }
-    return closure;
-}
 
-void TaskInterpreter::restoreClosureVariables(const json& closure) {
-    for (const auto& [key, value] : closure.items()) {
-        impl_->variables[key] = {determineType(value), value};
-    }
-}
-
-/*
-{
-    "type": "scope",
-    "variables": {
-        "local_var": 10
-    },
-    "functions": [
-        {
-            "name": "calculate",
-            "params": ["x"],
-            "steps": [
-                { "type": "assign", "variable": "result", "value": { "$add":
-["$x", "$local_var"] } }
-            ]
+    [[nodiscard]] auto callExternalFunction(
+        const std::string& name,
+        const std::vector<std::shared_ptr<ASTNode>>& args)
+        -> std::variant<int, double, std::string> {
+        void* funcPtr = dlsym(RTLD_DEFAULT, name.c_str());
+        if (funcPtr == nullptr) {
+            throw std::runtime_error("Undefined external function: " + name);
         }
-    ],
-    "steps": [
-        { "type": "call", "function": "calculate", "params": { "x": 5 } },
-        { "type": "throw", "message": "Something went wrong!" }  // Example
-error to trigger error handling
-    ],
-    "on_error": [
-        { "type": "print", "message": "Handled error within scope!" }
-    ],
-    "cleanup": [
-        { "type": "print", "message": "Cleanup after scope." }
-    ]
-}
-*/
-void TaskInterpreter::executeScope(const json& step, size_t& idx,
-                                   const json& script) {
-    // Store old variable states to restore after the scope ends
-    std::unordered_map<std::string, std::pair<VariableType, json>> oldVars;
-    std::unordered_map<std::string, std::function<json(const json&)>>
-        oldFunctions;
 
-    // Capture scope variables
-    if (step.contains("variables") && step["variables"].is_object()) {
-        for (const auto& [name, value] : step["variables"].items()) {
-            if (impl_->variables.find(name) != impl_->variables.end()) {
-                oldVars[name] = impl_->variables[name];
-            }
-            setVariable(name, value, determineType(value));
-        }
-    }
+        // 准备libffi调用
+        ffi_cif cif;
+        std::vector<ffi_type*> argTypes(args.size());
+        std::vector<void*> argValues(args.size());
+        std::vector<double> doubleStorage(args.size());
+        std::vector<std::string> stringStorage(args.size());
+        std::vector<const char*> cStringStorage(args.size());
 
-    // Capture scope-specific functions
-    if (step.contains("functions") && step["functions"].is_array()) {
-        for (const auto& funcDef : step["functions"]) {
-            if (funcDef.contains("name") && funcDef["name"].is_string()) {
-                std::string funcName = funcDef["name"];
-                if (impl_->functions.find(funcName) != impl_->functions.end()) {
-                    oldFunctions[funcName] = impl_->functions[funcName];
-                }
-                executeFunctionDef(funcDef);  // Define the new scope function
+        for (size_t i = 0; i < args.size(); ++i) {
+            auto argValue = evaluate(args[i].get());
+            if (std::holds_alternative<int>(argValue)) {
+                doubleStorage[i] = static_cast<double>(std::get<int>(argValue));
+                argTypes[i] = &ffi_type_double;
+                argValues[i] = &doubleStorage[i];
+            } else if (std::holds_alternative<double>(argValue)) {
+                doubleStorage[i] = std::get<double>(argValue);
+                argTypes[i] = &ffi_type_double;
+                argValues[i] = &doubleStorage[i];
+            } else if (std::holds_alternative<std::string>(argValue)) {
+                stringStorage[i] = std::get<std::string>(argValue);
+                cStringStorage[i] = stringStorage[i].c_str();
+                argTypes[i] = &ffi_type_pointer;
+                argValues[i] = &cStringStorage[i];
+            } else {
+                throw std::runtime_error(
+                    "Unsupported argument type for external function");
             }
         }
-    }
 
-    try {
-        // Execute scope steps
-        if (step.contains("steps") && step["steps"].is_array()) {
-            executeSteps(step["steps"], idx, script);
-        }
-    } catch (const std::exception& e) {
-        // Scope-specific error handling
-        if (step.contains("on_error") && step["on_error"].is_array()) {
-            LOG_F(WARNING, "Error occurred within scope: {}", e.what());
-            size_t errorIdx = 0;
-            executeSteps(step["on_error"], errorIdx, script);
-        } else {
-            throw;  // Rethrow if no specific error handling is provided
-        }
-    }
-
-    // Execute scope cleanup
-    if (step.contains("cleanup") && step["cleanup"].is_array()) {
-        size_t cleanupIdx = 0;
-        executeSteps(step["cleanup"], cleanupIdx, script);
-    }
-
-    // Restore old functions
-    for (const auto& [name, func] : oldFunctions) {
-        impl_->functions[name] = func;  // Restore old function if it existed
-    }
-
-    // Restore old variables
-    for (const auto& [name, var] : oldVars) {
-        impl_->variables[name] = var;  // Restore old variable
-    }
-
-    // Remove variables that were only within the scope
-    if (step.contains("variables") && step["variables"].is_object()) {
-        for (const auto& [name, _] : step["variables"].items()) {
-            if (oldVars.find(name) == oldVars.end()) {
-                impl_->variables.erase(
-                    name);  // Remove variables specific to the scope
-            }
-        }
-    }
-}
-
-void TaskInterpreter::executeNestedScript(const json& step) {
-    LOG_F(INFO, "Executing nested script step");
-    std::string scriptName = step["script"];
-    std::shared_lock lock(impl_->mtx);
-    if (impl_->scripts.find(scriptName) != impl_->scripts.end()) {
-        execute(scriptName);
-    } else {
-        THROW_RUNTIME_ERROR("Script '" + scriptName + "' not found.");
-    }
-}
-
-void TaskInterpreter::executeAssign(const json& step) {
-    try {
-        if (!step.contains("variable") || !step["variable"].is_string()) {
-            THROW_INVALID_ARGUMENT(
-                "Assign step is missing a valid 'variable' field.");
+        // 假设返回类型为double
+        ffi_type* returnType = &ffi_type_double;
+        if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, args.size(), returnType,
+                         argTypes.data()) != FFI_OK) {
+            throw std::runtime_error(
+                "Failed to prepare CIF for external function");
         }
 
-        if (!step.contains("value")) {
-            THROW_INVALID_ARGUMENT("Assign step is missing 'value' field.");
+        ffi_arg result;
+        ffi_call(&cif, FFI_FN(funcPtr), &result, argValues.data());
+
+        // 尝试将结果转换为double
+        double doubleResult = *reinterpret_cast<double*>(&result);
+        if (doubleResult == static_cast<int>(doubleResult)) {
+            return static_cast<int>(doubleResult);
         }
+        return doubleResult;
+    }
 
-        std::string variableName = step["variable"];
-        json value = evaluate(step["value"]);
-
-        // Instead of locking the entire method, we update the variable directly
-        // since this is executed within the script execution context.
-        for (int attempt = 0; attempt < 3; ++attempt) {  // Retry 3 times
-            std::unique_lock lock(impl_->mtx, std::defer_lock);
-            if (lock.try_lock_for(
-                    std::chrono::milliseconds(50))) {  // Wait for 50ms
-                impl_->variables[variableName] = {determineType(value), value};
-                return;
-            }
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(100));  // Backoff delay
+    // 导入模块
+    void importModule(const std::string& moduleName, const std::string& alias) {
+        std::string fileName = "./" + moduleName + ".so";
+        if (!fs::exists(fileName)) {
+            throw std::runtime_error("Module not found: " + fileName);
         }
-        THROW_RUNTIME_ERROR(
-            "Failed to acquire lock after multiple attempts in executeAssign.");
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeAssign: {}", e.what());
-        throw;
-    }
-}
-
-void TaskInterpreter::executeImport(const json& step) {
-    LOG_F(INFO, "Executing import step");
-
-    // Validate the 'script' field
-    if (!step.contains("script") || !step["script"].is_string()) {
-        THROW_INVALID_ARGUMENT(
-            "Import step is missing a valid 'script' field.");
-    }
-
-    std::string scriptName = step["script"];
-    // Handle namespace if provided
-    std::string namespaceName;
-    if (step.contains("namespace") && step["namespace"].is_string()) {
-        namespaceName = step["namespace"];
-    }
-
-    json scriptToImport;
-
-    bool fromFile = step.contains("fromFile") && step["fromFile"].get<bool>();
-    // If we are importing from a file, check if the script is already imported
-    if (fromFile) {
-        if (hasScript(scriptName)) {
-            LOG_F(WARNING, "Script '{}' already imported. Skipping import.",
-                  scriptName);
+        if (dlopen(fileName.c_str(), RTLD_NOLOAD) != nullptr) {
+            log("Module '" + moduleName + "' already loaded.");
             return;
         }
+        void* handle = dlopen(fileName.c_str(), RTLD_LAZY);
+        if (handle == nullptr) {
+            throw std::runtime_error("Failed to load module: " + fileName);
+        }
+        log("Module '" + moduleName + "' loaded.");
 
-        // Try to read the script from file
-        try {
-            // Synchronization for async operation
-            std::mutex mtx;
-            std::condition_variable cv;
-            bool callbackCalled = false;
-
-            std::weak_ptr<atom::utils::Env> weakEnv;
-            GET_OR_CREATE_WEAK_PTR(weakEnv, atom::utils::Env,
-                                   Constants::ENVIRONMENT)
-            auto taskFolder = weakEnv.lock()->getEnv("TASK_FOLDER", "./tasks/");
-            std::string fullPath =
-                taskFolder + scriptName + Constants::PATH_SEPARATOR + ".json";
-            LOG_F(INFO, "Importing script from file: {}", fullPath);
-
-            // Asynchronously read the script file
-            TaskLoader::asyncReadJsonFile(
-                fullPath, [&](std::optional<json> data) {
-                    std::unique_lock lock(mtx);
-                    if (!data) {
-                        THROW_FILE_NOT_FOUND("Script '" + scriptName +
-                                             "' not found.");
-                    }
-                    if (data->is_null() || data->empty()) {
-                        THROW_JSON_VALUE_ERROR("Script '" + scriptName +
-                                               "' is empty or null.");
-                    }
-                    scriptToImport = std::move(*data);
-                    callbackCalled = true;
-                    cv.notify_one();  // Notify that the callback has been
-                                      // called
-                });
-
-            // Wait for the callback to finish
-            std::unique_lock lock(mtx);
-            cv.wait(lock, [&] { return callbackCalled; });
-            // Apply namespace if needed
-            if (!namespaceName.empty()) {
-                json namespacedScript;
-                for (const auto& [key, value] : scriptToImport.items()) {
-                    namespacedScript[namespaceName + "::" + key] = value;
-                }
-                scriptToImport = std::move(namespacedScript);
+        // 导入模块中的函数
+        std::vector<std::string> importedFunctions;
+        importedFunctions.reserve(functions_.size());
+        for (const auto& [name, func] : functions_) {
+            importedFunctions.push_back(name);
+        }
+        for (const auto& funcName : importedFunctions) {
+            auto funcIt = functions_.find(funcName);
+            if (funcIt == functions_.end()) {
+                throw std::runtime_error("Undefined function: " + funcName);
             }
-            // Load the script
-            loadScript(scriptName, scriptToImport);
-            LOG_F(INFO, "Successfully imported script '{}'.", scriptName);
-        } catch (const json ::parse_error& e) {
-            THROW_JSON_PARSE_ERROR("Failed to parse script '" + scriptName +
-                                   "': " + e.what());
-        } catch (const std::exception& e) {
-            LOG_F(ERROR, "Failed to import script '{}': {}", scriptName,
-                  e.what());
-            THROW_RUNTIME_ERROR("Error importing script '" + scriptName +
-                                "': " + e.what());
-        }
-    } else {
-        // Here we are importing from a local cache, so we must check
-        if (!hasScript(scriptName)) {
-            THROW_OBJ_NOT_EXIST("Script '" + scriptName + "' not found.");
-        }
-        LOG_F(INFO, "Importing script from cache: {}", scriptName);
-        // This means this script is not executed yet, so we need to execute it
-        // No 'auto_execute' flag found
-        if (!impl_->scriptHeaders.contains(scriptName)) {
-            execute(scriptName);
-        }
-    }
-
-    // Handle nested imports recursively
-    if (scriptToImport.contains("imports") &&
-        scriptToImport["imports"].is_array()) {
-        for (const auto& nestedImport : scriptToImport["imports"]) {
-            if (nestedImport.is_string()) {
-                json importStep;
-                importStep["script"] = nestedImport.get<std::string>();
-                if (!namespaceName.empty()) {
-                    importStep["namespace"] = namespaceName;
-                }
-                executeImport(importStep);  // Recursively import nested scripts
-            }
-        }
-    }
-}
-
-void TaskInterpreter::executeWaitEvent(const json& step) {
-    try {
-        if (!step.contains("event") || !step["event"].is_string()) {
-            THROW_INVALID_ARGUMENT(
-                "WaitEvent step is missing a valid 'event' field.");
-        }
-        std::string eventName = step["event"];
-        std::unique_lock lock(impl_->mtx);
-        impl_->cv.wait(lock, [this, &eventName]() {
-            return !impl_->eventQueue.empty() &&
-                   impl_->eventQueue.front().first == eventName;
-        });
-        impl_->eventQueue.pop();
-    } catch (const std::exception& e) {
-        LOG_F(ERROR, "Error during executeWaitEvent: {}", e.what());
-        std::throw_with_nested(e);
-    }
-}
-
-void TaskInterpreter::executePrint(const json& step) {
-    std::string message = evaluate(step["message"]).get<std::string>();
-    LOG_F(INFO, "{}", message);
-}
-
-void TaskInterpreter::executeAsync(const json& step) {
-    impl_->threadPool->enqueueDetach([this, step]() {
-        size_t idx = 0;
-        executeStep(step, idx, step);
-    });
-}
-
-/*
-{
-    "type": "try",
-    "try": [
-        {"type": "print", "message": "Executing try block..."},
-        {"type": "call", "function": "someFunction"}  // 假设此处可能抛出异常
-    ],
-    "catch": {
-        "type": "all",
-        "steps": [
-            {"type": "print", "message": "Exception caught in catch block!"}
-        ]
-    },
-    "finally": [
-        {"type": "print", "message": "Finally block executed."}
-    ]
-}
- */
-void TaskInterpreter::executeTryCatch(const json& step, size_t& idx,
-                                      const json& script) {
-    [[maybe_unused]] bool exceptionOccurred = false;
-    if (!step.contains("try") || !step["try"].is_array()) {
-        THROW_INVALID_ARGUMENT("TryCatch step is missing a valid 'try' field.");
-    }
-    try {
-        executeSteps(step["try"], idx, script);
-    } catch (const std::exception& e) {
-        exceptionOccurred = true;
-        LOG_F(ERROR, "Exception caught: {}", e.what());
-
-        if (step.contains("catch")) {
-            const auto& catchBlock = step["catch"];
-            auto abiName =
-                atom::meta::DemangleHelper::demangle(typeid(e).name());
-            // 遍历 catch block, 匹配异常类型
-            for (const auto& catchEntry : catchBlock) {
-                std::string catchType =
-                    catchEntry.contains("type")
-                        ? catchEntry["type"].get<std::string>()
-                        : "all";
-                LOG_F(INFO, "Checking catch block for type: {} {}", catchType,
-                      catchEntry.dump());
-
-                // 检查异常类型是否匹配
-                if (catchType == "all" || catchType == abiName) {
-                    LOG_F(INFO, "Catch block step: {}", catchEntry.dump());
-                    executeSteps(catchEntry["steps"], idx, script);
-                    break;  // 执行匹配的 catch 分支后跳出
-                }
+            auto* func = funcIt->second.get();
+            if (func->getName() == funcName) {
+                functions_[alias + "::" + funcName] = funcIt->second;
+                log("Function '" + alias + "::" + funcName + "' imported.");
             }
         }
     }
 
-    // 执行 finally 块，无论是否发生异常
-    if (step.contains("finally")) {
-        const auto& finallyBlock = step["finally"];
-        executeSteps(finallyBlock, idx, script);
-    }
-
-    if (!exceptionOccurred && step.contains("else")) {
-        // 如果没有发生异常，执行 else 块
-        const auto& elseBlock = step["else"];
-        executeSteps(elseBlock, idx, script);
-    }
-}
-
-void TaskInterpreter::executeThrow(const json& step) {
-    if (!step.contains("exception_type") ||
-        !step["exception_type"].is_string()) {
-        THROW_INVALID_ARGUMENT(
-            "Throw step requires an 'exception_type' field.");
-    }
-
-    std::string exceptionType = step["exception_type"];
-    std::string message =
-        step.contains("message") && step["message"].is_string()
-            ? step["message"].get<std::string>()
-            : "An error occurred";
-
-    if (exceptionType == "runtime_error") {
-        throw std::runtime_error(message);
-    }
-    if (exceptionType == "invalid_argument") {
-        throw std::invalid_argument(message);
-    }
-    if (exceptionType == "out_of_range") {
-        throw std::out_of_range(message);
-    }
-    THROW_RUNTIME_ERROR("Unsupported exception type: " + exceptionType);
-}
-
-// TODO: Switch to self implementation of CommandDispatcher
-void TaskInterpreter::executeFunction(const json& step) {
-    LOG_F(INFO, "Executing step {}", step.dump());
-    std::string functionName = step["name"];
-    json params = step.contains("params") ? step["params"] : json::object();
-    // 用于处理返回值
-    std::string targetVariable =
-        step.contains("result") ? step["result"].get<std::string>() : "";
-    std::shared_lock lock(impl_->mtx);
-    if (impl_->functions.contains(functionName)) {
-        json returnValue = impl_->functions[functionName](params);
-        // 如果指定了目标变量名，则将返回值存储到该变量中
-        if (!targetVariable.empty()) {
-            std::unique_lock ulock(impl_->mtx);
-            impl_->variables[targetVariable] = returnValue;
-        }
-    } else {
-        THROW_RUNTIME_ERROR("Function '" + functionName + "' not found.");
-    }
-}
-
-void TaskInterpreter::executeReturn(const json& step, size_t& idx) {
-    if (step.contains("value")) {
-        impl_->variables["__return_value__"] = {determineType(step["value"]),
-                                                evaluate(step["value"])};
-    }
-    idx = std::numeric_limits<size_t>::max();  // Terminate the script execution
-}
-
-void TaskInterpreter::executeBreak(const json& /*step*/, size_t& idx) {
-    idx = std::numeric_limits<size_t>::max();  // Terminate the loop
-}
-
-void TaskInterpreter::executeContinue(const json& /*step*/, size_t& idx) {
-    idx = std::numeric_limits<size_t>::max() - 1;  // Skip to the next iteration
-}
-
-void TaskInterpreter::executeSteps(const nlohmann::json& steps, size_t& idx,
-                                   const nlohmann::json& script) {
-    auto stepView =
-        steps | std::views::take_while([this, &idx, &script](const auto& step) {
-            return !impl_->stopRequested && executeStep(step, idx, script);
-        });
-
-    std::ranges::for_each(stepView, [](const auto&) {});
-}
-
-void TaskInterpreter::executeMessage(const json& step) {
-    std::string message = evaluate(step["label"]).get<std::string>();
-    LOG_F(INFO, "{}", message);
-#if ENABLE_DEBUG
-    std::cout << message << std::endl;
-#endif
-}
-
-void TaskInterpreter::executeListenEvent(const json& step, size_t& idx) {
-    LOG_F(INFO, "Listening for events: {}", step.dump());
-
-    if (!step.contains("event_names") || !step["event_names"].is_array()) {
-        THROW_INVALID_ARGUMENT("Listen event requires an 'event_names' array.");
-    }
-
-    std::vector<std::string> eventNames =
-        step["event_names"].get<std::vector<std::string>>();
-    std::string channel =
-        step.contains("channel") && step["channel"].is_string()
-            ? step["channel"].get<std::string>()
-            : "default";
-    int timeout = step.contains("timeout") && step["timeout"].is_number()
-                      ? step["timeout"].get<int>()
-                      : -1;
-
-    std::unique_lock lock(impl_->mtx);
-
-    bool eventReceived = false;
-    if (timeout < 0) {
-        // 无超时等待事件发生
-        impl_->cv.wait(lock, [&]() {
-            for (const auto& eventName : eventNames) {
-                if (!impl_->eventQueue.empty() &&
-                    impl_->eventQueue.front().first ==
-                        eventName + "@" + channel) {
-                    eventReceived = true;
-                    return true;
-                }
-            }
-            return false;
-        });
-    } else {
-        // 带超时的等待
-        impl_->cv.wait_for(lock, std::chrono::milliseconds(timeout), [&]() {
-            for (const auto& eventName : eventNames) {
-                if (!impl_->eventQueue.empty() &&
-                    impl_->eventQueue.front().first ==
-                        eventName + "@" + channel) {
-                    eventReceived = true;
-                    return true;
-                }
-            }
-            return false;
-        });
-    }
-
-    if (!eventReceived) {
-        LOG_F(INFO, "Timeout occurred while waiting for events on channel '{}'",
-              channel);
-        return;
-    }
-
-    auto eventData = impl_->eventQueue.front().second;
-    std::string receivedEvent = impl_->eventQueue.front().first;
-
-    // 事件数据过滤（如果适用）
-    if (step.contains("filter")) {
-        const json& filter = step["filter"];
-        if (!evaluate(filter).get<bool>()) {
-            impl_->eventQueue.pop();
-            return;  // 如果过滤条件不满足，跳过步骤
-        }
-    }
-
-    // 根据接收到的特定事件执行步骤
-    if (step.contains("event_steps") && step["event_steps"].is_object()) {
-        std::string eventKey = receivedEvent.substr(0, receivedEvent.find('@'));
-        if (step["event_steps"].contains(eventKey)) {
-            executeSteps(step["event_steps"][eventKey], idx, step);
-        } else if (step["event_steps"].contains("default")) {
-            executeSteps(step["event_steps"]["default"], idx, step);
-        }
-    } else if (step.contains("steps")) {
-        // 如果没有特定的事件处理逻辑，执行通用步骤
-        executeSteps(step["steps"], idx, step);
-    }
-
-    impl_->eventQueue.pop();
-}
-
-void TaskInterpreter::executeBroadcastEvent(const json& step) {
-    LOG_F(INFO, "Broadcasting event: {}", step.dump());
-    if (!step.contains("event_name") || !step["event_name"].is_string()) {
-        THROW_INVALID_ARGUMENT("Broadcast event requires an 'event_name'.");
-    }
-
-    std::string eventName = step["event_name"];
-    std::string channel =
-        step.contains("channel") && step["channel"].is_string()
-            ? step["channel"].get<std::string>()
-            : "default";
-
-    std::unique_lock lock(impl_->mtx);
-    impl_->eventQueue.emplace(
-        eventName + "@" + channel,
-        step.contains("event_data") ? step["event_data"] : json());
-    impl_->cv.notify_all();
-}
-
-/*
-{
-    "type": "schedule",
-    "delay": 3000,
-    "parallel": true,
-    "steps": [
-        { "type": "print", "message": "This message is delayed by 3 seconds and
-runs in parallel" }
-    ]
-}
-*/
-void TaskInterpreter::executeSchedule(const json& step, size_t& idx,
-                                      const json& script) {
-    if (!step.contains("delay") || !step["delay"].is_number_integer()) {
-        THROW_INVALID_ARGUMENT(
-            "Schedule step requires an integer 'delay' field.");
-    }
-    int delay = step["delay"];
-    bool parallel = step.contains("parallel") && step["parallel"].is_boolean()
-                        ? step["parallel"].get<bool>()
-                        : false;
-
-    if (parallel) {
-        // Non-blocking parallel execution
-        impl_->threadPool->enqueueDetach(
-            [this, step, idx, script, delay]() mutable {
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-                executeSteps(step["steps"], idx, script);
-            });
-    } else {
-        // Blocking execution
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-        executeSteps(step["steps"], idx, script);
-    }
-}
-
-void TaskInterpreter::executeRetry(const json& step, size_t& idx,
-                                   const json& script) {
-    if (!step.contains("retries") || !step["retries"].is_number_integer()) {
-        THROW_INVALID_ARGUMENT(
-            "Retry step requires an integer 'retries' field.");
-    }
-    int retries = step["retries"];
-    int delay = step.contains("delay") && step["delay"].is_number_integer()
-                    ? step["delay"].get<int>()
-                    : 0;
-    bool exponentialBackoff = step.contains("exponential_backoff") &&
-                                      step["exponential_backoff"].is_boolean()
-                                  ? step["exponential_backoff"].get<bool>()
-                                  : false;
-
-    std::string retryOnErrorType =
-        step.contains("error_type") && step["error_type"].is_string()
-            ? step["error_type"].get<std::string>()
-            : "";
-
-    auto logError = [&](int attempt, const std::exception& e) {
-        LOG_F(WARNING, "Retry {} failed, attempt {}/{}. Error: {}",
-              step["type"].get<std::string>(), attempt + 1, retries, e.what());
-        if (step.contains("on_retry")) {
-            // Execute the on_retry steps before the next retry
-            size_t retryIdx = 0;
-            executeSteps(step["on_retry"], retryIdx, script);
-        }
-    };
-
-    for (int i = 0; i <= retries; ++i) {
-        try {
-            executeSteps(step["steps"], idx, script);
-            return;  // Break on success
-        } catch (const std::exception& e) {
-            // Check if we should retry based on the error type
-            if (!retryOnErrorType.empty()) {
-                try {
-                    std::rethrow_if_nested(e);
-                } catch (const std::system_error& se) {
-                    if (se.code().category().name() != retryOnErrorType) {
-                        throw;  // Rethrow if the error type doesn't match
-                    }
-                } catch (const std::exception&) {
-                    if (typeid(e).name() != retryOnErrorType) {
-                        throw;  // Rethrow if the error type doesn't match
-                    }
-                }
-            }
-
-            if (i == retries) {
-                logError(i, e);
-                throw;  // Rethrow if all retries failed
-            }
-
-            logError(i, e);
-
-            if (delay > 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-
-            // Increase delay if exponential backoff is enabled
-            if (exponentialBackoff) {
-                delay *= 2;
+    // 获取变量值
+    [[nodiscard]] auto getVariable(const std::string& name)
+        -> std::variant<int, double, std::string> {
+        // 优先从局部作用域查找
+        for (auto& local : std::ranges::reverse_view(locals_)) {
+            auto varIt = local.find(name);
+            if (varIt != local.end()) {
+                return varIt->second;
             }
         }
-    }
-}
-
-void TaskInterpreter::executeTransaction(const json& step, size_t& idx,
-                                         const json& script) {
-    impl_->transactionRollbackActions.clear();
-    try {
-        executeSteps(step["steps"], idx, script);
-        executeCommit(step);
-    } catch (...) {
-        executeRollback(step);
-        throw;
-    }
-}
-
-void TaskInterpreter::executeRollback(const json& step) {
-    for (auto& transactionRollbackAction :
-         std::ranges::reverse_view(impl_->transactionRollbackActions)) {
-        transactionRollbackAction();
-    }
-    impl_->transactionRollbackActions.clear();
-}
-
-void TaskInterpreter::executeCommit(const json& step) {
-    impl_->transactionRollbackActions.clear();
-}
-
-void TaskInterpreter::executeAtomicOperation(const json& step) {
-    std::atomic_flag lock = ATOMIC_FLAG_INIT;
-    while (lock.test_and_set(std::memory_order_acquire)) {
-        std::this_thread::yield();
-    }
-    try {
-        size_t idx = 0;
-        executeSteps(step["steps"], idx, step);
-    } catch (...) {
-        lock.clear(std::memory_order_release);
-        throw;
-    }
-    lock.clear(std::memory_order_release);
-}
-
-auto TaskInterpreter::executeCoroutine(const json& step) -> TaskCoroutine {
-    if (!step.contains("steps") || !step["steps"].is_array()) {
-        THROW_MISSING_ARGUMENT("Coroutine step must contain a 'steps' array");
+        // 从全局作用域查找
+        auto it = globals_.find(name);
+        if (it != globals_.end()) {
+            return it->second;
+        }
+        throw std::runtime_error("Variable not found: " + name);
     }
 
-    for (const auto& subStep : step["steps"]) {
-        if (subStep.contains("type")) {
-            std::string stepType = subStep["type"];
-
-            if (stepType == "async") {
-                // Execute async step
-                auto future =
-                    std::async(std::launch::async, [this, &subStep]() {
-                        size_t idx = 0;
-                        executeStep(subStep, idx, subStep);
-                    });
-
-                // Yield control back to the caller
-                co_await std::suspend_always{};
-
-                // Wait for the async operation to complete
-                future.wait();
-            } else if (stepType == "delay") {
-                if (!subStep.contains("duration") ||
-                    !subStep["duration"].is_number()) {
-                    THROW_MISSING_ARGUMENT(
-                        "Delay step must contain a 'duration' number");
-                }
-
-                int duration = subStep["duration"].get<int>();
-
-                // Start the delay
-                auto start = std::chrono::steady_clock::now();
-
-                // Yield control back to the caller
-                co_await std::suspend_always{};
-
-                // Resume and check if the delay has passed
-                while (std::chrono::steady_clock::now() - start <
-                       std::chrono::milliseconds(duration)) {
-                    co_await std::suspend_always{};
-                }
-            } else {
-                // Execute regular step
-                size_t idx = 0;
-                executeStep(subStep, idx, subStep);
+    // 设置变量值
+    void setVariable(const std::string& name,
+                     const std::variant<int, double, std::string>& value) {
+        // 如果在局部作用域中存在，赋值到最内层的局部作用域
+        for (auto& local : std::ranges::reverse_view(locals_)) {
+            if (local.find(name) != local.end()) {
+                local[name] = value;
+                return;
             }
         }
+        // 否则，赋值到全局作用域
+        globals_[name] = value;
     }
 
-    co_return;
-}
-
-// Helper method to resume a coroutine
-void TaskInterpreter::resumeCoroutine(const std::string& coroutineName) {
-    auto it = impl_->coroutines.find(coroutineName);
-    if (it != impl_->coroutines.end() && !it->second.done()) {
-        it->second.resume();
-    }
-}
-
-auto TaskInterpreter::evaluate(const json& value) -> json {
-    if (value.is_string()) {
-        std::string valStr = value.get<std::string>();
-
-        if (impl_->variables.contains(std::string(valStr))) {
-            std::shared_lock lock(impl_->mtx);
-            return impl_->variables.at(std::string(valStr)).second;
-        }
-
-        if (std::ranges::any_of(std::array{'+', '-', '*', '/', '%', '^', '!',
-                                           '&', '|', '<', '=', '>'},
-                                [&valStr](char op) {
-                                    return valStr.find(op) !=
-                                           std::string_view::npos;
-                                })) {
-            return evaluateExpression(valStr);
-        }
-
-        if (valStr.starts_with('$')) {
-            return evaluateExpression(valStr.substr(1));
-        }
-    }
-
-    if (value.is_number() || value.is_boolean()) {
-        return value;
-    }
-
-    if (value.is_object()) {
-        if (value.contains("$")) {
-            if (value["$"].is_string()) {
-                std::string expr = value["$"].get<std::string>();
-                return evaluateExpression(expr);
-            } else {
-                THROW_RUNTIME_ERROR(
-                    "Invalid format: '$' key must map to a string expression.");
-            }
-        }
-        if (value.contains("$eq")) {  // 等于比较
-            auto operands = value["$eq"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]);
-                auto right = evaluate(operands[1]);
-#if ENABLE_DEBUG
-                std::cout << "Left type: " << left.type_name()
-                          << ", Right type: " << right.type_name() << std::endl;
-                std::cout << "Evaluating equality comparison: " << left.dump()
-                          << " == " << right.dump() << std::endl;
-#endif
-                LOG_F(INFO, "{} == {}", left.dump(), right.dump());
-                if (determineType(left) != determineType(right)) {
-                    THROW_RUNTIME_ERROR(
-                        "Type mismatch in equality comparison: " +
-                        value.dump());
-                }
-                return left == right;
-            }
-            THROW_RUNTIME_ERROR("Invalid equality comparison: " + value.dump());
-        }
-        if (value.contains("$gt")) {  // 大于比较
-            auto operands = value["$gt"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]);
-                auto right = evaluate(operands[1]);
-                return left > right;
-            }
-        } else if (value.contains("$lt")) {  // 小于比较
-            auto operands = value["$lt"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]);
-                auto right = evaluate(operands[1]);
-                return left < right;
-            }
-        } else if (value.contains("$gte")) {  // 大于等于比较
-            auto operands = value["$gte"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]);
-                auto right = evaluate(operands[1]);
-                return left >= right;
-            }
-        } else if (value.contains("$lte")) {  // 小于等于比较
-            auto operands = value["$lte"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]);
-                auto right = evaluate(operands[1]);
-                return left <= right;
-            }
-        } else if (value.contains("$ne")) {  // 不等于比较
-            auto operands = value["$ne"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]);
-                auto right = evaluate(operands[1]);
-                return left != right;
-            }
-        } else if (value.contains("$add")) {  // 加法运算
-            auto operands = value["$add"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
-                auto right = evaluate(operands[1]).get<int>();
-                return left + right;
-            }
-        } else if (value.contains("$sub")) {  // 减法运算
-            auto operands = value["$sub"];
-            if (operands.is_array() && operands.size() == 2) {
-                LOG_F(INFO, "{}", operands.dump());
-                LOG_F(INFO, "{}", evaluate(operands[0]).dump());
-                auto left = evaluate(operands[0]).get<int>();
-                auto right = evaluate(operands[1]).get<int>();
-                LOG_F(INFO, "{}", left - right);
-                return left - right;
-            }
-        } else if (value.contains("$mul")) {  // 乘法运算
-            auto operands = value["$mul"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
-                auto right = evaluate(operands[1]).get<int>();
-                return left * right;
-            }
-        } else if (value.contains("$div")) {  // 除法运算
-            auto operands = value["$div"];
-            if (operands.is_array() && operands.size() == 2) {
-                auto left = evaluate(operands[0]).get<int>();
-                auto right = evaluate(operands[1]).get<int>();
-                if (right == 0) {
-                    THROW_RUNTIME_ERROR("Division by zero");
-                }
-                return left / right;
-            }
-        } else if (value.contains("$and")) {  // 逻辑与
-            auto operands = value["$and"];
-            if (operands.is_array()) {
-                for (const auto& operand : operands) {
-                    if (!evaluate(operand).get<bool>()) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        } else if (value.contains("$or")) {  // 逻辑或
-            auto operands = value["$or"];
-            if (operands.is_array()) {
-                for (const auto& operand : operands) {
-                    if (evaluate(operand).get<bool>()) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
-        // Conditional operation
-        else if (value.contains("$if")) {
-            const auto& cond = value["$if"];
-            return evaluate(cond["condition"]).get<bool>()
-                       ? evaluate(cond["then"])
-                       : evaluate(cond["else"]);
-        }
-        // Custom function call
-        else if (value.contains("$call")) {
-            const auto& callInfo = value["$call"];
-            std::string functionName = callInfo["function"];
-            const json& params = callInfo["params"];
-            return impl_->functions[functionName](params);
-        }
-    }
-    return value;
-}
-
-auto TaskInterpreter::evaluateExpression(const std::string& expr) -> json {
-    std::vector<std::string> tokens;
-    std::stack<char> operators;
-    std::stack<double> operands;
-
-    // Tokenize the expression
-    size_t start = 0;
-    for (size_t i = 0; i < expr.size(); ++i) {
-        if (std::isspace(expr[i])) {
-            if (start != i) {
-                tokens.push_back(expr.substr(start, i - start));
-            }
-            start = i + 1;
-        } else if (expr[i] == '(' || expr[i] == ')' || expr[i] == '+' ||
-                   expr[i] == '-' || expr[i] == '*' || expr[i] == '/' ||
-                   expr[i] == '%' || expr[i] == '^' || expr[i] == '<' ||
-                   expr[i] == '>' || expr[i] == '=' || expr[i] == '!' ||
-                   expr[i] == '&' || expr[i] == '|') {
-            if (start != i) {
-                tokens.push_back(expr.substr(start, i - start));
-            }
-            tokens.push_back(expr.substr(i, 1));
-            start = i + 1;
-        }
-    }
-    if (start < expr.size()) {
-        tokens.push_back(expr.substr(start));
-    }
-
-    auto applyOperator = [](char op, double a, double b) -> double {
-        switch (op) {
-            case '+':
-                return a + b;
-            case '-':
-                return a - b;
-            case '*':
-                return a * b;
-            case '/':
-                if (b == 0)
-                    throw std::runtime_error("Division by zero");
-                return a / b;
-            case '%':
-                if (b == 0)
-                    throw std::runtime_error("Modulo by zero");
-                return std::fmod(a, b);
-            case '^':
-                return std::pow(a, b);
-            case '<':
-                return static_cast<double>(a < b);
-            case '>':
-                return static_cast<double>(a > b);
-            case '=':
-                return static_cast<double>(a == b);
-            case '!':
-                return static_cast<double>(a != b);
-            case '&':
-                return static_cast<double>(static_cast<bool>(a) &&
-                                           static_cast<bool>(b));
-            case '|':
-                return static_cast<double>(static_cast<bool>(a) ||
-                                           static_cast<bool>(b));
+    // 转换TokenType为字符串
+    static auto tokenTypeToString(TokenType type) -> std::string {
+        switch (type) {
+            case TokenType::PLUS:
+                return "+";
+            case TokenType::MINUS:
+                return "-";
+            case TokenType::MULTIPLY:
+                return "*";
+            case TokenType::DIVIDE:
+                return "/";
+            case TokenType::GREATER:
+                return ">";
+            case TokenType::LESS:
+                return "<";
+            case TokenType::GREATER_EQUAL:
+                return ">=";
+            case TokenType::LESS_EQUAL:
+                return "<=";
+            case TokenType::EQUAL:
+                return "==";
+            case TokenType::NOT_EQUAL:
+                return "!=";
             default:
-                throw std::runtime_error("Unknown operator");
-        }
-    };
-
-    for (const auto& token : tokens) {
-        if (token.size() == 1 &&
-            std::string("+-*/%^<>=!&|").find(token[0]) != std::string::npos) {
-            while (!operators.empty() &&
-                   precedence(operators.top()) >= precedence(token[0])) {
-                double b = operands.top();
-                operands.pop();
-                double a = operands.top();
-                operands.pop();
-                operands.push(applyOperator(operators.top(), a, b));
-                operators.pop();
-            }
-            operators.push(token[0]);
-        } else if (token == "(") {
-            operators.push('(');
-        } else if (token == ")") {
-            while (!operators.empty() && operators.top() != '(') {
-                double b = operands.top();
-                operands.pop();
-                double a = operands.top();
-                operands.pop();
-                operands.push(applyOperator(operators.top(), a, b));
-                operators.pop();
-            }
-            if (operators.empty()) {
-                throw std::runtime_error("Mismatched parentheses");
-            }
-            operators.pop();  // Remove '('
-        } else {
-            // Parse number or variable
-            if (token[0] == '$') {
-                // Variable
-                std::string varName(token.substr(1));
-                std::shared_lock lock(impl_->mtx);
-                if (impl_->variables.contains(varName)) {
-                    operands.push(
-                        impl_->variables.at(varName).second.get<double>());
-                } else {
-                    throw std::runtime_error("Undefined variable: " + varName);
-                }
-            } else {
-                // Number
-                double value;
-                auto [ptr, ec] = std::from_chars(
-                    token.data(), token.data() + token.size(), value);
-                if (ec == std::errc()) {
-                    operands.push(value);
-                } else {
-                    throw std::runtime_error("Invalid token: " +
-                                             std::string(token));
-                }
-            }
+                return "unknown";
         }
     }
 
-    while (!operators.empty()) {
-        double b = operands.top();
-        operands.pop();
-        double a = operands.top();
-        operands.pop();
-        operands.push(applyOperator(operators.top(), a, b));
-        operators.pop();
+    // 将variant类型转换为字符串
+    static auto variantToString(
+        const std::variant<int, double, std::string>& var) -> std::string {
+        if (std::holds_alternative<int>(var)) {
+            return std::to_string(std::get<int>(var));
+        }
+        if (std::holds_alternative<double>(var)) {
+            return std::to_string(std::get<double>(var));
+        }
+        if (std::holds_alternative<std::string>(var)) {
+            return "\"" + std::get<std::string>(var) + "\"";
+        }
+        return "unknown";
     }
 
-    if (operands.size() != 1) {
-        throw std::runtime_error("Invalid expression");
+    // 将variant类型转换为布尔值
+    static auto variantToBool(const std::variant<int, double, std::string>& var)
+        -> bool {
+        if (std::holds_alternative<int>(var)) {
+            return std::get<int>(var) != 0;
+        }
+        if (std::holds_alternative<double>(var)) {
+            return std::get<double>(var) != 0.0;
+        }
+        if (std::holds_alternative<std::string>(var)) {
+            return !std::get<std::string>(var).empty();
+        }
+        return false;
     }
 
-    return operands.top();
-}
+    // 评估二元操作
+    static auto evaluateBinaryOp(
+        TokenType opType, const std::variant<int, double, std::string>& left,
+        const std::variant<int, double, std::string>& right)
+        -> std::variant<int, double, std::string> {
+        // 数字运算
+        if ((std::holds_alternative<int>(left) ||
+             std::holds_alternative<double>(left)) &&
+            (std::holds_alternative<int>(right) ||
+             std::holds_alternative<double>(right))) {
+            double leftVal = std::holds_alternative<int>(left)
+                                 ? static_cast<double>(std::get<int>(left))
+                                 : std::get<double>(left);
+            double rightVal = std::holds_alternative<int>(right)
+                                  ? static_cast<double>(std::get<int>(right))
+                                  : std::get<double>(right);
+            switch (opType) {
+                case TokenType::PLUS:
+                    return leftVal + rightVal;
+                case TokenType::MINUS:
+                    return leftVal - rightVal;
+                case TokenType::MULTIPLY:
+                    return leftVal * rightVal;
+                case TokenType::DIVIDE:
+                    if (rightVal == 0.0) {
+                        throw std::runtime_error("Division by zero");
+                    }
+                    return leftVal / rightVal;
+                case TokenType::GREATER:
+                    return leftVal > rightVal ? 1 : 0;
+                case TokenType::LESS:
+                    return leftVal < rightVal ? 1 : 0;
+                case TokenType::GREATER_EQUAL:
+                    return leftVal >= rightVal ? 1 : 0;
+                case TokenType::LESS_EQUAL:
+                    return leftVal <= rightVal ? 1 : 0;
+                case TokenType::EQUAL:
+                    return (leftVal == rightVal) ? 1 : 0;
+                case TokenType::NOT_EQUAL:
+                    return (leftVal != rightVal) ? 1 : 0;
+                default:
+                    throw std::runtime_error("Unknown binary operator");
+            }
+        }
 
-auto TaskInterpreter::precedence(char op) noexcept -> int {
-    switch (op) {
-        case '+':
-        case '-':
-            return 1;
-        case '*':
-        case '/':
-        case '%':
-            return 2;
-        case '^':
-            return 3;
-        case '<':
-        case '>':
-        case '=':
-        case '!':
-            return 4;
-        case '&':
-            return 5;
-        case '|':
-            return 6;
-        default:
-            return 0;
+        // 字符串连接
+        if (opType == TokenType::PLUS) {
+            if (std::holds_alternative<std::string>(left) &&
+                std::holds_alternative<std::string>(right)) {
+                return std::get<std::string>(left) +
+                       std::get<std::string>(right);
+            }
+            if (std::holds_alternative<std::string>(left)) {
+                return std::get<std::string>(left) +
+                       std::visit(
+                           [](auto&& arg) -> std::string {
+                               if constexpr (std::is_same_v<
+                                                 std::decay_t<decltype(arg)>,
+                                                 int> ||
+                                             std::is_same_v<
+                                                 std::decay_t<decltype(arg)>,
+                                                 double>) {
+                                   return std::to_string(arg);
+                               } else {
+                                   throw std::runtime_error(
+                                       "Unsupported type for string "
+                                       "concatenation");
+                               }
+                           },
+                           right);
+            }
+            if (std::holds_alternative<std::string>(right)) {
+                return std::visit(
+                           [](auto&& arg) -> std::string {
+                               if constexpr (std::is_same_v<
+                                                 std::decay_t<decltype(arg)>,
+                                                 int> ||
+                                             std::is_same_v<
+                                                 std::decay_t<decltype(arg)>,
+                                                 double>) {
+                                   return std::to_string(arg);
+                               } else {
+                                   throw std::runtime_error(
+                                       "Unsupported type for string "
+                                       "concatenation");
+                               }
+                           },
+                           left) +
+                       std::get<std::string>(right);
+            }
+        }
+
+        // 比较字符串
+        if ((opType == TokenType::GREATER || opType == TokenType::LESS ||
+             opType == TokenType::GREATER_EQUAL ||
+             opType == TokenType::LESS_EQUAL || opType == TokenType::EQUAL ||
+             opType == TokenType::NOT_EQUAL) &&
+            std::holds_alternative<std::string>(left) &&
+            std::holds_alternative<std::string>(right)) {
+            const auto& leftStr = std::get<std::string>(left);
+            const auto& rightStr = std::get<std::string>(right);
+            switch (opType) {
+                case TokenType::GREATER:
+                    return leftStr > rightStr ? 1 : 0;
+                case TokenType::LESS:
+                    return leftStr < rightStr ? 1 : 0;
+                case TokenType::GREATER_EQUAL:
+                    return leftStr >= rightStr ? 1 : 0;
+                case TokenType::LESS_EQUAL:
+                    return leftStr <= rightStr ? 1 : 0;
+                case TokenType::EQUAL:
+                    return (leftStr == rightStr) ? 1 : 0;
+                case TokenType::NOT_EQUAL:
+                    return (leftStr != rightStr) ? 1 : 0;
+                default:
+                    throw std::runtime_error(
+                        "Unknown binary operator for strings");
+            }
+        }
+
+        throw std::runtime_error(
+            "Unsupported binary operation between different types");
     }
+};
+
+Interpreter::Interpreter() : impl_(std::make_unique<Impl>()) {}
+
+void Interpreter::loadScript(const std::string& filename) {
+    impl_->loadScript(filename);
 }
 
-void TaskInterpreter::registerCustomError(const std::string& name,
-                                          const std::error_code& errorCode) {
-    std::unique_lock lock(impl_->mtx);
-    impl_->customErrors[name] = errorCode;
+void Interpreter::interpretScript(const std::string& filename) {
+    impl_->interpretScript(filename);
 }
 
-void TaskInterpreter::throwCustomError(const std::string& name) {
-    std::shared_lock lock(impl_->mtx);
-    if (impl_->customErrors.contains(name)) {
-        throw std::system_error(impl_->customErrors.at(name));
-    }
-    THROW_RUNTIME_ERROR("Custom error '" + name + "' not found.");
-}
-
-void TaskInterpreter::handleException(const std::string& scriptName,
-                                      const std::exception& e) {
-    std::shared_lock lock(impl_->mtx);
-    if (impl_->exceptionHandlers.contains(scriptName)) {
-        impl_->exceptionHandlers.at(scriptName)(e);
-    } else {
-        LOG_F(ERROR, "Unhandled exception in script '{}': {}", scriptName,
-              e.what());
-        std::rethrow_if_nested(e);
-    }
-}
+void Interpreter::interpret(const std::shared_ptr<Program>& ast) {
+    impl_->interpret(ast);
+};
 
 }  // namespace lithium

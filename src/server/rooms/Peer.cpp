@@ -9,9 +9,14 @@
 #include "dto/DTOs.hpp"
 #include "oatpp/encoding/Base64.hpp"
 
+#include "middleware/gpio.hpp"
 #include "middleware/indi_server.hpp"
+#include "middleware/telescope.hpp"
+#include "middleware/usb.hpp"
 
 #include "matchit/matchit.h"
+
+#include "tools/croods.hpp"
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
@@ -368,18 +373,82 @@ auto Peer::handleQTextMessage(const std::string& message)
         pattern | "CS" = [parts] { LOG_F(INFO, "CS"); },
         pattern | "disconnectAllDevice" =
             [parts] { LOG_F(INFO, "disconnectAllDevice"); },
-        pattern | "MountMoveWest" = [parts] {},
-        pattern | "MountMoveEast" = [parts] {},
-        pattern | "MountMoveNorth" = [parts] {},
-        pattern | "MountMoveSouth" = [parts] {},
-        pattern | "MountMoveAbort" = [parts] {},
-        pattern | "MountPark" = [parts] {}, pattern | "MountTrack" = [parts] {},
-        pattern | "MountHome" = [parts] {}, pattern | "MountSYNC" = [parts] {},
-        pattern | "MountSpeedSwitch" = [parts] {},
-        pattern | "ImageGainR" = [parts] {},
-        pattern | "ImageGainB" = [parts] {},
+        pattern | "MountMoveWest" =
+            [parts] {
+                LOG_F(INFO, "MountMoveWest");
+                mountMoveWest();
+            },
+        pattern | "MountMoveEast" =
+            [parts] {
+                LOG_F(INFO, "MountMoveEast");
+                mountMoveEast();
+            },
+        pattern | "MountMoveNorth" =
+            [parts] {
+                LOG_F(INFO, "MountMoveNorth");
+                mountMoveNorth();
+            },
+        pattern | "MountMoveSouth" =
+            [parts] {
+                LOG_F(INFO, "MountMoveSouth");
+                mountMoveSouth();
+            },
+        pattern | "MountMoveAbort" =
+            [parts] {
+                LOG_F(INFO, "MountMoveAbort");
+                mountMoveAbort();
+            },
+        pattern | "MountPark" =
+            [parts] {
+                LOG_F(INFO, "MountPark");
+                mountPark();
+            },
+        pattern | "MountTrack" =
+            [parts] {
+                LOG_F(INFO, "MountTrack");
+                mountTrack();
+            },
+        pattern | "MountHome" =
+            [parts] {
+                LOG_F(INFO, "MountHome");
+                mountHome();
+            },
+        pattern | "MountSYNC" =
+            [parts] {
+                LOG_F(INFO, "MountSYNC");
+                mountSync();
+            },
+        pattern | "MountSpeedSwitch" =
+            [parts] {
+                LOG_F(INFO, "MountSpeedSwitch");
+                mountSpeedSwitch();
+            },
+        pattern | "ImageGainR" =
+            [parts] {
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue("/lithium/device/camera/gain_r",
+                                        std::stod(atom::utils::trim(parts[1])));
+            },
+        pattern | "ImageGainB" =
+            [parts] {
+                std::shared_ptr<lithium::ConfigManager> configManager;
+                GET_OR_CREATE_PTR(configManager, lithium::ConfigManager,
+                                  Constants::CONFIG_MANAGER)
+                configManager->setValue("/lithium/device/camera/gain_b",
+                                        std::stod(atom::utils::trim(parts[1])));
+            },
         pattern | "ScheduleTabelData" = [parts] {},
-        pattern | "MountGoto" = [parts] {},
+        pattern | "MountGoto" =
+            [parts] {
+                double ra = std::stod(atom::utils::trim(parts[1]));
+                double dec = std::stod(atom::utils::trim(parts[2]));
+                ra = lithium::tools::radToHour(ra);
+                dec = lithium::tools::radToDegree(dec);
+                LOG_F(INFO, "MountGoto: {} {}", ra, dec);
+                mountGoto(ra, dec);
+            },
         pattern | "StopSchedule" = [parts] {},
         pattern | "CaptureImageSave" = [parts] {},
         pattern | "getConnectedDevices" = [parts] {},
@@ -398,10 +467,11 @@ auto Peer::handleQTextMessage(const std::string& message)
         pattern | "GuiderExpTimeSwitch" = [parts] {},
         pattern | "SolveSYNC" = [parts] {},
         pattern | "ClearDataPoints" = [parts] {},
-        pattern | "ShowAllImageFolder" = [parts] {
-            LOG_F(INFO, "ShowAllImageFolder");
-            showAllImageFolder();
-        },
+        pattern | "ShowAllImageFolder" =
+            [parts] {
+                LOG_F(INFO, "ShowAllImageFolder");
+                showAllImageFolder();
+            },
         pattern | "MoveFileToUSB" =
             [parts] {
                 LOG_F(INFO, "MoveFileToUSB: {}", parts[1]);

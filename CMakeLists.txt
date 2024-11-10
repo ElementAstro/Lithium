@@ -159,7 +159,6 @@ set(debug_module
 )
 
 set(device_module
-    ${lithium_src_dir}/device/manager.cpp
     ${lithium_src_dir}/device/template/device.cpp
 )
 

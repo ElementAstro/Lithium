@@ -54,6 +54,7 @@ public:
     virtual auto setTelescopeTrackEnable(bool enable) -> bool = 0;
 
     virtual auto setTelescopeAbortMotion() -> bool = 0;
+    virtual auto getTelescopeStatus() -> std::optional<std::string> = 0;
 
     virtual auto setTelescopeParkOption(ParkOptions option) -> bool = 0;
 

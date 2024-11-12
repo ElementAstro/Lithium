@@ -522,4 +522,8 @@ auto TimeManager::getNtpTime(const std::string &hostname) -> std::time_t {
     return ntpTime;
 }
 
+void TimeManager::setImpl(std::unique_ptr<TimeManagerImpl> impl) {
+    impl_ = std::move(impl);
+}
+
 }  // namespace atom::web

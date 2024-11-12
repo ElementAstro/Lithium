@@ -3,7 +3,6 @@
 
 #include <chrono>
 #include <functional>
-#include <future>
 #include <memory>
 #include <string>
 
@@ -57,6 +56,24 @@ public:
     void setReconnectionStrategy(std::chrono::milliseconds initialDelay,
                                  std::chrono::milliseconds maxDelay,
                                  int maxAttempts);
+
+    void enableSSL(const std::string& certFile, const std::string& keyFile);
+
+    void disableSSL();
+
+    void enableCompression();
+
+    void disableCompression();
+
+    void authenticate(const std::string& username, const std::string& password);
+
+    atom::async::EnhancedFuture<std::string> GetStatus();
+
+    atom::async::EnhancedFuture<bool> RestartDriver();
+
+    atom::async::EnhancedFuture<bool> UpdateConfig(const std::string& config);
+
+    void initializeRPC();
 
 private:
     void backgroundProcessing();

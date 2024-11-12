@@ -8,6 +8,7 @@
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "atom/utils/container.hpp"
 
 #if __has_include(<yaml-cpp/yaml.h>)
 #include <yaml-cpp/yaml.h>
@@ -19,7 +20,12 @@
 using namespace tinyxml2;
 #endif
 
+#include "utils/constant.hpp"
+
 namespace lithium {
+DependencyGraph::DependencyGraph() {
+    LOG_F(INFO, "Creating dependency graph.");
+}
 
 void DependencyGraph::addNode(const Node& node, const Version& version) {
     LOG_F(INFO, "Adding node: {} with version: {}", node, version.toString());
@@ -124,46 +130,27 @@ auto DependencyGraph::resolveDependencies(
     LOG_F(INFO, "Resolving dependencies for directories.");
     DependencyGraph graph;
 
+    const std::vector<std::string> FILE_TYPES = {"package.json", "package.xml",
+                                                 "package.yaml"};
+
     for (const auto& dir : directories) {
-        std::string packageJsonPath = dir + "/package.json";
-        std::string packageXmlPath = dir + "/package.xml";
-        std::string packageYamlPath = dir + "/package.yaml";
+        for (const auto& file : FILE_TYPES) {
+            std::string filePath = dir;
+            filePath.append(Constants::PATH_SEPARATOR).append(file);
+            if (std::filesystem::exists(filePath)) {
+                LOG_F(INFO, "Parsing {} in directory: {}", file, dir);
+                auto [package_name, deps] =
+                    (file == "package.json")  ? parsePackageJson(filePath)
+                    : (file == "package.xml") ? parsePackageXml(filePath)
+                                              : parsePackageYaml(filePath);
 
-        if (std::filesystem::exists(packageJsonPath)) {
-            LOG_F(INFO, "Parsing package.json in directory: {}", dir);
-            auto [package_name, deps] = parsePackageJson(packageJsonPath);
-            graph.addNode(package_name, deps.at(package_name));
+                graph.addNode(package_name, deps.at(package_name));
 
-            for (const auto& dep : deps) {
-                if (dep.first != package_name) {
-                    graph.addNode(dep.first, dep.second);
-                    graph.addDependency(package_name, dep.first, dep.second);
-                }
-            }
-        }
-
-        if (std::filesystem::exists(packageXmlPath)) {
-            LOG_F(INFO, "Parsing package.xml in directory: {}", dir);
-            auto [package_name, deps] = parsePackageXml(packageXmlPath);
-            graph.addNode(package_name, deps.at(package_name));
-
-            for (const auto& dep : deps) {
-                if (dep.first != package_name) {
-                    graph.addNode(dep.first, dep.second);
-                    graph.addDependency(package_name, dep.first, dep.second);
-                }
-            }
-        }
-
-        if (std::filesystem::exists(packageYamlPath)) {
-            LOG_F(INFO, "Parsing package.yaml in directory: {}", dir);
-            auto [package_name, deps] = parsePackageYaml(packageYamlPath);
-            graph.addNode(package_name, deps.at(package_name));
-
-            for (const auto& dep : deps) {
-                if (dep.first != package_name) {
-                    graph.addNode(dep.first, dep.second);
-                    graph.addDependency(package_name, dep.first, dep.second);
+                for (const auto& [depName, version] : deps) {
+                    if (depName != package_name) {
+                        graph.addNode(depName, version);
+                        graph.addDependency(package_name, depName, version);
+                    }
                 }
             }
         }
@@ -182,6 +169,39 @@ auto DependencyGraph::resolveDependencies(
 
     LOG_F(INFO, "Dependencies resolved successfully.");
     return removeDuplicates(sortedPackagesOpt.value());
+}
+
+auto DependencyGraph::resolveSystemDependencies(
+    const std::vector<std::string>& directories)
+    -> std::unordered_map<std::string, Version> {
+    LOG_F(INFO, "Resolving system dependencies for directories.");
+    std::unordered_map<std::string, Version> systemDeps;
+    const std::vector<std::string> FILE_TYPES = {"package.json", "package.xml",
+                                                 "package.yaml"};
+
+    for (const auto& dir : directories) {
+        for (const auto& file : FILE_TYPES) {
+            std::string filePath = dir;
+            filePath.append(Constants::PATH_SEPARATOR).append(file);
+            if (std::filesystem::exists(filePath)) {
+                LOG_F(INFO, "Parsing {} in directory: {}", file, dir);
+                auto [package_name, deps] =
+                    (file == "package.json")  ? parsePackageJson(filePath)
+                    : (file == "package.xml") ? parsePackageXml(filePath)
+                                              : parsePackageYaml(filePath);
+
+                for (const auto& [depName, version] : deps) {
+                    if (depName.rfind("system:", 0) == 0) {
+                        systemDeps[depName.substr(7)] = version;
+                    }
+                }
+            }
+        }
+    }
+
+    LOG_F(INFO, "System dependencies resolved successfully.");
+    return atom::utils::unique(systemDeps);
+    ;
 }
 
 auto DependencyGraph::parsePackageJson(const std::string& path)
@@ -275,7 +295,7 @@ auto DependencyGraph::parsePackageYaml(const std::string& path)
         THROW_MISSING_ARGUMENT("Missing package name in " + path);
     }
 
-    std::string packageName = config["name"].as<std::string>();
+    auto packageName = config["name"].as<std::string>();
     std::unordered_map<std::string, Version> deps;
 
     if (config["dependencies"]) {
@@ -289,38 +309,6 @@ auto DependencyGraph::parsePackageYaml(const std::string& path)
     return {packageName, deps};
 }
 
-void DependencyGraph::generatePackageYaml(const std::string& path) const {
-    LOG_F(INFO, "Generating package.yaml file: {}", path);
-    YAML::Emitter out;
-
-    out << YAML::BeginMap;
-    out << YAML::Key << "name" << YAML::Value << "my-cpp-package";
-    out << YAML::Key << "version" << YAML::Value << "1.0.0";
-    out << YAML::Key << "description" << YAML::Value
-        << "A sample C++20 package";
-    out << YAML::Key << "author" << YAML::Value
-        << "Your Name <your.email@example.com>";
-    out << YAML::Key << "license" << YAML::Value << "MIT";
-
-    out << YAML::Key << "dependencies" << YAML::Value << YAML::BeginMap;
-    for (const auto& [node, version] : nodeVersions_) {
-        out << YAML::Key << node << YAML::Value << version.toString();
-    }
-    out << YAML::EndMap;
-
-    out << YAML::EndMap;
-
-    std::ofstream fout(path);
-    if (!fout.is_open()) {
-        LOG_F(ERROR, "Failed to open file: {}", path);
-        THROW_FAIL_TO_OPEN_FILE("Failed to open " + path);
-    }
-    fout << out.c_str();
-    fout.close();
-
-    LOG_F(INFO, "Generated package.yaml file: {} successfully.", path);
-}
-
 auto DependencyGraph::hasCycleUtil(
     const Node& node, std::unordered_set<Node>& visited,
     std::unordered_set<Node>& recStack) const -> bool {
@@ -332,7 +320,8 @@ auto DependencyGraph::hasCycleUtil(
             if (!visited.contains(neighbor) &&
                 hasCycleUtil(neighbor, visited, recStack)) {
                 return true;
-            } else if (recStack.contains(neighbor)) {
+            }
+            if (recStack.contains(neighbor)) {
                 return true;
             }
         }

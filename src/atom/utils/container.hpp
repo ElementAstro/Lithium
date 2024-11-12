@@ -265,6 +265,18 @@ auto transformToVector(const Container& source, MemberFunc memberFunc) {
     return result;  // 返回新容器
 }
 
+template <typename MapContainer>
+    requires std::ranges::input_range<MapContainer> && requires {
+        typename MapContainer::key_type;
+        typename MapContainer::mapped_type;
+    }
+auto unique(const MapContainer& container) {
+    std::unordered_map<typename MapContainer::key_type,
+                       typename MapContainer::mapped_type>
+        map(container.begin(), container.end());
+    return map;
+}
+
 /**
  * @brief Removes duplicate elements from a container.
  *

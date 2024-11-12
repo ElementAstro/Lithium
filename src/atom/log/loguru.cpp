@@ -147,6 +147,17 @@ LOGURU_ANONYMOUS_NAMESPACE_BEGIN
 namespace loguru {
 using namespace std::chrono;
 
+struct FileRotate {
+    int log_size_cnt;
+    int log_size_max;
+    int log_num_max;
+    bool is_reopening = false;  // to prevent recursive call in file_reopen.
+    std::string log_path;
+    std::vector<std::string> log_list;
+    FILE* file;
+    std::string mode;
+};
+
 #if LOGURU_WITH_FILEABS
 struct FileAbs {
     char path[PATH_MAX];
@@ -158,7 +169,8 @@ struct FileAbs {
     decltype(steady_clock::now()) last_check_time = steady_clock::now();
 };
 #else
-using FileAbs = FILE*;
+// using FileAbs = FILE*;
+using FileAbs = FileRotate*;
 #endif
 
 struct Callback {
@@ -317,10 +329,105 @@ inline FILE* toFile(void* user_data) {
     return reinterpret_cast<FileAbs*>(user_data)->fp;
 }
 #else
-inline auto toFile(void* user_data) -> FILE* {
-    return reinterpret_cast<FILE*>(user_data);
+inline auto toFile(void* user_data) -> FileRotate* {
+    return reinterpret_cast<FileRotate*>(user_data);
 }
 #endif
+
+static auto fileLogListInit(FileRotate* file_rotate) -> int {
+    std::string logFile(file_rotate->log_path);
+
+    struct stat statBuffer;
+    for (int i = 1;; i++) {
+        std::string logTmp = logFile + "." + std::to_string(i);
+        if (stat(logTmp.c_str(), &statBuffer) != 0) {
+            break;
+        }
+        if (file_rotate->mode == "a") {
+            file_rotate->log_list.insert(file_rotate->log_list.begin(), logTmp);
+        } else {
+            std::remove(logTmp.c_str());
+        }
+    }
+
+    return 0;
+}
+
+static auto fileLogInit(FileRotate* file_rotate, char* path, int log_size_m,
+                        int num) -> int {
+    file_rotate->log_path.assign(path);
+    file_rotate->log_size_max = log_size_m * 1024 * 1024;
+    file_rotate->log_num_max = num;
+    file_rotate->is_reopening = false;
+
+    // Init log_size_cnt
+    int numBytes = 0;
+    struct stat statbuffer;
+    if (stat(file_rotate->log_path.c_str(), &statbuffer) == 0) {
+        numBytes = statbuffer.st_size;
+    }
+    file_rotate->log_size_cnt = numBytes;
+
+    // Init log_list
+    fileLogListInit(file_rotate);
+
+    return 0;
+}
+
+static auto fileLogRotatingSave(FileRotate* file_rotate) -> int {
+    std::string log_file(file_rotate->log_path);
+
+    // When log file list greater then max number, del the oldest one
+    while (file_rotate->log_list.size() >= file_rotate->log_num_max) {
+        auto it = file_rotate->log_list.begin();
+        std::remove((*it).c_str());
+        file_rotate->log_list.erase(it);
+    }
+
+    // Rename the log file list
+    for (int i = 0; i < file_rotate->log_list.size(); i++) {
+        std::string name = log_file + "." +
+                           std::to_string(file_rotate->log_list.size() - i + 1);
+        std::rename(file_rotate->log_list[i].c_str(), name.c_str());
+        file_rotate->log_list[i] = name;
+    }
+
+    // Rename the new log file
+    std::string logFileNew = log_file + ".1";
+    std::rename(log_file.c_str(), logFileNew.c_str());
+
+    // Push the new log file to vector
+    file_rotate->log_list.push_back(logFileNew);
+
+    return 0;
+}
+
+inline static auto fileLogRotate(FileRotate* file_rotate, int len) -> int {
+    file_rotate->log_size_cnt += len;
+    if (file_rotate->log_size_cnt >= file_rotate->log_size_max) {
+        file_rotate->is_reopening = true;
+        file_rotate->log_size_cnt = 0;
+
+        fflush(file_rotate->file);
+        fclose(file_rotate->file);
+        fileLogRotatingSave(file_rotate);
+
+#ifdef _WIN32
+        errno_t file_error =
+            fopen_s(&file_rotate->file, file_rotate->log_path.c_str(), "w");
+        if (file_error) {
+#else
+        file_rotate->file = fopen(file_rotate->log_path.c_str(), "w");
+        if (file_rotate->file == nullptr) {
+#endif
+            return -1;
+        }
+
+        file_rotate->is_reopening = false;
+    }
+
+    return 0;
+}
 
 void fileLog(void* user_data, const Message& message) {
 #if LOGURU_WITH_FILEABS
@@ -337,33 +444,39 @@ void fileLog(void* user_data, const Message& message) {
         file_abs->last_check_time = steady_clock::now();
         fileReopen(user_data);
     }
-    FILE* file = to_file(user_data);
-    if (!file) {
+    FileRotate* file_rotate = to_file(user_data);
+    if (!file_rotate) {
         return;
     }
 #else
-    FILE* file = toFile(user_data);
+    FileRotate* file_rotate = toFile(user_data);
 #endif
-    fprintf(file, "%s%s%s%s\n", message.preamble, message.indentation,
-            message.prefix, message.message);
-    if (g_flush_interval_ms == 0) {
-        fflush(file);
+    int len = fprintf(file_rotate->file, "%s%s%s%s\n", message.preamble,
+                      message.indentation, message.prefix, message.message);
+    fileLogRotate(file_rotate, len);
+    if (g_flush_interval_ms == 0 && file_rotate->is_reopening == false) {
+        fflush(file_rotate->file);
     }
 }
 
 void fileClose(void* user_data) {
-    FILE* file = toFile(user_data);
-    if (file != nullptr) {
-        fclose(file);
+    FileRotate* file_rotate = toFile(user_data);
+    if (file_rotate->file && file_rotate->is_reopening == false) {
+        fclose(file_rotate->file);
     }
 #if LOGURU_WITH_FILEABS
     delete reinterpret_cast<FileAbs*>(user_data);
 #endif
+    delete file_rotate;
 }
 
 void fileFlush(void* user_data) {
-    FILE* file = toFile(user_data);
-    fflush(file);
+    FileRotate* file_rotate = toFile(user_data);
+    if (file_rotate->is_reopening == true) {
+        return;
+    }
+
+    fflush(file_rotate->file);
 }
 
 #if LOGURU_WITH_FILEABS
@@ -371,11 +484,12 @@ void fileReopen(void* user_data) {
     FileAbs* file_abs = reinterpret_cast<FileAbs*>(user_data);
     struct stat st;
     int ret;
-    if (!file_abs->fp || (ret = stat(file_abs->path, &st)) == -1 ||
+    iif(!file_abs->file_rotate->file ||
+        (ret = stat(file_abs->path, &st)) == -1 ||
         (st.st_ino != file_abs->st.st_ino)) {
-        file_abs->is_reopening = true;
-        if (file_abs->fp) {
-            fclose(file_abs->fp);
+        file_abs->file_rotate->is_reopening = true;
+        if (file_abs->file_rotate->file) {
+            fclose(file_abs->file_rotate->file);
         }
         if (!file_abs->fp) {
             VLOG_F(g_internal_verbosity,
@@ -397,13 +511,13 @@ void fileReopen(void* user_data) {
             LOG_F(ERROR, "Failed to create directories to '" LOGURU_FMT(s) "'",
                   file_abs->path);
         }
-        file_abs->fp = fopen(file_abs->path, file_abs->mode_str);
-        if (!file_abs->fp) {
+        file_abs->file_rotate->file = fopen(file_abs->path, file_abs->mode_str);
+        if (!file_abs->file_rotate->file) {
             LOG_F(ERROR, "Failed to open '" LOGURU_FMT(s) "'", file_abs->path);
         } else {
             stat(file_abs->path, &file_abs->st);
         }
-        file_abs->is_reopening = false;
+        file_abs->file_rotate->is_reopening = false;
     }
 }
 #endif
@@ -848,7 +962,8 @@ bool create_directories(const char* file_path_const) {
     free(file_path);
     return true;
 }
-bool add_file(const char* path_in, FileMode mode, Verbosity verbosity) {
+bool add_file(const char* path_in, FileMode mode, Verbosity verbosity,
+              int log_size_m, int file_num) {
     char path[PATH_MAX];
     if (path_in[0] == '~') {
         snprintf(path, sizeof(path) - 1, "%s%s", home_dir(), path_in + 1);
@@ -873,17 +988,27 @@ bool add_file(const char* path_in, FileMode mode, Verbosity verbosity) {
         return false;
     }
 #if LOGURU_WITH_FILEABS
-    FileAbs* file_abs = new FileAbs();  // this is deleted in file_close;
+    FileAbs* file_abs = new FileAbs();         // this is deleted in file_close;
+    file_abs->file_rotate = new FileRotate();  // this is deleted in file_close;
     snprintf(file_abs->path, sizeof(file_abs->path) - 1, "%s", path);
     snprintf(file_abs->mode_str, sizeof(file_abs->mode_str) - 1, "%s",
              mode_str);
     stat(file_abs->path, &file_abs->st);
-    file_abs->fp = file;
+    // file_abs->fp = file;
     file_abs->verbosity = verbosity;
+    file_abs->file_rotate->file = file;
+    file_abs->file_rotate->mode.assign(mode_str);
+    fileLogInit(&file_abs->file_rotate, path, log_size_m, file_num);
     add_callback(path_in, file_log, file_abs, verbosity, file_close,
                  file_flush);
 #else
-    add_callback(path_in, fileLog, file, verbosity, fileClose, fileFlush);
+    FileRotate* file_rotate =
+        new FileRotate();  // this is deleted in file_close;
+    file_rotate->file = file;
+    file_rotate->mode.assign(mode_str);
+    fileLogInit(file_rotate, path, log_size_m, file_num);
+    add_callback(path_in, fileLog, file_rotate, verbosity, fileClose,
+                 fileFlush);
 #endif
 
     if (mode == FileMode::Append) {

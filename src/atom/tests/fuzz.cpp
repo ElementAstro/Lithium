@@ -53,19 +53,16 @@ auto RandomDataGenerator::generateString(int length,
 }
 
 auto RandomDataGenerator::generateBooleans(int count) -> std::vector<bool> {
-#if __cplusplus >= 202302L
-    return std::views::iota(0, count) | std::views::transform([this](auto) {
-               return std::bernoulli_distribution(0.5)(generator_);
-           }) |
-           std::ranges::to<std::vector>();
-#else
+    // return std::views::iota(0, count) | std::views::transform([this](auto) {
+    //            return std::bernoulli_distribution(0.5)(generator_);
+    //        }) |
+    //        std::ranges::to<std::vector>();
     std::vector<bool> result;
     result.reserve(count);
     for (int i = 0; i < count; ++i) {
         result.push_back(std::bernoulli_distribution(0.5)(generator_));
     }
     return result;
-#endif
 }
 
 auto RandomDataGenerator::generateException() -> std::string {

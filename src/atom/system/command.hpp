@@ -150,6 +150,14 @@ ATOM_NODISCARD auto executeCommandSimple(const std::string &command) -> bool;
  * as a void pointer.
  */
 auto startProcess(const std::string &command) -> std::pair<int, void *>;
+
+/**
+ * @brief Check if a command is available in the system.
+ *
+ * @param command The command to check.
+ * @return A boolean indicating whether the command is available.
+ */
+auto isCommandAvailable(const std::string &command) -> bool;
 }  // namespace atom::system
 
 #endif

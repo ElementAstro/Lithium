@@ -1,3 +1,4 @@
+// atomlog.cpp
 /*
  * atomlog.cpp
  *
@@ -8,18 +9,22 @@
 
 Date: 2023-11-10
 
-Description: Logger for Atom
+Description: Enhanced Logger Implementation for Atom with C++20 Features
 
 **************************************************/
 
 #include "atomlog.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <format>
 #include <fstream>
+#include <memory>
 #include <queue>
+#include <shared_mutex>
 #include <sstream>
+#include <thread>
 #include <unordered_map>
 
 #ifdef _WIN32
@@ -36,7 +41,7 @@ Description: Logger for Atom
 
 namespace atom::log {
 
-class LoggerImpl {
+class Logger::LoggerImpl : public std::enable_shared_from_this<LoggerImpl> {
 public:
     LoggerImpl(fs::path file_name_, LogLevel min_level, size_t max_file_size,
                int max_files)
@@ -44,17 +49,17 @@ public:
           max_file_size_(max_file_size),
           max_files_(max_files),
           min_level_(min_level),
-          worker_(&LoggerImpl::run, this) {
+          system_logging_enabled_(false) {
         rotateLogFile();
+        worker_ = std::jthread(&LoggerImpl::run, this);
     }
 
     ~LoggerImpl() {
         {
-            std::lock_guard lock(queue_mutex_);
+            std::lock_guard<std::mutex> lock(queue_mutex_);
             finished_ = true;
         }
         cv_.notify_one();
-        worker_.request_stop();
         if (log_file_.is_open()) {
             log_file_.close();
         }
@@ -67,26 +72,42 @@ public:
     }
 
     void setThreadName(const std::string& name) {
-        std::lock_guard lock(queue_mutex_);
+        std::lock_guard<std::mutex> lock(thread_mutex_);
         thread_names_[std::this_thread::get_id()] = name;
     }
 
-    void setLevel(LogLevel level) { min_level_ = level; }
+    void setLevel(LogLevel level) {
+        std::lock_guard<std::mutex> lock(level_mutex_);
+        min_level_ = level;
+    }
 
-    void setPattern(const std::string& pattern) { this->pattern_ = pattern; }
+    void setPattern(const std::string& pattern) {
+        std::lock_guard<std::mutex> lock(pattern_mutex_);
+        pattern_ = pattern;
+    }
 
     void registerSink(const std::shared_ptr<LoggerImpl>& logger) {
-        sinks_.push_back(logger);
+        if (logger.get() == this) {
+            // 防止注册自身以避免递归调用
+            return;
+        }
+        std::lock_guard<std::mutex> lock(sinks_mutex_);
+        sinks_.emplace_back(logger);
     }
 
     void removeSink(const std::shared_ptr<LoggerImpl>& logger) {
+        std::lock_guard<std::mutex> lock(sinks_mutex_);
         sinks_.erase(std::remove(sinks_.begin(), sinks_.end(), logger),
                      sinks_.end());
     }
 
-    void clearSinks() { sinks_.clear(); }
+    void clearSinks() {
+        std::lock_guard<std::mutex> lock(sinks_mutex_);
+        sinks_.clear();
+    }
 
     void enableSystemLogging(bool enable) {
+        std::lock_guard<std::mutex> lock(system_log_mutex_);
         system_logging_enabled_ = enable;
 
 #ifdef _WIN32
@@ -100,32 +121,34 @@ public:
         if (system_logging_enabled_) {
             openlog("AtomLogger", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
         }
-#elif defined(__ANDROID__)
-        // Android logging does not require initialization
 #endif
     }
 
+    void registerCustomLogLevel(const std::string& name, int severity) {
+        std::lock_guard<std::mutex> lock(custom_level_mutex_);
+        custom_levels_[name] = severity;
+    }
+
     void log(LogLevel level, const std::string& msg) {
-        if (level < min_level_) {
+        if (static_cast<int>(level) < static_cast<int>(min_level_)) {
             return;
         }
 
         auto formattedMsg = formatMessage(level, msg);
 
         {
-            std::lock_guard lock(queue_mutex_);
+            std::lock_guard<std::mutex> lock(queue_mutex_);
             log_queue_.push(formattedMsg);
         }
         cv_.notify_one();
 
-        // Send to system log if enabled
+        // 如果启用了系统日志，发送到系统日志
         if (system_logging_enabled_) {
             logToSystem(level, formattedMsg);
         }
 
-        for (const auto& sink : sinks_) {
-            sink->log(level, msg);
-        }
+        // 分发到所有注册的日志接收器
+        dispatchToSinks(level, msg);
     }
 
 private:
@@ -140,15 +163,24 @@ private:
     int max_files_;
     LogLevel min_level_;
     std::unordered_map<std::thread::id, std::string> thread_names_;
-    std::string pattern_ = "[{}][{}][{}] {v}";
+    std::string pattern_ = "[{}][{}][{}] {}";
     std::vector<std::shared_ptr<LoggerImpl>> sinks_;
-    bool system_logging_enabled_{};
+    bool system_logging_enabled_ = false;
+
 #ifdef _WIN32
     HANDLE h_event_log_ = nullptr;
 #endif
 
+    std::mutex thread_mutex_;
+    std::mutex pattern_mutex_;
+    std::mutex sinks_mutex_;
+    std::mutex system_log_mutex_;
+    std::mutex level_mutex_;
+    std::mutex custom_level_mutex_;
+    std::unordered_map<std::string, int> custom_levels_;
+
     void rotateLogFile() {
-        std::lock_guard lock(queue_mutex_);
+        std::lock_guard<std::mutex> lock(queue_mutex_);
         if (log_file_.is_open()) {
             log_file_.close();
         }
@@ -191,6 +223,7 @@ private:
     }
 
     auto getThreadName() -> std::string {
+        std::lock_guard<std::mutex> lock(thread_mutex_);
         auto thread_id = std::this_thread::get_id();
         if (thread_names_.contains(thread_id)) {
             return thread_names_[thread_id];
@@ -221,15 +254,18 @@ private:
     auto formatMessage(LogLevel level, const std::string& msg) -> std::string {
         auto currentTime = utils::getChinaTimestampString();
         auto threadName = getThreadName();
-        return std::format("[{}][{}][{}][{}]", currentTime,
-                           logLevelToString(level), threadName, msg);
+
+        std::shared_lock<std::mutex> patternLock(pattern_mutex_);
+        return std::vformat(pattern_, std::make_format_args(
+                                          currentTime, logLevelToString(level),
+                                          threadName, msg));
     }
 
-    void run(const std::stop_token& stop_token) {
+    void run(std::stop_token stop_token) {
         while (!stop_token.stop_requested()) {
             std::string msg;
             {
-                std::unique_lock lock(queue_mutex_);
+                std::unique_lock<std::mutex> lock(queue_mutex_);
                 cv_.wait(lock,
                          [this] { return !log_queue_.empty() || finished_; });
 
@@ -239,7 +275,7 @@ private:
 
                 msg = log_queue_.front();
                 log_queue_.pop();
-            }  // Release lock before I/O operation
+            }
 
             log_file_ << msg << std::endl;
 
@@ -250,7 +286,7 @@ private:
         }
     }
 
-    void logToSystem(LogLevel level, const std::string& msg) {
+    void logToSystem(LogLevel level, const std::string& msg) const {
 #ifdef _WIN32
         if (h_event_log_) {
             using enum LogLevel;
@@ -277,64 +313,83 @@ private:
                          nullptr);
         }
 #elif defined(__linux__) || defined(__APPLE__)
-        using enum LogLevel;
-        int priority;
-        switch (level) {
-            case CRITICAL:
-                priority = LOG_CRIT;
-                break;
-            case ERROR:
-                priority = LOG_ERR;
-                break;
-            case WARN:
-                priority = LOG_WARNING;
-                break;
-            case INFO:
-                priority = LOG_INFO;
-                break;
-            case DEBUG:
-            case TRACE:
-            default:
-                priority = LOG_DEBUG;
-                break;
-        }
+        if (system_logging_enabled_) {
+            using enum LogLevel;
+            int priority;
+            switch (level) {
+                case CRITICAL:
+                    priority = LOG_CRIT;
+                    break;
+                case ERROR:
+                    priority = LOG_ERR;
+                    break;
+                case WARN:
+                    priority = LOG_WARNING;
+                    break;
+                case INFO:
+                    priority = LOG_INFO;
+                    break;
+                case DEBUG:
+                case TRACE:
+                default:
+                    priority = LOG_DEBUG;
+                    break;
+            }
 
-        syslog(priority, "%s", msg.c_str());
+            syslog(priority, "%s", msg.c_str());
+        }
 #elif defined(__ANDROID__)
-        using enum LogLevel;
-        int priority;
-        switch (level) {
-            case CRITICAL:
-                priority = ANDROID_LOG_FATAL;
-                break;
-            case ERROR:
-                priority = ANDROID_LOG_ERROR;
-                break;
-            case WARN:
-                priority = ANDROID_LOG_WARN;
-                break;
-            case INFO:
-                priority = ANDROID_LOG_INFO;
-                break;
-            case DEBUG:
-                priority = ANDROID_LOG_DEBUG;
-                break;
-            case TRACE:
-            default:
-                priority = ANDROID_LOG_VERBOSE;
-                break;
-        }
+        if (system_logging_enabled_) {
+            using enum LogLevel;
+            int priority;
+            switch (level) {
+                case CRITICAL:
+                    priority = ANDROID_LOG_FATAL;
+                    break;
+                case ERROR:
+                    priority = ANDROID_LOG_ERROR;
+                    break;
+                case WARN:
+                    priority = ANDROID_LOG_WARN;
+                    break;
+                case INFO:
+                    priority = ANDROID_LOG_INFO;
+                    break;
+                case DEBUG:
+                    priority = ANDROID_LOG_DEBUG;
+                    break;
+                case TRACE:
+                default:
+                    priority = ANDROID_LOG_VERBOSE;
+                    break;
+            }
 
-        __android_log_print(priority, "AtomLogger", "%s", msg.c_str());
+            __android_log_print(priority, "AtomLogger", "%s", msg.c_str());
+        }
 #endif
+    }
+
+    void dispatchToSinks(LogLevel level, const std::string& msg) {
+        std::shared_lock<std::mutex> lock(sinks_mutex_);
+        for (const auto& sink : sinks_) {
+            sink->log(level, msg);
+        }
+    }
+
+    auto getCustomLogLevel(const std::string& name) -> LogLevel {
+        std::shared_lock<std::mutex> lock(custom_level_mutex_);
+        if (custom_levels_.find(name) != custom_levels_.end()) {
+            return static_cast<LogLevel>(custom_levels_.at(name));
+        }
+        return LogLevel::INFO;
     }
 };
 
-// `Logger` class method implementations
+// `Logger` 类的方法实现
 
 Logger::Logger(const fs::path& file_name, LogLevel min_level,
                size_t max_file_size, int max_files)
-    : impl_(std::make_unique<LoggerImpl>(file_name, min_level, max_file_size,
+    : impl_(std::make_shared<LoggerImpl>(file_name, min_level, max_file_size,
                                          max_files)) {}
 
 Logger::~Logger() = default;
@@ -350,17 +405,25 @@ void Logger::setPattern(const std::string& pattern) {
 }
 
 void Logger::registerSink(const std::shared_ptr<Logger>& logger) {
-    impl_->registerSink(logger->impl_);
+    if (logger) {
+        impl_->registerSink(logger->impl_);
+    }
 }
 
 void Logger::removeSink(const std::shared_ptr<Logger>& logger) {
-    impl_->removeSink(logger->impl_);
+    if (logger) {
+        impl_->removeSink(logger->impl_);
+    }
 }
 
 void Logger::clearSinks() { impl_->clearSinks(); }
 
 void Logger::enableSystemLogging(bool enable) {
     impl_->enableSystemLogging(enable);
+}
+
+void Logger::registerCustomLogLevel(const std::string& name, int severity) {
+    impl_->registerCustomLogLevel(name, severity);
 }
 
 void Logger::log(LogLevel level, const std::string& msg) {

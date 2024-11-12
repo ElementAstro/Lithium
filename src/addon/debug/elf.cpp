@@ -231,8 +231,10 @@ private:
                 Symbol{.name = std::string(strtab + symtab[i].st_name),
                        .value = symtab[i].st_value,
                        .size = symtab[i].st_size,
-                       .bind = ELF64_ST_BIND(symtab[i].st_info),
-                       .type = ELF64_ST_TYPE(symtab[i].st_info),
+                       .bind = static_cast<unsigned char>(
+                           ELF64_ST_BIND(symtab[i].st_info)),
+                       .type = static_cast<unsigned char>(
+                           ELF64_ST_TYPE(symtab[i].st_info)),
                        .shndx = symtab[i].st_shndx});
         }
 

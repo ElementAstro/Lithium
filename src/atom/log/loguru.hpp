@@ -611,7 +611,8 @@ enum FileMode { Truncate, Append };
    the same path.
 */
 LOGURU_EXPORT
-auto add_file(const char* path, FileMode mode, Verbosity verbosity) -> bool;
+auto add_file(const char* path, FileMode mode, Verbosity verbosity,
+              int log_size_m = 2, int file_num = 3) -> bool;
 
 LOGURU_EXPORT
 // Send logs to syslog with LOG_USER facility (see next call)

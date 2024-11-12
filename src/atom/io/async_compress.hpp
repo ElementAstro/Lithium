@@ -159,6 +159,8 @@ public:
      */
     explicit BaseDecompressor(asio::io_context& io_context);
 
+    virtual ~BaseDecompressor() = default;
+
     /**
      * @brief Starts the decompression process.
      */
@@ -202,6 +204,8 @@ public:
     SingleFileDecompressor(asio::io_context& io_context, fs::path input_file,
                            fs::path output_folder);
 
+    ~SingleFileDecompressor() override = default;
+    
     /**
      * @brief Starts the decompression process.
      */
@@ -233,6 +237,7 @@ public:
                           const fs::path& input_dir,
                           const fs::path& output_folder);
 
+    ~DirectoryDecompressor() override = default;
     /**
      * @brief Starts the decompression process.
      */
@@ -262,6 +267,7 @@ private:
  */
 class ZipOperation {
 public:
+    virtual ~ZipOperation() = default;
     /**
      * @brief Starts the ZIP operation.
      */
@@ -315,6 +321,7 @@ public:
      */
     FileExistsInZip(asio::io_context& io_context, std::string_view zip_file,
                     std::string_view file_name);
+    ~FileExistsInZip() override = default;
 
     /**
      * @brief Starts the ZIP operation.

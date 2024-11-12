@@ -15,14 +15,18 @@
 #include <mutex>
 #include <string>
 
+#include "addon/dependency.hpp"
 #include "addons.hpp"
 #include "compiler.hpp"
 #include "component.hpp"
-#include "config/configor.hpp"
 #include "loader.hpp"
 #include "sandbox.hpp"
+#include "system_dependency.hpp"
 #include "tracker.hpp"
 
+#include "config/configor.hpp"
+
+#include "template/remote.hpp"
 #include "template/standalone.hpp"
 
 #include "atom/components/registry.hpp"
@@ -32,8 +36,8 @@
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 #include "atom/system/env.hpp"
-#include "atom/system/process_manager.hpp"
 #include "atom/system/process.hpp"
+#include "atom/system/process_manager.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
 
@@ -70,6 +74,7 @@ public:
     std::shared_ptr<Compiler> compiler;
     std::shared_ptr<FileTracker> fileTracker;
     std::weak_ptr<AddonManager> addonManager;
+    std::shared_ptr<DependencyManager> dependencyManager;
     std::unordered_map<std::string, std::shared_ptr<ComponentEntry>>
         componentEntries;
     std::weak_ptr<atom::system::ProcessManager> processManager;
@@ -91,6 +96,7 @@ ComponentManager::ComponentManager()
         GetWeakPtr<atom::system::ProcessManager>(Constants::PROCESS_MANAGER);
     impl_->sandbox = std::make_shared<Sandbox>();
     impl_->compiler = std::make_shared<Compiler>();
+    impl_->dependencyManager = std::make_shared<DependencyManager>();
 
     GET_OR_CREATE_WEAK_PTR(impl_->configManager, ConfigManager,
                            Constants::CONFIG_MANAGER);
@@ -206,6 +212,15 @@ void ComponentManager::initializeRegistryComponents() {
 }
 
 auto ComponentManager::loadModules() -> bool {
+    // Resolve system dependencies first, then resolve other dependencies
+    auto systemDeps = impl_->dependencyGraph.resolveSystemDependencies(
+        getQualifiedSubDirs(impl_->modulePath));
+
+    for (const auto& [dep, version] : systemDeps) {
+        impl_->dependencyManager->addDependency({dep, version.toString()});
+    }
+    impl_->dependencyManager->checkAndInstallDependencies();
+
     auto qualifiedSubdirs = impl_->dependencyGraph.resolveDependencies(
         getQualifiedSubDirs(impl_->modulePath));
     if (qualifiedSubdirs.empty()) {
@@ -934,6 +949,42 @@ auto ComponentManager::reloadStandaloneComponent(
     return true;
 }
 
+auto ComponentManager::loadRemoteComponent(
+    const std::string& component_name, const std::string& addon_name,
+    const std::string& module_path, const std::string& entry,
+    const std::vector<std::string>& dependencies) -> bool {
+    std::lock_guard lock(impl_->mutex);
+    for (const auto& [name, component] : impl_->components) {
+        if (name == component_name) {
+            LOG_F(ERROR, "Component {} is already loaded", component_name);
+            return false;
+        }
+    }
+    if (atom::system::isProcessRunning(component_name)) {
+        LOG_F(ERROR, "Component {} is already running, killing it",
+              component_name);
+        atom::system::killProcessByName(component_name, SIGTERM);
+        LOG_F(INFO, "Killed process {}", component_name);
+        if (atom::system::isProcessRunning(component_name)) {
+            LOG_F(ERROR, "Failed to kill process {}", component_name);
+            return false;
+        }
+    }
+    for (const auto& dependency : dependencies) {
+        if (!atom::system::isProcessRunning(dependency)) {
+            LOG_F(ERROR, "Dependency {} is not running", dependency);
+            return false;
+        }
+    }
+    auto componentFullPath = module_path + Constants::PATH_SEPARATOR +
+                             component_name + Constants::EXECUTABLE_EXTENSION;
+    auto remoteComponent = std::make_shared<RemoteStandAloneComponentImpl>(
+        component_name, addon_name);
+
+    LOG_F(INFO, "Successfully loaded remote component {}", component_name);
+    return true;
+}
+
 void ComponentManager::updateDependencyGraph(
     const std::string& component_name, const std::string& version,
     const std::vector<std::string>& dependencies,
@@ -1010,9 +1061,11 @@ auto ComponentManager::getComponentDoc(const std::string& component_name)
     return impl_->components[component_name].lock()->getDoc();
 }
 
-auto ComponentManager::compileAndLoadComponent(const std::string& code, const std::string& moduleName,
-                                               const std::string& functionName) -> bool {
-    if (!impl_->compiler->compileToSharedLibrary(code, moduleName, functionName)) {
+auto ComponentManager::compileAndLoadComponent(
+    const std::string& code, const std::string& moduleName,
+    const std::string& functionName) -> bool {
+    if (!impl_->compiler->compileToSharedLibrary(code, moduleName,
+                                                 functionName)) {
         LOG_F(ERROR, "Failed to compile component: {}", moduleName);
         return false;
     }

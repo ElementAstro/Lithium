@@ -9,10 +9,6 @@
 
 namespace lithium {
 
-// 日志级别定义
-enum class LogLevel { INFO, WARNING, ERROR };
-
-// 自定义异常类
 class DependencyException : public std::exception {
 public:
     explicit DependencyException(std::string message)
@@ -28,44 +24,42 @@ private:
 // 依赖项信息结构
 struct DependencyInfo {
     std::string name;
-    std::string version;  // 可选
+    std::string version;         // 可选
+    std::string packageManager;  // 指定的包管理器
+};
+
+// 包管理器信息结构
+struct PackageManagerInfo {
+    std::string name;
+    std::function<std::string(const DependencyInfo&)> getCheckCommand;
+    std::function<std::string(const DependencyInfo&)> getInstallCommand;
+    std::function<std::string(const DependencyInfo&)> getUninstallCommand;
+    std::function<std::string(const std::string&)> getSearchCommand;
 };
 
 // 依赖管理器类
 class DependencyManager {
 public:
-    explicit DependencyManager(std::vector<DependencyInfo> dependencies);
+    DependencyManager();
     ~DependencyManager();
 
-    // 禁用拷贝和赋值
     DependencyManager(const DependencyManager&) = delete;
     DependencyManager& operator=(const DependencyManager&) = delete;
 
-    // 设置日志回调函数，包含日志级别
-    void setLogCallback(
-        std::function<void(LogLevel, const std::string&)> callback);
-
-    // 检查并安装所有依赖项
     void checkAndInstallDependencies();
-
-    // 设置自定义安装命令
     void setCustomInstallCommand(const std::string& dep,
                                  const std::string& command);
-
-    // 生成依赖项报告
     auto generateDependencyReport() const -> std::string;
-
-    // 卸载依赖项
     void uninstallDependency(const std::string& dep);
-
-    // 获取当前支持的平台类型
     auto getCurrentPlatform() const -> std::string;
-
-    // 异步安装依赖项
     void installDependencyAsync(const DependencyInfo& dep);
-
-    // 取消安装操作
     void cancelInstallation(const std::string& dep);
+    void addDependency(const DependencyInfo& dep);
+    void removeDependency(const std::string& depName);
+    auto searchDependency(const std::string& depName)
+        -> std::vector<std::string>;
+    void loadSystemPackageManagers();
+    auto getPackageManagers() const -> std::vector<PackageManagerInfo>;
 
 private:
     class Impl;

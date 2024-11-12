@@ -1,3 +1,4 @@
+// atomlog.hpp
 /*
  * atomlog.hpp
  *
@@ -8,7 +9,7 @@
 
 Date: 2023-11-10
 
-Description: Logger for Atom
+Description: Enhanced Logger for Atom with C++20 Features
 
 **************************************************/
 
@@ -26,18 +27,25 @@ namespace atom::log {
 
 /**
  * @brief Enum class representing the log levels.
+ * Extended to support custom log levels.
  */
 enum class LogLevel {
-    TRACE,     ///< Trace level logging.
-    DEBUG,     ///< Debug level logging.
-    INFO,      ///< Info level logging.
-    WARN,      ///< Warn level logging.
-    ERROR,     ///< Error level logging.
-    CRITICAL,  ///< Critical level logging.
-    OFF        ///< Used to disable logging.
+    TRACE = 0,  ///< Trace level logging.
+    DEBUG,      ///< Debug level logging.
+    INFO,       ///< Info level logging.
+    WARN,       ///< Warn level logging.
+    ERROR,      ///< Error level logging.
+    CRITICAL,   ///< Critical level logging.
+    OFF         ///< Used to disable logging.
 };
 
-class LoggerImpl;  // Forward declaration
+/**
+ * @brief Structure representing a custom log level.
+ */
+struct CustomLogLevel {
+    std::string name;
+    int severity;
+};
 
 /**
  * @brief Logger class for logging messages with different severity levels.
@@ -71,9 +79,8 @@ public:
      * @param args The arguments to format.
      */
     template <typename... Args>
-    void trace(const std::string& format, const Args&... args) {
-        log(LogLevel::TRACE,
-            std::vformat(format, std::make_format_args(args...)));
+    void trace(const std::string& format, Args&&... args) {
+        log(LogLevel::TRACE, std::format(format, std::forward<Args>(args)...));
     }
 
     /**
@@ -83,9 +90,8 @@ public:
      * @param args The arguments to format.
      */
     template <typename... Args>
-    void debug(const std::string& format, const Args&... args) {
-        log(LogLevel::DEBUG,
-            std::vformat(format, std::make_format_args(args...)));
+    void debug(const std::string& format, Args&&... args) {
+        log(LogLevel::DEBUG, std::format(format, std::forward<Args>(args)...));
     }
 
     /**
@@ -95,9 +101,8 @@ public:
      * @param args The arguments to format.
      */
     template <typename... Args>
-    void info(const std::string& format, const Args&... args) {
-        log(LogLevel::INFO,
-            std::vformat(format, std::make_format_args(args...)));
+    void info(const std::string& format, Args&&... args) {
+        log(LogLevel::INFO, std::format(format, std::forward<Args>(args)...));
     }
 
     /**
@@ -107,9 +112,8 @@ public:
      * @param args The arguments to format.
      */
     template <typename... Args>
-    void warn(const std::string& format, const Args&... args) {
-        log(LogLevel::WARN,
-            std::vformat(format, std::make_format_args(args...)));
+    void warn(const std::string& format, Args&&... args) {
+        log(LogLevel::WARN, std::format(format, std::forward<Args>(args)...));
     }
 
     /**
@@ -119,9 +123,8 @@ public:
      * @param args The arguments to format.
      */
     template <typename... Args>
-    void error(const std::string& format, const Args&... args) {
-        log(LogLevel::ERROR,
-            std::vformat(format, std::make_format_args(args...)));
+    void error(const std::string& format, Args&&... args) {
+        log(LogLevel::ERROR, std::format(format, std::forward<Args>(args)...));
     }
 
     /**
@@ -131,9 +134,9 @@ public:
      * @param args The arguments to format.
      */
     template <typename... Args>
-    void critical(const std::string& format, const Args&... args) {
+    void critical(const std::string& format, Args&&... args) {
         log(LogLevel::CRITICAL,
-            std::vformat(format, std::make_format_args(args...)));
+            std::format(format, std::forward<Args>(args)...));
     }
 
     /**
@@ -177,7 +180,15 @@ public:
      */
     void enableSystemLogging(bool enable);
 
+    /**
+     * @brief Registers a custom log level.
+     * @param name The name of the custom log level.
+     * @param severity The severity of the custom log level.
+     */
+    void registerCustomLogLevel(const std::string& name, int severity);
+
 private:
+    class LoggerImpl;  // Forward declaration
     std::shared_ptr<LoggerImpl>
         impl_;  ///< Pointer to the Logger implementation.
 

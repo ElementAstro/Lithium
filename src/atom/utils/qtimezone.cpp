@@ -166,10 +166,12 @@ auto QTimeZone::isDaylightTime(const QDateTime& dateTime) const -> bool {
     static constexpr int K_FIRST_SUNDAY = 1;
     static constexpr int K_ONE_WEEK = 7;
 
-    std::tm startDST = {0, 0, 2, K_SECOND_SUNDAY, K_MARCH, localTime.tm_year,
-                        0, 0, -1};  // March 8th 2:00 AM
-    std::tm endDST = {0, 0, 2, K_FIRST_SUNDAY, K_NOVEMBER, localTime.tm_year,
-                      0, 0, -1};  // November 1st 2:00 AM
+    std::tm startDST = {
+        0, 0,  2, K_SECOND_SUNDAY, K_MARCH, localTime.tm_year, 0,
+        0, -1, 0};  // March 8th 2:00 AM
+    std::tm endDST = {
+        0, 0,  2, K_FIRST_SUNDAY, K_NOVEMBER, localTime.tm_year, 0,
+        0, -1, 0};  // November 1st 2:00 AM
 
     while (startDST.tm_wday != 0) {
         startDST.tm_mday += 1;

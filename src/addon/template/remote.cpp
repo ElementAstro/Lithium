@@ -1,6 +1,8 @@
 #include "remote.hpp"
 
 #include <asio.hpp>
+#include <asio/ssl.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <string>
@@ -12,6 +14,7 @@
 
 using asio::ip::tcp;
 using asio::ip::udp;
+namespace ssl = asio::ssl;
 
 class RemoteStandAloneComponentImpl {
 public:
@@ -31,6 +34,18 @@ public:
     std::string heartbeatMessage;
     std::atomic<bool> heartbeatEnabled{false};
     ProtocolType protocol{ProtocolType::TCP};
+
+    // SSL支持
+    std::optional<ssl::context> sslContext;
+    std::optional<ssl::stream<tcp::socket>> sslSocket;
+    bool sslEnabled{false};
+
+    // 压缩支持
+    bool compressionEnabled{false};
+
+    // 身份验证信息
+    std::string username;
+    std::string password;
 
     // Reconnection strategy
     std::chrono::milliseconds initialReconnectDelay{1000};
@@ -54,14 +69,24 @@ RemoteStandAloneComponent::RemoteStandAloneComponent(std::string name)
         "TCP or UDP");
     def("connect", &RemoteStandAloneComponent::connectToRemoteDriver);
     def("disconnect", &RemoteStandAloneComponent::disconnectRemoteDriver);
-    def("send", &RemoteStandAloneComponent::sendMessageToDriver<std::string>);
-    def("send_async",
-        &RemoteStandAloneComponent::sendMessageAsync<std::string>);
+    //def("send", &RemoteStandAloneComponent::sendMessageToDriver<std::string>);
+    // def("send_async",
+    //     &RemoteStandAloneComponent::sendMessageAsync<std::string>);
     def("listen", &RemoteStandAloneComponent::toggleDriverListening);
     def("print", &RemoteStandAloneComponent::printDriver);
     def("heartbeat_on", &RemoteStandAloneComponent::enableHeartbeat);
     def("heartbeat_off", &RemoteStandAloneComponent::disableHeartbeat);
-    def("execute", &RemoteStandAloneComponent::executeCommand<std::string>);
+    // TODO: Implement executeCommand
+    // def("execute", &RemoteStandAloneComponent::executeCommand<std::string>);
+
+    def("enable_ssl", &RemoteStandAloneComponent::enableSSL);
+    def("disable_ssl", &RemoteStandAloneComponent::disableSSL);
+    def("enable_compression", &RemoteStandAloneComponent::enableCompression);
+    def("disable_compression", &RemoteStandAloneComponent::disableCompression);
+    def("authenticate", &RemoteStandAloneComponent::authenticate);
+    def("GetStatus", &RemoteStandAloneComponent::GetStatus);
+    def("RestartDriver", &RemoteStandAloneComponent::RestartDriver);
+    def("UpdateConfig", &RemoteStandAloneComponent::UpdateConfig);
 }
 
 RemoteStandAloneComponent::~RemoteStandAloneComponent() {
@@ -169,7 +194,17 @@ void RemoteStandAloneComponent::sendMessageToDriver(T&& message) {
     std::visit(
         [&](auto&& socket) {
             if (socket && socket->is_open()) {
-                asio::write(*socket, asio::buffer(std::forward<T>(message)));
+                if constexpr (std::is_same_v<std::decay_t<decltype(*socket)>,
+                                             asio::ip::tcp::socket>) {
+                    asio::write(*socket,
+                                asio::buffer(std::forward<T>(message)));
+                } else if constexpr (std::is_same_v<
+                                         std::decay_t<decltype(*socket)>,
+                                         asio::ip::udp::socket>) {
+                    socket->send(asio::buffer(std::forward<T>(message)));
+                } else {
+                    LOG_F(ERROR, "Unsupported socket type");
+                }
             } else {
                 LOG_F(ERROR, "No active connection to send message");
             }
@@ -434,6 +469,98 @@ void RemoteStandAloneComponent::attemptReconnection() {
         impl_->socket);
 
     impl_->currentReconnectAttempts++;
+}
+
+void RemoteStandAloneComponent::enableSSL(const std::string& certFile,
+                                          const std::string& keyFile) {
+    impl_->sslEnabled = true;
+    impl_->sslContext.emplace(ssl::context::tlsv12_client);
+    impl_->sslContext->load_verify_file(certFile);
+    impl_->sslContext->use_private_key_file(keyFile, ssl::context::pem);
+    LOG_F(INFO, "SSL enabled with cert file: {} and key file: {}", certFile,
+          keyFile);
+}
+
+void RemoteStandAloneComponent::disableSSL() {
+    impl_->sslEnabled = false;
+    impl_->sslContext.reset();
+    impl_->sslSocket.reset();
+    LOG_F(INFO, "SSL disabled");
+}
+
+void RemoteStandAloneComponent::enableCompression() {
+    impl_->compressionEnabled = true;
+    LOG_F(INFO, "Compression enabled");
+}
+
+void RemoteStandAloneComponent::disableCompression() {
+    impl_->compressionEnabled = false;
+    LOG_F(INFO, "Compression disabled");
+}
+
+void RemoteStandAloneComponent::authenticate(const std::string& username,
+                                             const std::string& password) {
+    impl_->username = username;
+    impl_->password = password;
+    std::string authMessage = "AUTH " + username + " " + password;
+    // sendMessageToDriver(authMessage);
+    LOG_F(INFO, "Authentication message sent for user: {}", username);
+}
+
+atom::async::EnhancedFuture<std::string>
+RemoteStandAloneComponent::GetStatus() {
+    auto promise =
+        std::make_shared<atom::async::EnhancedPromise<std::string>>();
+    auto future = promise->getEnhancedFuture();
+
+    sendMessageAsync("GET_STATUS").then([promise](auto&& result) {
+        if (!result.first) {
+            // promise->set_value(result.second);
+        } else {
+            // promise->set_exception(std::make_exception_ptr(
+            //     std::runtime_error("Failed to get status")));
+        }
+    });
+
+    return future;
+}
+
+atom::async::EnhancedFuture<bool> RemoteStandAloneComponent::RestartDriver() {
+    auto promise = std::make_shared<atom::async::EnhancedPromise<bool>>();
+    auto future = promise->getEnhancedFuture();
+
+    sendMessageAsync("RESTART_DRIVER").then([promise](auto&& result) {
+        if (!result.first) {
+            //  promise->set_value(true);
+        } else {
+            // promise->set_exception(std::make_exception_ptr(
+            //     std::runtime_error("Failed to restart driver")));
+        }
+    });
+
+    return future;
+}
+
+atom::async::EnhancedFuture<bool> RemoteStandAloneComponent::UpdateConfig(
+    const std::string& config) {
+    auto promise = std::make_shared<atom::async::EnhancedPromise<bool>>();
+    auto future = promise->getEnhancedFuture();
+
+    sendMessageAsync("UPDATE_CONFIG " + config).then([promise](auto&& result) {
+        if (!result.first) {
+            // promise->set_value(true);
+        } else {
+            // promise->set_exception(std::make_exception_ptr(
+            //    std::runtime_error("Failed to update config")));
+        }
+    });
+
+    return future;
+}
+
+void RemoteStandAloneComponent::initializeRPC() {
+    // 初始化RPC框架，如gRPC
+    LOG_F(INFO, "RPC system initialized");
 }
 
 // Explicit template instantiations

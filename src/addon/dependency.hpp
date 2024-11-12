@@ -24,6 +24,8 @@ namespace lithium {
  */
 class DependencyGraph {
 public:
+    DependencyGraph();
+
     using Node = std::string;
 
     /**
@@ -124,6 +126,9 @@ public:
     auto resolveDependencies(const std::vector<Node>& directories)
         -> std::vector<Node>;
 
+    auto resolveSystemDependencies(const std::vector<Node>& directories)
+        -> std::unordered_map<std::string, Version>;
+
 private:
     std::unordered_map<Node, std::unordered_set<Node>>
         adjList_;  ///< Adjacency list representation of the graph.
@@ -153,8 +158,6 @@ private:
 
     static auto parsePackageYaml(const std::string& path)
         -> std::pair<std::string, std::unordered_map<std::string, Version>>;
-
-    void generatePackageYaml(const std::string& path) const;
 };
 }  // namespace lithium
 #endif  // LITHIUM_ADDON_DEPENDENCY_HPP

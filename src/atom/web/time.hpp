@@ -82,6 +82,12 @@ public:
      */
     auto getNtpTime(const std::string &hostname) -> std::time_t;
 
+    /**
+     * @brief Sets the implementation for testing purposes.
+     * @param impl The implementation to set.
+     */
+    void setImpl(std::unique_ptr<TimeManagerImpl> impl);
+
 private:
     std::unique_ptr<TimeManagerImpl>
         impl_;  ///< Pointer to the implementation, using Pimpl idiom to hide

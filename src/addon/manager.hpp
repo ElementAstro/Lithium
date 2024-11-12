@@ -99,6 +99,16 @@ private:
                                    bool forced) -> bool;
     auto reloadStandaloneComponent(const std::string& component_name) -> bool;
 
+    auto loadRemoteComponent(const std::string& component_name,
+                             const std::string& addon_name,
+                             const std::string& module_path,
+                             const std::string& entry,
+                             const std::vector<std::string>& dependencies)
+        -> bool;
+    auto unloadRemoteComponent(const std::string& component_name,
+                            bool forced) -> bool;
+    auto reloadRemoteComponent(const std::string& component_name) -> bool;
+
     void updateDependencyGraph(
         const std::string& component_name, const std::string& version,
         const std::vector<std::string>& dependencies,

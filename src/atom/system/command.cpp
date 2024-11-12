@@ -523,4 +523,14 @@ auto startProcess(const std::string &command) -> std::pair<int, void *> {
 #endif
 }
 
+auto isCommandAvailable(const std::string &command) -> bool {
+    std::string checkCommand;
+#ifdef _WIN32
+    checkCommand = "where " + command + " > nul 2>&1";
+#else
+    checkCommand = "command -v " + command + " > /dev/null 2>&1";
+#endif
+    return atom::system::executeCommandSimple(checkCommand);
+}
+
 }  // namespace atom::system

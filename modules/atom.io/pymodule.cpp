@@ -33,9 +33,10 @@ PYBIND11_MODULE(io, m) {
         .def_readwrite("on_delete",
                        &atom::io::CreateDirectoriesOptions::onDelete);
 
-    m.def("create_directory",
-          py::overload_cast<const std::string &>(&atom::io::createDirectory),
-          "Create a directory", py::arg("path"), py::arg("root_dir") = "");
+    // TODO: Implement the following functions
+    // m.def("create_directory",
+    //       py::overload_cast<const std::string &>(&atom::io::createDirectory),
+    //       "Create a directory", py::arg("path"), py::arg("root_dir") = "");
 
     m.def("create_directories_recursive", &atom::io::createDirectoriesRecursive,
           "Create directories recursively", py::arg("base_path"),

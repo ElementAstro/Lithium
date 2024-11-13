@@ -1,8 +1,12 @@
 #ifndef ATOM_ALGORITHM_BIGNUMBER_HPP
 #define ATOM_ALGORITHM_BIGNUMBER_HPP
 
+#include <algorithm>
+#include <cctype>
+#include <ostream>
+#include <stdexcept>
 #include <string>
-
+#include <utility>
 #include "atom/macro.hpp"
 
 namespace atom::algorithm {
@@ -19,6 +23,7 @@ public:
      */
     BigNumber(std::string number) : numberString_(std::move(number)) {
         numberString_ = trimLeadingZeros().numberString_;
+        validate();
     }
 
     /**
@@ -77,6 +82,8 @@ public:
      */
     auto setString(const std::string& newStr) -> BigNumber {
         numberString_ = newStr;
+        numberString_ = trimLeadingZeros().numberString_;
+        validate();
         return *this;
     }
 
@@ -85,8 +92,11 @@ public:
      * @return The negated BigNumber.
      */
     ATOM_NODISCARD auto negate() const -> BigNumber {
-        return numberString_[0] == '-' ? BigNumber(numberString_.substr(1))
-                                       : BigNumber("-" + numberString_);
+        if (isNegative()) {
+            return BigNumber(numberString_.substr(1));
+        } else {
+            return BigNumber("-" + numberString_);
+        }
     }
 
     /**
@@ -127,7 +137,7 @@ public:
      * @return The number of digits.
      */
     ATOM_NODISCARD auto digits() const -> unsigned int {
-        return numberString_.length() - static_cast<int>(isNegative());
+        return numberString_.length() - (isNegative() ? 1 : 0);
     }
 
     /**
@@ -135,7 +145,7 @@ public:
      * @return True if the number is negative, false otherwise.
      */
     ATOM_NODISCARD auto isNegative() const -> bool {
-        return numberString_[0] == '-';
+        return !numberString_.empty() && numberString_[0] == '-';
     }
 
     /**
@@ -149,6 +159,8 @@ public:
      * @return True if the number is even, false otherwise.
      */
     ATOM_NODISCARD auto isEven() const -> bool {
+        if (numberString_.empty())
+            return false;
         return (numberString_.back() - '0') % 2 == 0;
     }
 
@@ -347,9 +359,9 @@ public:
      * @return The BigNumber before incrementing.
      */
     auto operator++(int) -> BigNumber {
-        BigNumber t(*this);
+        BigNumber temp(*this);
         ++(*this);
-        return t;
+        return temp;
     }
 
     /**
@@ -357,9 +369,9 @@ public:
      * @return The BigNumber before decrementing.
      */
     auto operator--(int) -> BigNumber {
-        BigNumber t(*this);
+        BigNumber temp(*this);
         --(*this);
-        return t;
+        return temp;
     }
 
     /**
@@ -368,11 +380,23 @@ public:
      * @return The digit at the specified index.
      */
     auto operator[](int index) const -> unsigned int {
+        if (index < 0 || index >= static_cast<int>(numberString_.size())) {
+            throw std::out_of_range("Index out of range");
+        }
+        if (isNegative() && index == 0) {
+            throw std::invalid_argument("Cannot access the negative sign");
+        }
         return static_cast<unsigned int>(numberString_[index] - '0');
     }
 
 private:
     std::string numberString_;  ///< The string representation of the number.
+
+    /**
+     * @brief Validates the BigNumber string.
+     * @throws std::invalid_argument if the string is not a valid number.
+     */
+    void validate() const;
 };
 
 }  // namespace atom::algorithm

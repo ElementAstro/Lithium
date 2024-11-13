@@ -8,52 +8,70 @@
 
 Date: 2024-3-28
 
-Description: Implementation of fraction class
+Description: Implementation of Fraction class
 
 **************************************************/
 
 #ifndef ATOM_ALGORITHM_FRACTION_HPP
 #define ATOM_ALGORITHM_FRACTION_HPP
 
+#include <cmath>
 #include <compare>
-#include <ostream>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <numeric>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace atom::algorithm {
+
+/**
+ * @brief Exception class for Fraction errors.
+ */
+class FractionException : public std::runtime_error {
+public:
+    explicit FractionException(const std::string& message)
+        : std::runtime_error(message) {}
+};
+
 /**
  * @brief Represents a fraction with numerator and denominator.
  */
 class Fraction {
+private:
+    int numerator;   /**< The numerator of the fraction. */
+    int denominator; /**< The denominator of the fraction. */
+
     /**
      * @brief Computes the greatest common divisor (GCD) of two numbers.
      * @param a The first number.
      * @param b The second number.
      * @return The GCD of the two numbers.
      */
-    static int gcd(int a, int b);
+    static constexpr int gcd(int a, int b) noexcept;
 
     /**
      * @brief Reduces the fraction to its simplest form.
      */
-    void reduce();
+    void reduce() noexcept;
 
-    // For pybind11 compatibility
 public:
-    int numerator;   /**< The numerator of the fraction. */
-    int denominator; /**< The denominator of the fraction. */
-
     /**
      * @brief Constructs a new Fraction object with the given numerator and
      * denominator.
      * @param n The numerator (default is 0).
      * @param d The denominator (default is 1).
+     * @throws FractionException if the denominator is zero.
      */
-    explicit Fraction(int n = 0, int d = 1);
+    explicit constexpr Fraction(int n = 0, int d = 1);
 
     /**
      * @brief Adds another fraction to this fraction.
      * @param other The fraction to add.
      * @return Reference to the modified fraction.
+     * @throws FractionException on arithmetic overflow.
      */
     auto operator+=(const Fraction& other) -> Fraction&;
 
@@ -61,6 +79,7 @@ public:
      * @brief Subtracts another fraction from this fraction.
      * @param other The fraction to subtract.
      * @return Reference to the modified fraction.
+     * @throws FractionException on arithmetic overflow.
      */
     auto operator-=(const Fraction& other) -> Fraction&;
 
@@ -68,6 +87,7 @@ public:
      * @brief Multiplies this fraction by another fraction.
      * @param other The fraction to multiply by.
      * @return Reference to the modified fraction.
+     * @throws FractionException if multiplication leads to zero denominator.
      */
     auto operator*=(const Fraction& other) -> Fraction&;
 
@@ -75,6 +95,7 @@ public:
      * @brief Divides this fraction by another fraction.
      * @param other The fraction to divide by.
      * @return Reference to the modified fraction.
+     * @throws FractionException if division by zero occurs.
      */
     auto operator/=(const Fraction& other) -> Fraction&;
 
@@ -110,18 +131,9 @@ public:
     /**
      * @brief Compares this fraction with another fraction.
      * @param other The fraction to compare with.
-     * @return An integer indicating the comparison result.
+     * @return A std::strong_ordering indicating the comparison result.
      */
-    auto operator<=>(const Fraction& other) const {
-        double diff = this->toDouble() - other.toDouble();
-        if (diff > 0) {
-            return std::strong_ordering::greater;
-        }
-        if (diff < 0) {
-            return std::strong_ordering::less;
-        }
-        return std::strong_ordering::equal;
-    }
+    auto operator<=>(const Fraction& other) const -> std::strong_ordering;
 #endif
 
     /**
@@ -145,7 +157,7 @@ public:
 
     /**
      * @brief Converts the fraction to an integer value.
-     * @return The fraction as an integer.
+     * @return The fraction as an integer (truncates towards zero).
      */
     explicit operator int() const;
 
@@ -162,6 +174,37 @@ public:
     [[nodiscard]] auto toDouble() const -> double;
 
     /**
+     * @brief Inverts the fraction (reciprocal).
+     * @return Reference to the modified fraction.
+     * @throws FractionException if numerator is zero.
+     */
+    auto invert() -> Fraction&;
+
+    /**
+     * @brief Returns the absolute value of the fraction.
+     * @return A new Fraction representing the absolute value.
+     */
+    [[nodiscard]] auto abs() const -> Fraction;
+
+    /**
+     * @brief Checks if the fraction is zero.
+     * @return True if the fraction is zero, false otherwise.
+     */
+    [[nodiscard]] auto isZero() const -> bool;
+
+    /**
+     * @brief Checks if the fraction is positive.
+     * @return True if the fraction is positive, false otherwise.
+     */
+    [[nodiscard]] auto isPositive() const -> bool;
+
+    /**
+     * @brief Checks if the fraction is negative.
+     * @return True if the fraction is negative, false otherwise.
+     */
+    [[nodiscard]] auto isNegative() const -> bool;
+
+    /**
      * @brief Outputs the fraction to the output stream.
      * @param os The output stream.
      * @param f The fraction to output.
@@ -175,10 +218,29 @@ public:
      * @param is The input stream.
      * @param f The fraction to input.
      * @return Reference to the input stream.
+     * @throws FractionException if the input format is invalid or denominator
+     * is zero.
      */
     friend auto operator>>(std::istream& is, Fraction& f) -> std::istream&;
 };
 
+/**
+ * @brief Creates a Fraction from an integer.
+ * @param value The integer value.
+ * @return A Fraction representing the integer.
+ */
+inline auto makeFraction(int value) -> Fraction;
+
+/**
+ * @brief Creates a Fraction from a double by approximating it.
+ * @param value The double value.
+ * @param max_denominator The maximum allowed denominator to limit the
+ * approximation.
+ * @return A Fraction approximating the double value.
+ */
+inline auto makeFraction(double value,
+                         int max_denominator = 1000000) -> Fraction;
+
 }  // namespace atom::algorithm
 
-#endif
+#endif  // ATOM_ALGORITHM_FRACTION_HPP

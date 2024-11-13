@@ -6,10 +6,13 @@
 #include <concepts>
 #include <fstream>
 #include <functional>
+#include <future>
+#include <mutex>
 #include <numeric>
 #include <optional>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifdef USE_SIMD
@@ -24,6 +27,7 @@
 #include "atom/log/loguru.hpp"
 
 namespace atom::algorithm {
+
 template <std::floating_point T>
 class AdvancedErrorCalibration {
 private:
@@ -33,6 +37,8 @@ private:
     std::vector<T> residuals_;
     T mse_ = 0.0;  // Mean Squared Error
     T mae_ = 0.0;  // Mean Absolute Error
+
+    std::mutex metrics_mutex_;
 
     /**
      * Calculate calibration metrics
@@ -74,7 +80,8 @@ private:
                               _mm256_andnot_pd(_mm256_set1_pd(-0.0), errorVec));
 
             ssTotal += std::pow(actual[i] - meanActual, 2);
-            ssResidual += std::pow(predictedVec[i] - actual[i], 2);
+            ssResidual +=
+                std::pow(_mm256_extract_pd(predictedVec, 0) - actual[i], 2);
         }
 
         double tempSquaredError[4];
@@ -108,7 +115,7 @@ private:
                 vaddq_f64(sumAbsoluteErrorVec, vabsq_f64(errorVec));
 
             ssTotal += std::pow(actual[i] - meanActual, 2);
-            ssResidual += std::pow(predictedVec[i] - actual[i], 2);
+            ssResidual += std::pow(predictedVec[0] - actual[i], 2);
         }
 
         double tempSquaredError[2];
@@ -124,15 +131,41 @@ private:
 #endif
 #endif
 
-        for (auto i = 0; i < actual.size(); ++i) {
-            T predicted = apply(measured[i]);
-            T error = actual[i] - predicted;
-            residuals_.push_back(error);
+        // Multithreaded computation for remaining elements
+        std::vector<std::future<void>> futures;
+        size_t i = 0;
+        size_t chunk_size = 100;
+        for (size_t start = i; start < actual.size(); start += chunk_size) {
+            size_t end = std::min(start + chunk_size, actual.size());
+            futures.emplace_back(
+                std::async(std::launch::async, [&, start, end]() {
+                    T localSumSquared = 0.0;
+                    T localSumAbsolute = 0.0;
+                    T localSsTotal = 0.0;
+                    T localSsResidual = 0.0;
+                    std::vector<T> localResiduals;
+                    for (size_t j = start; j < end; ++j) {
+                        T predicted = apply(measured[j]);
+                        T error = actual[j] - predicted;
+                        localResiduals.push_back(error);
 
-            sumSquaredError += error * error;
-            sumAbsoluteError += std::abs(error);
-            ssTotal += std::pow(actual[i] - meanActual, 2);
-            ssResidual += std::pow(error, 2);
+                        localSumSquared += error * error;
+                        localSumAbsolute += std::abs(error);
+                        localSsTotal += std::pow(actual[j] - meanActual, 2);
+                        localSsResidual += std::pow(error, 2);
+                    }
+                    std::lock_guard<std::mutex> lock(metrics_mutex_);
+                    sumSquaredError += localSumSquared;
+                    sumAbsoluteError += localSumAbsolute;
+                    ssTotal += localSsTotal;
+                    ssResidual += localSsResidual;
+                    residuals_.insert(residuals_.end(), localResiduals.begin(),
+                                      localResiduals.end());
+                }));
+        }
+
+        for (auto& fut : futures) {
+            fut.get();
         }
 
         mse_ = sumSquaredError / actual.size();
@@ -167,34 +200,50 @@ private:
         for (int iteration = 0; iteration < max_iterations; ++iteration) {
             std::vector<T> residuals(n);
             for (int i = 0; i < n; ++i) {
-                residuals[i] = y[i] - func(x[i], params);
+                try {
+                    residuals[i] = y[i] - func(x[i], params);
+                } catch (const std::exception& e) {
+                    LOG_F(ERROR, "Exception in func: %s", e.what());
+                    throw;
+                }
                 for (int j = 0; j < m; ++j) {
-                    T h = std::max(1e-6, std::abs(params[j]) * 1e-6);
+                    T h = std::max(T(1e-6), std::abs(params[j]) * T(1e-6));
                     std::vector<T> paramsPlusH = params;
                     paramsPlusH[j] += h;
-                    jacobian[i][j] =
-                        (func(x[i], paramsPlusH) - func(x[i], params)) / h;
+                    try {
+                        jacobian[i][j] =
+                            (func(x[i], paramsPlusH) - func(x[i], params)) / h;
+                    } catch (const std::exception& e) {
+                        LOG_F(ERROR, "Exception in jacobian computation: %s",
+                              e.what());
+                        throw;
+                    }
                 }
             }
 
-            std::vector<std::vector<T>> JTJ(m, std::vector<T>(m));
-            std::vector<T> jTr(m);
+            std::vector<std::vector<T>> JTJ(m, std::vector<T>(m, 0.0));
+            std::vector<T> jTr(m, 0.0);
             for (int i = 0; i < m; ++i) {
                 for (int j = 0; j < m; ++j) {
-                    JTJ[i][j] = 0;
                     for (int k = 0; k < n; ++k) {
                         JTJ[i][j] += jacobian[k][i] * jacobian[k][j];
                     }
                     if (i == j)
                         JTJ[i][j] += lambda;
                 }
-                jTr[i] = 0;
                 for (int k = 0; k < n; ++k) {
                     jTr[i] += jacobian[k][i] * residuals[k];
                 }
             }
 
-            std::vector<T> delta = solveLinearSystem(JTJ, jTr);
+            std::vector<T> delta;
+            try {
+                delta = solveLinearSystem(JTJ, jTr);
+            } catch (const std::exception& e) {
+                LOG_F(ERROR, "Exception in solving linear system: %s",
+                      e.what());
+                throw;
+            }
 
             prevParams = params;
             for (int i = 0; i < m; ++i) {
@@ -222,7 +271,7 @@ private:
     auto solveLinearSystem(const std::vector<std::vector<T>>& A,
                            const std::vector<T>& b) -> std::vector<T> {
         int n = A.size();
-        std::vector<std::vector<T>> augmented(n, std::vector<T>(n + 1));
+        std::vector<std::vector<T>> augmented(n, std::vector<T>(n + 1, 0.0));
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
                 augmented[i][j] = A[i][j];
@@ -231,6 +280,7 @@ private:
         }
 
         for (int i = 0; i < n; ++i) {
+            // Partial pivoting
             int maxRow = i;
             for (int k = i + 1; k < n; ++k) {
                 if (std::abs(augmented[k][i]) >
@@ -238,8 +288,12 @@ private:
                     maxRow = k;
                 }
             }
+            if (std::abs(augmented[maxRow][i]) < 1e-12) {
+                THROW_RUNTIME_ERROR("Matrix is singular or nearly singular.");
+            }
             std::swap(augmented[i], augmented[maxRow]);
 
+            // Eliminate below
             for (int k = i + 1; k < n; ++k) {
                 T factor = augmented[k][i] / augmented[i][i];
                 for (int j = i; j <= n; ++j) {
@@ -248,8 +302,12 @@ private:
             }
         }
 
-        std::vector<T> x(n);
+        std::vector<T> x(n, 0.0);
         for (int i = n - 1; i >= 0; --i) {
+            if (std::abs(augmented[i][i]) < 1e-12) {
+                THROW_RUNTIME_ERROR(
+                    "Division by zero during back substitution.");
+            }
             x[i] = augmented[i][n];
             for (int j = i + 1; j < n; ++j) {
                 x[i] -= augmented[i][j] * x[j];
@@ -281,6 +339,9 @@ public:
                                      measured.begin(), T(0));
 
         T n = static_cast<T>(measured.size());
+        if (n * sumXx - sumX * sumX == 0) {
+            THROW_RUNTIME_ERROR("Division by zero in slope calculation.");
+        }
         slope_ = (n * sumXy - sumX * sumY) / (n * sumXx - sumX * sumX);
         intercept_ = (sumY - slope_ * sumX) / n;
 
@@ -299,8 +360,11 @@ public:
             THROW_INVALID_ARGUMENT(
                 "Input vectors must be non-empty and of equal size");
         }
+        if (degree < 1) {
+            THROW_INVALID_ARGUMENT("Polynomial degree must be at least 1.");
+        }
 
-        auto polyFunc = [degree](T x, const std::vector<T>& params) {
+        auto polyFunc = [degree](T x, const std::vector<T>& params) -> T {
             T result = 0;
             for (int i = 0; i <= degree; ++i) {
                 result += params[i] * std::pow(x, i);
@@ -311,6 +375,11 @@ public:
         std::vector<T> initialParams(degree + 1, 1.0);
         auto params =
             levenbergMarquardt(measured, actual, polyFunc, initialParams);
+
+        if (params.size() < 2) {
+            THROW_RUNTIME_ERROR(
+                "Insufficient parameters returned from calibration.");
+        }
 
         slope_ = params[1];      // First-order coefficient as slope
         intercept_ = params[0];  // Constant term as intercept
@@ -323,6 +392,37 @@ public:
      * @param measured Vector of measured values
      * @param actual Vector of actual values
      */
+    void exponentialCalibrate(const std::vector<T>& measured,
+                              const std::vector<T>& actual) {
+        if (measured.size() != actual.size() || measured.empty()) {
+            THROW_INVALID_ARGUMENT(
+                "Input vectors must be non-empty and of equal size");
+        }
+        if (std::any_of(actual.begin(), actual.end(),
+                        [](T val) { return val <= 0; })) {
+            THROW_INVALID_ARGUMENT(
+                "Actual values must be positive for exponential calibration.");
+        }
+
+        auto expFunc = [](T x, const std::vector<T>& params) -> T {
+            return params[0] * std::exp(params[1] * x);
+        };
+
+        std::vector<T> initialParams = {1.0, 0.1};
+        auto params =
+            levenbergMarquardt(measured, actual, expFunc, initialParams);
+
+        if (params.size() < 2) {
+            THROW_RUNTIME_ERROR(
+                "Insufficient parameters returned from calibration.");
+        }
+
+        slope_ = params[1];
+        intercept_ = params[0];
+
+        calculateMetrics(measured, actual);
+    }
+
     [[nodiscard]] auto apply(T value) const -> T {
         return slope_ * value + intercept_;
     }
@@ -364,7 +464,15 @@ public:
         const std::vector<T>& measured, const std::vector<T>& actual,
         int n_iterations = 1000,
         double confidence_level = 0.95) -> std::pair<T, T> {
+        if (n_iterations <= 0) {
+            THROW_INVALID_ARGUMENT("Number of iterations must be positive.");
+        }
+        if (confidence_level <= 0 || confidence_level >= 1) {
+            THROW_INVALID_ARGUMENT("Confidence level must be between 0 and 1.");
+        }
+
         std::vector<T> bootstrapSlopes;
+        bootstrapSlopes.reserve(n_iterations);
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> dis(0, measured.size() - 1);
@@ -372,6 +480,8 @@ public:
         for (int i = 0; i < n_iterations; ++i) {
             std::vector<T> bootMeasured;
             std::vector<T> bootActual;
+            bootMeasured.reserve(measured.size());
+            bootActual.reserve(actual.size());
             for (size_t j = 0; j < measured.size(); ++j) {
                 int idx = dis(gen);
                 bootMeasured.push_back(measured[idx]);
@@ -379,15 +489,29 @@ public:
             }
 
             AdvancedErrorCalibration<T> bootCalibrator;
-            bootCalibrator.linearCalibrate(bootMeasured, bootActual);
-            bootstrapSlopes.push_back(bootCalibrator.getSlope());
+            try {
+                bootCalibrator.linearCalibrate(bootMeasured, bootActual);
+                bootstrapSlopes.push_back(bootCalibrator.getSlope());
+            } catch (const std::exception& e) {
+                LOG_F(WARNING, "Bootstrap iteration %d failed: %s", i,
+                      e.what());
+            }
+        }
+
+        if (bootstrapSlopes.empty()) {
+            THROW_RUNTIME_ERROR("All bootstrap iterations failed.");
         }
 
         std::sort(bootstrapSlopes.begin(), bootstrapSlopes.end());
-        int lowerIdx =
-            static_cast<int>((1 - confidence_level) / 2 * n_iterations);
-        int upperIdx =
-            static_cast<int>((1 + confidence_level) / 2 * n_iterations);
+        int lowerIdx = static_cast<int>((1 - confidence_level) / 2 *
+                                        bootstrapSlopes.size());
+        int upperIdx = static_cast<int>((1 + confidence_level) / 2 *
+                                        bootstrapSlopes.size());
+
+        lowerIdx = std::clamp(lowerIdx, 0,
+                              static_cast<int>(bootstrapSlopes.size()) - 1);
+        upperIdx = std::clamp(upperIdx, 0,
+                              static_cast<int>(bootstrapSlopes.size()) - 1);
 
         return {bootstrapSlopes[lowerIdx], bootstrapSlopes[upperIdx]};
     }
@@ -403,7 +527,7 @@ public:
                           const std::vector<T>& actual,
                           T threshold = 2.0) -> std::tuple<T, T, T> {
         if (residuals_.empty()) {
-            THROW_RUNTIME_ERROR("Please call calculate_metrics() first");
+            THROW_RUNTIME_ERROR("Please call calculateMetrics() first.");
         }
 
         T meanResidual =
@@ -431,7 +555,8 @@ public:
 
     void crossValidation(const std::vector<T>& measured,
                          const std::vector<T>& actual, int k = 5) {
-        if (measured.size() != actual.size() || measured.size() < k) {
+        if (measured.size() != actual.size() ||
+            measured.size() < static_cast<size_t>(k)) {
             THROW_INVALID_ARGUMENT(
                 "Input vectors must be non-empty and of size greater than k");
         }
@@ -446,7 +571,7 @@ public:
             std::vector<T> testMeasured;
             std::vector<T> testActual;
             for (size_t j = 0; j < measured.size(); ++j) {
-                if (j % k == i) {
+                if (j % k == static_cast<size_t>(i)) {
                     testMeasured.push_back(measured[j]);
                     testActual.push_back(actual[j]);
                 } else {
@@ -456,7 +581,13 @@ public:
             }
 
             AdvancedErrorCalibration<T> cvCalibrator;
-            cvCalibrator.linearCalibrate(trainMeasured, trainActual);
+            try {
+                cvCalibrator.linearCalibrate(trainMeasured, trainActual);
+            } catch (const std::exception& e) {
+                LOG_F(WARNING, "Cross-validation fold %d failed: %s", i,
+                      e.what());
+                continue;
+            }
 
             T foldMse = 0;
             T foldMae = 0;
@@ -476,16 +607,25 @@ public:
 
             mseValues.push_back(foldMse / testMeasured.size());
             maeValues.push_back(foldMae / testMeasured.size());
-            rSquaredValues.push_back(1 - (foldSsResidual / foldSsTotal));
+            if (foldSsTotal != 0) {
+                rSquaredValues.push_back(1 - (foldSsResidual / foldSsTotal));
+            }
         }
 
-        T avgMse =
-            std::accumulate(mseValues.begin(), mseValues.end(), T(0)) / k;
-        T avgMae =
-            std::accumulate(maeValues.begin(), maeValues.end(), T(0)) / k;
-        T avgRSquared = std::accumulate(rSquaredValues.begin(),
-                                        rSquaredValues.end(), T(0)) /
-                        k;
+        if (mseValues.empty()) {
+            THROW_RUNTIME_ERROR("All cross-validation folds failed.");
+        }
+
+        T avgMse = std::accumulate(mseValues.begin(), mseValues.end(), T(0)) /
+                   mseValues.size();
+        T avgMae = std::accumulate(maeValues.begin(), maeValues.end(), T(0)) /
+                   maeValues.size();
+        T avgRSquared = 0;
+        if (!rSquaredValues.empty()) {
+            avgRSquared = std::accumulate(rSquaredValues.begin(),
+                                          rSquaredValues.end(), T(0)) /
+                          rSquaredValues.size();
+        }
 
 #if ENABLE_DEBUG
         std::cout << "K-fold cross-validation results (k = " << k
@@ -504,6 +644,7 @@ public:
     [[nodiscard]] auto getMse() const -> T { return mse_; }
     [[nodiscard]] auto getMae() const -> T { return mae_; }
 };
+
 }  // namespace atom::algorithm
 
 #endif  // ATOM_ALGORITHM_ERROR_CALIBRATION_HPP

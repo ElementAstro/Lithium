@@ -16,6 +16,10 @@ Description: A collection of algorithms for C++
 #define ATOM_ALGORITHM_ALGORITHM_HPP
 
 #include <bitset>
+#include <exception>
+#include <mutex>
+#include <shared_mutex>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -72,6 +76,8 @@ private:
     std::string pattern_;  ///< The pattern to search for.
     std::vector<int>
         failure_;  ///< Failure function (partial match table) for the pattern.
+
+    mutable std::shared_mutex mutex_;  ///< Mutex for thread-safe operations
 };
 
 /**
@@ -170,6 +176,8 @@ private:
     std::unordered_map<char, int>
         bad_char_shift_;                  ///< Bad character shift table.
     std::vector<int> good_suffix_shift_;  ///< Good suffix shift table.
+
+    mutable std::mutex mutex_;  ///< Mutex for thread-safe operations
 };
 
 template <std::size_t N>
@@ -178,21 +186,29 @@ BloomFilter<N>::BloomFilter(std::size_t num_hash_functions)
 
 template <std::size_t N>
 void BloomFilter<N>::insert(std::string_view element) {
-    for (std::size_t i = 0; i < m_num_hash_functions_; ++i) {
-        std::size_t hashValue = hash(element, i);
-        m_bits_.set(hashValue % N);
+    try {
+        for (std::size_t i = 0; i < m_num_hash_functions_; ++i) {
+            std::size_t hashValue = hash(element, i);
+            m_bits_.set(hashValue % N);
+        }
+    } catch (const std::exception& e) {
+        throw;
     }
 }
 
 template <std::size_t N>
 auto BloomFilter<N>::contains(std::string_view element) const -> bool {
-    for (std::size_t i = 0; i < m_num_hash_functions_; ++i) {
-        std::size_t hashValue = hash(element, i);
-        if (!m_bits_.test(hashValue % N)) {
-            return false;
+    try {
+        for (std::size_t i = 0; i < m_num_hash_functions_; ++i) {
+            std::size_t hashValue = hash(element, i);
+            if (!m_bits_.test(hashValue % N)) {
+                return false;
+            }
         }
+        return true;
+    } catch (const std::exception& e) {
+        throw;
     }
-    return true;
 }
 
 template <std::size_t N>
@@ -204,6 +220,7 @@ auto BloomFilter<N>::hash(std::string_view element,
     }
     return hashValue;
 }
+
 }  // namespace atom::algorithm
 
 #endif

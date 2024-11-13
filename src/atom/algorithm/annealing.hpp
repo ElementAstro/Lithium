@@ -10,7 +10,6 @@
 #include <mutex>
 #include <numeric>
 #include <random>
-#include <ranges>
 #include <vector>
 
 #ifdef USE_SIMD
@@ -20,6 +19,8 @@
 #include <arm_neon.h>
 #endif
 #endif
+
+#include "atom/log/loguru.hpp"
 
 // Define a concept for a problem that Simulated Annealing can solve
 template <typename ProblemType, typename SolutionType>
@@ -107,6 +108,10 @@ SimulatedAnnealing<ProblemType, SolutionType>::SimulatedAnnealing(
       max_iterations_(maxIterations),
       initial_temperature_(initialTemperature),
       cooling_strategy_(coolingStrategy) {
+    LOG_F(INFO,
+          "SimulatedAnnealing initialized with max_iterations: {}, "
+          "initial_temperature: %.2f, cooling_strategy: {}",
+          maxIterations, initialTemperature, static_cast<int>(coolingStrategy));
     setCoolingSchedule(coolingStrategy);
 }
 
@@ -115,6 +120,8 @@ template <typename ProblemType, typename SolutionType>
 void SimulatedAnnealing<ProblemType, SolutionType>::setCoolingSchedule(
     AnnealingStrategy strategy) {
     cooling_strategy_ = strategy;
+    LOG_F(INFO, "Setting cooling schedule to strategy: {}",
+          static_cast<int>(strategy));
     switch (cooling_strategy_) {
         case AnnealingStrategy::LINEAR:
             cooling_schedule_ = [this](int iteration) {
@@ -130,7 +137,17 @@ void SimulatedAnnealing<ProblemType, SolutionType>::setCoolingSchedule(
             break;
         case AnnealingStrategy::LOGARITHMIC:
             cooling_schedule_ = [this](int iteration) {
+                if (iteration == 0)
+                    return initial_temperature_;
                 return initial_temperature_ / std::log(iteration + 2);
+            };
+            break;
+        default:
+            LOG_F(WARNING,
+                  "Unknown cooling strategy. Defaulting to EXPONENTIAL.");
+            cooling_schedule_ = [this](int iteration) {
+                return initial_temperature_ *
+                       std::pow(K_COOLING_RATE, iteration);
             };
             break;
     }
@@ -141,6 +158,7 @@ template <typename ProblemType, typename SolutionType>
 void SimulatedAnnealing<ProblemType, SolutionType>::setProgressCallback(
     std::function<void(int, double, const SolutionType&)> callback) {
     progress_callback_ = callback;
+    LOG_F(INFO, "Progress callback has been set.");
 }
 
 template <typename ProblemType, typename SolutionType>
@@ -148,48 +166,88 @@ template <typename ProblemType, typename SolutionType>
 void SimulatedAnnealing<ProblemType, SolutionType>::setStopCondition(
     std::function<bool(int, double, const SolutionType&)> condition) {
     stop_condition_ = condition;
+    LOG_F(INFO, "Stop condition has been set.");
 }
 
 template <typename ProblemType, typename SolutionType>
     requires AnnealingProblem<ProblemType, SolutionType>
 void SimulatedAnnealing<ProblemType, SolutionType>::optimizeThread() {
-    std::random_device randomDevice;
-    std::mt19937 generator(randomDevice());
-    std::uniform_real_distribution distribution(0.0, 1.0);
+    try {
+        std::random_device randomDevice;
+        std::mt19937 generator(randomDevice());
+        std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
-    auto currentSolution = problem_instance_.random_solution();
-    double currentEnergy = problem_instance_.energy(currentSolution);
+        auto currentSolution = problem_instance_.random_solution();
+        double currentEnergy = problem_instance_.energy(currentSolution);
+        LOG_F(INFO, "Thread %ld started with initial energy: {}",
+              std::this_thread::get_id(), currentEnergy);
 
-    for (int iteration = 0; iteration < max_iterations_ && !should_stop_.load();
-         ++iteration) {
-        double temperature = cooling_schedule_(iteration);
-
-        auto neighborSolution = problem_instance_.neighbor(currentSolution);
-        double neighborEnergy = problem_instance_.energy(neighborSolution);
-
-        if (double energyDifference = neighborEnergy - currentEnergy;
-            energyDifference < 0 ||
-            distribution(generator) <
-                std::exp(-energyDifference / temperature)) {
-            currentSolution = std::move(neighborSolution);
-            currentEnergy = neighborEnergy;
-
+        {
             std::lock_guard lock(best_mutex_);
             if (currentEnergy < best_energy_) {
                 best_solution_ = currentSolution;
                 best_energy_ = currentEnergy;
+                LOG_F(INFO, "New best energy found: {}", best_energy_);
             }
         }
 
-        if (progress_callback_) {
-            progress_callback_(iteration, currentEnergy, currentSolution);
-        }
+        for (int iteration = 0;
+             iteration < max_iterations_ && !should_stop_.load(); ++iteration) {
+            double temperature = cooling_schedule_(iteration);
+            if (temperature <= 0) {
+                LOG_F(WARNING,
+                      "Temperature has reached zero or below at iteration {}.",
+                      iteration);
+                break;
+            }
 
-        if (stop_condition_ &&
-            stop_condition_(iteration, currentEnergy, currentSolution)) {
-            should_stop_.store(true);
-            break;
+            auto neighborSolution = problem_instance_.neighbor(currentSolution);
+            double neighborEnergy = problem_instance_.energy(neighborSolution);
+
+            double energyDifference = neighborEnergy - currentEnergy;
+            LOG_F(INFO,
+                  "Iteration {}: Current Energy = {}, Neighbor Energy = "
+                  "{}, Energy Difference = {}, Temperature = {}",
+                  iteration, currentEnergy, neighborEnergy, energyDifference,
+                  temperature);
+
+            if (energyDifference < 0 ||
+                distribution(generator) <
+                    std::exp(-energyDifference / temperature)) {
+                currentSolution = std::move(neighborSolution);
+                currentEnergy = neighborEnergy;
+                LOG_F(INFO, "Solution accepted at iteration {} with energy: {}",
+                      iteration, currentEnergy);
+
+                std::lock_guard lock(best_mutex_);
+                if (currentEnergy < best_energy_) {
+                    best_solution_ = currentSolution;
+                    best_energy_ = currentEnergy;
+                    LOG_F(INFO, "New best energy updated to: {}", best_energy_);
+                }
+            }
+
+            if (progress_callback_) {
+                try {
+                    progress_callback_(iteration, currentEnergy,
+                                       currentSolution);
+                } catch (const std::exception& e) {
+                    LOG_F(ERROR, "Exception in progress_callback_: {}",
+                          e.what());
+                }
+            }
+
+            if (stop_condition_ &&
+                stop_condition_(iteration, currentEnergy, currentSolution)) {
+                should_stop_.store(true);
+                LOG_F(INFO, "Stop condition met at iteration {}.", iteration);
+                break;
+            }
         }
+        LOG_F(INFO, "Thread %ld completed optimization with best energy: {}",
+              std::this_thread::get_id(), best_energy_);
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Exception in optimizeThread: {}", e.what());
     }
 }
 
@@ -197,18 +255,31 @@ template <typename ProblemType, typename SolutionType>
     requires AnnealingProblem<ProblemType, SolutionType>
 auto SimulatedAnnealing<ProblemType, SolutionType>::optimize(int numThreads)
     -> SolutionType {
-    std::vector<std::future<void>> futures;
+    LOG_F(INFO, "Starting optimization with {} threads.", numThreads);
+    if (numThreads < 1) {
+        LOG_F(WARNING, "Invalid number of threads ({}). Defaulting to 1.",
+              numThreads);
+        numThreads = 1;
+    }
 
+    std::vector<std::future<void>> futures;
     futures.reserve(numThreads);
     for (int threadIndex = 0; threadIndex < numThreads; ++threadIndex) {
-        futures.push_back(
+        futures.emplace_back(
             std::async(std::launch::async, [this]() { optimizeThread(); }));
+        LOG_F(INFO, "Launched optimization thread {}.", threadIndex + 1);
     }
 
     for (auto& future : futures) {
-        future.wait();
+        try {
+            future.wait();
+            future.get();
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Exception in optimization thread: {}", e.what());
+        }
     }
 
+    LOG_F(INFO, "Optimization completed with best energy: {}", best_energy_);
     return best_solution_;
 }
 
@@ -216,12 +287,15 @@ template <typename ProblemType, typename SolutionType>
     requires AnnealingProblem<ProblemType, SolutionType>
 auto SimulatedAnnealing<ProblemType, SolutionType>::getBestEnergy() const
     -> double {
+    std::lock_guard lock(best_mutex_);
     return best_energy_;
 }
 
 // TSP class implementation
 inline TSP::TSP(const std::vector<std::pair<double, double>>& cities)
-    : cities_(cities) {}
+    : cities_(cities) {
+    LOG_F(INFO, "TSP instance created with %zu cities.", cities_.size());
+}
 
 inline auto TSP::energy(const std::vector<int>& solution) const -> double {
     double totalDistance = 0.0;
@@ -274,28 +348,43 @@ inline auto TSP::energy(const std::vector<int>& solution) const -> double {
         totalDistance += std::sqrt(deltaX * deltaX + deltaY * deltaY);
     }
 
+    LOG_F(INFO, "Computed energy (total distance): {}", totalDistance);
     return totalDistance;
 }
 
 inline auto TSP::neighbor(const std::vector<int>& solution)
     -> std::vector<int> {
     std::vector<int> newSolution = solution;
-    std::random_device randomDevice;
-    std::mt19937 generator(randomDevice());
-    std::uniform_int_distribution distribution(
-        0, static_cast<int>(solution.size()) - 1);
-    int index1 = distribution(generator);
-    int index2 = distribution(generator);
-    std::swap(newSolution[index1], newSolution[index2]);
+    try {
+        std::random_device randomDevice;
+        std::mt19937 generator(randomDevice());
+        std::uniform_int_distribution<int> distribution(
+            0, static_cast<int>(solution.size()) - 1);
+        int index1 = distribution(generator);
+        int index2 = distribution(generator);
+        std::swap(newSolution[index1], newSolution[index2]);
+        LOG_F(INFO,
+              "Generated neighbor solution by swapping indices {} and {}.",
+              index1, index2);
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Exception in TSP::neighbor: {}", e.what());
+        throw;
+    }
     return newSolution;
 }
 
 inline auto TSP::randomSolution() const -> std::vector<int> {
     std::vector<int> solution(cities_.size());
     std::iota(solution.begin(), solution.end(), 0);
-    std::random_device randomDevice;
-    std::mt19937 generator(randomDevice());
-    std::ranges::shuffle(solution, generator);
+    try {
+        std::random_device randomDevice;
+        std::mt19937 generator(randomDevice());
+        std::ranges::shuffle(solution, generator);
+        LOG_F(INFO, "Generated random solution.");
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Exception in TSP::randomSolution: {}", e.what());
+        throw;
+    }
     return solution;
 }
 

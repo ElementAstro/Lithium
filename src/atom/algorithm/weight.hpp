@@ -11,11 +11,12 @@
 #include <span>
 #include <vector>
 
+#include "atom/error/exception.hpp"
+#include "atom/function/concept.hpp"
 #include "atom/utils/random.hpp"
-#include "error/exception.hpp"
-#include "function/concept.hpp"
 
 namespace atom::algorithm {
+
 template <Arithmetic T>
 class WeightSelector {
 public:
@@ -49,7 +50,7 @@ public:
         BottomHeavySelectionStrategy() : random_(0.0, 1.0) {}
 
         auto select(std::span<const T> cumulative_weights,
-                      T total_weight) -> size_t override {
+                    T total_weight) -> size_t override {
             T randomValue = std::sqrt(random_()) * total_weight;
             auto it = std::ranges::upper_bound(cumulative_weights, randomValue);
             return std::distance(cumulative_weights.begin(), it);
@@ -65,15 +66,16 @@ public:
         explicit RandomSelectionStrategy(size_t max_index)
             : random_index_(0, max_index - 1) {}
 
-        auto select(std::span<const T>  /*cumulative_weights*/,
-                      T /*total_weight*/) -> size_t override {
+        auto select(std::span<const T> /*cumulative_weights*/,
+                    T /*total_weight*/) -> size_t override {
             return random_index_();
         }
     };
 
     class WeightedRandomSampler {
     public:
-        auto sample(std::span<const T> weights, size_t n) -> std::vector<size_t> {
+        auto sample(std::span<const T> weights,
+                    size_t n) -> std::vector<size_t> {
             std::vector<size_t> indices(weights.size());
             std::iota(indices.begin(), indices.end(), 0);
 
@@ -113,6 +115,9 @@ public:
 
     auto select() -> size_t {
         T totalWeight = std::reduce(weights_.begin(), weights_.end());
+        if (totalWeight <= T{0}) {
+            THROW_RUNTIME_ERROR("Total weight must be greater than zero.");
+        }
         return strategy_->select(cumulative_weights_, totalWeight);
     }
 
@@ -127,7 +132,7 @@ public:
 
     void updateWeight(size_t index, T new_weight) {
         if (index >= weights_.size()) {
-            THROW_OUT_OF_RANGE("Index out of range");
+            throw std::out_of_range("Index out of range");
         }
         weights_[index] = new_weight;
         updateCumulativeWeights();
@@ -140,7 +145,7 @@ public:
 
     void removeWeight(size_t index) {
         if (index >= weights_.size()) {
-            THROW_OUT_OF_RANGE("Index out of range");
+            throw std::out_of_range("Index out of range");
         }
         weights_.erase(weights_.begin() + index);
         updateCumulativeWeights();
@@ -164,7 +169,7 @@ public:
     void batchUpdateWeights(const std::vector<std::pair<size_t, T>>& updates) {
         for (const auto& [index, new_weight] : updates) {
             if (index >= weights_.size()) {
-                THROW_OUT_OF_RANGE("Index out of range");
+                throw std::out_of_range("Index out of range");
             }
             weights_[index] = new_weight;
         }
@@ -210,10 +215,17 @@ public:
     }
 
     [[nodiscard]] auto getAverageWeight() const -> T {
+        if (weights_.empty()) {
+            THROW_RUNTIME_ERROR("No weights available to calculate average.");
+        }
         return getTotalWeight() / static_cast<T>(weights_.size());
     }
 
     void printWeights(std::ostream& oss) const {
+        if (weights_.empty()) {
+            oss << "[]\n";
+            return;
+        }
         oss << std::format("[{:.2f}", weights_.front());
         for (auto it = weights_.begin() + 1; it != weights_.end(); ++it) {
             oss << std::format(", {:.2f}", *it);
@@ -231,7 +243,7 @@ public:
     TopHeavySelectionStrategy() : random_(0.0, 1.0) {}
 
     auto select(std::span<const T> cumulative_weights,
-                  T total_weight) -> size_t override {
+                T total_weight) -> size_t override {
         T randomValue = std::pow(random_(), 2) * total_weight;
         auto it = std::ranges::upper_bound(cumulative_weights, randomValue);
         return std::distance(cumulative_weights.begin(), it);

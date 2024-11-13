@@ -8,112 +8,268 @@
 
 Date: 2023-11-24
 
-Description: Simple implementation of Huffman encoding
+Description: Enhanced implementation of Huffman encoding
 
 **************************************************/
 
 #include "huffman.hpp"
-
+#include <bitset>
+#include <functional>
 #include <queue>
-
-#ifdef USE_OPENMP
-#include <omp.h>
-#endif
+#include <sstream>
 
 namespace atom::algorithm {
-HuffmanNode::HuffmanNode(char data, int frequency)
+
+/* ------------------------ HuffmanNode Implementation ------------------------
+ */
+
+HuffmanNode::HuffmanNode(unsigned char data, int frequency)
     : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
 
-auto createHuffmanTree(const std::unordered_map<char, int>& frequencies)
-    -> std::shared_ptr<HuffmanNode> {
-    auto compare = [](const std::shared_ptr<HuffmanNode>& a,
-                      const std::shared_ptr<HuffmanNode>& b) {
+/* ------------------------ Priority Queue Comparator ------------------------
+ */
+
+struct CompareNode {
+    bool operator()(const std::shared_ptr<HuffmanNode>& a,
+                    const std::shared_ptr<HuffmanNode>& b) const {
         return a->frequency > b->frequency;
-    };
+    }
+};
+
+/* ------------------------ createHuffmanTree ------------------------ */
+
+auto createHuffmanTree(const std::unordered_map<unsigned char, int>&
+                           frequencies) -> std::shared_ptr<HuffmanNode> {
+    if (frequencies.empty()) {
+        throw HuffmanException(
+            "Frequency map is empty. Cannot create Huffman Tree.");
+    }
 
     std::priority_queue<std::shared_ptr<HuffmanNode>,
-                        std::vector<std::shared_ptr<HuffmanNode>>,
-                        decltype(compare)>
-        minHeap(compare);
+                        std::vector<std::shared_ptr<HuffmanNode>>, CompareNode>
+        minHeap;
 
-    for (const auto& [data, frequency] : frequencies) {
-        minHeap.push(std::make_unique<HuffmanNode>(data, frequency));
+    // Initialize heap with leaf nodes
+    for (const auto& [data, freq] : frequencies) {
+        minHeap.push(std::make_shared<HuffmanNode>(data, freq));
     }
 
+    // Edge case: Only one unique byte
+    if (minHeap.size() == 1) {
+        auto soleNode = std::move(minHeap.top());
+        minHeap.pop();
+        auto parent = std::make_shared<HuffmanNode>('\0', soleNode->frequency);
+        parent->left = std::move(soleNode);
+        parent->right = nullptr;
+        minHeap.push(std::move(parent));
+    }
+
+    // Build Huffman Tree
     while (minHeap.size() > 1) {
-        auto left = minHeap.top();
+        auto left = std::move(minHeap.top());
         minHeap.pop();
-        auto right = minHeap.top();
+        auto right = std::move(minHeap.top());
         minHeap.pop();
 
-        auto newNode = std::make_unique<HuffmanNode>(
-            '$', left->frequency + right->frequency);
-        newNode->left = std::move(left);
-        newNode->right = std::move(right);
+        auto merged = std::make_shared<HuffmanNode>(
+            '\0', left->frequency + right->frequency);
+        merged->left = std::move(left);
+        merged->right = std::move(right);
 
-        minHeap.push(std::move(newNode));
+        minHeap.push(std::move(merged));
     }
 
-    return minHeap.empty() ? nullptr : minHeap.top();
+    return minHeap.empty() ? nullptr : std::move(minHeap.top());
 }
 
-void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
-                          std::unordered_map<char, std::string>& huffmanCodes) {
+/* ------------------------ generateHuffmanCodes ------------------------ */
+
+void generateHuffmanCodes(
+    const HuffmanNode* root, const std::string& code,
+    std::unordered_map<unsigned char, std::string>& huffmanCodes) {
     if (root == nullptr) {
+        throw HuffmanException(
+            "Cannot generate Huffman codes from a null tree.");
+    }
+
+    if (!root->left && !root->right) {
+        if (code.empty()) {
+            // Edge case: Only one unique byte
+            huffmanCodes[root->data] = "0";
+        } else {
+            huffmanCodes[root->data] = code;
+        }
         return;
     }
-    if (!root->left && !root->right) {
-        huffmanCodes[root->data] = code;
-    } else {
+
+    if (root->left) {
         generateHuffmanCodes(root->left.get(), code + "0", huffmanCodes);
-        generateHuffmanCodes(root->right.get(), code + "1", huffmanCodes);
     }
-    if (!root->left && !root->right) {
-        huffmanCodes[root->data] = code;
-    } else {
-        generateHuffmanCodes(root->left.get(), code + "0", huffmanCodes);
+
+    if (root->right) {
         generateHuffmanCodes(root->right.get(), code + "1", huffmanCodes);
     }
 }
 
-auto compressText(std::string_view TEXT,
-                  const std::unordered_map<char, std::string>& huffmanCodes)
-    -> std::string {
-    std::string compressedText;
+/* ------------------------ compressData ------------------------ */
 
-#ifdef USE_OPENMP
-#pragma omp parallel
-    {
-        std::string local_compressed;
-#pragma omp for nowait schedule(static)
-        for (std::size_t i = 0; i < TEXT.size(); ++i) {
-            local_compressed += huffmanCodes.at(TEXT[i]);
+auto compressData(const std::vector<unsigned char>& data,
+                  const std::unordered_map<unsigned char, std::string>&
+                      huffmanCodes) -> std::string {
+    std::string compressedData;
+    compressedData.reserve(data.size() * 2);  // Approximate reserve
+
+    for (unsigned char byte : data) {
+        auto it = huffmanCodes.find(byte);
+        if (it == huffmanCodes.end()) {
+            throw HuffmanException(
+                std::string("Byte '") + std::to_string(static_cast<int>(byte)) +
+                "' does not have a corresponding Huffman code.");
         }
-#pragma omp critical
-        compressedText += local_compressed;
+        compressedData += it->second;
     }
-#else
-    for (char c : TEXT) {
-        compressedText += huffmanCodes.at(c);
-    }
-#endif
 
-    return compressedText;
+    return compressedData;
 }
 
-auto decompressText(std::string_view COMPRESSED_TEXT,
-                    const HuffmanNode* root) -> std::string {
-    std::string decompressedText;
+/* ------------------------ decompressData ------------------------ */
+
+auto decompressData(const std::string& compressedData,
+                    const HuffmanNode* root) -> std::vector<unsigned char> {
+    if (!root) {
+        throw HuffmanException("Huffman tree is null. Cannot decompress data.");
+    }
+
+    std::vector<unsigned char> decompressedData;
     const HuffmanNode* current = root;
 
-    for (char bit : COMPRESSED_TEXT) {
-        current = (bit == '0') ? current->left.get() : current->right.get();
-        if ((current != nullptr) && !current->left && !current->right) {
-            decompressedText += current->data;
+    for (char bit : compressedData) {
+        if (bit == '0') {
+            if (current->left) {
+                current = current->left.get();
+            } else {
+                throw HuffmanException(
+                    "Invalid compressed data. Traversed to a null left child.");
+            }
+        } else if (bit == '1') {
+            if (current->right) {
+                current = current->right.get();
+            } else {
+                throw HuffmanException(
+                    "Invalid compressed data. Traversed to a null right "
+                    "child.");
+            }
+        } else {
+            throw HuffmanException(
+                "Invalid bit in compressed data. Only '0' and '1' are "
+                "allowed.");
+        }
+
+        // If leaf node, append the data and reset to root
+        if (!current->left && !current->right) {
+            decompressedData.push_back(current->data);
             current = root;
         }
     }
 
-    return decompressedText;
+    // Edge case: compressed data does not end at a leaf node
+    if (current != root) {
+        throw HuffmanException(
+            "Incomplete compressed data. Did not end at a leaf node.");
+    }
+
+    return decompressedData;
 }
+
+/* ------------------------ serializeTree ------------------------ */
+
+auto serializeTree(const HuffmanNode* root) -> std::string {
+    if (root == nullptr) {
+        throw HuffmanException("Cannot serialize a null Huffman tree.");
+    }
+
+    std::string serialized;
+    std::function<void(const HuffmanNode*)> serializeHelper =
+        [&](const HuffmanNode* node) {
+            if (!node) {
+                serialized += '1';  // Marker for null
+                return;
+            }
+
+            if (!node->left && !node->right) {
+                serialized += '0';  // Marker for leaf
+                serialized += node->data;
+            } else {
+                serialized += '2';  // Marker for internal node
+                serializeHelper(node->left.get());
+                serializeHelper(node->right.get());
+            }
+        };
+
+    serializeHelper(root);
+    return serialized;
+}
+
+/* ------------------------ deserializeTree ------------------------ */
+
+auto deserializeTree(const std::string& serializedTree,
+                     size_t& index) -> std::shared_ptr<HuffmanNode> {
+    if (index >= serializedTree.size()) {
+        throw HuffmanException(
+            "Invalid serialized tree format: Unexpected end of data.");
+    }
+
+    char marker = serializedTree[index++];
+    if (marker == '1') {
+        return nullptr;
+    } else if (marker == '0') {
+        if (index >= serializedTree.size()) {
+            throw HuffmanException(
+                "Invalid serialized tree format: Missing byte data for leaf "
+                "node.");
+        }
+        unsigned char data = serializedTree[index++];
+        return std::make_shared<HuffmanNode>(
+            data, 0);  // Frequency is not needed for decompression
+    } else if (marker == '2') {
+        auto node = std::make_shared<HuffmanNode>('\0', 0);
+        node->left = deserializeTree(serializedTree, index);
+        node->right = deserializeTree(serializedTree, index);
+        return node;
+    } else {
+        throw HuffmanException(
+            "Invalid serialized tree format: Unknown marker encountered.");
+    }
+}
+
+/* ------------------------ visualizeHuffmanTree ------------------------ */
+
+void visualizeHuffmanTree(const HuffmanNode* root, const std::string& indent) {
+    if (!root) {
+        std::cout << indent << "nullptr\n";
+        return;
+    }
+
+    if (!root->left && !root->right) {
+        std::cout << indent << "Leaf: '" << root->data << "'\n";
+    } else {
+        std::cout << indent << "Internal Node (Frequency: " << root->frequency
+                  << ")\n";
+    }
+
+    if (root->left) {
+        std::cout << indent << " Left:\n";
+        visualizeHuffmanTree(root->left.get(), indent + "  ");
+    } else {
+        std::cout << indent << " Left: nullptr\n";
+    }
+
+    if (root->right) {
+        std::cout << indent << " Right:\n";
+        visualizeHuffmanTree(root->right.get(), indent + "  ");
+    } else {
+        std::cout << indent << " Right: nullptr\n";
+    }
+}
+
 }  // namespace atom::algorithm

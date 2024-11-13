@@ -8,7 +8,7 @@
 
 Date: 2024-3-28
 
-Description: A collection of hash algorithms
+Description: A collection of optimized and enhanced hash algorithms
 
 **************************************************/
 
@@ -18,7 +18,9 @@ Description: A collection of hash algorithms
 #include <any>
 #include <array>
 #include <functional>
+#include <optional>
 #include <tuple>
+#include <variant>
 #include <vector>
 
 namespace atom::algorithm {
@@ -35,6 +37,21 @@ concept Hashable = requires(T a) {
 };
 
 /**
+ * @brief Combines two hash values into one.
+ *
+ * This function implements the hash combining technique proposed by Boost.
+ *
+ * @param seed The initial hash value.
+ * @param hash The hash value to combine with the seed.
+ * @return std::size_t The combined hash value.
+ */
+inline auto hashCombine(std::size_t seed,
+                        std::size_t hash) noexcept -> std::size_t {
+    // Magic number from Boost library
+    return seed ^ (hash + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+}
+
+/**
  * @brief Computes the hash value for a single Hashable value.
  *
  * @tparam T Type of the value to hash, must satisfy Hashable concept.
@@ -42,7 +59,7 @@ concept Hashable = requires(T a) {
  * @return std::size_t Hash value of the input value.
  */
 template <Hashable T>
-auto computeHash(const T& value) -> std::size_t {
+inline auto computeHash(const T& value) noexcept -> std::size_t {
     return std::hash<T>{}(value);
 }
 
@@ -54,11 +71,10 @@ auto computeHash(const T& value) -> std::size_t {
  * @return std::size_t Hash value of the vector of values.
  */
 template <Hashable T>
-auto computeHash(const std::vector<T>& values) -> std::size_t {
+inline auto computeHash(const std::vector<T>& values) noexcept -> std::size_t {
     std::size_t result = 0;
     for (const auto& value : values) {
-        result ^=
-            computeHash(value) + 0x9e3779b9 + (result << 6) + (result >> 2);
+        result = hashCombine(result, computeHash(value));
     }
     return result;
 }
@@ -72,13 +88,12 @@ auto computeHash(const std::vector<T>& values) -> std::size_t {
  * @return std::size_t Hash value of the tuple of values.
  */
 template <Hashable... Ts>
-auto computeHash(const std::tuple<Ts...>& tuple) -> std::size_t {
+inline auto computeHash(const std::tuple<Ts...>& tuple) noexcept
+    -> std::size_t {
     std::size_t result = 0;
     std::apply(
         [&result](const Ts&... values) {
-            ((result ^=
-              computeHash(values) + 0x9e3779b9 + (result << 6) + (result >> 2)),
-             ...);
+            ((result = hashCombine(result, computeHash(values))), ...);
         },
         tuple);
     return result;
@@ -93,22 +108,81 @@ auto computeHash(const std::tuple<Ts...>& tuple) -> std::size_t {
  * @return std::size_t Hash value of the array of values.
  */
 template <Hashable T, std::size_t N>
-auto computeHash(const std::array<T, N>& array) -> std::size_t {
+inline auto computeHash(const std::array<T, N>& array) noexcept -> std::size_t {
     std::size_t result = 0;
     for (const auto& value : array) {
-        result ^=
-            computeHash(value) + 0x9e3779b9 + (result << 6) + (result >> 2);
+        result = hashCombine(result, computeHash(value));
     }
     return result;
 }
 
-inline auto computeHash(const std::any& value) -> std::size_t {
-    if (value.has_value()) {
-        return value.type().hash_code();
+/**
+ * @brief Computes the hash value for a std::pair of Hashable values.
+ *
+ * @tparam T1 Type of the first element in the pair, must satisfy Hashable
+ * concept.
+ * @tparam T2 Type of the second element in the pair, must satisfy Hashable
+ * concept.
+ * @param pair The pair of values to hash.
+ * @return std::size_t Hash value of the pair of values.
+ */
+template <Hashable T1, Hashable T2>
+inline auto computeHash(const std::pair<T1, T2>& pair) noexcept -> std::size_t {
+    std::size_t seed = computeHash(pair.first);
+    seed = hashCombine(seed, computeHash(pair.second));
+    return seed;
+}
+
+/**
+ * @brief Computes the hash value for a std::optional of a Hashable value.
+ *
+ * @tparam T Type of the value inside the optional, must satisfy Hashable
+ * concept.
+ * @param opt The optional value to hash.
+ * @return std::size_t Hash value of the optional value.
+ */
+template <Hashable T>
+inline auto computeHash(const std::optional<T>& opt) noexcept -> std::size_t {
+    if (opt.has_value()) {
+        return computeHash(*opt) +
+               1;  // Adding 1 to differentiate from std::nullopt
     }
     return 0;
 }
-}  // namespace atom::algorithm
+
+/**
+ * @brief Computes the hash value for a std::variant of Hashable types.
+ *
+ * @tparam Ts Types contained in the variant, all must satisfy Hashable concept.
+ * @param var The variant of values to hash.
+ * @return std::size_t Hash value of the variant value.
+ */
+template <Hashable... Ts>
+inline auto computeHash(const std::variant<Ts...>& var) noexcept
+    -> std::size_t {
+    return std::visit(
+        [](const auto& value) -> std::size_t { return computeHash(value); },
+        var);
+}
+
+/**
+ * @brief Computes the hash value for a std::any value.
+ *
+ * This function attempts to hash the contained value if it is Hashable.
+ * If the contained type is not Hashable, it hashes the type information
+ * instead.
+ *
+ * @param value The std::any value to hash.
+ * @return std::size_t Hash value of the std::any value.
+ */
+inline auto computeHash(const std::any& value) noexcept -> std::size_t {
+    if (value.has_value()) {
+        const std::type_info& type = value.type();
+        // Hashing the type information as a fallback
+        return type.hash_code();
+    }
+    return 0;
+}
 
 /**
  * @brief Computes a hash value for a null-terminated string using FNV-1a
@@ -116,15 +190,17 @@ inline auto computeHash(const std::any& value) -> std::size_t {
  *
  * @param str Pointer to the null-terminated string to hash.
  * @param basis Initial basis value for hashing.
- * @return constexpr unsigned int Hash value of the string.
+ * @return constexpr std::size_t Hash value of the string.
  */
 constexpr auto hash(const char* str,
-                    unsigned int basis = 2166136261U) -> unsigned int {
-    while (*str != 0) {
-        basis = (basis ^ static_cast<unsigned int>(*str)) * 16777619u;
+                    std::size_t basis = 2166136261u) noexcept -> std::size_t {
+    std::size_t hash = basis;
+    while (*str != '\0') {
+        hash ^= static_cast<std::size_t>(*str);
+        hash *= 16777619u;
         ++str;
     }
-    return basis;
+    return hash;
 }
 
 /**
@@ -134,13 +210,15 @@ constexpr auto hash(const char* str,
  *
  * @param str Pointer to the string literal to hash.
  * @param size Size of the string literal (unused).
- * @return constexpr unsigned int Hash value of the string literal.
+ * @return constexpr std::size_t Hash value of the string literal.
  */
 constexpr auto operator""_hash(const char* str,
-                               std::size_t size) -> unsigned int {
+                               std::size_t size) noexcept -> std::size_t {
     // The size parameter is not used in this implementation
     static_cast<void>(size);
     return hash(str);
 }
+
+}  // namespace atom::algorithm
 
 #endif  // ATOM_ALGORITHM_HASH_HPP

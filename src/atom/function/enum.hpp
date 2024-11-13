@@ -16,6 +16,7 @@
 #include <string_view>
 #include <type_traits>
 
+namespace atom::meta {
 /*!
  * \brief Template struct for EnumTraits, needs to be specialized for each enum
  * type. \tparam T Enum type.
@@ -392,5 +393,6 @@ constexpr auto bitmask_to_enum(std::underlying_type_t<T> bitmask) noexcept
     }
     return std::nullopt;
 }
+}  // namespace atom::meta
 
 #endif  // ATOM_META_ENUM_HPP

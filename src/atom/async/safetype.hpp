@@ -219,6 +219,16 @@ public:
         }
     }
 
+    auto operator[](const Key& key) -> Value& {
+        auto& bucket = getBucket(key);
+        auto value = bucket.find(key);
+        if (value) {
+            return *value;
+        }
+        insert(key, Value());
+        return *find(key);
+    }
+
     // 迭代器类
     class Iterator {
     public:

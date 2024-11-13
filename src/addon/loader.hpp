@@ -24,7 +24,6 @@ Description: C++20 and Modules Loader
 #include <vector>
 
 #include "atom/function/ffi.hpp"
-#include "atom/log/loguru.hpp"
 #include "atom/type/json_fwd.hpp"
 
 #include "module.hpp"
@@ -93,15 +92,12 @@ auto ModuleLoader::getFunction(const std::string& name,
     std::shared_lock lock(sharedMutex_);
     auto it = modules_.find(name);
     if (it == modules_.end()) {
-        LOG_F(ERROR, "Module {} not found", name);
         return nullptr;
     }
 
     try {
         return it->second->mLibrary->getFunction<T>(functionName);
     } catch (const FFIException& e) {
-        LOG_F(ERROR, "Failed to load function {} from module {}: {}",
-              functionName, name, e.what());
     }
     return nullptr;
 }

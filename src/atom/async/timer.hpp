@@ -24,6 +24,8 @@ Description: Timer class for C++
 #include <queue>
 #include <thread>
 
+#include "future.hpp"
+
 namespace atom::async {
 /**
  * @brief Represents a task to be scheduled and executed by the Timer.
@@ -95,12 +97,13 @@ public:
      * @param func The function to be executed.
      * @param delay The delay in milliseconds before the function is executed.
      * @param args The arguments to be passed to the function.
-     * @return A future representing the result of the function execution.
+     * @return An EnhancedFuture representing the result of the function
+     * execution.
      */
     template <typename Function, typename... Args>
     [[nodiscard]] auto setTimeout(Function &&func, unsigned int delay,
                                   Args &&...args)
-        -> std::future<typename std::result_of<Function(Args...)>::type>;
+        -> EnhancedFuture<typename std::result_of<Function(Args...)>::type>;
 
     /**
      * @brief Schedules a task to be executed repeatedly at a specified
@@ -168,12 +171,13 @@ private:
      * @param repeatCount The number of repetitions remaining.
      * @param priority The priority of the task.
      * @param args The arguments to be passed to the function.
-     * @return A future representing the result of the function execution.
+     * @return An EnhancedFuture representing the result of the function
+     * execution.
      */
     template <typename Function, typename... Args>
     auto addTask(Function &&func, unsigned int delay, int repeatCount,
                  int priority, Args &&...args)
-        -> std::future<typename std::result_of<Function(Args...)>::type>;
+        -> EnhancedFuture<typename std::result_of<Function(Args...)>::type>;
 
     /**
      * @brief Main execution loop for processing and running tasks.
@@ -199,7 +203,7 @@ private:
 
 template <typename Function, typename... Args>
 auto Timer::setTimeout(Function &&func, unsigned int delay, Args &&...args)
-    -> std::future<typename std::result_of<Function(Args...)>::type> {
+    -> EnhancedFuture<typename std::result_of<Function(Args...)>::type> {
     using ReturnType = typename std::result_of<Function(Args...)>::type;
     auto task = std::make_shared<std::packaged_task<ReturnType()>>(
         std::bind(std::forward<Function>(func), std::forward<Args>(args)...));
@@ -207,7 +211,7 @@ auto Timer::setTimeout(Function &&func, unsigned int delay, Args &&...args)
     std::unique_lock lock(m_mutex);
     m_taskQueue.emplace([task]() { (*task)(); }, delay, 1, 0);
     m_cond.notify_all();
-    return result;
+    return EnhancedFuture<ReturnType>(std::move(result).share());
 }
 
 template <typename Function, typename... Args>
@@ -218,9 +222,9 @@ void Timer::setInterval(Function &&func, unsigned int interval, int repeatCount,
 }
 
 template <typename Function, typename... Args>
-std::future<typename std::result_of<Function(Args...)>::type> Timer::addTask(
-    Function &&func, unsigned int delay, int repeatCount, int priority,
-    Args &&...args) {
+auto Timer::addTask(Function &&func, unsigned int delay, int repeatCount,
+                    int priority, Args &&...args)
+    -> EnhancedFuture<typename std::result_of<Function(Args...)>::type> {
     using ReturnType = typename std::result_of<Function(Args...)>::type;
     auto task = std::make_shared<std::packaged_task<ReturnType()>>(
         std::bind(std::forward<Function>(func), std::forward<Args>(args)...));
@@ -228,7 +232,7 @@ std::future<typename std::result_of<Function(Args...)>::type> Timer::addTask(
     std::unique_lock lock(m_mutex);
     m_taskQueue.emplace([task]() { (*task)(); }, delay, repeatCount, priority);
     m_cond.notify_all();
-    return result;
+    return EnhancedFuture<ReturnType>(std::move(result).share());
 }
 
 template <typename Function>

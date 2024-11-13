@@ -4,153 +4,225 @@ import sys
 from pathlib import Path
 import argparse
 from loguru import logger
+from typing import Optional, List, Dict
 
 
-def set_ulimit(unlimited: bool):
+class CoreRunner:
     """
-    Set the core dump size using ulimit.
-
-    Parameters:
-    unlimited (bool): If True, set the core dump size to unlimited. Otherwise, set it to 0.
+    CoreRunner handles the setup and execution of C++ programs with core dump analysis.
     """
-    size = "unlimited" if unlimited else "0"
-    try:
-        subprocess.run(["ulimit", "-c", size], shell=True,
-                       check=True, executable='/bin/bash')
-        logger.info(f"Core dump size set to {size}.")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error setting ulimit: {e}")
 
+    def __init__(self, args: argparse.Namespace):
+        self.source_file: Path = Path(args.source).resolve()
+        self.output_file: Path = Path(args.output).resolve()
+        self.core_dir: Path = Path(args.core_dir).resolve()
+        self.core_pattern: str = args.core_pattern
+        self.ulimit_unlimited: bool = args.ulimit
+        self.compile_flags: List[str] = args.flags or []
+        self.cpp_standard: str = args.std
+        self.gdb_commands: List[str] = args.gdb_commands or [
+            "-ex", "bt", "-ex", "quit"]
+        self.auto_analyze: bool = args.auto_analyze
+        self.log_file: Optional[Path] = Path(
+            args.log_file).resolve() if args.log_file else None
 
-def set_core_pattern(core_pattern: str):
-    """
-    Set the core pattern for core dump files.
-
-    Parameters:
-    core_pattern (str): The pattern to use for core dump files.
-
-    Note:
-    This function requires root privileges to modify /proc/sys/kernel/core_pattern.
-    """
-    if os.geteuid() != 0:
-        logger.error(
-            "Setting core pattern requires root privileges. Please run as root.")
-        sys.exit(1)
-
-    try:
-        with open("/proc/sys/kernel/core_pattern", "w", encoding="utf-8") as f:
-            f.write(core_pattern)
-        logger.info(f"Core pattern set to: {core_pattern}")
-    except PermissionError as e:
-        logger.error(f"Permission denied: {
-                     e}. Please run as root to set core pattern.")
-        sys.exit(1)
-
-
-def compile_cpp_program(source_file: str, output_file: str, compile_flags: list, cpp_standard: str):
-    """
-    Compile the C++ program with optional flags and standard.
-
-    Parameters:
-    source_file (str): The path to the C++ source file.
-    output_file (str): The name of the output executable file.
-    compile_flags (list): Additional flags for the g++ compiler.
-    cpp_standard (str): The C++ standard to use (e.g., c++11, c++14, c++17, c++20).
-    """
-    flags = compile_flags + [f"-std={cpp_standard}"]
-    try:
-        subprocess.run(["g++", *flags, source_file, "-o",
-                       output_file, "-g"], check=True)
-        logger.info(f"Compiled {source_file} to {
-                    output_file} with flags: {' '.join(flags)}.")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Compilation failed: {e}")
-        sys.exit(1)
-
-
-def run_cpp_program(executable: str, auto_analyze: bool, core_dir: str):
-    """
-    Run the compiled C++ program and handle crashes.
-
-    Parameters:
-    executable (str): The name of the executable file to run.
-    auto_analyze (bool): If True, automatically analyze the core dump if the program crashes.
-    core_dir (str): The directory to search for core dump files.
-    """
-    try:
-        subprocess.run([f"./{executable}"], check=True)
-        logger.info(f"Program {executable} ran successfully without crashing.")
-    except subprocess.CalledProcessError as e:
-        logger.warning(f"Program crashed: {e}")
-        core_file = find_latest_core_file(core_dir)
-        if auto_analyze and core_file:
-            analyze_core_dump(executable, core_file)
-        elif not core_file:
-            logger.warning("No core dump file found.")
-
-
-def find_latest_core_file(core_dir: str) -> Path:
-    """
-    Find the latest core dump file in the specified directory.
-
-    Parameters:
-    core_dir (str): The directory to search for core dump files.
-
-    Returns:
-    Path: The path to the latest core dump file, or None if no core dump files are found.
-    """
-    core_files = list(Path(core_dir).glob("core.*"))
-    if not core_files:
-        logger.warning("No core dump files found in the specified directory.")
-        return None
-    latest_core = max(core_files, key=os.path.getctime)
-    logger.info(f"Found core dump file: {latest_core}")
-    return latest_core
-
-
-def analyze_core_dump(executable: str, core_file: Path, gdb_commands: list = ["-ex", "bt", "-ex", "quit"]):
-    """
-    Analyze the core dump file using gdb with custom commands.
-
-    Parameters:
-    executable (str): The name of the executable file.
-    core_file (Path): The path to the core dump file.
-    gdb_commands (list): A list of gdb commands to run for analysis.
-    """
-    try:
-        result = subprocess.run(
-            ["gdb", executable, str(core_file), *gdb_commands],
-            text=True,
-            capture_output=True,
-            check=True
+    def setup_logging(self) -> None:
+        """
+        Configure Loguru for logging.
+        """
+        logger.remove()
+        logger.add(
+            sys.stderr,
+            level="INFO",
+            format="<level>{message}</level>",
         )
-        logger.info("Core dump analysis:")
-        logger.info(result.stdout)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"GDB analysis failed: {e}")
+        if self.log_file:
+            logger.add(
+                self.log_file,
+                rotation="10 MB",
+                retention="7 days",
+                compression="zip",
+                enqueue=True,
+                encoding="utf-8",
+                format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
+                level="DEBUG"
+            )
+        logger.debug("Logging is configured.")
+
+    def set_ulimit(self) -> None:
+        """
+        Set the core dump size using ulimit.
+        """
+        size = "unlimited" if self.ulimit_unlimited else "0"
+        try:
+            subprocess.run(["bash", "-c", f"ulimit -c {size}"], check=True)
+            logger.info(f"Core dump size set to {size}.")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error setting ulimit: {e}")
+            sys.exit(1)
+
+    def set_core_pattern(self) -> None:
+        """
+        Set the core pattern for core dump files.
+        """
+        if os.geteuid() != 0:
+            logger.error(
+                "Setting core pattern requires root privileges. Please run as root.")
+            sys.exit(1)
+
+        try:
+            core_path = Path("/proc/sys/kernel/core_pattern")
+            core_path.write_text(self.core_pattern, encoding="utf-8")
+            logger.info(f"Core pattern set to: {self.core_pattern}")
+        except PermissionError as e:
+            logger.error(
+                f"Permission denied: {e}. Please run as root to set core pattern.")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"Failed to set core pattern: {e}")
+            sys.exit(1)
+
+    def compile_cpp_program(self) -> None:
+        """
+        Compile the C++ program with optional flags and standard.
+        """
+        if not self.source_file.exists():
+            logger.error(f"Source file not found: {self.source_file}")
+            sys.exit(1)
+
+        flags = self.compile_flags + [f"-std={self.cpp_standard}"]
+        compile_cmd = ["g++", *flags,
+                       str(self.source_file), "-o", str(self.output_file), "-g"]
+        logger.info(f"Running compile command: {' '.join(compile_cmd)}")
+        try:
+            subprocess.run(compile_cmd, check=True)
+            logger.success(f"Compilation successful: {self.output_file}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Compilation failed: {e}")
+            sys.exit(1)
+        except Exception as e:
+            logger.exception(f"Unexpected error during compilation: {e}")
+            sys.exit(1)
+
+    def run_cpp_program(self) -> None:
+        """
+        Run the compiled C++ program and handle crashes.
+        """
+        if not self.output_file.exists():
+            logger.error(f"Executable not found: {self.output_file}")
+            sys.exit(1)
+
+        try:
+            logger.info(f"Running program: {self.output_file}")
+            subprocess.run([str(self.output_file)], check=True)
+            logger.info(
+                f"Program {self.output_file} ran successfully without crashing.")
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Program crashed with exit code {e.returncode}.")
+            core_file = self.find_latest_core_file()
+            if self.auto_analyze and core_file:
+                self.analyze_core_dump(core_file)
+            elif not core_file:
+                logger.warning("No core dump file found.")
+        except Exception as e:
+            logger.exception(f"Unexpected error during program execution: {e}")
+            sys.exit(1)
+
+    def find_latest_core_file(self) -> Optional[Path]:
+        """
+        Find the latest core dump file in the specified directory.
+
+        Returns:
+            Optional[Path]: The path to the latest core dump file, or None if no core dump files are found.
+        """
+        if not self.core_dir.exists():
+            logger.warning(f"Core directory does not exist: {self.core_dir}")
+            return None
+
+        core_files = list(self.core_dir.glob("core.*"))
+        if not core_files:
+            logger.warning(
+                "No core dump files found in the specified directory.")
+            return None
+
+        latest_core = max(core_files, key=lambda f: f.stat().st_ctime)
+        logger.info(f"Found core dump file: {latest_core}")
+        return latest_core
+
+    def analyze_core_dump(self, core_file: Path) -> None:
+        """
+        Analyze the core dump file using gdb with custom commands.
+
+        Parameters:
+            core_file (Path): The path to the core dump file.
+        """
+        gdb_cmd = ["gdb", str(self.output_file), str(
+            core_file), *self.gdb_commands]
+        logger.info(f"Running GDB with command: {' '.join(gdb_cmd)}")
+        try:
+            result = subprocess.run(
+                gdb_cmd,
+                text=True,
+                capture_output=True,
+                check=True
+            )
+            logger.info("Core dump analysis output:")
+            logger.info(result.stdout)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"GDB analysis failed: {e.stderr}")
+        except Exception as e:
+            logger.exception(f"Unexpected error during GDB analysis: {e}")
+
+    def run(self) -> None:
+        """
+        Execute the full workflow: setup, compile, and run the program.
+        """
+        logger.debug("Starting CoreRunner workflow.")
+        if self.ulimit_unlimited:
+            self.set_ulimit()
+        self.set_core_pattern()
+        self.compile_cpp_program()
+        self.run_cpp_program()
+        logger.debug("CoreRunner workflow completed successfully.")
 
 
-def configure_logging(log_file: str):
+def configure_logging(log_file: str) -> None:
     """
     Configure the loguru logger.
 
     Parameters:
-    log_file (str): The path to the log file. If empty, logs will only be written to stderr.
+        log_file (str): The path to the log file. If empty, logs will only be written to stderr.
     """
     logger.remove()  # Remove the default logger
-    logger.add(sys.stderr, level="INFO")
+    logger.add(
+        sys.stderr,
+        level="INFO",
+        format="<level>{message}</level>",
+    )
     if log_file:
-        # Rotate logs every 10 MB
-        logger.add(log_file, level="DEBUG", rotation="10 MB")
-    logger.info("Logging is configured.")
+        logger.add(
+            log_file,
+            rotation="10 MB",
+            retention="7 days",
+            compression="zip",
+            enqueue=True,
+            encoding="utf-8",
+            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
+            level="DEBUG"
+        )
+    logger.debug("Logging is configured.")
 
 
-def main():
+def parse_arguments() -> argparse.Namespace:
     """
-    Main function to parse arguments and run the core dump and analysis tool.
+    Parse command-line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
     """
     parser = argparse.ArgumentParser(
-        description="C++ Core Dump and Analysis Tool with Logging")
+        description="C++ Core Dump and Analysis Tool with Enhanced Logging and Exception Handling"
+    )
     parser.add_argument("source", help="C++ source file to compile and run")
     parser.add_argument("-o", "--output", default="a.out",
                         help="Output executable name")
@@ -170,18 +242,25 @@ def main():
                         help="Automatically analyze core dump if program crashes")
     parser.add_argument("-l", "--log-file", default="",
                         help="Log file to write logs to")
+    return parser.parse_args()
 
-    args = parser.parse_args()
 
+def main():
+    """
+    Main function to run the CoreRunner.
+    """
+    args = parse_arguments()
     configure_logging(args.log_file)
-
-    if args.ulimit:
-        set_ulimit(True)
-    set_core_pattern(args.core_pattern)
-
-    compile_cpp_program(args.source, args.output, args.flags, args.std)
-    run_cpp_program(args.output, args.auto_analyze, args.core_dir)
+    runner = CoreRunner(args)
+    runner.run()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.warning("Operation interrupted by user.")
+        sys.exit(0)
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred: {e}")
+        sys.exit(1)

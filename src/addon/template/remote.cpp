@@ -69,9 +69,10 @@ RemoteStandAloneComponent::RemoteStandAloneComponent(std::string name)
         "TCP or UDP");
     def("connect", &RemoteStandAloneComponent::connectToRemoteDriver);
     def("disconnect", &RemoteStandAloneComponent::disconnectRemoteDriver);
-    //def("send", &RemoteStandAloneComponent::sendMessageToDriver<std::string>);
-    // def("send_async",
-    //     &RemoteStandAloneComponent::sendMessageAsync<std::string>);
+    // def("send",
+    // &RemoteStandAloneComponent::sendMessageToDriver<std::string>);
+    //  def("send_async",
+    //      &RemoteStandAloneComponent::sendMessageAsync<std::string>);
     def("listen", &RemoteStandAloneComponent::toggleDriverListening);
     def("print", &RemoteStandAloneComponent::printDriver);
     def("heartbeat_on", &RemoteStandAloneComponent::enableHeartbeat);
@@ -222,12 +223,27 @@ auto RemoteStandAloneComponent::sendMessageAsync(T&& message)
     std::visit(
         [&](auto&& socket) {
             if (socket && socket->is_open()) {
-                asio::async_write(
-                    *socket, asio::buffer(std::forward<T>(message)),
-                    [promise](const asio::error_code& ec,
-                              std::size_t bytes_transferred) {
-                        promise->setValue({ec, bytes_transferred});
-                    });
+                if constexpr (std::is_same_v<std::decay_t<decltype(*socket)>,
+                                             asio::ip::tcp::socket>) {
+                    asio::async_write(
+                        *socket, asio::buffer(std::forward<T>(message)),
+                        [promise](const asio::error_code& ec,
+                                  std::size_t bytes_transferred) {
+                            promise->setValue({ec, bytes_transferred});
+                        });
+                } else if constexpr (std::is_same_v<
+                                         std::decay_t<decltype(*socket)>,
+                                         asio::ip::udp::socket>) {
+                    socket->async_send_to(
+                        asio::buffer(std::forward<T>(message)),
+                        *impl_->udpEndpoint,
+                        [promise](const asio::error_code& ec,
+                                  std::size_t bytes_transferred) {
+                            promise->setValue({ec, bytes_transferred});
+                        });
+                } else {
+                    promise->setValue({asio::error::not_connected, 0});
+                }
             } else {
                 promise->setValue({asio::error::not_connected, 0});
             }

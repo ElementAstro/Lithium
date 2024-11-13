@@ -109,7 +109,6 @@ void StorageMonitor::stopMonitoring() {
 }
 
 auto StorageMonitor::isRunning() const -> bool {
-    std::lock_guard lock(m_mutex);
     LOG_F(INFO, "isRunning called, returning: {}", m_isRunning);
     return m_isRunning;
 }

@@ -978,8 +978,8 @@ auto ComponentManager::loadRemoteComponent(
     }
     auto componentFullPath = module_path + Constants::PATH_SEPARATOR +
                              component_name + Constants::EXECUTABLE_EXTENSION;
-    auto remoteComponent = std::make_shared<RemoteStandAloneComponentImpl>(
-        component_name, addon_name);
+    auto remoteComponent = std::make_shared<RemoteStandAloneComponent>(
+        component_name);
 
     LOG_F(INFO, "Successfully loaded remote component {}", component_name);
     return true;

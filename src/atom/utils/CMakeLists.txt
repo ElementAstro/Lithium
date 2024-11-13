@@ -13,6 +13,7 @@ project(atom-utils C CXX)
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
     convert.cpp
+    difflib.cpp
     error_stack.cpp
     qdatetime.cpp
     qprocess.cpp
@@ -31,6 +32,7 @@ set(${PROJECT_NAME}_HEADERS
     aes.hpp
     argsview.hpp
     convert.hpp
+    difflib.hpp
     error_stack.hpp
     qdatetime.hpp
     qprocess.hpp

@@ -14,16 +14,17 @@ Usage:
 - Provide paths to C++ header files via the `filepaths` argument.
 - Optionally specify output file, log level, whitelist, blacklist, module name, and instance prefix.
 
-Author: [Your Name]
-Date: [Date]
 """
 
 import clang.cindex
 from loguru import logger
 import argparse
 import os
+import threading
+import yaml
+from concurrent.futures import ThreadPoolExecutor
 
-from .finder import get_libclang_path
+from .libclang_finder import get_libclang_path
 
 # Set the path to libclang
 try:
@@ -65,7 +66,27 @@ def parse_args():
                         help="Name of the generated ATOM_MODULE.")
     parser.add_argument("--instance-prefix", default="",
                         help="Prefix for instance names in the module.")
+    parser.add_argument("--config-file", default=None,
+                        help="Path to a YAML configuration file.")
     return parser.parse_args()
+
+
+def load_config(config_file):
+    """
+    Loads configuration from a YAML file.
+
+    Args:
+        config_file (str): Path to the configuration file.
+
+    Returns:
+        dict: The loaded configuration.
+    """
+    if config_file and os.path.isfile(config_file):
+        with open(config_file, 'r') as f:
+            config = yaml.safe_load(f)
+        logger.info(f"Loaded configuration from {config_file}")
+        return config
+    return {}
 
 
 def is_in_list(name, whitelist, blacklist):
@@ -85,6 +106,71 @@ def is_in_list(name, whitelist, blacklist):
     if name in blacklist:
         return False
     return True
+
+
+def find_classes_methods_and_functions(node, namespace="", whitelist=None, blacklist=None):
+    """
+    Recursively finds classes, methods, and functions within the AST.
+
+    Args:
+        node (clang.cindex.Cursor): The current AST node.
+        namespace (str, optional): The current namespace.
+        whitelist (list, optional): List of whitelisted functions or methods.
+        blacklist (list, optional): List of blacklisted functions or methods.
+
+    Returns:
+        tuple: A dictionary of classes and their methods, and a list of functions.
+    """
+    classes = {}
+    functions = []
+    for child in node.get_children():
+        # Handle namespaces
+        if child.kind == clang.cindex.CursorKind.NAMESPACE:
+            nested_namespace = f"{namespace}::{child.spelling}" if namespace else child.spelling
+            nested_classes, nested_functions = find_classes_methods_and_functions(
+                child, nested_namespace, whitelist, blacklist)
+            classes.update(nested_classes)
+            functions.extend(nested_functions)
+        # Handle class declarations
+        elif child.kind == clang.cindex.CursorKind.CLASS_DECL:
+            class_name = f"{namespace}::{child.spelling}" if namespace else child.spelling
+            methods = []
+            for sub_child in child.get_children():
+                if (sub_child.kind == clang.cindex.CursorKind.CXX_METHOD and
+                        sub_child.access_specifier == clang.cindex.AccessSpecifier.PUBLIC):
+                    method_name = sub_child.spelling
+                    if is_in_list(method_name, whitelist, blacklist):
+                        methods.append(method_name)
+                        logger.debug(
+                            f"Found public method: {class_name}::{method_name}")
+            if methods:
+                classes[class_name] = methods
+                logger.debug(f"Registered class: {class_name}")
+        # Handle global function declarations
+        elif child.kind == clang.cindex.CursorKind.FUNCTION_DECL:
+            function_name = f"{namespace}::{child.spelling}" if namespace else child.spelling
+            if is_in_list(function_name, whitelist, blacklist):
+                functions.append(function_name)
+                logger.debug(f"Found global function: {function_name}")
+    return classes, functions
+
+
+def parse_header_file(filepath, whitelist=None, blacklist=None):
+    """
+    Parses a C++ header file to extract classes, methods, and functions.
+
+    Args:
+        filepath (str): Path to the C++ header file.
+        whitelist (list, optional): List of whitelisted functions or methods.
+        blacklist (list, optional): List of blacklisted functions or methods.
+
+    Returns:
+        tuple: A dictionary of classes and their methods, and a list of functions.
+    """
+    index = clang.cindex.Index.create()
+    translation_unit = index.parse(filepath)
+    logger.info(f"Parsing the file: {filepath}\n")
+    return find_classes_methods_and_functions(translation_unit.cursor, whitelist=whitelist, blacklist=blacklist)
 
 
 def generate_atom_module(filepaths, output_file=None, log_level="INFO", whitelist=None, blacklist=None, module_name="all_components", instance_prefix=""):
@@ -108,59 +194,13 @@ def generate_atom_module(filepaths, output_file=None, log_level="INFO", whitelis
     all_classes = {}
     all_functions = []
 
-    for filepath in filepaths:
-        index = clang.cindex.Index.create()
-        translation_unit = index.parse(filepath)
-        logger.info(f"Parsing the file: {filepath}\n")
-
-        def find_classes_methods_and_functions(node, namespace=""):
-            """
-            Recursively finds classes, methods, and functions within the AST.
-
-            Args:
-                node (clang.cindex.Cursor): The current AST node.
-                namespace (str, optional): The current namespace.
-
-            Returns:
-                tuple: A dictionary of classes and their methods, and a list of functions.
-            """
-            classes = {}
-            functions = []
-            for child in node.get_children():
-                # Handle namespaces
-                if child.kind == clang.cindex.CursorKind.NAMESPACE:
-                    nested_namespace = f"{namespace}::{child.spelling}" if namespace else child.spelling
-                    nested_classes, nested_functions = find_classes_methods_and_functions(
-                        child, nested_namespace)
-                    classes.update(nested_classes)
-                    functions.extend(nested_functions)
-                # Handle class declarations
-                elif child.kind == clang.cindex.CursorKind.CLASS_DECL:
-                    class_name = f"{namespace}::{child.spelling}" if namespace else child.spelling
-                    methods = []
-                    for sub_child in child.get_children():
-                        if (sub_child.kind == clang.cindex.CursorKind.CXX_METHOD and
-                                sub_child.access_specifier == clang.cindex.AccessSpecifier.PUBLIC):
-                            method_name = sub_child.spelling
-                            if is_in_list(method_name, whitelist, blacklist):
-                                methods.append(method_name)
-                                logger.debug(
-                                    f"Found public method: {class_name}::{method_name}")
-                    if methods:
-                        classes[class_name] = methods
-                        logger.debug(f"Registered class: {class_name}")
-                # Handle global function declarations
-                elif child.kind == clang.cindex.CursorKind.FUNCTION_DECL:
-                    function_name = f"{namespace}::{child.spelling}" if namespace else child.spelling
-                    if is_in_list(function_name, whitelist, blacklist):
-                        functions.append(function_name)
-                        logger.debug(f"Found global function: {function_name}")
-            return classes, functions
-
-        classes, functions = find_classes_methods_and_functions(
-            translation_unit.cursor)
-        all_classes.update(classes)
-        all_functions.extend(functions)
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(
+            parse_header_file, filepath, whitelist, blacklist) for filepath in filepaths]
+        for future in futures:
+            classes, functions = future.result()
+            all_classes.update(classes)
+            all_functions.extend(functions)
 
     logger.info("Generating ATOM_MODULE...\n")
 
@@ -218,5 +258,13 @@ if __name__ == "__main__":
     Configures logging and handles exceptions during module generation.
     """
     args = parse_args()
-    generate_atom_module(args.filepaths, args.output, args.log_level,
-                         args.whitelist, args.blacklist, args.module_name, args.instance_prefix)
+    config = load_config(args.config_file)
+    generate_atom_module(
+        args.filepaths,
+        args.output or config.get('output'),
+        args.log_level or config.get('log_level', 'INFO'),
+        args.whitelist or config.get('whitelist', DEFAULT_WHITELIST),
+        args.blacklist or config.get('blacklist', DEFAULT_BLACKLIST),
+        args.module_name or config.get('module_name', 'all_components'),
+        args.instance_prefix or config.get('instance_prefix', '')
+    )

@@ -11,6 +11,8 @@ Features:
 - Support various C++ versions (from C++98 to C++23)
 - Compile and link source files
 - Load additional compile/link options from JSON files
+- Enhanced logging with Loguru
+- Robust exception handling
 
 Usage:
     python compiler_helper.py source1.cpp source2.cpp -o output.o --compiler GCC --cpp_version c++20 --link --flags -O3
@@ -30,7 +32,9 @@ from pathlib import Path
 from typing import List, Optional, Dict
 import argparse
 
-from .pyjson import load_json
+from loguru import logger
+import json
+
 
 class CppVersion(Enum):
     """
@@ -44,11 +48,13 @@ class CppVersion(Enum):
     CPP20 = "c++20"
     CPP23 = "c++23"
 
+
 class CompilerType(Enum):
     """Enum representing the types of compilers."""
     GCC = auto()
     CLANG = auto()
     MSVC = auto()
+
 
 @dataclass
 class Compiler:
@@ -58,7 +64,7 @@ class Compiler:
     compiler_type: CompilerType
     cpp_flags: Dict[CppVersion, str] = field(default_factory=dict)
     additional_compile_flags: List[str] = field(default_factory=list)
-    additional_link_flags: List[str] = field(default_factory.list)
+    additional_link_flags: List[str] = field(default_factory=list)
 
     def compile(self, source_files: List[Path], output_file: Path, cpp_version: CppVersion, additional_flags: Optional[List[str]] = None):
         """
@@ -71,18 +77,24 @@ class Compiler:
             additional_flags (Optional[List[str]]): Additional flags for compilation.
 
         Raises:
-            SystemExit: If the C++ version is not supported.
+            SystemExit: If the C++ version is not supported or compilation fails.
         """
         additional_flags = additional_flags or []
-        if cpp_version in self.cpp_flags:
-            version_flag = self.cpp_flags[cpp_version]
-        else:
-            print(f"Unsupported C++ version: {cpp_version}")
+        version_flag = self.cpp_flags.get(cpp_version)
+        if not version_flag:
+            logger.error(f"Unsupported C++ version: {cpp_version.value}")
             sys.exit(1)
 
-        compile_cmd = [self.command, version_flag] + self.additional_compile_flags + additional_flags + ["-c"] + [str(f) for f in source_files] + ["-o", str(output_file)]
-        print(f"Running compile command: {' '.join(compile_cmd)}")
-        subprocess.run(compile_cmd, check=True)
+        compile_cmd = [self.command, version_flag] + self.additional_compile_flags + \
+            additional_flags + \
+            ["-c"] + [str(f) for f in source_files] + ["-o", str(output_file)]
+        logger.info(f"Running compile command: {' '.join(compile_cmd)}")
+        try:
+            subprocess.run(compile_cmd, check=True)
+            logger.success(f"Compilation successful: {output_file}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Compilation failed: {e}")
+            sys.exit(1)
 
     def link(self, object_files: List[Path], output_file: Path, additional_flags: Optional[List[str]] = None):
         """
@@ -92,11 +104,45 @@ class Compiler:
             object_files (List[Path]): List of object files to link.
             output_file (Path): Path to the output file.
             additional_flags (Optional[List[str]]): Additional flags for linking.
+
+        Raises:
+            SystemExit: If linking fails.
         """
         additional_flags = additional_flags or []
-        link_cmd = [self.command] + self.additional_link_flags + [str(f) for f in object_files] + additional_flags + ["-o", str(output_file)]
-        print(f"Running link command: {' '.join(link_cmd)}")
-        subprocess.run(link_cmd, check=True)
+        link_cmd = [self.command] + self.additional_link_flags + \
+            [str(f) for f in object_files] + \
+            additional_flags + ["-o", str(output_file)]
+        logger.info(f"Running link command: {' '.join(link_cmd)}")
+        try:
+            subprocess.run(link_cmd, check=True)
+            logger.success(f"Linking successful: {output_file}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Linking failed: {e}")
+            sys.exit(1)
+
+
+def setup_logging() -> None:
+    """
+    Configure Loguru for logging.
+    """
+    logger.remove()
+    logger.add(
+        "compiler_helper.log",
+        rotation="10 MB",
+        retention="7 days",
+        compression="zip",
+        enqueue=True,
+        encoding="utf-8",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
+        level="DEBUG"
+    )
+    logger.add(
+        sys.stdout,
+        level="INFO",
+        format="<level>{message}</level>",
+    )
+    logger.debug("Logging is configured.")
+
 
 def detect_compilers() -> List[Compiler]:
     """
@@ -125,6 +171,7 @@ def detect_compilers() -> List[Compiler]:
             additional_compile_flags=["-Wall", "-Wextra", "-Werror"],
             additional_link_flags=[]
         ))
+        logger.debug("GCC compiler detected.")
 
     clang_path = find_command("clang")
     if clang_path:
@@ -144,6 +191,7 @@ def detect_compilers() -> List[Compiler]:
             additional_compile_flags=["-Wall", "-Wextra", "-Werror"],
             additional_link_flags=[]
         ))
+        logger.debug("Clang compiler detected.")
 
     msvc_path = find_command("cl")
     if msvc_path:
@@ -163,8 +211,12 @@ def detect_compilers() -> List[Compiler]:
             additional_compile_flags=["/W4", "/WX"],
             additional_link_flags=["/DEBUG"]
         ))
+        logger.debug("MSVC compiler detected.")
 
+    if not compilers:
+        logger.error("No suitable compiler found on the system.")
     return compilers
+
 
 def find_command(command: str) -> Optional[str]:
     """
@@ -176,10 +228,16 @@ def find_command(command: str) -> Optional[str]:
     Returns:
         Optional[str]: Path to the command if found, otherwise None.
     """
-    result = subprocess.run(["which", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if result.returncode == 0:
-        return result.stdout.strip()
-    return None
+    try:
+        result = subprocess.run(["which", command], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True, check=True)
+        path = result.stdout.strip()
+        logger.debug(f"Found command '{command}' at: {path}")
+        return path
+    except subprocess.CalledProcessError:
+        logger.warning(f"Command '{command}' not found.")
+        return None
+
 
 def select_compiler(compilers: List[Compiler]) -> Compiler:
     """
@@ -194,16 +252,24 @@ def select_compiler(compilers: List[Compiler]) -> Compiler:
     Raises:
         SystemExit: If the selection is invalid.
     """
+    if len(compilers) == 1:
+        logger.info(
+            f"Only one compiler detected: {compilers[0].name}. Selecting it by default.")
+        return compilers[0]
+
     print("Available compilers:")
     for idx, compiler in enumerate(compilers, start=1):
         print(f"{idx}. {compiler.name}")
 
-    choice = input("Select a compiler by number: ").strip()
-    try:
-        return compilers[int(choice) - 1]
-    except (ValueError, IndexError):
-        print("Invalid selection.")
-        sys.exit(1)
+    while True:
+        choice = input("Select a compiler by number: ").strip()
+        try:
+            selected = compilers[int(choice) - 1]
+            logger.info(f"Selected compiler: {selected.name}")
+            return selected
+        except (ValueError, IndexError):
+            print("Invalid selection. Please enter a valid number.")
+
 
 def select_cpp_version() -> CppVersion:
     """
@@ -216,15 +282,19 @@ def select_cpp_version() -> CppVersion:
         SystemExit: If the selection is invalid.
     """
     print("Available C++ versions:")
-    for idx, version in enumerate(CppVersion, start=1):
+    versions = list(CppVersion)
+    for idx, version in enumerate(versions, start=1):
         print(f"{idx}. {version.value}")
 
-    choice = input("Select a C++ version by number: ").strip()
-    try:
-        return list(CppVersion)[int(choice) - 1]
-    except (ValueError, IndexError):
-        print("Invalid selection.")
-        sys.exit(1)
+    while True:
+        choice = input("Select a C++ version by number: ").strip()
+        try:
+            selected = versions[int(choice) - 1]
+            logger.info(f"Selected C++ version: {selected.value}")
+            return selected
+        except (ValueError, IndexError):
+            print("Invalid selection. Please enter a valid number.")
+
 
 def load_options_from_json(file_path: str) -> Dict[str, List[str]]:
     """
@@ -235,48 +305,76 @@ def load_options_from_json(file_path: str) -> Dict[str, List[str]]:
 
     Returns:
         Dict[str, List[str]]: Dictionary containing compile and link flags.
+
+    Raises:
+        SystemExit: If the JSON file cannot be loaded or is invalid.
     """
-    data = load_json(file_path)
-    return {
-        "compile_flags": data.get("compile_flags", []),
-        "link_flags": data.get("link_flags", []),
-    }
+    try:
+        with open(file_path, 'r', encoding="utf-8") as f:
+            data = json.load(f)
+        logger.debug(f"Loaded options from JSON file: {file_path}")
+        return {
+            "compile_flags": data.get("compile_flags", []),
+            "link_flags": data.get("link_flags", []),
+        }
+    except FileNotFoundError:
+        logger.error(f"JSON options file not found: {file_path}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON format in {file_path}: {e}")
+        sys.exit(1)
+
 
 def main():
     """
     Main function to run the compiler helper.
     """
+    setup_logging()
+    logger.info("Starting Compiler Helper.")
+
     parser = argparse.ArgumentParser(description="Compiler Helper")
-    parser.add_argument("source_files", nargs="+", type=Path, help="Source files to compile")
-    parser.add_argument("-o", "--output", type=Path, required=True, help="Output file")
-    parser.add_argument("--link", action="store_true", help="Link object files into an executable")
-    parser.add_argument("--compiler", type=str, help="Specify the compiler to use (GCC, Clang, MSVC)")
-    parser.add_argument("--cpp_version", type=str, help="Specify the C++ version to use (e.g., c++17, c++20)")
-    parser.add_argument("--flags", nargs="*", help="Additional flags for compilation or linking")
-    parser.add_argument("--compile-flags", nargs="*", help="Additional compilation flags")
-    parser.add_argument("--link-flags", nargs="*", help="Additional linking flags")
-    parser.add_argument("--json-options", type=str, help="Path to JSON file containing additional compile/link options")
+    parser.add_argument("source_files", nargs="+", type=Path,
+                        help="Source files to compile")
+    parser.add_argument("-o", "--output", type=Path,
+                        required=True, help="Output file")
+    parser.add_argument("--link", action="store_true",
+                        help="Link object files into an executable")
+    parser.add_argument("--compiler", type=str,
+                        help="Specify the compiler to use (GCC, Clang, MSVC)")
+    parser.add_argument("--cpp_version", type=str,
+                        help="Specify the C++ version to use (e.g., c++17, c++20)")
+    parser.add_argument("--flags", nargs="*",
+                        help="Additional flags for compilation or linking")
+    parser.add_argument("--compile-flags", nargs="*",
+                        help="Additional compilation flags")
+    parser.add_argument("--link-flags", nargs="*",
+                        help="Additional linking flags")
+    parser.add_argument("--json-options", type=str,
+                        help="Path to JSON file containing additional compile/link options")
 
     args = parser.parse_args()
 
     compilers = detect_compilers()
     if not compilers:
-        print("No suitable compiler found.")
+        logger.critical("No suitable compiler found. Exiting.")
         sys.exit(1)
 
     if args.compiler:
-        compiler = next((c for c in compilers if c.name.lower() == args.compiler.lower()), None)
+        compiler = next((c for c in compilers if c.name.lower()
+                        == args.compiler.lower()), None)
         if not compiler:
-            print(f"Compiler '{args.compiler}' not found.")
+            logger.error(
+                f"Compiler '{args.compiler}' not found among detected compilers.")
             sys.exit(1)
+        logger.info(f"User selected compiler: {compiler.name}")
     else:
         compiler = select_compiler(compilers)
 
     if args.cpp_version:
         try:
-            cpp_version = CppVersion[args.cpp_version.replace("++", "").upper()]
-        except KeyError:
-            print(f"Invalid C++ version: {args.cpp_version}")
+            cpp_version = CppVersion(args.cpp_version.lower())
+        except ValueError:
+            logger.error(f"Invalid C++ version specified: {args.cpp_version}")
             sys.exit(1)
     else:
         cpp_version = select_cpp_version()
@@ -288,13 +386,28 @@ def main():
     # Load additional options from JSON file if provided
     if args.json_options:
         json_options = load_options_from_json(args.json_options)
-        additional_compile_flags.extend(json_options["compile_flags"])
-        additional_link_flags.extend(json_options["link_flags"])
+        additional_compile_flags.extend(json_options.get("compile_flags", []))
+        additional_link_flags.extend(json_options.get("link_flags", []))
 
-    if args.link:
-        compiler.link(args.source_files, args.output, additional_flags + additional_link_flags)
-    else:
-        compiler.compile(args.source_files, args.output, cpp_version, additional_flags + additional_compile_flags)
+    try:
+        if args.link:
+            logger.info("Starting linking process.")
+            compiler.link(args.source_files, args.output,
+                          additional_flags + additional_link_flags)
+        else:
+            logger.info("Starting compilation process.")
+            compiler.compile(args.source_files, args.output, cpp_version,
+                             additional_flags + additional_compile_flags)
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+    logger.success("Compiler Helper finished successfully.")
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.warning("Operation interrupted by user.")
+        sys.exit(0)

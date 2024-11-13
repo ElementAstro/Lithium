@@ -1,43 +1,46 @@
-# CMakeLists.txt for Lithium-Task
+# CMakeLists.txt for Lithium-Task-Simple
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Lithium-Task
+# Project Name: Lithium-Task-Simple
 # Description: The official config module for lithium server
 # Author: Max Qian
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(lithium-task VERSION 1.0.0 LANGUAGES C CXX)
-
-add_subdirectory(simple)
+project(lithium-task-simple VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources
 set(PROJECT_SOURCES
-    container.cpp
-    generator.cpp
-    loader.cpp
-    manager.cpp
-    singlepool.cpp
+    sequencer.cpp
+    target.cpp
     task.cpp
+
+    task_camera.cpp
 )
 
 # Headers
 set(PROJECT_HEADERS
-    container.hpp
-    generator.hpp
-    loader.hpp
-    manager.hpp
-    singlepool.hpp
+    sequencer.hpp
+    target.hpp
     task.hpp
+
+    task_camera.hpp
 )
 
 # Required libraries
 set(PROJECT_LIBS
     atom-component
+    atom-async
     atom-function
+    atom-io
     atom-utils
     atom-error
+    lithium-config
+    lithium-addons
+    atom-async-io
+    atom-utils
     loguru
+    yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
@@ -64,3 +67,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+
+add_executable(task_simple main.cpp)
+target_link_libraries(task_simple PRIVATE ${PROJECT_NAME} ${PROJECT_LIBS})

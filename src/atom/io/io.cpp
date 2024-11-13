@@ -22,6 +22,7 @@ Description: IO
 #include <regex>
 #include <string_view>
 #include <thread>
+#include <unordered_map>
 
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
@@ -805,5 +806,26 @@ auto searchExecutableFiles(const fs::path &dir, const std::string &searchStr)
     }
 
     return matchedFiles;
+}
+
+auto classifyFiles(const fs::path &directory)
+    -> std::unordered_map<std::string, std::vector<std::string>> {
+    std::unordered_map<std::string, std::vector<std::string>> fileMap;
+
+    if (fs::exists(directory) && fs::is_directory(directory)) {
+        for (const auto &entry : fs::directory_iterator(directory)) {
+            if (fs::is_regular_file(entry)) {
+                std::string extension = entry.path().extension().string();
+
+                std::string filename = entry.path().string();
+
+                fileMap[extension].push_back(filename);
+            }
+        }
+    } else {
+        LOG_F(ERROR, "Directory does not exist or is not a directory.");
+    }
+
+    return fileMap;
 }
 }  // namespace atom::io

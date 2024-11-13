@@ -5,16 +5,23 @@ import numpy as np
 import cv2
 from astropy.io import fits
 from scipy import ndimage
+from concurrent.futures import ThreadPoolExecutor
+import yaml
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def debayer_image(img: np.ndarray, bayer_pattern: Optional[str] = None) -> np.ndarray:
     bayer_patterns = {
-        "RGGB": cv2.COLOR_BAYER_RGGB2BGR,
-        "GBRG": cv2.COLOR_BAYER_GBRG2BGR,
-        "BGGR": cv2.COLOR_BAYER_BGGR2BGR,
-        "GRBG": cv2.COLOR_BAYER_GRBG2BGR
+        "rggb": cv2.COLOR_BAYER_RGGB2BGR,
+        "gbrg": cv2.COLOR_BAYER_GBRG2BGR,
+        "bggr": cv2.COLOR_BAYER_BGGR2BGR,
+        "grbg": cv2.COLOR_BAYER_GRBG2BGR
     }
-    return cv2.cvtColor(img, bayer_patterns.get(bayer_pattern, cv2.COLOR_BAYER_RGGB2BGR))
+    return cv2.cvtColor(img, bayer_patterns.get(bayer_pattern.lower(), cv2.COLOR_BAYER_RGGB2BGR))
 
 
 def resize_image(img: np.ndarray, target_size: int) -> np.ndarray:
@@ -33,16 +40,15 @@ def normalize_image(img: np.ndarray) -> np.ndarray:
 
 def stretch_image(img: np.ndarray, is_color: bool) -> np.ndarray:
     if is_color:
-        return ComputeAndStretch_ThreeChannels(img, True)
-    return ComputeStretch_OneChannels(img, True)
+        return compute_and_stretch_three_channels(img, True)
+    return compute_stretch_one_channel(img, True)
 
 
 def detect_stars(img: np.ndarray, remove_hotpixel: bool, remove_noise: bool, do_star_mark: bool, mark_img: Optional[np.ndarray] = None) -> Tuple[np.ndarray, float, float, Dict[str, float]]:
-    return StarDetectAndHfr(img, remove_hotpixel, remove_noise, do_star_mark, down_sample_mean_std=True, mark_img=mark_img)
+    return star_detect_and_hfr(img, remove_hotpixel, remove_noise, do_star_mark, down_sample_mean_std=True, mark_img=mark_img)
+
 
 # New functions for enhanced image processing
-
-
 def apply_gaussian_blur(img: np.ndarray, kernel_size: int = 5) -> np.ndarray:
     """Apply Gaussian blur to reduce noise."""
     return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
@@ -116,13 +122,16 @@ def enhance_image(img: np.ndarray, config: Dict[str, bool]) -> np.ndarray:
         img = apply_unsharp_mask(img)
     if config.get('adjust_gamma', False):
         img = adjust_gamma(img, gamma=config.get('gamma', 1.0))
+    if config.get('apply_gaussian_blur', False):
+        img = apply_gaussian_blur(img)
     return img
 
 
 def process_image(filepath: Path, config: Dict[str, bool], resize_size: int = 2048) -> Tuple[Optional[np.ndarray], Dict[str, float]]:
     try:
         img, header = fits.getdata(filepath, header=True)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error loading FITS file {filepath}: {e}")
         return None, {"star_count": -1, "average_hfr": -1, "max_star": -1, "min_star": -1, "average_star": -1}
 
     is_color = 'BAYERPAT' in header
@@ -135,12 +144,12 @@ def process_image(filepath: Path, config: Dict[str, bool], resize_size: int = 20
     # Apply image enhancements
     img = enhance_image(img, config)
 
-    if config['do_stretch']:
+    if config.get('do_stretch', False):
         img = stretch_image(img, is_color)
 
-    if config['do_star_count']:
+    if config.get('do_star_count', False):
         img, star_count, avg_hfr, area_range = detect_stars(
-            img, config['remove_hotpixel'], config['remove_noise'], config['do_star_mark'])
+            img, config.get('remove_hotpixel', False), config.get('remove_noise', False), config.get('do_star_mark', False))
         return img, {
             "star_count": float(star_count),
             "average_hfr": avg_hfr,
@@ -152,8 +161,8 @@ def process_image(filepath: Path, config: Dict[str, bool], resize_size: int = 20
     return img, {"star_count": -1, "average_hfr": -1, "max_star": -1, "min_star": -1, "average_star": -1}
 
 
-def ImageStretchAndStarCount_Optim(filepath: Path, config: Dict[str, bool], resize_size: int = 2048,
-                                   jpg_file: Optional[Path] = None, star_file: Optional[Path] = None) -> Tuple[Optional[np.ndarray], Dict[str, float]]:
+def image_stretch_and_star_count_optim(filepath: Path, config: Dict[str, bool], resize_size: int = 2048,
+                                       jpg_file: Optional[Path] = None, star_file: Optional[Path] = None) -> Tuple[Optional[np.ndarray], Dict[str, float]]:
     img, result = process_image(filepath, config, resize_size)
 
     if jpg_file and img is not None:
@@ -165,8 +174,8 @@ def ImageStretchAndStarCount_Optim(filepath: Path, config: Dict[str, bool], resi
     return img, result
 
 
-def StreamingDebayerAndStretch(fits_data: bytearray, width: int, height: int, config: Dict[str, bool],
-                               resize_size: int = 2048, bayer_type: Optional[str] = None) -> Optional[np.ndarray]:
+def streaming_debayer_and_stretch(fits_data: bytearray, width: int, height: int, config: Dict[str, bool],
+                                  resize_size: int = 2048, bayer_type: Optional[str] = None) -> Optional[np.ndarray]:
     img = np.frombuffer(fits_data, dtype=np.uint16).reshape(height, width)
 
     if bayer_type:
@@ -184,8 +193,8 @@ def StreamingDebayerAndStretch(fits_data: bytearray, width: int, height: int, co
     return img
 
 
-def StreamingDebayer(fits_data: bytearray, width: int, height: int, config: Dict[str, bool],
-                     resize_size: int = 2048, bayer_type: Optional[str] = None) -> Optional[np.ndarray]:
+def streaming_debayer(fits_data: bytearray, width: int, height: int, config: Dict[str, bool],
+                      resize_size: int = 2048, bayer_type: Optional[str] = None) -> Optional[np.ndarray]:
     img = np.frombuffer(fits_data, dtype=np.uint16).reshape(height, width)
 
     if bayer_type:
@@ -198,3 +207,45 @@ def StreamingDebayer(fits_data: bytearray, width: int, height: int, config: Dict
     img = enhance_image(img, config)
 
     return img
+
+
+def load_config(config_file: Path) -> Dict[str, bool]:
+    """Load configuration from a YAML file."""
+    if config_file.is_file():
+        with config_file.open('r') as f:
+            config = yaml.safe_load(f)
+        logger.info(f"Loaded configuration from {config_file}")
+        return config
+    else:
+        logger.warning(
+            f"Configuration file {config_file} not found. Using default configuration.")
+        return {}
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Image Stretch and Star Count Optimization")
+    parser.add_argument("filepath", type=Path, help="Path to the FITS file")
+    parser.add_argument("--config", type=Path, default="config.yaml",
+                        help="Path to the configuration file")
+    parser.add_argument("--resize-size", type=int, default=2048,
+                        help="Target size for resizing the image")
+    parser.add_argument("--jpg-file", type=Path,
+                        help="Path to save the processed image as JPG")
+    parser.add_argument("--star-file", type=Path,
+                        help="Path to save the star count results as JSON")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    img, result = image_stretch_and_star_count_optim(
+        args.filepath, config, args.resize_size, args.jpg_file, args.star_file)
+
+    if img is not None:
+        logger.info(f"Processed image saved to {args.jpg_file}")
+    logger.info(f"Star count results: {result}")
+
+
+if __name__ == "__main__":
+    main()

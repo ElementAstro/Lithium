@@ -11,37 +11,46 @@ Dependencies:
 
 Usage:
 - The script automatically determines the path to `libclang` and sets it for the `clang.cindex.Config`.
-
-Author: [Your Name]
-Date: [Date]
 """
 
 import platform
 import os
 import glob
 import subprocess
+import argparse
 from clang.cindex import Config
 from loguru import logger
 
+CACHE_FILE = "libclang_path_cache.txt"
+
+
+def cache_libclang_path(path: str):
+    """Caches the found libclang path to a file."""
+    with open(CACHE_FILE, 'w') as f:
+        f.write(path)
+    logger.info(f"Cached libclang path: {path}")
+
+
+def load_cached_libclang_path() -> str | None:
+    """Loads the cached libclang path from a file."""
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, 'r') as f:
+            path = f.read().strip()
+        if os.path.isfile(path):
+            logger.info(f"Loaded cached libclang path: {path}")
+            return path
+    return None
+
 
 def find_libclang_linux():
-    """
-    Searches for the libclang library on Linux systems.
-
-    This function looks through several common installation paths for libclang on Linux.
-    If the library is not found in the predefined paths, a RuntimeError is raised.
-
-    Returns:
-        str: The path to the libclang library.
-
-    Raises:
-        RuntimeError: If the libclang library is not found.
-    """
+    """Searches for the libclang library on Linux systems."""
     possible_paths = [
         '/usr/lib/llvm-*/*/lib/libclang.so',
         '/usr/local/lib/llvm-*/*/lib/libclang.so',
         '/usr/lib/x86_64-linux-gnu/libclang.so',
-        '/usr/local/lib/x86_64-linux-gnu/libclang.so'
+        '/usr/local/lib/x86_64-linux-gnu/libclang.so',
+        '/usr/lib/llvm-*/lib/libclang.so',
+        '/usr/local/lib/llvm-*/lib/libclang.so'
     ]
     logger.info("Searching for libclang on Linux...")
     for pattern in possible_paths:
@@ -54,22 +63,12 @@ def find_libclang_linux():
 
 
 def find_libclang_macos():
-    """
-    Searches for the libclang library on macOS systems.
-
-    This function checks common installation paths for libclang on macOS. If the library is not
-    found in the predefined paths, it attempts to locate it using the `find` command. A RuntimeError
-    is raised if the library cannot be found.
-
-    Returns:
-        str: The path to the libclang library.
-
-    Raises:
-        RuntimeError: If the libclang library is not found.
-    """
+    """Searches for the libclang library on macOS systems."""
     possible_paths = [
         '/usr/local/opt/llvm/lib/libclang.dylib',
-        '/usr/local/lib/libclang.dylib'
+        '/usr/local/lib/libclang.dylib',
+        '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib',
+        '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib'
     ]
     logger.info("Searching for libclang on macOS...")
     for path in possible_paths:
@@ -91,22 +90,11 @@ def find_libclang_macos():
 
 
 def find_libclang_windows():
-    """
-    Searches for the libclang library on Windows systems.
-
-    This function checks common installation paths for libclang on Windows. If the library is not found
-    in the predefined paths, it attempts to locate it using the `where` command. A RuntimeError is raised
-    if the library cannot be found.
-
-    Returns:
-        str: The path to the libclang library.
-
-    Raises:
-        RuntimeError: If the libclang library is not found.
-    """
+    """Searches for the libclang library on Windows systems."""
     possible_paths = [
         'C:\\Program Files\\LLVM\\bin\\libclang.dll',
-        'C:\\Program Files (x86)\\LLVM\\bin\\libclang.dll'
+        'C:\\Program Files (x86)\\LLVM\\bin\\libclang.dll',
+        'C:\\LLVM\\bin\\libclang.dll'
     ]
     logger.info("Searching for libclang on Windows...")
     for path in possible_paths:
@@ -127,44 +115,45 @@ def find_libclang_windows():
     raise RuntimeError("libclang not found on Windows")
 
 
-def get_libclang_path():
-    """
-    Determines the appropriate libclang library path based on the operating system.
+def get_libclang_path(custom_path: str | None = None):
+    """Determines the appropriate libclang library path based on the operating system."""
+    if custom_path and os.path.isfile(custom_path):
+        logger.info(f"Using custom libclang path: {custom_path}")
+        return custom_path
 
-    This function detects the current operating system and calls the corresponding function
-    to find the libclang library path. If the operating system is not supported, a RuntimeError
-    is raised.
+    cached_path = load_cached_libclang_path()
+    if cached_path:
+        return cached_path
 
-    Returns:
-        str: The path to the libclang library.
-
-    Raises:
-        RuntimeError: If the operating system is unsupported.
-    """
     system = platform.system()
     logger.info(f"Detected operating system: {system}")
     if system == 'Linux':
-        return find_libclang_linux()
+        path = find_libclang_linux()
     elif system == 'Darwin':  # macOS
-        return find_libclang_macos()
+        path = find_libclang_macos()
     elif system == 'Windows':
-        return find_libclang_windows()
+        path = find_libclang_windows()
     else:
         logger.error("Unsupported operating system")
         raise RuntimeError("Unsupported operating system")
 
+    cache_libclang_path(path)
+    return path
 
-# Main Execution Block
-if __name__ == "__main__":
-    """
-    Main execution block for setting up libclang path and configuring clang.cindex.
 
-    This block attempts to determine the path to the libclang library using `get_libclang_path()`
-    and sets it using `clang.cindex.Config.set_library_file()`. If any errors occur, they are logged.
-    """
+def main():
+    """Main execution block for setting up libclang path and configuring clang.cindex."""
+    parser = argparse.ArgumentParser(description="libclang Path Finder")
+    parser.add_argument('--path', type=str, help="Custom path to libclang")
+    args = parser.parse_args()
+
     try:
-        libclang_path = get_libclang_path()
+        libclang_path = get_libclang_path(args.path)
         Config.set_library_file(libclang_path)
         logger.info(f"Successfully set libclang path to: {libclang_path}")
     except Exception as e:
         logger.exception("Failed to set libclang path")
+
+
+if __name__ == "__main__":
+    main()

@@ -34,15 +34,15 @@ ExposureSequence::~ExposureSequence() { stop(); }
 
 void ExposureSequence::addTarget(std::unique_ptr<Target> target) {
     if (!target) {
-        throw std::invalid_argument("Cannot add a null target");
+        THROW_INVALID_ARGUMENT("Cannot add a null target");
     }
     std::unique_lock lock(mutex_);
     auto it = std::find_if(targets_.begin(), targets_.end(),
                            [&](const std::unique_ptr<Target>& t) {
-                               return t->getName() == target->getName();
+                               return t->getUUID() == target->getUUID();
                            });
     if (it != targets_.end()) {
-        THROW_RUNTIME_ERROR("Target with name '" + target->getName() +
+        THROW_RUNTIME_ERROR("Target with name '" + target->getUUID() +
                             "' already exists");
     }
     targets_.push_back(std::move(target));
@@ -128,10 +128,17 @@ void ExposureSequence::saveSequence(const std::string& filename) const {
     json j;
     std::shared_lock lock(mutex_);
     for (const auto& target : targets_) {
-        json targetJson = {
-            {"name", target->getName()}, {"enabled", target->isEnabled()}
-            // 根据需要添加更多目标属性
-        };
+        json targetJson = {{"name", target->getName()},
+                           {"enabled", target->isEnabled()},
+                           {"tasks", json::array()}};
+        /*
+        for (const auto& task : target->getTasks()) {
+            targetJson["tasks"].push_back({
+                {"name", task->getName()},
+                // Add more task properties as needed
+            });
+        }
+        */
         j["targets"].push_back(targetJson);
     }
     std::ofstream file(filename);
@@ -167,7 +174,9 @@ void ExposureSequence::loadSequence(const std::string& filename) {
         bool enabled = targetJson["enabled"].get<bool>();
         auto target = std::make_unique<Target>(name);
         target->setEnabled(enabled);
-        // 根据需要加载更多目标属性
+        if (targetJson.contains("tasks") && targetJson["tasks"].is_array()) {
+            target->loadTasksFromJson(targetJson["tasks"]);
+        }
         targets_.push_back(std::move(target));
     }
     totalTargets_ = targets_.size();
@@ -355,7 +364,7 @@ void ExposureSequence::executeSequence() {
         }
     } catch (const std::exception& e) {
         // 记录未捕获的异常，防止线程崩溃
-        LOG_F(ERROR, "Unhandled exception in executeSequence: %s", e.what());
+        LOG_F(ERROR, "Unhandled exception in executeSequence: {}", e.what());
         // 可选：通过通用错误回调通知
     }
 

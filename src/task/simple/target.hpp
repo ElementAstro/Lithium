@@ -10,75 +10,183 @@
 #include <string>
 #include <vector>
 
+#include "atom/async/safetype.hpp"
 #include "task.hpp"
 
 namespace lithium::sequencer {
-// 目标状态枚举
-enum class TargetStatus { Pending, InProgress, Completed, Failed, Skipped };
 
-// 回调函数类型定义
+/**
+ * @enum TargetStatus
+ * @brief Represents the status of a target.
+ */
+enum class TargetStatus {
+    Pending,     ///< Target is pending and has not started yet.
+    InProgress,  ///< Target is currently in progress.
+    Completed,   ///< Target has completed successfully.
+    Failed,      ///< Target has failed.
+    Skipped      ///< Target has been skipped.
+};
+
+/**
+ * @brief Callback function type definitions.
+ */
 using TargetStartCallback = std::function<void(const std::string&)>;
 using TargetEndCallback = std::function<void(const std::string&, TargetStatus)>;
 using TargetErrorCallback =
     std::function<void(const std::string&, const std::exception&)>;
 
 class Target;
-// 目标修改器类型定义
+
+/**
+ * @brief Target modifier type definition.
+ */
 using TargetModifier = std::function<void(Target&)>;
 
+/**
+ * @class Target
+ * @brief Represents a target that can execute a series of tasks with optional
+ * retries and cooldown periods.
+ */
 class Target {
 public:
+    /**
+     * @brief Constructs a Target with a given name, cooldown period, and
+     * maximum retries.
+     * @param name The name of the target.
+     * @param cooldown The cooldown period between task executions.
+     * @param maxRetries The maximum number of retries for each task.
+     */
     Target(std::string name,
            std::chrono::seconds cooldown = std::chrono::seconds{0},
            int maxRetries = 0);
 
-    // 禁止拷贝
+    // Disable copy constructor and assignment operator
     Target(const Target&) = delete;
     Target& operator=(const Target&) = delete;
 
-    // 目标管理
+    /**
+     * @brief Adds a task to the target.
+     * @param task The task to be added.
+     */
     void addTask(std::unique_ptr<Task> task);
+
+    /**
+     * @brief Sets the cooldown period for the target.
+     * @param cooldown The cooldown period in seconds.
+     */
     void setCooldown(std::chrono::seconds cooldown);
+
+    /**
+     * @brief Enables or disables the target.
+     * @param enabled True to enable, false to disable.
+     */
     void setEnabled(bool enabled);
+
+    /**
+     * @brief Sets the maximum number of retries for each task.
+     * @param retries The maximum number of retries.
+     */
     void setMaxRetries(int retries);
+
+    /**
+     * @brief Sets the status of the target.
+     * @param status The status to be set.
+     */
     void setStatus(TargetStatus status);
 
-    // 回调设置
+    /**
+     * @brief Sets the callback function to be called when the target starts.
+     * @param callback The callback function.
+     */
     void setOnStart(TargetStartCallback callback);
+
+    /**
+     * @brief Sets the callback function to be called when the target ends.
+     * @param callback The callback function.
+     */
     void setOnEnd(TargetEndCallback callback);
+
+    /**
+     * @brief Sets the callback function to be called when an error occurs.
+     * @param callback The callback function.
+     */
     void setOnError(TargetErrorCallback callback);
 
-    // 查询函数
+    /**
+     * @brief Gets the name of the target.
+     * @return The name of the target.
+     */
     [[nodiscard]] const std::string& getName() const;
-    [[nodiscard]] TargetStatus getStatus() const;
-    [[nodiscard]] bool isEnabled() const;
-    [[nodiscard]] double getProgress() const;  // 返回进度百分比
 
-    // 执行函数
+    /**
+     * @brief Gets the UUID of the target.
+     * @return The UUID of the target.
+     */
+    [[nodiscard]] const std::string& getUUID() const;
+
+    /**
+     * @brief Gets the current status of the target.
+     * @return The current status of the target.
+     */
+    [[nodiscard]] TargetStatus getStatus() const;
+
+    /**
+     * @brief Checks if the target is enabled.
+     * @return True if the target is enabled, false otherwise.
+     */
+    [[nodiscard]] bool isEnabled() const;
+
+    /**
+     * @brief Gets the progress of the target as a percentage.
+     * @return The progress percentage.
+     */
+    [[nodiscard]] double getProgress() const;
+
+    /**
+     * @brief Executes the target.
+     */
     void execute();
 
+     /**
+     * @brief Loads tasks from a JSON array.
+     * @param tasksJson The JSON array containing task definitions.
+     */
+    void loadTasksFromJson(const json& tasksJson);
+
 private:
-    std::string name_;
-    std::vector<std::unique_ptr<Task>> tasks_;
-    std::chrono::seconds cooldown_;
-    bool enabled_{true};
-    std::atomic<TargetStatus> status_{TargetStatus::Pending};
-    std::shared_mutex mutex_;
+    std::string name_;  ///< The name of the target.
+    std::string uuid_;  ///< The unique identifier of the target.
+    std::vector<std::unique_ptr<Task>>
+        tasks_;  ///< The list of tasks to be executed by the target.
+    std::chrono::seconds
+        cooldown_;        ///< The cooldown period between task executions.
+    bool enabled_{true};  ///< Indicates whether the target is enabled.
+    std::atomic<TargetStatus> status_{
+        TargetStatus::Pending};  ///< The current status of the target.
+    std::shared_mutex
+        mutex_;  ///< Mutex for thread-safe access to target properties.
 
-    // 进度跟踪
-    std::atomic<size_t> completedTasks_{0};
-    size_t totalTasks_ = 0;
+    // Progress tracking
+    std::atomic<size_t> completedTasks_{0};  ///< The number of completed tasks.
+    size_t totalTasks_ = 0;                  ///< The total number of tasks.
 
-    // 回调函数
-    TargetStartCallback onStart_;
-    TargetEndCallback onEnd_;
-    TargetErrorCallback onError_;
+    // Callback functions
+    TargetStartCallback
+        onStart_;  ///< Callback function to be called when the target starts.
+    TargetEndCallback
+        onEnd_;  ///< Callback function to be called when the target ends.
+    TargetErrorCallback
+        onError_;  ///< Callback function to be called when an error occurs.
 
-    // 重试机制
-    int maxRetries_;
-    mutable std::shared_mutex callbackMutex_;
+    // Retry mechanism
+    int maxRetries_;  ///< The maximum number of retries for each task.
+    mutable std::shared_mutex callbackMutex_;  ///< Mutex for thread-safe access
+                                               ///< to callback functions.
 
-    // 辅助方法
+    std::shared_ptr<atom::async::LockFreeHashTable<std::string, json>>
+        queue_;  ///< The task queue.
+
+    // Helper methods
     void notifyStart();
     void notifyEnd(TargetStatus status);
     void notifyError(const std::exception& e);

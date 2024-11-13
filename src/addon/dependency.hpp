@@ -1,8 +1,10 @@
+// DEPENDENCY.hpp
 #ifndef LITHIUM_ADDON_DEPENDENCY_HPP
 #define LITHIUM_ADDON_DEPENDENCY_HPP
 
 #include <functional>
 #include <optional>
+#include <shared_mutex>
 #include <stack>
 #include <string>
 #include <unordered_map>
@@ -32,6 +34,7 @@ public:
      * @brief Adds a node to the dependency graph.
      *
      * @param node The name of the node to be added.
+     * @param version The version of the node.
      */
     void addNode(const Node& node, const Version& version);
 
@@ -42,6 +45,7 @@ public:
      *
      * @param from The node that has a dependency.
      * @param to The node that is being depended upon.
+     * @param requiredVersion The required version of the dependent node.
      */
     void addDependency(const Node& from, const Node& to,
                        const Version& requiredVersion);
@@ -126,10 +130,18 @@ public:
     auto resolveDependencies(const std::vector<Node>& directories)
         -> std::vector<Node>;
 
+    /**
+     * @brief Resolves system dependencies for a given list of directories.
+     *
+     * @param directories A vector containing the paths of directories to
+     * resolve.
+     * @return A map containing system dependency names and their versions.
+     */
     auto resolveSystemDependencies(const std::vector<Node>& directories)
         -> std::unordered_map<std::string, Version>;
 
 private:
+    mutable std::shared_mutex mutex_;
     std::unordered_map<Node, std::unordered_set<Node>>
         adjList_;  ///< Adjacency list representation of the graph.
     std::unordered_map<Node, std::unordered_set<Node>>
@@ -158,6 +170,18 @@ private:
 
     static auto parsePackageYaml(const std::string& path)
         -> std::pair<std::string, std::unordered_map<std::string, Version>>;
+
+    /**
+     * @brief Validates the version compatibility between dependent and
+     * dependency.
+     *
+     * @param from The dependent node.
+     * @param to The dependency node.
+     * @param requiredVersion The required version of the dependency.
+     */
+    void validateVersion(const Node& from, const Node& to,
+                         const Version& requiredVersion) const;
 };
 }  // namespace lithium
+
 #endif  // LITHIUM_ADDON_DEPENDENCY_HPP

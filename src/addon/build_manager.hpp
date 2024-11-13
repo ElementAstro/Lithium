@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -14,55 +15,57 @@ namespace lithium {
 
 /**
  * @class Project
- * @brief 表示一个项目，包含源代码目录、构建目录和构建系统类型。
+ * @brief Represents a project with source directory, build directory, and build
+ * system type.
  */
 class Project {
 public:
     /**
      * @enum BuildSystemType
-     * @brief 表示构建系统的类型。
+     * @brief Represents the type of build system.
      */
     enum class BuildSystemType {
-        CMake,  /**< CMake 构建系统。 */
-        Meson,  /**< Meson 构建系统。 */
-        XMake,  /**< XMake 构建系统。 */
-        Unknown /**< 未知的构建系统。 */
+        CMake,  /**< CMake build system. */
+        Meson,  /**< Meson build system. */
+        XMake,  /**< XMake build system. */
+        Unknown /**< Unknown build system. */
     };
 
     /**
-     * @brief 构造函数，创建一个项目对象。
+     * @brief Constructor to create a Project object.
      *
-     * @param sourceDir 项目的源代码目录。
-     * @param buildDir 项目的构建目录。
-     * @param type 构建系统类型，可选，默认为 Unknown，将自动检测。
+     * @param sourceDir Path to the project's source directory.
+     * @param buildDir Path to the project's build directory.
+     * @param type Build system type, optional. Defaults to Unknown and
+     * auto-detects.
      */
     Project(std::filesystem::path sourceDir,
             std::filesystem::path buildDirectory,
             BuildSystemType type = BuildSystemType::Unknown);
 
     /**
-     * @brief 自动检测构建系统类型。
+     * @brief Automatically detects the build system type.
      */
     void detectBuildSystem();
 
     /**
-     * @brief 获取源代码目录。
+     * @brief Gets the source directory.
      *
-     * @return 源代码目录的路径。
+     * @return Path to the source directory.
      */
     const std::filesystem::path& getSourceDir() const;
 
     /**
-     * @brief 获取构建目录。
+     * @brief Gets the build directory.
      *
-     * @return 构建目录的路径。
+     * @return Path to the build directory.
      */
     const std::filesystem::path& getBuildDir() const;
 
     /**
-     * @brief 获取构建系统类型。
+     * @brief Gets the build system type.
      *
-     * @return 构建系统类型。
+     * @return Build system type.
      */
     BuildSystemType getBuildSystemType() const;
 
@@ -74,45 +77,47 @@ private:
 
 /**
  * @class BuildManager
- * @brief 管理多个项目的构建过程，支持各种构建系统。
+ * @brief Manages the build processes of multiple projects, supporting various
+ * build systems.
  */
 class BuildManager {
 public:
     /**
      * @typedef BuildTask
-     * @brief 定义了一个构建任务类型，使用 std::function。
+     * @brief Defines a build task type using std::function.
      *
-     * 每个构建任务是返回 BuildResult 的可调用对象。
+     * Each build task is a callable object that returns a BuildResult.
      */
     using BuildTask = std::function<BuildResult()>;
 
     /**
-     * @brief 构造函数，创建一个 BuildManager 对象。
+     * @brief Constructor to create a BuildManager object.
      */
     BuildManager();
 
     /**
-     * @brief 扫描指定目录，自动检测并管理项目。
+     * @brief Scans the specified directory to automatically detect and manage
+     * projects.
      *
-     * @param rootDir 要扫描的根目录。
+     * @param rootDir Root directory to scan.
      */
     void scanForProjects(const std::filesystem::path& rootDir);
 
     /**
-     * @brief 添加一个项目到管理器。
+     * @brief Adds a project to the manager.
      *
-     * @param project 要添加的项目。
+     * @param project The project to add.
      */
     void addProject(const Project& project);
 
     /**
-     * @brief 获取所有管理的项目。
+     * @brief Retrieves all managed projects.
      *
-     * @return 项目列表。
+     * @return List of projects.
      */
     const std::vector<Project>& getProjects() const;
 
-    // 针对单个项目的构建操作
+    // Build operations for individual projects
     BuildResult configureProject(
         const Project& project, BuildType buildType,
         const std::vector<std::string>& options = {},
@@ -132,10 +137,10 @@ public:
     BuildResult generateDocs(const Project& project,
                              const std::filesystem::path& outputDir);
 
-    // 异常处理和性能优化已在实现中考虑
-
 private:
-    std::vector<Project> projects_; /**< 管理的项目列表。 */
+    std::vector<Project> projects_; /**< List of managed projects. */
+    mutable std::mutex
+        projectsMutex_; /**< Mutex for thread-safe access to projects. */
 };
 
 }  // namespace lithium

@@ -20,6 +20,7 @@ Description: IO
 #include <functional>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "atom/macro.hpp"
@@ -579,6 +580,9 @@ auto countLinesInFile(const std::string &filePath) -> std::optional<int>;
 
 auto searchExecutableFiles(const fs::path &dir, const std::string &searchStr)
     -> std::vector<fs::path>;
+
+auto classifyFiles(const fs::path &directory)
+    -> std::unordered_map<std::string, std::vector<std::string>>;
 }  // namespace atom::io
 
 #endif

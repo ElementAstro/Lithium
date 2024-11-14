@@ -1,96 +1,184 @@
-#ifndef ATOM_META_TEST_TYPE_CASTER_HPP
-#define ATOM_META_TEST_TYPE_CASTER_HPP
-
+// test_type_caster.hpp
 #include "atom/function/type_caster.hpp"
 #include <gtest/gtest.h>
+#include <thread>
 
-using namespace atom::meta;
+namespace atom::meta::test {
+
+// Test helper types
+struct TestStruct {
+    int value;
+    explicit TestStruct(int v = 0) : value(v) {}
+};
+
+enum class TestEnum { Value1, Value2, Value3 };
 
 class TypeCasterTest : public ::testing::Test {
 protected:
-    TypeCaster typeCaster;
+    std::shared_ptr<TypeCaster> caster;
 
-    void SetUp() override {
-        // Register some custom types and conversions for testing
-        typeCaster.registerType<int>("int");
-        typeCaster.registerType<double>("double");
-        typeCaster.registerConversion<int, double>([](const std::any& input) {
-            return std::any_cast<int>(input) * 1.0;
-        });
-        typeCaster.registerConversion<double, int>([](const std::any& input) {
-            return static_cast<int>(std::any_cast<double>(input));
-        });
+    void SetUp() override { caster = TypeCaster::createShared(); }
+
+    // Helper to create simple conversion functions
+    template <typename From, typename To>
+    static auto makeConvertFunc() -> TypeCaster::ConvertFunc {
+        return [](const std::any& value) -> std::any {
+            return std::any(static_cast<To>(std::any_cast<From>(value)));
+        };
     }
 };
 
-TEST_F(TypeCasterTest, ConvertIntToDouble) {
+// Constructor Tests
+TEST_F(TypeCasterTest, CreateInstance) {
+    EXPECT_NE(caster, nullptr);
+    auto types = caster->getRegisteredTypes();
+    EXPECT_FALSE(types.empty());
+}
+
+// Basic Type Registration Tests
+TEST_F(TypeCasterTest, RegisterBasicType) {
+    caster->registerType<TestStruct>("TestStruct");
+    auto types = caster->getRegisteredTypes();
+    EXPECT_TRUE(std::find(types.begin(), types.end(), "TestStruct") !=
+                types.end());
+}
+
+// Type Conversion Tests
+TEST_F(TypeCasterTest, BasicConversion) {
+    caster->registerType<int>("int");
+    caster->registerType<double>("double");
+    caster->registerConversion<int, double>(makeConvertFunc<int, double>());
+
     std::any input = 42;
-    std::any result = typeCaster.convert<double>(input);
+    auto result = caster->convert<double>(input);
     EXPECT_EQ(std::any_cast<double>(result), 42.0);
 }
 
-TEST_F(TypeCasterTest, ConvertDoubleToInt) {
-    std::any input = 42.0;
-    std::any result = typeCaster.convert<int>(input);
-    EXPECT_EQ(std::any_cast<int>(result), 42);
-}
+// Multi-stage Conversion Tests
+TEST_F(TypeCasterTest, MultiStageConversion) {
+    caster->registerType<int>("int");
+    caster->registerType<double>("double");
+    caster->registerType<std::string>("string");
 
-TEST_F(TypeCasterTest, RegisterAndConvertCustomType) {
-    struct CustomType {
-        int value;
-    };
-
-    typeCaster.registerType<CustomType>("CustomType");
-    typeCaster.registerConversion<CustomType, int>([](const std::any& input) {
-        return std::any_cast<CustomType>(input).value;
-    });
-
-    CustomType customValue{123};
-    std::any input = customValue;
-    std::any result = typeCaster.convert<int>(input);
-    EXPECT_EQ(std::any_cast<int>(result), 123);
-}
-
-TEST_F(TypeCasterTest, RegisterMultiStageConversion) {
-    typeCaster.registerMultiStageConversion<int, double, std::string>(
-        [](const std::any& input) { return std::any_cast<int>(input) * 1.0; },
-        [](const std::any& input) {
-            return std::to_string(std::any_cast<double>(input));
+    caster->registerMultiStageConversion<double, int, std::string>(
+        makeConvertFunc<int, double>(), [](const std::any& value) -> std::any {
+            return std::to_string(std::any_cast<double>(value));
         });
 
     std::any input = 42;
-    std::any result = typeCaster.convert<std::string>(input);
-    EXPECT_EQ(std::any_cast<std::string>(result), "42.000000");
+    auto result = caster->convert<std::string>(input);
+    EXPECT_EQ(std::any_cast<std::string>(result), "42");
 }
 
-TEST_F(TypeCasterTest, GetRegisteredTypes) {
-    auto types = typeCaster.getRegisteredTypes();
-    EXPECT_NE(std::find(types.begin(), types.end(), "int"), types.end());
-    EXPECT_NE(std::find(types.begin(), types.end(), "double"), types.end());
+// Type Alias Tests
+TEST_F(TypeCasterTest, TypeAlias) {
+    caster->registerType<int>("int");
+    caster->registerAlias<int>("Integer");
+    auto types = caster->getRegisteredTypes();
+    EXPECT_TRUE(std::find(types.begin(), types.end(), "Integer") !=
+                types.end());
 }
 
-TEST_F(TypeCasterTest, EnumToString) {
-    enum class TestEnum { VALUE1, VALUE2 };
-    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE1",
-                                           TestEnum::VALUE1);
-    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE2",
-                                           TestEnum::VALUE2);
-
-    EXPECT_EQ(typeCaster.enumToString(TestEnum::VALUE1, "TestEnum"), "VALUE1");
-    EXPECT_EQ(typeCaster.enumToString(TestEnum::VALUE2, "TestEnum"), "VALUE2");
+// Type Group Tests
+TEST_F(TypeCasterTest, TypeGroup) {
+    std::vector<std::string> numericTypes = {"int", "double", "float"};
+    caster->registerTypeGroup("numeric", numericTypes);
+    // Verify group registration (implementation specific)
 }
 
-TEST_F(TypeCasterTest, StringToEnum) {
-    enum class TestEnum { VALUE1, VALUE2 };
-    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE1",
-                                           TestEnum::VALUE1);
-    typeCaster.registerEnumValue<TestEnum>("TestEnum", "VALUE2",
-                                           TestEnum::VALUE2);
+// Enum Tests
+TEST_F(TypeCasterTest, EnumRegistration) {
+    caster->registerEnumValue<TestEnum>("TestEnum", "Value1", TestEnum::Value1);
+    caster->registerEnumValue<TestEnum>("TestEnum", "Value2", TestEnum::Value2);
 
-    EXPECT_EQ(typeCaster.stringToEnum<TestEnum>("VALUE1", "TestEnum"),
-              TestEnum::VALUE1);
-    EXPECT_EQ(typeCaster.stringToEnum<TestEnum>("VALUE2", "TestEnum"),
-              TestEnum::VALUE2);
+    auto enumStr = caster->enumToString(TestEnum::Value1, "TestEnum");
+    EXPECT_EQ(enumStr, "Value1");
+
+    auto enumVal = caster->stringToEnum<TestEnum>("Value2", "TestEnum");
+    EXPECT_EQ(enumVal, TestEnum::Value2);
 }
 
-#endif  // ATOM_META_TEST_TYPE_CASTER_HPP
+// Error Handling Tests
+TEST_F(TypeCasterTest, ConversionNotFound) {
+    caster->registerType<int>("int");
+    caster->registerType<std::string>("string");
+
+    std::any input = 42;
+    EXPECT_THROW(caster->convert<std::string>(input), std::runtime_error);
+}
+
+TEST_F(TypeCasterTest, InvalidEnumValue) {
+    caster->registerEnumValue<TestEnum>("TestEnum", "Value1", TestEnum::Value1);
+    EXPECT_THROW(caster->enumToString(TestEnum::Value2, "TestEnum"),
+                 std::invalid_argument);
+    EXPECT_THROW(caster->stringToEnum<TestEnum>("InvalidValue", "TestEnum"),
+                 std::invalid_argument);
+}
+
+// Thread Safety Tests
+TEST_F(TypeCasterTest, ConcurrentTypeRegistration) {
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 10; i++) {
+        threads.emplace_back([this, i]() {
+            std::string typeName = "Type" + std::to_string(i);
+            caster->registerType<int>(typeName);
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    auto types = caster->getRegisteredTypes();
+    EXPECT_EQ(std::count_if(types.begin(), types.end(),
+                            [](const std::string& name) {
+                                return name.find("Type") != std::string::npos;
+                            }),
+              10);
+}
+
+// Cache Tests
+TEST_F(TypeCasterTest, ConversionPathCache) {
+    caster->registerType<int>("int");
+    caster->registerType<double>("double");
+    caster->registerType<std::string>("string");
+
+    caster->registerConversion<int, double>(makeConvertFunc<int, double>());
+    caster->registerConversion<double, std::string>(
+        [](const std::any& value) -> std::any {
+            return std::to_string(std::any_cast<double>(value));
+        });
+
+    // First conversion should build the path
+    std::any input = 42;
+    auto result1 = caster->convert<std::string>(input);
+
+    // Second conversion should use cached path
+    auto result2 = caster->convert<std::string>(input);
+
+    EXPECT_EQ(std::any_cast<std::string>(result1),
+              std::any_cast<std::string>(result2));
+}
+
+// Complex Conversion Path Tests
+TEST_F(TypeCasterTest, ComplexConversionPath) {
+    // Register types
+    caster->registerType<int>("int");
+    caster->registerType<float>("float");
+    caster->registerType<double>("double");
+    caster->registerType<std::string>("string");
+
+    // Register conversions
+    caster->registerConversion<int, float>(makeConvertFunc<int, float>());
+    caster->registerConversion<float, double>(makeConvertFunc<float, double>());
+    caster->registerConversion<double, std::string>(
+        [](const std::any& value) -> std::any {
+            return std::to_string(std::any_cast<double>(value));
+        });
+
+    std::any input = 42;
+    auto result = caster->convert<std::string>(input);
+    EXPECT_EQ(std::any_cast<std::string>(result), "42");
+}
+
+}  // namespace atom::meta::test

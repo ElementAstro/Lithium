@@ -10,12 +10,13 @@
 #ifndef ATOM_META_TYPE_CASTER_HPP
 #define ATOM_META_TYPE_CASTER_HPP
 
-#include <any>            // Includes for std::any
-#include <cstddef>        // Includes for std::size_t
-#include <functional>     // Includes for std::function
-#include <memory>         // Includes for std::shared_ptr
-#include <mutex>          // Includes for std::mutex
-#include <queue>          // Includes for std::queue
+#include <any>         // Includes for std::any
+#include <cstddef>     // Includes for std::size_t
+#include <functional>  // Includes for std::function
+#include <memory>      // Includes for std::shared_ptr
+#include <mutex>       // Includes for std::mutex
+#include <queue>       // Includes for std::queue
+#include <shared_mutex>
 #include <string>         // Includes for std::string
 #include <typeinfo>       // Includes for std::type_info
 #include <unordered_map>  // Includes for std::unordered_map
@@ -59,8 +60,14 @@ public:
      */
     template <typename DestinationType>
     auto convert(const std::any& input) const -> std::any {
-        auto srcInfo = getTypeInfo(input.type().name());
-        auto destInfo = userType<DestinationType>();
+        // 分段加锁,避免死锁
+        TypeInfo destInfo;
+        std::optional<TypeInfo> srcInfo;
+        {
+            std::shared_lock type_lock(type_mutex_);
+            srcInfo = getTypeInfo(input.type().name());
+            destInfo = userType<DestinationType>();
+        }
 
         if (!srcInfo.has_value()) {
             THROW_INVALID_ARGUMENT("Source type not found.");
@@ -70,10 +77,19 @@ public:
             return input;
         }
 
-        auto path = findShortestConversionPath(srcInfo.value(), destInfo);
+        std::vector<ConvertFunc> conversions;
+        {
+            std::shared_lock conv_lock(conversion_mutex_);
+            auto path = findShortestConversionPath(srcInfo.value(), destInfo);
+            conversions.reserve(path.size() - 1);
+            for (size_t i = 0; i < path.size() - 1; ++i) {
+                conversions.push_back(conversions_.at(path[i]).at(path[i + 1]));
+            }
+        }
+
         std::any result = input;
-        for (size_t j = 0; j < path.size() - 1; ++j) {
-            result = conversions_.at(path[j]).at(path[j + 1])(result);
+        for (const auto& converter : conversions) {
+            result = converter(result);
         }
         return result;
     }
@@ -88,16 +104,19 @@ public:
      */
     template <typename SourceType, typename DestinationType>
     void registerConversion(ConvertFunc func) {
-        std::lock_guard lock(mutex_);  // Ensure thread safety
+        std::unique_lock type_lock(type_mutex_);
+        std::unique_lock conv_lock(conversion_mutex_);
+
         auto srcInfo = userType<SourceType>();
         auto destInfo = userType<DestinationType>();
-        registerType<SourceType>(srcInfo.bareName());
-        registerType<DestinationType>(destInfo.bareName());
 
         if (srcInfo == destInfo) {
             THROW_INVALID_ARGUMENT(
                 "Source and destination types must be different.");
         }
+
+        registerType<SourceType>(srcInfo.bareName());
+        registerType<DestinationType>(destInfo.bareName());
 
         conversions_[srcInfo][destInfo] = std::move(func);
         clearCache();
@@ -110,8 +129,10 @@ public:
      */
     template <typename T>
     void registerAlias(const std::string& alias) {
-        std::lock_guard lock(mutex_);
-        type_alias_map_[alias] = userType<T>();
+        std::unique_lock type_lock(type_mutex_);
+        auto type_info = userType<T>();
+        type_alias_map_[alias] = type_info;
+        type_name_map_[alias] = type_info;
     }
 
     /*!
@@ -121,7 +142,7 @@ public:
      */
     void registerTypeGroup(const std::string& groupName,
                            const std::vector<std::string>& types) {
-        std::lock_guard lock(mutex_);
+        std::unique_lock type_lock(type_mutex_);
         for (const auto& typeName : types) {
             type_group_map_[typeName] = groupName;
         }
@@ -149,7 +170,7 @@ public:
      * \return True if a conversion exists, false otherwise.
      */
     auto hasConversion(TypeInfo src, TypeInfo dst) const -> bool {
-        std::lock_guard lock(mutex_);
+        std::shared_lock conv_lock(conversion_mutex_);
         return conversions_.find(src) != conversions_.end() &&
                conversions_.at(src).find(dst) != conversions_.at(src).end();
     }
@@ -159,7 +180,7 @@ public:
      * \return A vector of registered type names.
      */
     auto getRegisteredTypes() const -> std::vector<std::string> {
-        std::lock_guard lock(mutex_);
+        std::shared_lock type_lock(type_mutex_);
         std::vector<std::string> typeNames;
         typeNames.reserve(type_name_map_.size());
         for (const auto& [name, info] : type_name_map_) {
@@ -175,10 +196,11 @@ public:
      */
     template <typename T>
     void registerType(const std::string& name) {
-        std::lock_guard lock(mutex_);
-        type_name_map_[name] = userType<T>();
-        type_name_map_[typeid(T).name()] = userType<T>();
-        detail::getTypeRegistry()[typeid(T).name()] = userType<T>();
+        std::unique_lock type_lock(type_mutex_);
+        auto type_info = userType<T>();
+        type_name_map_[name] = type_info;
+        type_name_map_[typeid(T).name()] = type_info;
+        detail::getTypeRegistry()[typeid(T).name()] = type_info;
     }
 
     /*!
@@ -192,6 +214,7 @@ public:
     void registerEnumValue(const std::string& enum_name,
                            const std::string& string_value,
                            EnumType enum_value) {
+        std::unique_lock enum_lock(enum_mutex_);
         if (!m_enumMaps_.contains(enum_name)) {
             m_enumMaps_[enum_name] =
                 std::unordered_map<std::string, EnumType>();
@@ -200,7 +223,6 @@ public:
         auto& enumMap =
             std::any_cast<std::unordered_map<std::string, EnumType>&>(
                 m_enumMaps_[enum_name]);
-
         enumMap[string_value] = enum_value;
     }
 
@@ -215,6 +237,7 @@ public:
     template <typename EnumType>
     auto enumToString(EnumType value,
                       const std::string& enum_name) -> std::string {
+        std::shared_lock enum_lock(enum_mutex_);
         const auto& enumMap = getEnumMap<EnumType>(enum_name);
         for (const auto& [key, enumValue] : enumMap) {
             if (enumValue == value) {
@@ -235,6 +258,7 @@ public:
     template <typename EnumType>
     auto stringToEnum(const std::string& string_value,
                       const std::string& enum_name) -> EnumType {
+        std::shared_lock enum_lock(enum_mutex_);
         const auto& enumMap = getEnumMap<EnumType>(enum_name);
         auto iterator = enumMap.find(string_value);
         if (iterator != enumMap.end()) {
@@ -252,7 +276,10 @@ private:
     std::unordered_map<std::string, std::string> type_group_map_;
     std::unordered_map<std::string, std::any> m_enumMaps_;
 
-    mutable std::mutex mutex_;  // Ensure thread safety
+    mutable std::shared_mutex type_mutex_;
+    mutable std::shared_mutex conversion_mutex_;
+    mutable std::shared_mutex enum_mutex_;
+    static inline std::shared_mutex registry_mutex_;
 
     /*!
      * \brief Registers built-in types.
@@ -267,7 +294,7 @@ private:
         registerType<char>("char");
         registerType<unsigned char>("unsigned char");
         registerType<char>("char");
-        registerType<char *>("char *");
+        registerType<char*>("char *");
         registerType<const char*>("const char*");
         registerType<std::string>("std::string");
         registerType<std::string_view>("std::string_view");
@@ -283,16 +310,26 @@ private:
      */
     auto findShortestConversionPath(TypeInfo src, TypeInfo dst) const
         -> std::vector<TypeInfo> {
+        // 已经在调用方获取了读锁,这里不需要重复加锁
         std::string cacheKey = makeCacheKey(src, dst);
-        if (conversion_paths_cache_.find(cacheKey) !=
-            conversion_paths_cache_.end()) {
-            return conversion_paths_cache_.at(cacheKey);
+
+        if (auto it = conversion_paths_cache_.find(cacheKey);
+            it != conversion_paths_cache_.end()) {
+            return it->second;
         }
 
-        std::queue<std::vector<TypeInfo>> paths;
-        paths.push({src});
+        // 查找路径的过程中使用已获取的读锁
+        auto path = findPath(src, dst);
+        conversion_paths_cache_[cacheKey] = path;
+        return path;
+    }
 
+    // 辅助方法:实际的路径查找逻辑
+    auto findPath(TypeInfo src, TypeInfo dst) const -> std::vector<TypeInfo> {
+        std::queue<std::vector<TypeInfo>> paths;
         std::unordered_set<TypeInfo> visited;
+
+        paths.push({src});
         visited.insert(src);
 
         while (!paths.empty()) {
@@ -301,13 +338,11 @@ private:
             auto last = currentPath.back();
 
             if (last == dst) {
-                conversion_paths_cache_[cacheKey] = currentPath;
                 return currentPath;
             }
 
-            auto findIt = conversions_.find(last);
-            if (findIt != conversions_.end()) {
-                for (const auto& [next_type, _] : findIt->second) {
+            if (auto it = conversions_.find(last); it != conversions_.end()) {
+                for (const auto& [next_type, _] : it->second) {
                     if (visited.insert(next_type).second) {
                         auto newPath = currentPath;
                         newPath.push_back(next_type);

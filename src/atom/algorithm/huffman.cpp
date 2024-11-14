@@ -15,6 +15,7 @@ Description: Enhanced implementation of Huffman encoding
 #include "huffman.hpp"
 #include <bitset>
 #include <functional>
+#include <iostream>
 #include <queue>
 #include <sstream>
 

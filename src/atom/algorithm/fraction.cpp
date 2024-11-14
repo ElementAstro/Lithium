@@ -14,6 +14,9 @@ Description: Implementation of Fraction class
 
 #include "fraction.hpp"
 
+#include <numeric>
+#include <sstream>
+
 namespace atom::algorithm {
 
 /* ------------------------ Private Methods ------------------------ */
@@ -37,15 +40,6 @@ void Fraction::reduce() noexcept {
     int divisor = gcd(numerator, denominator);
     numerator /= divisor;
     denominator /= divisor;
-}
-
-/* ------------------------ Constructors ------------------------ */
-
-constexpr Fraction::Fraction(int n, int d) : numerator(n), denominator(d) {
-    if (denominator == 0) {
-        throw FractionException("Denominator cannot be zero.");
-    }
-    reduce();
 }
 
 /* ------------------------ Arithmetic Operators ------------------------ */

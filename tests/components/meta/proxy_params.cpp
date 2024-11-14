@@ -47,35 +47,46 @@ TEST(FunctionParamsTest, SingleElementConstructor) {
               DEFAULT_INT_VALUE);
 }
 
+// 修改测试用例，添加类型检查和安全转换
 TEST(FunctionParamsTest, RangeConstructor) {
-    std::vector<Arg> vec = {Arg("param1", 1), Arg("param2", "test"),
-                            Arg("param3", DEFAULT_DOUBLE_VALUE)};
+    std::vector<Arg> vec = {Arg("param1", std::any(1)),
+                            Arg("param2", std::any(std::string("test"))),
+                            Arg("param3", std::any(DEFAULT_DOUBLE_VALUE))};
     FunctionParams params(vec);
 
     ASSERT_EQ(params.size(), vec.size());
-    EXPECT_EQ(params[0].getName(), "param1");
-    EXPECT_EQ(std::any_cast<int>(params[0].getDefaultValue().value()), 1);
-    EXPECT_EQ(params[1].getName(), "param2");
-    EXPECT_EQ(std::any_cast<std::string>(params[1].getDefaultValue().value()),
-              "test");
-    EXPECT_EQ(params[2].getName(), "param3");
-    EXPECT_EQ(std::any_cast<double>(params[2].getDefaultValue().value()),
-              DEFAULT_DOUBLE_VALUE);
+
+    auto param1Value = params[0].getDefaultValue();
+    ASSERT_TRUE(param1Value.has_value());
+    EXPECT_EQ(std::any_cast<int>(param1Value.value()), 1);
+
+    auto param2Value = params[1].getDefaultValue();
+    ASSERT_TRUE(param2Value.has_value());
+    EXPECT_EQ(std::any_cast<std::string>(param2Value.value()), "test");
+
+    auto param3Value = params[2].getDefaultValue();
+    ASSERT_TRUE(param3Value.has_value());
+    EXPECT_EQ(std::any_cast<double>(param3Value.value()), DEFAULT_DOUBLE_VALUE);
 }
 
 TEST(FunctionParamsTest, InitializerListConstructor) {
-    FunctionParams params = {Arg("param1", 1), Arg("param2", "test"),
-                             Arg("param3", DEFAULT_DOUBLE_VALUE)};
+    FunctionParams params = {Arg("param1", std::any(1)),
+                             Arg("param2", std::any(std::string("test"))),
+                             Arg("param3", std::any(DEFAULT_DOUBLE_VALUE))};
 
     ASSERT_EQ(params.size(), 3);
-    EXPECT_EQ(params[0].getName(), "param1");
-    EXPECT_EQ(std::any_cast<int>(params[0].getDefaultValue().value()), 1);
-    EXPECT_EQ(params[1].getName(), "param2");
-    EXPECT_EQ(std::any_cast<std::string>(params[1].getDefaultValue().value()),
-              "test");
-    EXPECT_EQ(params[2].getName(), "param3");
-    EXPECT_EQ(std::any_cast<double>(params[2].getDefaultValue().value()),
-              DEFAULT_DOUBLE_VALUE);
+
+    auto param1Value = params[0].getDefaultValue();
+    ASSERT_TRUE(param1Value.has_value());
+    EXPECT_EQ(std::any_cast<int>(param1Value.value()), 1);
+
+    auto param2Value = params[1].getDefaultValue();
+    ASSERT_TRUE(param2Value.has_value());
+    EXPECT_EQ(std::any_cast<std::string>(param2Value.value()), "test");
+
+    auto param3Value = params[2].getDefaultValue();
+    ASSERT_TRUE(param3Value.has_value());
+    EXPECT_EQ(std::any_cast<double>(param3Value.value()), DEFAULT_DOUBLE_VALUE);
 }
 
 // 测试 FunctionParams 类的其他方法
@@ -148,14 +159,18 @@ TEST(FunctionParamsTest, ToVectorMethod) {
 }
 
 TEST(FunctionParamsTest, ToAnyVectorMethod) {
-    FunctionParams params = {Arg("param1", 1), Arg("param2", "test"),
-                             Arg("param3", DEFAULT_DOUBLE_VALUE)};
-    auto anyVec = params.toAnyVector();
+    FunctionParams params = {Arg("param1", std::any(1)),
+                             Arg("param2", std::any(std::string("test"))),
+                             Arg("param3", std::any(DEFAULT_DOUBLE_VALUE))};
 
-    EXPECT_EQ(anyVec.size(), 3);
-    EXPECT_EQ(std::any_cast<int>(anyVec[0]), 1);
-    EXPECT_EQ(std::any_cast<std::string>(anyVec[1]), "test");
-    EXPECT_EQ(std::any_cast<double>(anyVec[2]), DEFAULT_DOUBLE_VALUE);
+    auto anyVec = params.toAnyVector();
+    ASSERT_EQ(anyVec.size(), 3);
+
+    EXPECT_NO_THROW({
+        EXPECT_EQ(std::any_cast<int>(anyVec[0]), 1);
+        EXPECT_EQ(std::any_cast<std::string>(anyVec[1]), "test");
+        EXPECT_EQ(std::any_cast<double>(anyVec[2]), DEFAULT_DOUBLE_VALUE);
+    });
 }
 
 TEST(FunctionParamsTest, GetByNameMethod) {

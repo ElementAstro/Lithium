@@ -60,8 +60,8 @@ inline void to_json(nlohmann::json& j, const std::any& a) {
         j = std::any_cast<std::string>(a);
     } else if (a.type() == typeid(std::string_view)) {
         j = std::any_cast<std::string_view>(a);
-    } else if (a.type() == typeid(const char *)) {
-        j = std::any_cast<const char *>(a);
+    } else if (a.type() == typeid(const char*)) {
+        j = std::any_cast<const char*>(a);
     } else {
         throw std::runtime_error("Unsupported type");
     }
@@ -291,6 +291,24 @@ public:
             THROW_OUT_OF_RANGE("Index out of range");
         }
         params_[index] = arg;
+    }
+
+    template <typename T>
+    [[nodiscard]] auto getValueAs(size_t index) const -> std::optional<T> {
+        if (index >= params_.size()) {
+            return std::nullopt;
+        }
+
+        const auto& value = params_[index].getDefaultValue();
+        if (!value.has_value()) {
+            return std::nullopt;
+        }
+
+        try {
+            return std::any_cast<T>(value.value());
+        } catch (const std::bad_any_cast&) {
+            return std::nullopt;
+        }
     }
 
 private:

@@ -17,11 +17,7 @@ Description: Implementation of Fraction class
 
 #include <cmath>
 #include <compare>
-#include <exception>
-#include <functional>
 #include <iostream>
-#include <numeric>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -65,7 +61,23 @@ public:
      * @param d The denominator (default is 1).
      * @throws FractionException if the denominator is zero.
      */
-    explicit constexpr Fraction(int n = 0, int d = 1);
+    explicit constexpr Fraction(int n, int d) : numerator(n), denominator(d) {
+        if (denominator == 0) {
+            throw FractionException("Denominator cannot be zero.");
+        }
+        reduce();
+    }
+
+    /**
+     * @brief Constructs a new Fraction object with the given integer value.
+     * @param value The integer value.
+     */
+    explicit constexpr Fraction(int value) : numerator(value), denominator(1) {}
+
+    /**
+     * @brief Default constructor. Initializes the fraction as 0/1.
+     */
+    constexpr Fraction() : Fraction(0, 1) {}
 
     /**
      * @brief Adds another fraction to this fraction.
@@ -229,7 +241,7 @@ public:
  * @param value The integer value.
  * @return A Fraction representing the integer.
  */
-inline auto makeFraction(int value) -> Fraction;
+auto makeFraction(int value) -> Fraction;
 
 /**
  * @brief Creates a Fraction from a double by approximating it.
@@ -238,8 +250,7 @@ inline auto makeFraction(int value) -> Fraction;
  * approximation.
  * @return A Fraction approximating the double value.
  */
-inline auto makeFraction(double value,
-                         int max_denominator = 1000000) -> Fraction;
+auto makeFraction(double value, int max_denominator = 1000000) -> Fraction;
 
 }  // namespace atom::algorithm
 

@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+#include "atom/error/exception.hpp"
+#include "atom/function/proxy.hpp"
 #include "atom/macro.hpp"
 #include "type_info.hpp"
 
@@ -250,6 +252,12 @@ public:
             std::scoped_lock lock(m_mutex_, rhs.m_mutex_);
             std::swap(m_data_, rhs.m_data_);
         }
+    }
+
+    template <typename T>
+    auto isType() const -> bool {
+        std::shared_lock lock(m_mutex_);
+        return m_data_->mTypeInfo == userType<T>();
     }
 
     /*!

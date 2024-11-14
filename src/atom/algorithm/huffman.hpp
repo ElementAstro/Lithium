@@ -15,8 +15,6 @@ Description: Enhanced implementation of Huffman encoding
 #ifndef ATOM_ALGORITHM_HUFFMAN_HPP
 #define ATOM_ALGORITHM_HUFFMAN_HPP
 
-#include <exception>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>

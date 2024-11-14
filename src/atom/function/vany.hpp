@@ -117,21 +117,31 @@ private:
 public:
     Any() noexcept : storage{} {}
 
-    Any(const Any& other) : vptr_(other.vptr_), is_small_(other.is_small_) {
+    Any(const Any& other)
+        : vptr_(other.vptr_), is_small_(other.is_small_), ptr(nullptr) {
         if (vptr_ != nullptr) {
-            if (is_small_) {
-                vptr_->copy(other.getPtr(), storage.data());
-            } else {
-                ptr = std::malloc(vptr_->size());
-                if (ptr == nullptr) {
-                    throw std::bad_alloc();
-                }
-                try {
+            try {
+                if (is_small_) {
+                    // 小对象直接拷贝到storage
+                    std::memcpy(storage.data(), other.getPtr(), vptr_->size());
+                } else {
+                    // 大对象需要动态分配内存
+                    ptr = std::malloc(vptr_->size());
+                    if (ptr == nullptr) {
+                        throw std::bad_alloc();
+                    }
+                    // 拷贝数据
                     vptr_->copy(other.getPtr(), ptr);
-                } catch (...) {
-                    std::free(ptr);
-                    throw;
                 }
+            } catch (...) {
+                // 清理已分配的资源
+                if (!is_small_ && ptr != nullptr) {
+                    std::free(ptr);
+                    ptr = nullptr;
+                }
+                vptr_ = nullptr;
+                is_small_ = true;
+                throw;  // 重新抛出异常
             }
         }
     }
@@ -149,20 +159,62 @@ public:
     }
 
     template <typename T>
+    auto allocateAligned(size_t size, size_t alignment) -> T* {
+        // 确保对齐值是2的幂
+        if (alignment & (alignment - 1)) {
+            alignment = std::bit_ceil(alignment);
+        }
+
+        // 确保对齐值至少等于sizeof(void*)
+        alignment = std::max(alignment, sizeof(void*));
+
+        void* ptr = std::aligned_alloc(alignment, size);
+        if (!ptr) {
+            throw std::bad_alloc();
+        }
+
+        return static_cast<T*>(ptr);
+    }
+
+    template <typename T>
     explicit Any(T&& value) {
         using ValueType = std::remove_cvref_t<T>;
-        if constexpr (kIsSmallObject<ValueType>) {
-            new (storage.data()) ValueType(std::forward<T>(value));
-            is_small_ = true;
-        } else {
-            ptr = std::malloc(sizeof(ValueType));
-            if (!ptr) {
-                throw std::bad_alloc();
+        try {
+            if constexpr (kIsSmallObject<ValueType>) {
+                // 确保内存对齐
+                alignas(std::max_align_t) char* addr = storage.data();
+                new (addr) ValueType(std::forward<T>(value));
+                is_small_ = true;
+            } else {
+                // 使用智能指针临时管理内存
+                auto temp = allocateAligned<ValueType>(
+                    sizeof(ValueType),
+                    std::max(alignof(ValueType), alignof(std::max_align_t)));
+                if (!temp) {
+                    throw std::bad_alloc();
+                }
+
+                try {
+                    new (temp) ValueType(std::forward<T>(value));
+                    ptr = temp;
+                    is_small_ = false;
+                } catch (...) {
+                    std::free(temp);
+                    throw;
+                }
             }
-            new (ptr) ValueType(std::forward<T>(value));
-            is_small_ = false;
+
+            // 确保vtable初始化在对象构造完成后
+            if constexpr (std::is_trivially_destructible_v<ValueType>) {
+                vptr_ = &K_V_TABLE<ValueType>;
+            } else {
+                static const VTable vtable = K_V_TABLE<ValueType>;
+                vptr_ = &vtable;
+            }
+        } catch (...) {
+            reset();  // 清理已分配的资源
+            throw;
         }
-        vptr_ = &K_V_TABLE<ValueType>;
     }
 
     ~Any() { reset(); }

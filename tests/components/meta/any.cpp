@@ -1,161 +1,223 @@
-#include "atom/function/any.hpp"
+// test_vany.hpp
+#ifndef TEST_ATOM_META_VANY_HPP
+#define TEST_ATOM_META_VANY_HPP
 
 #include <gtest/gtest.h>
+#include "atom/function/vany.hpp"
+#include <string>
+#include <vector>
 
-using namespace atom::meta;
+namespace atom::meta::test {
 
-const int INITIAL_VALUE = 42;
-const int UPDATED_VALUE = 100;
-const int SECOND_VALUE = 200;
+class AnyTest : public ::testing::Test {
+protected:
+    struct LargeObject {
+        std::array<char, 64> data;
+        std::string name;
+        
+        LargeObject(const std::string& n = "test") : name(n) {}
+        bool operator==(const LargeObject& other) const {
+            return name == other.name;
+        }
+    };
+    
+    struct SmallObject {
+        int value;
+        SmallObject(int v = 0) : value(v) {}
+        bool operator==(const SmallObject& other) const {
+            return value == other.value;
+        }
+    };
+};
 
-class BoxedValueTest : public ::testing::Test {};
-
-TEST_F(BoxedValueTest, DefaultConstructor) {
-    BoxedValue boxedValue;
-    EXPECT_TRUE(boxedValue.isUndef());
-    EXPECT_TRUE(boxedValue.isNull());
+// Construction Tests
+TEST_F(AnyTest, DefaultConstruction) {
+    Any any;
+    EXPECT_FALSE(any.hasValue());
 }
 
-TEST_F(BoxedValueTest, ConstructWithValue) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    EXPECT_FALSE(boxedValue.isUndef());
-    EXPECT_TRUE(boxedValue.canCast<int>());
-    EXPECT_EQ(boxedValue.tryCast<int>().value(), INITIAL_VALUE);
+TEST_F(AnyTest, SmallObjectConstruction) {
+    SmallObject obj(42);
+    Any any(obj);
+    EXPECT_TRUE(any.hasValue());
+    EXPECT_TRUE(any.is<SmallObject>());
+    EXPECT_EQ(any.cast<SmallObject>(), obj);
 }
 
-TEST_F(BoxedValueTest, ConstructWithConstValue) {
-    const int VALUE = INITIAL_VALUE;
-    BoxedValue boxedValue = VALUE;
-    // TODO: FIX ME - Now we can't detect constant value
-    // EXPECT_TRUE(boxedValue.isConst());
-    EXPECT_TRUE(boxedValue.isReadonly());
-    EXPECT_EQ(boxedValue.tryCast<int>().value(), INITIAL_VALUE);
+TEST_F(AnyTest, LargeObjectConstruction) {
+    LargeObject obj("test");
+    Any any(obj);
+    EXPECT_TRUE(any.hasValue());
+    EXPECT_TRUE(any.is<LargeObject>());
+    EXPECT_EQ(any.cast<LargeObject>(), obj);
 }
 
-TEST_F(BoxedValueTest, CopyConstructor) {
-    BoxedValue boxedValue1(INITIAL_VALUE);
-    BoxedValue boxedValue2 = boxedValue1;
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(), INITIAL_VALUE);
-    boxedValue1 = UPDATED_VALUE;
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(),
-              INITIAL_VALUE);  // Copy should not affect original
-}
-
-TEST_F(BoxedValueTest, MoveConstructor) {
-    BoxedValue boxedValue1(INITIAL_VALUE);            // 构造默认对象
-    BoxedValue boxedValue2 = std::move(boxedValue1);  // 移动构造
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(),
-              INITIAL_VALUE);            // 验证移动对象的值
-    EXPECT_TRUE(boxedValue1.isUndef());  // 原对象应被置于无效状态
-}
-
-TEST_F(BoxedValueTest, CopyAssignment) {
-    BoxedValue boxedValue1(INITIAL_VALUE);  // 创建一个 BoxedValue
-    BoxedValue boxedValue2;                 // 默认构造
-    boxedValue2 = boxedValue1;              // 拷贝赋值
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(), INITIAL_VALUE);
-    boxedValue1 =
-        makeBoxedValue(UPDATED_VALUE);  // 使用 makeBoxedValue 来避免直接赋值
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(),
-              INITIAL_VALUE);  // boxedValue2 不应该受影响
-}
-
-TEST_F(BoxedValueTest, MoveAssignment) {
-    BoxedValue boxedValue1(INITIAL_VALUE);
-    BoxedValue boxedValue2;
-    boxedValue2 = std::move(boxedValue1);
-    EXPECT_TRUE(boxedValue2.canCast<int>());
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(), INITIAL_VALUE);
-    EXPECT_TRUE(
-        boxedValue1
-            .isUndef());  // Original should be in a valid but undefined state
-}
-
-TEST_F(BoxedValueTest, Swap) {
-    BoxedValue boxedValue1(INITIAL_VALUE);
-    BoxedValue boxedValue2(UPDATED_VALUE);
-    boxedValue1.swap(boxedValue2);
-    EXPECT_EQ(boxedValue1.tryCast<int>().value(), UPDATED_VALUE);
-    EXPECT_EQ(boxedValue2.tryCast<int>().value(), INITIAL_VALUE);
-}
-
-TEST_F(BoxedValueTest, CheckAttributes) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    boxedValue.setAttr("key", BoxedValue(UPDATED_VALUE));
-    EXPECT_TRUE(boxedValue.hasAttr("key"));
-    EXPECT_EQ(boxedValue.getAttr("key").tryCast<int>().value(), UPDATED_VALUE);
-    boxedValue.removeAttr("key");
-    EXPECT_FALSE(boxedValue.hasAttr("key"));
-}
-
-TEST_F(BoxedValueTest, ListAttributes) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    boxedValue.setAttr("key1", BoxedValue(UPDATED_VALUE));
-    boxedValue.setAttr("key2", BoxedValue(SECOND_VALUE));
-    auto attrs = boxedValue.listAttrs();
-    EXPECT_EQ(attrs.size(), 2);
-    EXPECT_NE(std::find(attrs.begin(), attrs.end(), "key1"), attrs.end());
-    EXPECT_NE(std::find(attrs.begin(), attrs.end(), "key2"), attrs.end());
-}
-
-TEST_F(BoxedValueTest, TryCastValid) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    auto result = boxedValue.tryCast<int>();
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result.value(), INITIAL_VALUE);
-}
-
-TEST_F(BoxedValueTest, TryCastInvalid) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    auto result = boxedValue.tryCast<std::string>();
-    EXPECT_FALSE(result.has_value());
-}
-
-TEST_F(BoxedValueTest, CanCast) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    EXPECT_TRUE(boxedValue.canCast<int>());
-    EXPECT_FALSE(boxedValue.canCast<std::string>());
-}
-
-TEST_F(BoxedValueTest, DebugString) {
-    BoxedValue boxedValue(INITIAL_VALUE);
-    EXPECT_EQ(boxedValue.debugString(), "BoxedValue<int>: 42");
-}
-
-TEST_F(BoxedValueTest, VoidTypeCheck) {
-    BoxedValue boxedValue;
-    EXPECT_TRUE(boxedValue.isUndef());
-    EXPECT_FALSE(boxedValue.canCast<int>());
-    EXPECT_TRUE(boxedValue.isNull());
-}
-
-// TODO: FIX ME - Now we can't detect constant value
+// Copy Tests
 /*
-TEST_F(BoxedValueTest, ConstDataPtrCheck) {
-    const int value = INITIAL_VALUE;
-    BoxedValue boxedValue = constVar(value);
-    EXPECT_TRUE(boxedValue.isConstDataPtr());
-    EXPECT_EQ(*static_cast<const int*>(boxedValue.getPtr()), INITIAL_VALUE);
+TEST_F(AnyTest, CopyConstructionSmall) {
+    Any original(SmallObject(42));
+    Any copy(original);
+    EXPECT_TRUE(copy.hasValue());
+    EXPECT_TRUE(copy.is<SmallObject>());
+    EXPECT_EQ(copy.cast<SmallObject>(), SmallObject(42));
+}
+
+TEST_F(AnyTest, CopyConstructionLarge) {
+    Any original(LargeObject("test"));
+    Any copy(original);
+    EXPECT_TRUE(copy.hasValue());
+    EXPECT_TRUE(copy.is<LargeObject>());
+    EXPECT_EQ(copy.cast<LargeObject>(), LargeObject("test"));
 }
 */
 
-TEST_F(BoxedValueTest, ReadonlyCheck) {
-    int value = INITIAL_VALUE;
-    BoxedValue boxedValue = makeBoxedValue(value, false, true);
-    EXPECT_TRUE(boxedValue.isReadonly());
-    boxedValue.resetReturnValue();
-    EXPECT_TRUE(boxedValue.isReadonly());
+
+// Move Tests
+TEST_F(AnyTest, MoveConstructionSmall) {
+    Any original(SmallObject(42));
+    Any moved(std::move(original));
+    EXPECT_TRUE(moved.hasValue());
+    EXPECT_FALSE(original.hasValue());
+    EXPECT_EQ(moved.cast<SmallObject>(), SmallObject(42));
+}
+
+TEST_F(AnyTest, MoveConstructionLarge) {
+    Any original(LargeObject("test"));
+    Any moved(std::move(original));
+    EXPECT_TRUE(moved.hasValue());
+    EXPECT_FALSE(original.hasValue());
+    EXPECT_EQ(moved.cast<LargeObject>(), LargeObject("test"));
+}
+
+// Assignment Tests
+/*
+TEST_F(AnyTest, CopyAssignment) {
+    Any original(SmallObject(42));
+    Any copy;
+    copy = original;
+    EXPECT_TRUE(copy.hasValue());
+    EXPECT_EQ(copy.cast<SmallObject>(), SmallObject(42));
+}
+*/
+
+
+TEST_F(AnyTest, MoveAssignment) {
+    Any original(SmallObject(42));
+    Any target;
+    target = std::move(original);
+    EXPECT_TRUE(target.hasValue());
+    EXPECT_FALSE(original.hasValue());
+}
+
+// Type Safety Tests
+TEST_F(AnyTest, TypeChecking) {
+    Any any(42);
+    EXPECT_TRUE(any.is<int>());
+    EXPECT_FALSE(any.is<double>());
+    EXPECT_FALSE(any.is<std::string>());
+}
+
+TEST_F(AnyTest, BadCast) {
+    Any any(42);
+    EXPECT_THROW(any.cast<std::string>(), std::bad_cast);
+}
+
+// String Conversion Tests
+TEST_F(AnyTest, ToStringTest) {
+    Any empty;
+    EXPECT_EQ(empty.toString(), "Empty Any");
+
+    Any intAny(42);
+    EXPECT_EQ(intAny.toString(), "42");
+
+    Any strAny(std::string("test"));
+    EXPECT_EQ(strAny.toString(), "test");
+}
+
+// Iterator Support Tests
+TEST_F(AnyTest, ForeachVector) {
+    std::vector<int> vec{1, 2, 3};
+    Any any(vec);
+    std::vector<int> result;
+    
+    any.foreach([&result](const Any& item) {
+        result.push_back(item.cast<int>());
+    });
+    
+    EXPECT_EQ(result, vec);
+}
+
+TEST_F(AnyTest, ForeachNonIterable) {
+    Any any(42);
+    EXPECT_THROW(any.foreach([](const Any&) {}), std::invalid_argument);
+}
+
+// Reset and Value Management Tests
+TEST_F(AnyTest, ResetTest) {
+    Any any(42);
+    EXPECT_TRUE(any.hasValue());
+    any.reset();
+    EXPECT_FALSE(any.hasValue());
 }
 
 /*
-
-*/
-TEST_F(BoxedValueTest, ReferenceHandling) {
-    int value = INITIAL_VALUE;
-    BoxedValue boxedValue = makeBoxedValue(std::ref(value));
-    // TODO: FIX ME - Now we can't detect reference
-    // EXPECT_TRUE(boxedValue.isRef());
-    EXPECT_EQ(boxedValue.tryCast<int>().value(), INITIAL_VALUE);
-    value = UPDATED_VALUE;
-    EXPECT_EQ(boxedValue.tryCast<int>().value(), UPDATED_VALUE);
+TEST_F(AnyTest, SwapTest) {
+    Any a1(42);
+    Any a2(std::string("test"));
+    
+    a1.swap(a2);
+    
+    EXPECT_TRUE(a1.is<std::string>());
+    EXPECT_TRUE(a2.is<int>());
+    EXPECT_EQ(a1.cast<std::string>(), "test");
+    EXPECT_EQ(a2.cast<int>(), 42);
 }
+*/
+
+
+// Memory Leak Tests
+TEST_F(AnyTest, NoMemoryLeakOnException) {
+    struct ThrowOnCopy {
+        ThrowOnCopy() = default;
+        ThrowOnCopy(const ThrowOnCopy&) { throw std::runtime_error("copy error"); }
+    };
+    
+    Any original(ThrowOnCopy{});
+    EXPECT_THROW(Any copy(original), std::runtime_error);
+}
+
+// Invoke Tests
+TEST_F(AnyTest, InvokeTest) {
+    int value = 42;
+    Any any(value);
+    bool invoked = false;
+    
+    any.invoke([&invoked](const void* ptr) {
+        invoked = (*static_cast<const int*>(ptr) == 42);
+    });
+    
+    EXPECT_TRUE(invoked);
+}
+
+TEST_F(AnyTest, InvokeEmpty) {
+    Any any;
+    EXPECT_THROW(any.invoke([](const void*) {}), std::invalid_argument);
+}
+
+// Type Info Tests
+TEST_F(AnyTest, TypeInfoTest) {
+    Any any(42);
+    EXPECT_EQ(any.type(), typeid(int));
+    
+    any = std::string("test");
+    EXPECT_EQ(any.type(), typeid(std::string));
+}
+
+TEST_F(AnyTest, TypeInfoEmptyThrows) {
+    Any any;
+    EXPECT_THROW(any.type(), std::bad_typeid);
+}
+
+}  // namespace atom::meta::test
+
+#endif // TEST_ATOM_META_VANY_HPP

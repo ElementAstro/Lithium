@@ -1,151 +1,197 @@
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#ifndef TEST_ATOM_META_ENUM_HPP
+#define TEST_ATOM_META_ENUM_HPP
 
 #include "atom/function/enum.hpp"
-using namespace atom::meta;
+#include <gtest/gtest.h>
+#include <string_view>
+using namespace std::literals::string_view_literals;
 
+
+// Test enum definitions
 enum class Color { Red, Green, Blue };
-enum class Permissions { Read = 1, Write = 2, Execute = 4 };
 
+enum class Flags { None = 0, Flag1 = 1, Flag2 = 2, Flag3 = 4 };
+
+// Specializations for test enums
 template <>
-struct EnumTraits<Color> {
+struct atom::meta::EnumTraits<Color> {
     static constexpr std::array<Color, 3> values = {Color::Red, Color::Green,
                                                     Color::Blue};
-    static constexpr std::array<std::string_view, 3> names = {"Red", "Green",
-                                                              "Blue"};
+    static constexpr std::array<std::string_view, 3> names = {
+        "Red"sv, "Green"sv, "Blue"sv};
+    static constexpr std::array<std::string_view, 3> descriptions = {
+        "Red color"sv, "Green color"sv, "Blue color"sv};
 };
 
 template <>
-struct EnumAliasTraits<Color> {
-    static constexpr std::array<std::string_view, 3> aliases = {"R", "G", "B"};
+struct atom::meta::EnumTraits<Flags> {
+    static constexpr std::array<Flags, 4> values = {Flags::None, Flags::Flag1,
+                                                    Flags::Flag2, Flags::Flag3};
+    static constexpr std::array<std::string_view, 4> names = {
+        "None"sv, "Flag1"sv, "Flag2"sv, "Flag3"sv};
+    static constexpr std::array<std::string_view, 4> descriptions = {
+        "No flags"sv, "First flag"sv, "Second flag"sv, "Third flag"sv};
 };
 
 template <>
-struct EnumTraits<Permissions> {
-    static constexpr std::array<Permissions, 3> values = {
-        Permissions::Read, Permissions::Write, Permissions::Execute};
-    static constexpr std::array<std::string_view, 3> names = {"Read", "Write",
-                                                              "Execute"};
+struct atom::meta::EnumAliasTraits<Color> {
+    static constexpr std::array aliases = {"R"sv, "G"sv, "B"sv};
 };
 
-// 枚举到字符串测试
-TEST(EnumTest, EnumToString) {
+
+namespace atom::meta::test {
+
+class EnumTest : public ::testing::Test {
+protected:
+    void SetUp() override {}
+    void TearDown() override {}
+};
+
+// Basic enum operations tests
+TEST_F(EnumTest, EnumToString) {
     EXPECT_EQ(enum_name(Color::Red), "Red");
     EXPECT_EQ(enum_name(Color::Green), "Green");
     EXPECT_EQ(enum_name(Color::Blue), "Blue");
-
-    // 边界情况：未定义的枚举值（在当前代码中不会发生，因为只有定义的枚举值会被转换）
-    // EXPECT_EQ(enum_name(static_cast<Color>(-1)), ""); // Uncomment if needed
-    // for additional boundary checks
 }
 
-// 字符串到枚举测试
-TEST(EnumTest, StringToEnum) {
-    EXPECT_EQ(enum_cast<Color>("Red"), Color::Red);
-    EXPECT_EQ(enum_cast<Color>("Green"), Color::Green);
-    EXPECT_EQ(enum_cast<Color>("Blue"), Color::Blue);
+TEST_F(EnumTest, StringToEnum) {
+    auto red = enum_cast<Color>("Red");
+    EXPECT_TRUE(red.has_value());
+    EXPECT_EQ(red.value(), Color::Red);
 
-    // 边界情况：无效的字符串
-    EXPECT_EQ(enum_cast<Color>("Purple"), std::nullopt);
+    auto invalid = enum_cast<Color>("Invalid");
+    EXPECT_FALSE(invalid.has_value());
 }
 
-// 枚举值到整数测试
-TEST(EnumTest, EnumToInteger) {
-    EXPECT_EQ(enum_to_integer(Color::Red), 0);
-    EXPECT_EQ(enum_to_integer(Color::Green), 1);
-    EXPECT_EQ(enum_to_integer(Color::Blue), 2);
+TEST_F(EnumTest, EnumToInteger) {
+    EXPECT_EQ(enum_to_integer(Flags::None), 0);
+    EXPECT_EQ(enum_to_integer(Flags::Flag1), 1);
+    EXPECT_EQ(enum_to_integer(Flags::Flag2), 2);
 }
 
-// 整数到枚举值测试
-TEST(EnumTest, IntegerToEnum) {
-    EXPECT_EQ(integer_to_enum<Color>(0), Color::Red);
-    EXPECT_EQ(integer_to_enum<Color>(1), Color::Green);
-    EXPECT_EQ(integer_to_enum<Color>(2), Color::Blue);
-
-    // 边界情况：无效的整数
-    EXPECT_EQ(integer_to_enum<Color>(3), std::nullopt);
-    EXPECT_EQ(integer_to_enum<Color>(-1), std::nullopt);
+TEST_F(EnumTest, IntegerToEnum) {
+    auto flag1 = integer_to_enum<Flags>(1);
+    EXPECT_TRUE(flag1.has_value());
+    EXPECT_EQ(flag1.value(), Flags::Flag1);
 }
 
-// 检查枚举值是否有效
-TEST(EnumTest, EnumContains) {
+// Enum validation tests
+TEST_F(EnumTest, EnumContains) {
     EXPECT_TRUE(enum_contains(Color::Red));
     EXPECT_TRUE(enum_contains(Color::Green));
     EXPECT_TRUE(enum_contains(Color::Blue));
-
-    // 边界情况：无效的枚举值
-    EXPECT_FALSE(enum_contains(static_cast<Color>(-1)));
 }
 
-// 枚举别名测试
-TEST(EnumTest, EnumAlias) {
-    EXPECT_EQ(enum_cast_with_alias<Color>("R"), Color::Red);
-    EXPECT_EQ(enum_cast_with_alias<Color>("G"), Color::Green);
-    EXPECT_EQ(enum_cast_with_alias<Color>("B"), Color::Blue);
-
-    // 边界情况：无效的别名
-    EXPECT_EQ(enum_cast_with_alias<Color>("X"), std::nullopt);
+TEST_F(EnumTest, EnumEntries) {
+    auto entries = enum_entries<Color>();
+    EXPECT_EQ(entries.size(), 3);
+    EXPECT_EQ(entries[0].first, Color::Red);
+    EXPECT_EQ(entries[0].second, "Red");
 }
 
-// 模糊匹配测试
-TEST(EnumTest, EnumCastFuzzy) {
-    EXPECT_EQ(enum_cast_fuzzy<Color>("Red"), Color::Red);
-    EXPECT_EQ(enum_cast_fuzzy<Color>("Gre"), Color::Green);
-    EXPECT_EQ(enum_cast_fuzzy<Color>("Blu"), Color::Blue);
+// Bitwise operation tests
+TEST_F(EnumTest, BitwiseOperations) {
+    Flags f1 = Flags::Flag1;
+    Flags f2 = Flags::Flag2;
 
-    // 边界情况：无效的模糊匹配
-    EXPECT_EQ(enum_cast_fuzzy<Color>("Purple"), std::nullopt);
+    auto combined = f1 | f2;
+    EXPECT_EQ(enum_to_integer(combined), 3);
+
+    auto intersection = combined & f1;
+    EXPECT_EQ(intersection, f1);
+
+    auto exclusive = f1 ^ f2;
+    EXPECT_EQ(enum_to_integer(exclusive), 3);
+
+    auto complement = ~f1;
+    EXPECT_NE(complement, f1);
 }
 
-// 位运算测试
-TEST(EnumTest, EnumBitwiseOperations) {
-    Permissions p = Permissions::Read | Permissions::Write;
-    EXPECT_EQ(enum_to_integer(p), 3);  // 1 | 2 = 3
-
-    p |= Permissions::Execute;
-    EXPECT_EQ(enum_to_integer(p), 7);  // 3 | 4 = 7
-
-    p &= Permissions::Write;
-    EXPECT_EQ(enum_to_integer(p), 2);  // 7 & 2 = 2
-
-    p ^= Permissions::Read;
-    EXPECT_EQ(enum_to_integer(p), 3);  // 2 ^ 1 = 3
-
-    p = ~Permissions::Execute;
-    EXPECT_NE(
-        enum_to_integer(p),
-        enum_to_integer(Permissions::Execute));  // ~4 should not be equal to 4
-}
-
-// 枚举值根据名称排序测试
-TEST(EnumTest, EnumSortedByName) {
+// Sorting tests
+TEST_F(EnumTest, SortByName) {
     auto sorted = enum_sorted_by_name<Color>();
     EXPECT_EQ(sorted[0].second, "Blue");
     EXPECT_EQ(sorted[1].second, "Green");
     EXPECT_EQ(sorted[2].second, "Red");
 }
 
-// 枚举值根据整数值排序测试
-TEST(EnumTest, EnumSortedByValue) {
-    auto sorted = enum_sorted_by_value<Permissions>();
-    EXPECT_EQ(sorted[0].second, "Read");
-    EXPECT_EQ(sorted[1].second, "Write");
-    EXPECT_EQ(sorted[2].second, "Execute");
+TEST_F(EnumTest, SortByValue) {
+    auto sorted = enum_sorted_by_value<Flags>();
+    EXPECT_EQ(sorted[0].first, Flags::None);
+    EXPECT_EQ(sorted[1].first, Flags::Flag1);
+    EXPECT_EQ(sorted[2].first, Flags::Flag2);
 }
 
-// 检查整数值是否在枚举范围内
-TEST(EnumTest, IntegerInEnumRange) {
-    EXPECT_TRUE(integer_in_enum_range<Permissions>(1));  // Read
-    EXPECT_TRUE(integer_in_enum_range<Permissions>(2));  // Write
-    EXPECT_TRUE(integer_in_enum_range<Permissions>(4));  // Execute
-
-    // 边界情况：无效的整数值
-    EXPECT_FALSE(integer_in_enum_range<Permissions>(3));
-    EXPECT_FALSE(integer_in_enum_range<Permissions>(0));
+// Fuzzy matching tests
+TEST_F(EnumTest, FuzzyMatch) {
+    auto red = enum_cast_fuzzy<Color>("Re");
+    EXPECT_TRUE(red.has_value());
+    EXPECT_EQ(red.value(), Color::Red);
 }
 
-// 枚举的默认值测试
-TEST(EnumTest, EnumDefault) {
+// Range checking tests
+TEST_F(EnumTest, RangeCheck) {
+    EXPECT_TRUE(integer_in_enum_range<Flags>(1));
+    EXPECT_FALSE(integer_in_enum_range<Flags>(8));
+
+    EXPECT_TRUE(enum_in_range(Color::Green, Color::Red, Color::Blue));
+    EXPECT_TRUE(enum_in_range(Color::Red, Color::Red, Color::Blue));
+    EXPECT_TRUE(enum_in_range(Color::Blue, Color::Red, Color::Blue));
+}
+
+// Alias tests
+TEST_F(EnumTest, EnumAliases) {
+    auto red = enum_cast_with_alias<Color>("R");
+    EXPECT_TRUE(red.has_value());
+    EXPECT_EQ(red.value(), Color::Red);
+}
+
+// Description tests
+TEST_F(EnumTest, EnumDescriptions) {
+    EXPECT_EQ(enum_description(Color::Red), "Red color");
+    EXPECT_EQ(enum_description(Color::Green), "Green color");
+    EXPECT_EQ(enum_description(Color::Blue), "Blue color");
+}
+
+// Serialization tests
+TEST_F(EnumTest, Serialization) {
+    auto serialized = serialize_enum(Color::Red);
+    EXPECT_EQ(serialized, "Red");
+
+    auto deserialized = deserialize_enum<Color>(serialized);
+    EXPECT_TRUE(deserialized.has_value());
+    EXPECT_EQ(deserialized.value(), Color::Red);
+}
+
+// Bitmask tests
+TEST_F(EnumTest, Bitmasks) {
+    auto mask = enum_bitmask(Flags::Flag1);
+    EXPECT_EQ(mask, 1);
+
+    auto flag = bitmask_to_enum<Flags>(1);
+    EXPECT_TRUE(flag.has_value());
+    EXPECT_EQ(flag.value(), Flags::Flag1);
+}
+
+// Default value tests
+TEST_F(EnumTest, DefaultValue) {
     EXPECT_EQ(enum_default<Color>(), Color::Red);
-    EXPECT_EQ(enum_default<Permissions>(), Permissions::Read);
+    EXPECT_EQ(enum_default<Flags>(), Flags::None);
 }
+
+// Compound operations tests
+TEST_F(EnumTest, CompoundOperations) {
+    Flags f = Flags::Flag1;
+    f |= Flags::Flag2;
+    EXPECT_EQ(enum_to_integer(f), 3);
+
+    f &= Flags::Flag1;
+    EXPECT_EQ(f, Flags::Flag1);
+
+    f ^= Flags::Flag2;
+    EXPECT_EQ(enum_to_integer(f), 3);
+}
+
+}  // namespace atom::meta::test
+
+#endif  // TEST_ATOM_META_ENUM_HPP

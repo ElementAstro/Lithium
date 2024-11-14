@@ -18,14 +18,14 @@ include(cmake/policies.cmake)
 # Set project directories
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
-set(lithium_module_dir ${lithium_src_dir}/atom)
+set(atom_module ${lithium_src_dir}/atom)
 set(lithium_client_dir ${lithium_src_dir}/client)
 set(lithium_component_dir ${lithium_src_dir}/addon)
 set(lithium_task_dir ${lithium_src_dir}/task)
 
-add_custom_target(CmakeAdditionalFiles
-	SOURCES
-	${lithium_src_dir}/../cmake/compiler_options.cmake)
+#add_custom_target(CmakeAdditionalFiles
+#	SOURCES
+#	${lithium_src_dir}/../cmake/compiler_options.cmake)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/")
 include(cmake/compiler_options.cmake)
@@ -100,7 +100,7 @@ endif()
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${lithium_src_dir})
-include_directories(${lithium_module_dir})
+include_directories(${atom_module})
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket/oatpp-websocket)
@@ -121,7 +121,7 @@ set(BUILD_SHARED_LIBS ON)
 add_subdirectory(libs)
 add_subdirectory(modules)
 
-add_subdirectory(${lithium_module_dir})
+add_subdirectory(${atom_module})
 
 add_subdirectory(${lithium_src_dir}/config)
 add_subdirectory(${lithium_src_dir}/task)

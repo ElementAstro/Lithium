@@ -14,7 +14,7 @@ auto INDIManager::stopServer() -> bool { return connector->stopServer(); }
 auto INDIManager::isRunning() -> bool { return connector->isRunning(); }
 
 auto INDIManager::isInstalled() -> bool {
-    return atom::system::checkSoftwareInstalled("hydrogenserver");
+    return atom::system::checkSoftwareInstalled("indiserver");
 }
 
 auto INDIManager::startDriver(

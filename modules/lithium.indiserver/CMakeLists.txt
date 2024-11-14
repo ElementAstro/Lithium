@@ -30,6 +30,12 @@ set(HEADER_FILES
     include/iconnector.hpp
 )
 
+set(TEST_FILES
+    tests/test_collection.cpp
+    tests/test_connector.cpp
+    tests/test_driverlist.cpp
+)
+
 # Specify the external libraries
 set(LIBS
     loguru
@@ -39,6 +45,7 @@ set(LIBS
     atom-component
     atom-error
     atom-utils
+    atom-function
 )
 
 if (WIN32)
@@ -70,3 +77,9 @@ install(TARGETS lithium.indiserver
 
 # Install header files
 install(FILES ${HEADER_FILES} DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
+
+find_package(GTest REQUIRED)
+
+# Add the test executable
+add_executable(lithium.indiserver.test ${TEST_FILES})
+target_link_libraries(lithium.indiserver.test lithium.indiserver GTest::GTest GTest::Main)

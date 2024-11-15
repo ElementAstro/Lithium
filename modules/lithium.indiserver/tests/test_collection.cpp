@@ -1,8 +1,12 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+
 #include "collection.hpp"
+
 #include "tinyxml2.h"
+
+#include "atom/error/exception.hpp"
 
 namespace fs = std::filesystem;
 
@@ -27,13 +31,15 @@ protected:
 };
 
 TEST_F(INDIDriverCollectionTest, EmptyDirectory) {
-    EXPECT_TRUE(collection->parseDrivers(testDir.string()));
+    EXPECT_THROW(collection->parseDrivers(testDir.string()),
+                 atom::error::FileNotFound);
     auto families = collection->getFamilies();
     EXPECT_TRUE(families.empty());
 }
 
 TEST_F(INDIDriverCollectionTest, InvalidDirectory) {
-    EXPECT_FALSE(collection->parseDrivers("/nonexistent/path"));
+    EXPECT_THROW(collection->parseDrivers("/nonexistent/path"),
+                 atom::error::FileNotFound);
 }
 
 TEST_F(INDIDriverCollectionTest, ValidXMLParsing) {

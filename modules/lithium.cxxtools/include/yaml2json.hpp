@@ -1,24 +1,22 @@
-/*
- * yaml2json.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
+// yaml2json.hpp
+#ifndef YAML2JSON_HPP
+#define YAML2JSON_HPP
 
-#ifndef LITHIUM_CXXTOOLS_YAML2JSON_HPP
-#define LITHIUM_CXXTOOLS_YAML2JSON_HPP
+#include "converter.hpp"
+#include <string>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <yaml-cpp/yaml.h>
 
-#include <string_view>
+namespace lithium::cxxtools::detail {
 
-namespace lithium::cxxtools {
-/**
- * @brief Convert YAML file to JSON file
- *
- * @param yamlFilePath Path to the YAML file
- * @param jsonFilePath Path to the JSON file
- * @return true if conversion was successful
- * @return false if conversion failed
- */
-auto yamlToJson(std::string_view yaml_file, std::string_view json_file) -> bool;
-}  // namespace lithium::cxxtools
+class Yaml2Json : public Converter<Yaml2Json> {
+public:
+    nlohmann::json convertImpl(std::string_view yamlFilePath);
 
-#endif  // LITHIUM_CXXTOOLS_YAML2JSON_HPP
+    bool saveToFileImpl(const nlohmann::json& jsonData, std::string_view jsonFilePath);
+};
+
+} // namespace lithium::cxxtools::detail
+
+#endif // YAML2JSON_HPP

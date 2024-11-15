@@ -5,6 +5,7 @@
 
 #include <tinyxml2.h>
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
@@ -96,7 +97,7 @@ auto INDIDriverCollection::parseDrivers(const std::string& path) -> bool {
     LOG_F(INFO, "Parsing drivers from path: {}", path);
     if (!collectXMLFiles(path)) {
         LOG_F(INFO, "No XML files found in directory {}", path);
-        return true;
+        THROW_FILE_NOT_FOUND("No XML files found in directory: ", path);
     }
 
     drivers_.clear();

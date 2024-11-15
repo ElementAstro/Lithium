@@ -1,17 +1,28 @@
-/*
- * json2ini.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+#ifndef JSON2INI_HPP
+#define JSON2INI_HPP
+
+#include "json_converter.hpp"
+
+#include <tinyxml2.h>
+#include <filesystem>
+
+namespace lithium::cxxtools::converters {
+
+/**
+ * @brief Converter class for converting JSON to INI format.
  */
+class JsonToIniConverter : public JsonConverter<JsonToIniConverter> {
+public:
+    /**
+     * @brief Implements the conversion from JSON to INI.
+     * 
+     * @param jsonData The JSON data to convert.
+     * @param outputPath The path to the output INI file.
+     * @return true if conversion is successful, false otherwise.
+     */
+    bool convertImpl(const nlohmann::json& jsonData, const std::filesystem::path& outputPath);
+};
 
-#ifndef LITHIUM_CXXTOOLS_JSON2INI_HPP
-#define LITHIUM_CXXTOOLS_JSON2INI_HPP
+} // namespace lithium::cxxtools::converters
 
-#include <string_view>
-
-namespace lithium::cxxtools {
-auto jsonToIni(std::string_view jsonFilePath,
-               std::string_view iniFilePath) -> bool;
-}
-
-#endif  // LITHIUM_CXXTOOLS_JSON2INI_HPP
+#endif // JSON2INI_HPP

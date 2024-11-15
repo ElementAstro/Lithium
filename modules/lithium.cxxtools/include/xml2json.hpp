@@ -1,36 +1,26 @@
-/*
- * xml2json.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
+// xml2json.hpp
+#ifndef XML2JSON_HPP
+#define XML2JSON_HPP
 
-#ifndef LITHIUM_CXXTOOLS_XML2JSON_HPP
-#define LITHIUM_CXXTOOLS_XML2JSON_HPP
+#include "converter.hpp"
+#include <string>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include "tinyxml2.h"
 
-#include <string_view>
+namespace lithium::cxxtools::detail {
+using json = nlohmann::json;
+class Xml2Json : public Converter<Xml2Json> {
+public:
+    nlohmann::json convertImpl(std::string_view xmlFilePath);
 
-namespace lithium::cxxtools {
-namespace detail {
-/**
- * @brief Convert XML file to JSON file
- *
- * @param xmlFilePath Path to the XML file
- * @param jsonFilePath Path to the JSON file
- * @return true if conversion was successful
- * @return false if conversion failed
- */
-auto convertXmlToJson(std::string_view xmlFilePath,
-                      std::string_view jsonFilePath) -> bool;
-}  // namespace detail
-/**
- * @brief Convert XML file to JSON file
- *
- * @param xml_file Path to the XML file
- * @param json_file Path to the JSON file
- * @return true if conversion was successful
- * @return false if conversion failed
- */
-auto xmlToJson(std::string_view xml_file, std::string_view json_file) -> bool;
-}  // namespace lithium::cxxtools
+    bool saveToFileImpl(const nlohmann::json& jsonData, std::string_view jsonFilePath);
 
-#endif  // LITHIUM_CXXTOOLS_XML2JSON_HPP
+private:
+    void xmlToJson(const tinyxml2::XMLElement* xmlElement, json& jsonData);
+    bool convertXmlToJson(const std::string& xmlFilePath, json& jsonData);
+};
+
+} // namespace lithium::cxxtools::detail
+
+#endif // XML2JSON_HPP

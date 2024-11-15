@@ -61,20 +61,40 @@ auto parseDevicesFromPath(const std::string& path,
             }
 
             XMLElement* root = doc.RootElement();
+            if (!root) {
+                LOG_F(ERROR, "No root element in XML file: {}",
+                      entry.path().string());
+                continue;
+            }
+
             for (XMLElement* devGroupElem = root->FirstChildElement("devGroup");
                  devGroupElem != nullptr;
                  devGroupElem = devGroupElem->NextSiblingElement("devGroup")) {
                 DevGroup devGroup;
-                devGroup.group = devGroupElem->Attribute("group");
-                LOG_F(INFO, "Found devGroup: {}", devGroup.group);
+                const char* groupAttr = devGroupElem->Attribute("group");
+                if (groupAttr) {
+                    devGroup.group = groupAttr;
+                    LOG_F(INFO, "Found devGroup: {}", devGroup.group);
+                } else {
+                    LOG_F(WARNING,
+                          "devGroup element missing 'group' attribute");
+                    continue;
+                }
 
                 for (XMLElement* deviceElem =
                          devGroupElem->FirstChildElement("device");
                      deviceElem != nullptr;
                      deviceElem = deviceElem->NextSiblingElement("device")) {
                     Device device;
-                    device.label = deviceElem->Attribute("label");
-                    LOG_F(INFO, "Found device: {}", device.label);
+                    const char* labelAttr = deviceElem->Attribute("label");
+                    if (labelAttr) {
+                        device.label = labelAttr;
+                        LOG_F(INFO, "Found device: {}", device.label);
+                    } else {
+                        LOG_F(WARNING,
+                              "device element missing 'label' attribute");
+                        continue;
+                    }
 
                     if (deviceElem->FindAttribute("manufacturer") != nullptr) {
                         device.manufacturer =
@@ -88,12 +108,24 @@ auto parseDevicesFromPath(const std::string& path,
                          driverElem != nullptr;
                          driverElem = driverElem->NextSiblingElement()) {
                         if (std::string(driverElem->Name()) == "driver") {
-                            device.driverName = driverElem->GetText();
-                            LOG_F(INFO, "Device driver: {}", device.driverName);
+                            const char* driverText = driverElem->GetText();
+                            if (driverText) {
+                                device.driverName = driverText;
+                                LOG_F(INFO, "Device driver: {}",
+                                      device.driverName);
+                            } else {
+                                LOG_F(WARNING, "driver element is empty");
+                            }
                         } else if (std::string(driverElem->Name()) ==
                                    "version") {
-                            device.version = driverElem->GetText();
-                            LOG_F(INFO, "Device version: {}", device.version);
+                            const char* versionText = driverElem->GetText();
+                            if (versionText) {
+                                device.version = versionText;
+                                LOG_F(INFO, "Device version: {}",
+                                      device.version);
+                            } else {
+                                LOG_F(WARNING, "version element is empty");
+                            }
                         }
                     }
                     devGroup.devices.push_back(device);

@@ -1,23 +1,22 @@
-#ifndef JSON2XML_HPP
-#define JSON2XML_HPP
+#ifndef JSON2YAML_HPP
+#define JSON2YAML_HPP
 
 #include "json_converter.hpp"
 
-#include <tinyxml2.h>
 #include <filesystem>
 
 namespace lithium::cxxtools::converters {
 
 /**
- * @brief Converter class for converting JSON to XML format.
+ * @brief Converter class for converting JSON to YAML format.
  */
-class JsonToXmlConverter : public JsonConverter<JsonToXmlConverter> {
+class JsonToYamlConverter : public JsonConverter<JsonToYamlConverter> {
 public:
     /**
-     * @brief Implements the conversion from JSON to XML.
+     * @brief Implements the conversion from JSON to YAML.
      * 
      * @param jsonData The JSON data to convert.
-     * @param outputPath The path to the output XML file.
+     * @param outputPath The path to the output YAML file.
      * @return true if conversion is successful, false otherwise.
      */
     bool convertImpl(const nlohmann::json& jsonData, const std::filesystem::path& outputPath);
@@ -25,4 +24,4 @@ public:
 
 } // namespace lithium::cxxtools::converters
 
-#endif // JSON2XML_HPP
+#endif // JSON2YAML_HPP

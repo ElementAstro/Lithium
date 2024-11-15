@@ -1,34 +1,43 @@
-#ifndef LITHIUM_CXXTOOLS_CSV2JSON_HPP
-#define LITHIUM_CXXTOOLS_CSV2JSON_HPP
+// csv2json.hpp
+#ifndef CSV2JSON_HPP
+#define CSV2JSON_HPP
 
-#include <string_view>
+#include "converter.hpp"
 
-#include "atom/type/json_fwd.hpp"
-using json = nlohmann::json;
-
-namespace lithium::cxxtools {
-namespace detail {
-/**
- * @brief Convert a CSV file to a JSON object
- * @param csvFilePath The path to the CSV file
- * @return The JSON object
- */
-auto csvToJson(std::string_view csvFilePath) -> json;
+namespace lithium::cxxtools::detail {
 
 /**
- * @brief Save a JSON object to a file
- * @param jsonData The JSON object
- * @param jsonFilePath The path to the JSON file
+ * @brief Class for converting CSV files to JSON format.
+ * 
+ * This class provides functionality to convert CSV files to JSON format
+ * and save the resulting JSON data to a file. It inherits from the
+ * `Converter` base class template.
  */
-void saveJsonToFile(const json &jsonData, std::string_view jsonFilePath);
-}  // namespace detail
-/**
- * @brief Convert a CSV file to a JSON file
- * @param csv_file The path to the CSV file
- * @param json_file The path to the JSON file
- * @return true if the conversion was successful
- */
-auto csvToJson(std::string_view csv_file, std::string_view json_file) -> bool;
-}  // namespace lithium::cxxtools
+class Csv2Json : public Converter<Csv2Json> {
+public:
+    /**
+     * @brief Converts a CSV file to JSON format.
+     * 
+     * This method reads the specified CSV file and converts its contents
+     * to JSON format.
+     * 
+     * @param csvFilePath The path to the CSV file to be converted.
+     * @return nlohmann::json The converted JSON data.
+     */
+    auto convertImpl(std::string_view csvFilePath) -> nlohmann::json;
 
-#endif
+    /**
+     * @brief Saves JSON data to a specified file.
+     * 
+     * This method saves the provided JSON data to the specified file path.
+     * 
+     * @param jsonData The JSON data to be saved.
+     * @param jsonFilePath The path to the file where the JSON data will be saved.
+     * @return bool True if the data was successfully saved, false otherwise.
+     */
+    bool saveToFileImpl(const nlohmann::json& jsonData, std::string_view jsonFilePath);
+};
+
+} // namespace lithium::cxxtools::detail
+
+#endif // CSV2JSON_HPP

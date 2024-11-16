@@ -2,9 +2,10 @@
 
 #include <libgpsmm.h>
 #include <chrono>
-#include <string>
-#include <optional>
 #include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
 
 struct GPSData {
     std::optional<double> latitude;
@@ -20,7 +21,8 @@ public:
     GPSD();
     ~GPSD();
 
-    bool connect(const std::string& host = "localhost", const std::string& port = DEFAULT_GPSD_PORT);
+    bool connect(const std::string& host = "localhost",
+                 const std::string& port = DEFAULT_GPSD_PORT);
     bool disconnect();
 
     std::optional<GPSData> updateGPS();
@@ -31,11 +33,15 @@ public:
     std::optional<double> getAltitude() const;
     std::optional<std::chrono::system_clock::time_point> getTime() const;
     std::optional<std::string> getFixStatus() const;
-    std::optional<double> getPolarisHourAngle() const;
+
+    // 新增功能
+    std::optional<std::string> getDevice() const;
 
 private:
-    std::unique_ptr<gpsmm> gps;
-    GPSData latestData;
+    class Impl;
+    std::unique_ptr<Impl> pImpl;
 
-    double calculatePolarisHourAngle(const gps_data_t* gpsData);
+    // 禁止拷贝和赋值
+    GPSD(const GPSD&) = delete;
+    GPSD& operator=(const GPSD&) = delete;
 };

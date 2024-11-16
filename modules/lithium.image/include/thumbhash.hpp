@@ -1,9 +1,22 @@
 #ifndef THUMBHASH_H
 #define THUMBHASH_H
 
-#include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
+
+#include "atom/macro.hpp"
+
+struct YCbCr {
+    double y;
+    double cb;
+    double cr;
+} ATOM_ALIGNAS(32);
+
+namespace cv {
+template <typename _Tp, int cn>
+class Vec;
+class Mat;
+}  // namespace cv
 
 /**
  * @brief Performs Discrete Cosine Transform (DCT) on the input image.
@@ -14,7 +27,7 @@
  * @param input The input image matrix.
  * @param output The output matrix to store the DCT result.
  */
-void DCT(const cv::Mat& input, cv::Mat& output);
+void dct(const cv::Mat& input, cv::Mat& output);
 
 /**
  * @brief Converts an RGB color to YCbCr color space.
@@ -27,7 +40,7 @@ void DCT(const cv::Mat& input, cv::Mat& output);
  * @param Cb The output blue-difference chroma component.
  * @param Cr The output red-difference chroma component.
  */
-void RGBToYCbCr(const cv::Vec3b& rgb, double& Y, double& Cb, double& Cr);
+auto rgbToYCbCr(const cv::Vec<unsigned char, 3>& rgb) -> YCbCr;
 
 /**
  * @brief Encodes an image into a ThumbHash.
@@ -38,7 +51,7 @@ void RGBToYCbCr(const cv::Vec3b& rgb, double& Y, double& Cb, double& Cr);
  * @param image The input image to be encoded.
  * @return A vector of doubles representing the encoded ThumbHash.
  */
-std::vector<double> encodeThumbHash(const cv::Mat& image);
+auto encodeThumbHash(const cv::Mat& image) -> std::vector<double>;
 
 /**
  * @brief Decodes a ThumbHash into an image.
@@ -50,8 +63,8 @@ std::vector<double> encodeThumbHash(const cv::Mat& image);
  * @param height The height of the output thumbnail image.
  * @return The decoded thumbnail image.
  */
-cv::Mat decodeThumbHash(const std::vector<double>& thumbHash, int width,
-                        int height);
+auto decodeThumbHash(const std::vector<double>& thumbHash, int width,
+                     int height) -> cv::Mat;
 
 /**
  * @brief Encodes ThumbHash data into a Base64 string.
@@ -62,6 +75,6 @@ cv::Mat decodeThumbHash(const std::vector<double>& thumbHash, int width,
  * @param thumbHash The ThumbHash data to be encoded.
  * @return A Base64 encoded string representing the ThumbHash data.
  */
-std::string base64Encode(const std::vector<double>& thumbHash);
+auto base64Encode(const std::vector<double>& thumbHash) -> std::string;
 
 #endif  // THUMBHASH_H

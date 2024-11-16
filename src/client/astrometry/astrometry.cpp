@@ -1,6 +1,11 @@
+// astrometry.cpp
+
 #include "astrometry.hpp"
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
@@ -8,7 +13,8 @@
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 
-static auto astrometrySolver = std::make_shared<AstrometrySolver>("solver.astrometry");
+static auto astrometrySolver =
+    std::make_shared<AstrometrySolver>("solver.astrometry");
 
 AstrometrySolver::AstrometrySolver(std::string name) : name_(std::move(name)) {
     DLOG_F(INFO, "Initializing Astrometry Solver...");
@@ -20,12 +26,15 @@ AstrometrySolver::~AstrometrySolver() {
 
 auto AstrometrySolver::connect(std::string_view solverPath) -> bool {
     if (solverPath.empty()) {
-        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", ATOM_FUNC_NAME);
+        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
+              ATOM_FUNC_NAME);
         return false;
     }
     DLOG_F(INFO, "Connecting to Astap Solver...");
-    if (!atom::io::isFileNameValid(solverPath.data()) || !atom::io::isFileExists(solverPath.data())) {
-        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", ATOM_FUNC_NAME);
+    if (!atom::io::isFileNameValid(solverPath.data()) ||
+        !atom::io::isFileExists(solverPath.data())) {
+        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
+              ATOM_FUNC_NAME);
         return false;
     }
     solverPath_ = solverPath;
@@ -53,53 +62,32 @@ auto AstrometrySolver::reconnect() -> bool {
     return true;
 }
 
-auto AstrometrySolver::isConnected()  -> bool {
-    return !solverPath_.empty();
-}
+auto AstrometrySolver::isConnected() -> bool { return !solverPath_.empty(); }
 
 auto AstrometrySolver::scanSolver() -> std::vector<std::string> {
-    return atom::io::checkFileTypeInFolder("/usr/bin", "astrometry.net-solver", atom::io::FileOption::NAME);
+    return atom::io::checkFileTypeInFolder("/usr/bin", {"solve-field"},
+                                           atom::io::FileOption::NAME);
 }
 
 auto AstrometrySolver::solveImage(
     std::string_view image, std::optional<std::string_view> target_ra,
     std::optional<std::string_view> target_dec, std::optional<double> radius,
     std::optional<int> downsample, std::optional<int> depth, bool overWrite,
-    bool noPlot, int timeout, int debug) -> bool {
+    bool noPlot, int timeout, int debug, const SolveOptions &options) -> bool {
     DLOG_F(INFO, "Solving Image {}...", image);
     if (!isConnected()) {
         LOG_F(ERROR, "Failed to execute {}: Not Connected", __func__);
         return false;
     }
-    if (!atom::io::isFileNameValid(image.data()) || !atom::io::isFileExists(image.data())) {
+    if (!atom::io::isFileNameValid(image.data()) ||
+        !atom::io::isFileExists(image.data())) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);
         return false;
     }
     try {
-        std::ostringstream commandStream;
-        commandStream << solverPath_;
-        if (target_ra.has_value()) {
-            commandStream << " --ra " << target_ra.value();
-        }
-        if (target_dec.has_value()) {
-            commandStream << " --dec " << target_dec.value();
-        }
-        if (radius.has_value()) {
-            commandStream << " --radius " << radius.value();
-        }
-        if (downsample.has_value()) {
-            commandStream << " --downsample " << downsample.value();
-        }
-        if (depth.has_value()) {
-            commandStream << " --depth " << depth.value();
-        }
-        if (overWrite) {
-            commandStream << " --overwrite";
-        }
-        if (noPlot) {
-            commandStream << " --no-plot";
-        }
-        std::string command = commandStream.str();
+        std::string command =
+            buildCommand(image, target_ra, target_dec, radius, downsample,
+                         depth, overWrite, noPlot, timeout, debug, options);
         std::string output = atom::system::executeCommand(command, false);
 
         solveResult_ = readSolveResult(output);
@@ -110,12 +98,14 @@ auto AstrometrySolver::solveImage(
     return true;
 }
 
-auto AstrometrySolver::getSolveResult(std::string_view /*image*/) -> SolveResult {
+auto AstrometrySolver::getSolveResult(std::string_view /*image*/)
+    -> SolveResult {
     DLOG_F(INFO, "Getting Solve Result...");
     return solveResult_;
 }
 
-auto AstrometrySolver::readSolveResult(const std::string &output) -> SolveResult {
+auto AstrometrySolver::readSolveResult(const std::string &output)
+    -> SolveResult {
     SolveResult result;
     std::unordered_map<std::string, std::string> tokens;
     std::istringstream outputStream(output);
@@ -131,7 +121,10 @@ auto AstrometrySolver::readSolveResult(const std::string &output) -> SolveResult
             key = line;
             value = "";
         }
-        key.erase(std::remove_if(key.begin(), key.end(), [](unsigned char ch) { return !std::isalnum(ch); }), key.end());
+        key.erase(
+            std::remove_if(key.begin(), key.end(),
+                           [](unsigned char ch) { return !std::isalnum(ch); }),
+            key.end());
         tokens[key] = value;
     }
 
@@ -154,26 +147,242 @@ auto AstrometrySolver::readSolveResult(const std::string &output) -> SolveResult
     }
     iter = tokens.find("Fieldrotationangleupisdegrees");
     if (iter != tokens.end()) {
-        result.rotation = std::stod(iter->second);
+        result.rotation = iter->second;
     }
 
     return result;
+}
+
+std::string AstrometrySolver::buildCommand(
+    std::string_view image, std::optional<std::string_view> target_ra,
+    std::optional<std::string_view> target_dec, std::optional<double> radius,
+    std::optional<int> downsample, std::optional<int> depth, bool overWrite,
+    bool noPlot, int timeout, int debug, const SolveOptions &options) {
+    std::vector<std::pair<std::string, std::optional<std::string>>> optionMap =
+        {{"--backend-config", options.backend_config},
+         {"--config", options.config},
+         {"--batch",
+          options.batch ? std::optional<std::string>("") : std::nullopt},
+         {"--files-on-stdin", options.files_on_stdin
+                                  ? std::optional<std::string>("")
+                                  : std::nullopt},
+         {"--no-plots",
+          options.no_plots ? std::optional<std::string>("") : std::nullopt},
+         {"--plot-scale",
+          options.plot_scale
+              ? std::make_optional(std::to_string(*options.plot_scale))
+              : std::nullopt},
+         {"--plot-bg", options.plot_bg},
+         {"--use-wget",
+          options.use_wget ? std::optional<std::string>("") : std::nullopt},
+         {"--overwrite",
+          options.overwrite ? std::optional<std::string>("") : std::nullopt},
+         {"--continue",
+          options.continue_run ? std::optional<std::string>("") : std::nullopt},
+         {"--skip-solved",
+          options.skip_solved ? std::optional<std::string>("") : std::nullopt},
+         {"--fits-image",
+          options.fits_image ? std::optional<std::string>("") : std::nullopt},
+         {"--new-fits", options.new_fits},
+         {"--kmz", options.kmz},
+         {"--scamp", options.scamp},
+         {"--scamp-config", options.scamp_config},
+         {"--index-xyls", options.index_xyls},
+         {"--just-augment",
+          options.just_augment ? std::optional<std::string>("") : std::nullopt},
+         {"--axy", options.axy},
+         {"--temp-axy",
+          options.temp_axy ? std::optional<std::string>("") : std::nullopt},
+         {"--timestamp",
+          options.timestamp ? std::optional<std::string>("") : std::nullopt},
+         {"--no-delete-temp", options.no_delete_temp
+                                  ? std::optional<std::string>("")
+                                  : std::nullopt},
+         {"--scale-low", options.scale_low ? std::make_optional(std::to_string(
+                                                 *options.scale_low))
+                                           : std::nullopt},
+         {"--scale-high",
+          options.scale_high
+              ? std::make_optional(std::to_string(*options.scale_high))
+              : std::nullopt},
+         {"--scale-units", options.scale_units},
+         {"--parity", options.parity},
+         {"--code-tolerance",
+          options.code_tolerance
+              ? std::make_optional(std::to_string(*options.code_tolerance))
+              : std::nullopt},
+         {"--pixel-error",
+          options.pixel_error
+              ? std::make_optional(std::to_string(*options.pixel_error))
+              : std::nullopt},
+         {"--quad-size-min",
+          options.quad_size_min
+              ? std::make_optional(std::to_string(*options.quad_size_min))
+              : std::nullopt},
+         {"--quad-size-max",
+          options.quad_size_max
+              ? std::make_optional(std::to_string(*options.quad_size_max))
+              : std::nullopt},
+         {"--odds-to-tune-up",
+          options.odds_to_tune_up
+              ? std::make_optional(std::to_string(*options.odds_to_tune_up))
+              : std::nullopt},
+         {"--odds-to-solve",
+          options.odds_to_solve
+              ? std::make_optional(std::to_string(*options.odds_to_solve))
+              : std::nullopt},
+         {"--odds-to-reject",
+          options.odds_to_reject
+              ? std::make_optional(std::to_string(*options.odds_to_reject))
+              : std::nullopt},
+         {"--odds-to-stop-looking", options.odds_to_stop_looking
+                                        ? std::make_optional(std::to_string(
+                                              *options.odds_to_stop_looking))
+                                        : std::nullopt},
+         {"--use-source-extractor", options.use_source_extractor
+                                        ? std::optional<std::string>("")
+                                        : std::nullopt},
+         {"--source-extractor-config", options.source_extractor_config},
+         {"--source-extractor-path", options.source_extractor_path},
+         {"--ra", options.ra},
+         {"--dec", options.dec},
+         {"--radius", options.radius
+                          ? std::make_optional(std::to_string(*options.radius))
+                          : std::nullopt},
+         {"--depth", options.depth
+                         ? std::make_optional(std::to_string(*options.depth))
+                         : std::nullopt},
+         {"--objs", options.objs
+                        ? std::make_optional(std::to_string(*options.objs))
+                        : std::nullopt},
+         {"--cpulimit", options.cpulimit ? std::make_optional(std::to_string(
+                                               *options.cpulimit))
+                                         : std::nullopt},
+         {"--resort",
+          options.resort ? std::optional<std::string>("") : std::nullopt},
+         {"--extension", options.extension ? std::make_optional(std::to_string(
+                                                 *options.extension))
+                                           : std::nullopt},
+         {"--invert",
+          options.invert ? std::optional<std::string>("") : std::nullopt},
+         {"--downsample",
+          options.downsample
+              ? std::make_optional(std::to_string(*options.downsample))
+              : std::nullopt},
+         {"--no-background-subtraction", options.no_background_subtraction
+                                             ? std::optional<std::string>("")
+                                             : std::nullopt},
+         {"--sigma", options.sigma
+                         ? std::make_optional(std::to_string(*options.sigma))
+                         : std::nullopt},
+         {"--nsigma", options.nsigma
+                          ? std::make_optional(std::to_string(*options.nsigma))
+                          : std::nullopt},
+         {"--no-remove-lines", options.no_remove_lines
+                                   ? std::optional<std::string>("")
+                                   : std::nullopt},
+         {"--uniformize",
+          options.uniformize
+              ? std::make_optional(std::to_string(*options.uniformize))
+              : std::nullopt},
+         {"--no-verify-uniformize", options.no_verify_uniformize
+                                        ? std::optional<std::string>("")
+                                        : std::nullopt},
+         {"--no-verify-dedup", options.no_verify_dedup
+                                   ? std::optional<std::string>("")
+                                   : std::nullopt},
+         {"--cancel", options.cancel},
+         {"--solved", options.solved},
+         {"--solved-in", options.solved_in},
+         {"--match", options.match},
+         {"--rdls", options.rdls},
+         {"--sort-rdls", options.sort_rdls},
+         {"--tag", options.tag},
+         {"--tag-all",
+          options.tag_all ? std::optional<std::string>("") : std::nullopt},
+         {"--scamp-ref", options.scamp_ref},
+         {"--corr", options.corr},
+         {"--wcs", options.wcs},
+         {"--pnm", options.pnm},
+         {"--keep-xylist", options.keep_xylist},
+         {"--dont-augment",
+          options.dont_augment ? std::optional<std::string>("") : std::nullopt},
+         {"--verify", options.verify},
+         {"--verify-ext", options.verify_ext},
+         {"--no-verify",
+          options.no_verify ? std::optional<std::string>("") : std::nullopt},
+         {"--guess-scale",
+          options.guess_scale ? std::optional<std::string>("") : std::nullopt},
+         {"--crpix-center",
+          options.crpix_center ? std::optional<std::string>("") : std::nullopt},
+         {"--crpix-x",
+          options.crpix_x ? std::make_optional(std::to_string(*options.crpix_x))
+                          : std::nullopt},
+         {"--crpix-y",
+          options.crpix_y ? std::make_optional(std::to_string(*options.crpix_y))
+                          : std::nullopt},
+         {"--no-tweak",
+          options.no_tweak ? std::optional<std::string>("") : std::nullopt},
+         {"--tweak-order",
+          options.tweak_order
+              ? std::make_optional(std::to_string(*options.tweak_order))
+              : std::nullopt},
+         {"--predistort", options.predistort},
+         {"--xscale", options.xscale
+                          ? std::make_optional(std::to_string(*options.xscale))
+                          : std::nullopt},
+         {"--temp-dir", options.temp_dir}};
+
+    std::vector<std::string> commandParts;
+    commandParts.emplace_back(std::string(solverPath_) + " solve-field");
+
+    for (const auto &[flag, value] : optionMap) {
+        if (value.has_value()) {
+            if (value.value().empty()) {
+                commandParts.emplace_back(flag);
+            } else {
+                commandParts.emplace_back(flag + " " + value.value());
+            }
+        }
+    }
+
+    // 处理基本参数
+    commandParts.emplace_back(std::string(image));
+
+    // 处理 xyls 文件（如果有）
+    // 根据需要添加处理逻辑
+
+    // 拼接命令
+    std::ostringstream commandStream;
+    for (const auto &part : commandParts) {
+        commandStream << part << " ";
+    }
+
+    return commandStream.str();
 }
 
 ATOM_MODULE(astrometry, [](Component &component) {
     LOG_F(INFO, "Registering astrometry module...");
     LOG_F(INFO, "AstrometryComponent Constructed");
 
-    component.def("connect", &AstrometrySolver::connect, "main", "Connect to astrometry solver");
-    component.def("disconnect", &AstrometrySolver::disconnect, "main", "Disconnect from astrometry solver");
-    component.def("reconnect", &AstrometrySolver::reconnect, "main", "Reconnect to astrometry solver");
-    component.def("isConnected", &AstrometrySolver::isConnected, "main", "Check if astrometry solver is connected");
-    component.def("scanSolver", &AstrometrySolver::scanSolver, "main", "Scan for astrometry solver");
-    component.def("solveImage", &AstrometrySolver::solveImage, "main", "Solve image");
-    component.def("getSolveResult", &AstrometrySolver::getSolveResult, "main", "Get solve result");
+    component.def("connect", &AstrometrySolver::connect, "main",
+                  "Connect to astrometry solver");
+    component.def("disconnect", &AstrometrySolver::disconnect, "main",
+                  "Disconnect from astrometry solver");
+    component.def("reconnect", &AstrometrySolver::reconnect, "main",
+                  "Reconnect to astrometry solver");
+    component.def("isConnected", &AstrometrySolver::isConnected, "main",
+                  "Check if astrometry solver is connected");
+    component.def("scanSolver", &AstrometrySolver::scanSolver, "main",
+                  "Scan for astrometry solver");
+    component.def("solveImage", &AstrometrySolver::solveImage, "main",
+                  "Solve image with options");
+    component.def("getSolveResult", &AstrometrySolver::getSolveResult, "main",
+                  "Get solve result");
 
     component.addVariable("astrometry.instance", "Astap solver instance");
-    component.defType<AstrometrySolver>("astrometry", "device.solver", "Astap solver");
+    component.defType<AstrometrySolver>("astrometry", "device.solver",
+                                        "Astap solver");
 
     LOG_F(INFO, "Registered astrometry module.");
 });

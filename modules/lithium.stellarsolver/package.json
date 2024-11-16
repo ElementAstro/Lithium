@@ -1,0 +1,33 @@
+{
+    "name": "lithium.stellarsolver",
+    "version": "1.0.0",
+    "type": "pymodule",
+    "description": "A Python wrapper around the StellarSolver plate solver",
+    "license": "GPL-3.0-or-later",
+    "author": "Max Qian",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "bugs": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium/issues"
+    },
+    "homepage": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "keywords": [
+        "lithium",
+        "stellarsolver",
+        "plate-solver"
+    ],
+    "scripts": {
+        "build": "cmake --build . --config Release -- -j 4",
+        "lint": "clang-format -i src/*.cpp include/*.h"
+    },
+    "dependencies": {
+        "pybind11": "^2.6.2",
+        "numpy": "^1.20.1"
+    }
+}

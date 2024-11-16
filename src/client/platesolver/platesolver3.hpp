@@ -1,10 +1,12 @@
 #pragma once
 
+#include <memory>
 #include "device/template/solver.hpp"
 
 class Platesolve3Solver : public AtomSolver {
 public:
-    Platesolve3Solver(std::string executableLocation);
+    explicit Platesolve3Solver(std::string executableLocation);
+    ~Platesolve3Solver();
 
     PlateSolveResult solve(const std::string& imageFilePath,
                            const std::optional<Coordinates>& initialCoordinates,
@@ -15,13 +17,9 @@ protected:
     std::string getOutputPath(const std::string& imageFilePath) const override;
 
 private:
-    std::string m_executableLocation;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 
-    std::string getArguments(
-        const std::string& imageFilePath,
-        const std::optional<Coordinates>& initialCoordinates, double fovW,
-        double fovH) const;
-
-    PlateSolveResult readResult(const std::string& outputFilePath,
-                                int imageWidth, int imageHeight) const;
+    Platesolve3Solver(const Platesolve3Solver&) = delete;
+    Platesolve3Solver& operator=(const Platesolve3Solver&) = delete;
 };

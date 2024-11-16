@@ -1,93 +1,125 @@
 #include "base64.hpp"
 
-static const std::string base64_chars =
+#include <array>
+#include <string>
+
+constexpr std::string_view BASE64_CHARS =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789+/";
 
-std::string base64_encode(unsigned char const* bytes_to_encode,
-                          unsigned int in_len) {
-    std::string ret;
-    int i = 0;
-    int j = 0;
-    unsigned char char_array_3[3];
-    unsigned char char_array_4[4];
+constexpr unsigned char MASK_0X_FC = 0xFC;
+constexpr unsigned char MASK_0X03 = 0x03;
+constexpr unsigned char MASK_0X_F0 = 0xF0;
+constexpr unsigned char MASK_0X0_F = 0x0F;
+constexpr unsigned char MASK_0X_C0 = 0xC0;
+constexpr unsigned char MASK_0X3_F = 0x3F;
+constexpr unsigned char MASK_0X30 = 0x30;
+constexpr unsigned char MASK_0X3_C = 0x3C;
+constexpr int SHIFT_6 = 6;
+constexpr int SHIFT_4 = 4;
+constexpr int SHIFT_2 = 2;
 
-    while (in_len--) {
-        char_array_3[i++] = *(bytes_to_encode++);
-        if (i == 3) {
-            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) +
-                              ((char_array_3[1] & 0xf0) >> 4);
-            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) +
-                              ((char_array_3[2] & 0xc0) >> 6);
-            char_array_4[3] = char_array_3[2] & 0x3f;
+auto base64Encode(unsigned char const* bytes_to_encode,
+                  unsigned int input_length) -> std::string {
+    std::string result;
+    int index3 = 0;
+    std::array<unsigned char, 3> charArray3;
+    std::array<unsigned char, 4> charArray4;
 
-            for (i = 0; (i < 4); i++)
-                ret += base64_chars[char_array_4[i]];
-            i = 0;
+    while ((input_length--) != 0U) {
+        charArray3[index3++] = *(bytes_to_encode++);
+        if (index3 == 3) {
+            charArray4[0] = (charArray3[0] & MASK_0X_FC) >> SHIFT_2;
+            charArray4[1] = ((charArray3[0] & MASK_0X03) << SHIFT_4) +
+                            ((charArray3[1] & MASK_0X_F0) >> SHIFT_4);
+            charArray4[2] = ((charArray3[1] & MASK_0X0_F) << SHIFT_2) +
+                            ((charArray3[2] & MASK_0X_C0) >> SHIFT_6);
+            charArray4[3] = charArray3[2] & MASK_0X3_F;
+
+            for (index3 = 0; index3 < 4; index3++) {
+                result += BASE64_CHARS[charArray4[index3]];
+            }
+            index3 = 0;
         }
     }
 
-    if (i) {
-        for (j = i; j < 3; j++)
-            char_array_3[j] = '\0';
+    if (index3 != 0) {
+        for (int j = index3; j < 3; j++) {
+            charArray3[j] = '\0';
+        }
 
-        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-        char_array_4[1] =
-            ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-        char_array_4[2] =
-            ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-        char_array_4[3] = char_array_3[2] & 0x3f;
+        charArray4[0] = (charArray3[0] & MASK_0X_FC) >> SHIFT_2;
+        charArray4[1] = ((charArray3[0] & MASK_0X03) << SHIFT_4) +
+                        ((charArray3[1] & MASK_0X_F0) >> SHIFT_4);
+        charArray4[2] = ((charArray3[1] & MASK_0X0_F) << SHIFT_2) +
+                        ((charArray3[2] & MASK_0X_C0) >> SHIFT_6);
+        charArray4[3] = charArray3[2] & MASK_0X3_F;
 
-        for (j = 0; (j < i + 1); j++)
-            ret += base64_chars[char_array_4[j]];
+        for (int j = 0; j < index3 + 1; j++) {
+            result += BASE64_CHARS[charArray4[j]];
+        }
 
-        while ((i++ < 3))
-            ret += '=';
-    }
-
-    return ret;
-}
-
-static inline bool is_base64(unsigned char c) {
-    return (isalnum(c) || (c == '+') || (c == '/'));
-}
-
-std::string base64_decode(std::string const& encoded_string) {
-    int in_len = encoded_string.size();
-    int i = 0;
-    int j = 0;
-    int in_ = 0;
-    unsigned char char_array_4[4], char_array_3[3];
-    std::string ret;
-
-    while (in_len-- && (encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
-        char_array_4[i++] = encoded_string[in_]; in_++;
-        if (i ==4) {
-            for (i = 0; i < 4; i++)
-                char_array_4[i] = base64_chars.find(char_array_4[i]);
-
-            char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-            for (i = 0; (i < 3); i++)
-                ret += char_array_3[i];
-            i = 0;
+        while (index3++ < 3) {
+            result += '=';
         }
     }
 
-    if (i) {
-        for (j = 0; j < i; j++)
-            char_array_4[j] = base64_chars.find(char_array_4[j]);
+    return result;
+}
 
-        char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+static inline auto isBase64(unsigned char character) -> bool {
+    return ((isalnum(character) != 0) || (character == '+') ||
+            (character == '/'));
+}
 
-        for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
+auto base64Decode(std::string const& encoded_string) -> std::string {
+    std::size_t inputLength = encoded_string.size();
+    int index3 = 0;
+    int inputIndex = 0;
+    std::array<unsigned char, 4> charArray4;
+    std::array<unsigned char, 3> charArray3;
+    std::string result;
+
+    while (((inputLength--) != 0) && (encoded_string[inputIndex] != '=') &&
+           isBase64(encoded_string[inputIndex])) {
+        charArray4[index3++] = encoded_string[inputIndex];
+        inputIndex++;
+        if (index3 == 4) {
+            for (index3 = 0; index3 < 4; index3++) {
+                charArray4[index3] = BASE64_CHARS.find(charArray4[index3]);
+            }
+
+            charArray3[0] = (charArray4[0] << SHIFT_2) +
+                            ((charArray4[1] & MASK_0X30) >> SHIFT_4);
+            charArray3[1] = ((charArray4[1] & MASK_0X0_F) << SHIFT_4) +
+                            ((charArray4[2] & MASK_0X3_C) >> SHIFT_2);
+            charArray3[2] =
+                ((charArray4[2] & MASK_0X03) << SHIFT_6) + charArray4[3];
+
+            for (index3 = 0; index3 < 3; index3++) {
+                result += charArray3[index3];
+            }
+            index3 = 0;
+        }
     }
 
-    return ret;
+    if (index3 != 0) {
+        for (int j = 0; j < index3; j++) {
+            charArray4[j] = BASE64_CHARS.find(charArray4[j]);
+        }
+
+        charArray3[0] = (charArray4[0] << SHIFT_2) +
+                        ((charArray4[1] & MASK_0X30) >> SHIFT_4);
+        charArray3[1] = ((charArray4[1] & MASK_0X0_F) << SHIFT_4) +
+                        ((charArray4[2] & MASK_0X3_C) >> SHIFT_2);
+        charArray3[2] =
+            ((charArray4[2] & MASK_0X03) << SHIFT_6) + charArray4[3];
+
+        for (int j = 0; j < index3 - 1; j++) {
+            result += charArray3[j];
+        }
+    }
+
+    return result;
 }

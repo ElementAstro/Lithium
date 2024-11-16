@@ -6,8 +6,6 @@
 #include <tuple>
 #include <vector>
 
-std::vector<cv::Mat> loadImages(const std::string& folder,
-                                const std::vector<std::string>& filenames);
 bool insideCircle(int x, int y, int centerX, int centerY, float radius);
 bool checkElongated(int width, int height);
 int checkWhitePixel(const cv::Mat& rect_contour, int x, int y);

@@ -8,40 +8,57 @@
 #include <iostream>
 #include <vector>
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
 constexpr double MIN_LONG_RATIO = 1.5;
 constexpr int MAX_SAMPLES = 500000;
 constexpr double MAGIC_1_4826 = 1.4826;
 constexpr double MAGIC_2_8 = 2.8;
-constexpr double B = 0.25;
-constexpr int KERNEL_SIZE = 3;
-constexpr int SHARPEN_VALUE = 5;
+constexpr double BASE_RATIO = 0.25;  // Renamed from B to BASE_RATIO
 
 auto insideCircle(int xCoord, int yCoord, int centerX, int centerY,
                   float radius) -> bool {
+    LOG_F(INFO,
+          "Checking if point ({}, {}) is inside circle with center ({}, {}) "
+          "and radius {}",
+          xCoord, yCoord, centerX, centerY, radius);
     return std::sqrt((xCoord - centerX) * (xCoord - centerX) +
                      (yCoord - centerY) * (yCoord - centerY)) < radius;
 }
 
 auto checkElongated(int width, int height) -> bool {
+    LOG_F(INFO, "Checking elongation for width: {}, height: {}", width, height);
     double ratio = width > height ? static_cast<double>(width) / height
                                   : static_cast<double>(height) / width;
-    return ratio > MIN_LONG_RATIO;
+    bool elongated = ratio > MIN_LONG_RATIO;
+    LOG_F(INFO, "Elongated: {}", elongated);
+    return elongated;
 }
 
 auto checkWhitePixel(const cv::Mat& rect_contour, int xCoord,
                      int yCoord) -> int {
+    LOG_F(INFO, "Checking white pixel at ({}, {})", xCoord, yCoord);
     if (xCoord >= 0 && xCoord < rect_contour.cols && yCoord >= 0 &&
         yCoord < rect_contour.rows) {
-        return rect_contour.at<uint16_t>(yCoord, xCoord) > 0 ? 1 : 0;
+        try {
+            return rect_contour.at<uint16_t>(yCoord, xCoord) > 0 ? 1 : 0;
+        } catch (const cv::Exception& e) {
+            LOG_F(ERROR, "Exception accessing pixel at ({}, {}): {}", xCoord,
+                  yCoord, e.what());
+            return 0;
+        }
     }
+    LOG_F(WARNING, "Pixel coordinates ({}, {}) out of bounds", xCoord, yCoord);
     return 0;
 }
 
-auto EightSymmetryCircleCheck(const cv::Mat& rect_contour,
+auto eightSymmetryCircleCheck(const cv::Mat& rect_contour,
                               const cv::Point& center, int xCoord,
                               int yCoord) -> int {
+    LOG_F(INFO,
+          "Performing EightSymmetryCircleCheck with xCoord: {}, yCoord: {}",
+          xCoord, yCoord);
     int whitePixelCount = 0;
     whitePixelCount +=
         checkWhitePixel(rect_contour, center.x + xCoord, center.y + yCoord);
@@ -59,11 +76,13 @@ auto EightSymmetryCircleCheck(const cv::Mat& rect_contour,
         checkWhitePixel(rect_contour, center.x - yCoord, center.y + xCoord);
     whitePixelCount +=
         checkWhitePixel(rect_contour, center.x - yCoord, center.y - xCoord);
+    LOG_F(INFO, "White pixel count after symmetry check: {}", whitePixelCount);
     return whitePixelCount;
 }
 
-auto FourSymmetryCircleCheck(const cv::Mat& rect_contour,
+auto fourSymmetryCircleCheck(const cv::Mat& rect_contour,
                              const cv::Point& center, float radius) -> int {
+    LOG_F(INFO, "Performing FourSymmetryCircleCheck with radius: {}", radius);
     int whitePixelCount = 0;
     whitePixelCount += checkWhitePixel(rect_contour, center.x,
                                        center.y + static_cast<int>(radius));
@@ -73,41 +92,63 @@ auto FourSymmetryCircleCheck(const cv::Mat& rect_contour,
         rect_contour, center.x - static_cast<int>(radius), center.y);
     whitePixelCount += checkWhitePixel(
         rect_contour, center.x + static_cast<int>(radius), center.y);
+    LOG_F(INFO, "White pixel count after four symmetry check: {}",
+          whitePixelCount);
     return whitePixelCount;
 }
 
-auto define_narrow_radius(int min_area, double max_area, double area,
-                          double scale)
+auto defineNarrowRadius(int minArea, double maxArea, double area, double scale)
     -> std::tuple<int, std::vector<int>, std::vector<double>> {
+    LOG_F(INFO,
+          "Defining narrow radius with minArea: {}, maxArea: {}, area: {}, "
+          "scale: {}",
+          minArea, maxArea, area, scale);
     std::vector<int> checklist;
     std::vector<double> thresholdList;
     int checkNum = 0;
 
-    if (min_area <= area && area <= 500 * scale) {
+    constexpr int AREA_THRESHOLD_1 = 500;
+    constexpr int AREA_THRESHOLD_2 = 1000;
+    constexpr double THRESHOLD_1 = 0.5;
+    constexpr double THRESHOLD_2 = 0.65;
+    constexpr double THRESHOLD_3 = 0.75;
+
+    if (minArea <= area && area <= AREA_THRESHOLD_1 * scale) {
         checkNum = 2;
         checklist = {1, 2};
-        thresholdList = {0.5, 0.65};
-    } else if (500 * scale < area && area <= 1000 * scale) {
+        thresholdList = {THRESHOLD_1, THRESHOLD_2};
+    } else if (AREA_THRESHOLD_1 * scale < area &&
+               area <= AREA_THRESHOLD_2 * scale) {
         checkNum = 3;
         checklist = {2, 3, 4};
-        thresholdList = {0.5, 0.65, 0.75};
-    } else if (1000 * scale < area && area <= max_area) {
+        thresholdList = {THRESHOLD_1, THRESHOLD_2, THRESHOLD_3};
+    } else if (AREA_THRESHOLD_2 * scale < area && area <= maxArea) {
         checkNum = 3;
         checklist = {2, 3, 4};
-        thresholdList = {0.5, 0.65, 0.75};
+        thresholdList = {THRESHOLD_1, THRESHOLD_2, THRESHOLD_3};
     } else {
         checkNum = 0;
         checklist = {};
         thresholdList = {};
+        LOG_F(WARNING, "Area {} is out of defined thresholds.", area);
     }
+    LOG_F(INFO,
+          "defineNarrowRadius result - checkNum: {}, checklist size: {}, "
+          "thresholdList size: {}",
+          checkNum, checklist.size(), thresholdList.size());
     return {checkNum, checklist, thresholdList};
 }
 
-auto BresenHamCheckCircle(const cv::Mat& rect_contour, float radius,
-                          float pixelRatio, bool if_debug) -> bool {
-    cv::Mat rect_contour_rgb;
-    if (if_debug) {
-        cv::cvtColor(rect_contour, rect_contour_rgb, cv::COLOR_GRAY2BGR);
+auto checkBresenhamCircle(const cv::Mat& rect_contour, float radius,
+                          float pixelRatio, bool ifDebug) -> bool {
+    LOG_F(INFO,
+          "Starting BresenhamCircleCheck with radius: {}, pixelRatio: {}, "
+          "ifDebug: {}",
+          radius, pixelRatio, ifDebug);
+    cv::Mat rectContourRgb;
+    if (ifDebug) {
+        cv::cvtColor(rect_contour, rectContourRgb, cv::COLOR_GRAY2BGR);
+        LOG_F(INFO, "Converted rect_contour to RGB for debugging.");
     }
 
     int totalPixelCount = 0;
@@ -119,7 +160,7 @@ auto BresenHamCheckCircle(const cv::Mat& rect_contour, float radius,
     int p = 1 - static_cast<int>(radius);
     int xCoord = 0;
     int yCoord = static_cast<int>(radius);
-    whitePixelCount += FourSymmetryCircleCheck(rect_contour, center, radius);
+    whitePixelCount += fourSymmetryCircleCheck(rect_contour, center, radius);
     totalPixelCount += 4;
 
     while (xCoord <= yCoord) {
@@ -131,29 +172,35 @@ auto BresenHamCheckCircle(const cv::Mat& rect_contour, float radius,
             p += 2 * (xCoord - yCoord) + 1;
         }
 
-        if (if_debug) {
-            int singleWhitePixelCount = 0;
-            // std::tie(singleWhitePixelCount, rect_contour_rgb) =
-            // EightSymmetryCircleCheck_forDebug(rect_contour, rect_contour_rgb,
-            // center, xCoord, yCoord);
-            whitePixelCount += singleWhitePixelCount;
+        if (ifDebug) {
+            // Future implementation for debugging can be added here
+            LOG_F(INFO, "Debug mode: xCoord = {}, yCoord = {}", xCoord, yCoord);
         } else {
             whitePixelCount +=
-                EightSymmetryCircleCheck(rect_contour, center, xCoord, yCoord);
+                eightSymmetryCircleCheck(rect_contour, center, xCoord, yCoord);
         }
 
         totalPixelCount += 8;
     }
 
     float ratio = static_cast<float>(whitePixelCount) / totalPixelCount;
-    if (if_debug) {
+    LOG_F(INFO, "BresenhamCircleCheck ratio: {}", ratio);
+
+    if (ifDebug) {
         std::cout << "ratio: " << ratio << std::endl;
     }
 
-    return ratio > pixelRatio;
+    bool result = ratio > pixelRatio;
+    LOG_F(INFO, "BresenhamCircleCheck result: {}", result);
+    return result;
 }
 
-auto Cal_Avgdev(double mid, const cv::Mat& norm_img) -> double {
+auto calculateAverageDeviation(double mid, const cv::Mat& norm_img) -> double {
+    LOG_F(INFO, "Calculating average deviation with mid: {}", mid);
+    if (norm_img.empty()) {
+        LOG_F(ERROR, "normalize image is empty.");
+        THROW_INVALID_ARGUMENT("normalize image is empty.");
+    }
     int size = norm_img.rows * norm_img.cols;
     double sum = 0;
     for (int i = 0; i < norm_img.rows; i++) {
@@ -162,45 +209,83 @@ auto Cal_Avgdev(double mid, const cv::Mat& norm_img) -> double {
         }
     }
     double avgDev = sum / size;
+    LOG_F(INFO, "Average deviation: {}", avgDev);
     return avgDev;
 }
 
-auto MTF(double mean, const cv::Mat& img) -> cv::Mat {
+auto calculateMTF(double mean, const cv::Mat& img) -> cv::Mat {
+    LOG_F(INFO, "Calculating MTF with mean: {}", mean);
+    if (img.empty()) {
+        LOG_F(ERROR, "Input image for MTF is empty.");
+        THROW_INVALID_ARGUMENT("Input image for MTF is empty.");
+    }
     cv::Mat result = img.clone();
     for (int i = 0; i < img.rows; i++) {
         for (int j = 0; j < img.cols; j++) {
             double value = img.at<double>(i, j);
             if (value != 0 && value != mean && value != 1) {
-                result.at<double>(i, j) =
-                    (mean - 1) * value / (((2 * mean - 1) * value) - mean);
+                double denominator = ((2 * mean - 1) * value) - mean;
+                if (denominator != 0) {
+                    result.at<double>(i, j) = (mean - 1) * value / denominator;
+                } else {
+                    LOG_F(WARNING,
+                          "Denominator is zero at ({}, {}), skipping MTF "
+                          "calculation.",
+                          i, j);
+                }
             }
         }
     }
+    LOG_F(INFO, "Completed MTF calculation.");
     return result;
 }
 
-auto CalScale(const cv::Mat& img, int resize_size) -> double {
+auto calculateScale(const cv::Mat& img, int resize_size) -> double {
+    LOG_F(INFO, "Calculating scale with resize_size: {}", resize_size);
+    if (img.empty()) {
+        LOG_F(ERROR, "Input image for scale calculation is empty.");
+        THROW_INVALID_ARGUMENT("Input image for scale calculation is empty.");
+    }
     double scale = (img.rows > img.cols)
                        ? static_cast<double>(resize_size) / img.rows
                        : static_cast<double>(resize_size) / img.cols;
+    LOG_F(INFO, "Calculated scale: {}", scale);
     return scale;
 }
 
-auto Cal_Middev(double mid, const cv::Mat& img) -> double {
+auto calculateMedianDeviation(double mid, const cv::Mat& img) -> double {
+    LOG_F(INFO, "Calculating median deviation with mid: {}", mid);
+    if (img.empty()) {
+        LOG_F(ERROR, "Input image for median deviation is empty.");
+        THROW_INVALID_ARGUMENT("Input image for median deviation is empty.");
+    }
     std::vector<double> deviations;
     for (int i = 0; i < img.rows; i++) {
         for (int j = 0; j < img.cols; j++) {
             deviations.push_back(std::abs(img.at<double>(i, j) - mid));
         }
     }
+    if (deviations.empty()) {
+        LOG_F(WARNING, "No deviations found in image.");
+        return 0.0;
+    }
     std::nth_element(deviations.begin(),
                      deviations.begin() + deviations.size() / 2,
                      deviations.end());
-    return deviations[deviations.size() / 2];
+    double medianDeviation = deviations[deviations.size() / 2];
+    LOG_F(INFO, "Median deviation: {}", medianDeviation);
+    return medianDeviation;
 }
 
 auto computeParamsOneChannel(const cv::Mat& img)
     -> std::tuple<double, double, double> {
+    LOG_F(INFO, "Computing parameters for one channel.");
+    if (img.empty()) {
+        LOG_F(ERROR, "Input image for computeParamsOneChannel is empty.");
+        THROW_INVALID_ARGUMENT(
+            "Input image for computeParamsOneChannel is empty.");
+    }
+
     // Flatten the image and sample it
     std::vector<uchar> bufferValue;
     if (img.isContinuous()) {
@@ -221,49 +306,61 @@ auto computeParamsOneChannel(const cv::Mat& img)
         sampleValue.push_back(bufferValue[i]);
     }
 
+    if (sampleValue.empty()) {
+        LOG_F(WARNING, "Sampled values are empty.");
+        return {0.0, 0.0, 0.0};
+    }
+
     // Compute median of sampled values
     size_t n = sampleValue.size() / 2;
     std::nth_element(sampleValue.begin(), sampleValue.begin() + n,
                      sampleValue.end());
     double medianSample = sampleValue[n];
+    LOG_F(INFO, "Median sample: {}", medianSample);
 
     // Compute Median Absolute Deviation (MAD)
     std::vector<double> absDev(sampleValue.size());
     std::transform(
         sampleValue.begin(), sampleValue.end(), absDev.begin(),
-        [medianSample](uchar value) { return std::abs(value - medianSample); });
+        [medianSample](uchar value) {
+            return std::abs(static_cast<double>(value) - medianSample);
+        });
 
     std::nth_element(absDev.begin(), absDev.begin() + n, absDev.end());
     double medDev = absDev[n];
+    LOG_F(INFO, "Median Absolute Deviation: {}", medDev);
 
     // Normalize
     double inputRange = img.depth() == CV_16U ? 65535.0 : 255.0;
     double normalizedMedian = medianSample / inputRange;
     double MADN = MAGIC_1_4826 * medDev / inputRange;
+    LOG_F(INFO, "Normalized median: {}, MADN: {}", normalizedMedian, MADN);
 
     bool upperHalf = normalizedMedian > 0.5;
-    double shadows, highlights, midtones;
+    double shadows = 0.0;
+    double highlights = 0.0;
+    double midtones = 0.0;
 
     if (upperHalf || MADN == 0) {
         shadows = 0.0;
     } else {
         shadows =
-            std::min(1.0, std::max(0.0, normalizedMedian + -MAGIC_2_8 * MADN));
+            std::min(1.0, std::max(0.0, normalizedMedian - MAGIC_2_8 * MADN));
     }
 
     if (!upperHalf || MADN == 0) {
         highlights = 1.0;
     } else {
         highlights =
-            std::min(1.0, std::max(0.0, normalizedMedian - -MAGIC_2_8 * MADN));
+            std::min(1.0, std::max(0.0, normalizedMedian + MAGIC_2_8 * MADN));
     }
 
-    double X, M;
+    double X = 0.0, M = 0.0;
     if (!upperHalf) {
         X = normalizedMedian - shadows;
-        M = B;
+        M = BASE_RATIO;
     } else {
-        X = B;
+        X = BASE_RATIO;
         M = highlights - normalizedMedian;
     }
 
@@ -277,10 +374,22 @@ auto computeParamsOneChannel(const cv::Mat& img)
         midtones = ((M - 1) * X) / ((2 * M - 1) * X - M);
     }
 
+    LOG_F(INFO, "Computed shadows: {}, midtones: {}, highlights: {}", shadows,
+          midtones, highlights);
     return {shadows, midtones, highlights};
 }
 
 auto autoWhiteBalance(const cv::Mat& img) -> cv::Mat {
+    LOG_F(INFO, "Starting auto white balance.");
+    if (img.empty()) {
+        LOG_F(ERROR, "Input image for autoWhiteBalance is empty.");
+        THROW_INVALID_ARGUMENT("Input image for autoWhiteBalance is empty.");
+    }
+    if (img.channels() != 3) {
+        LOG_F(ERROR, "Input image does not have 3 channels.");
+        THROW_INVALID_ARGUMENT("Input image does not have 3 channels.");
+    }
+
     std::vector<cv::Mat> channels(3);
     cv::split(img, channels);
 
@@ -289,9 +398,13 @@ auto autoWhiteBalance(const cv::Mat& img) -> cv::Mat {
     double avgR = cv::mean(channels[2])[0];
     double avg = (avgB + avgG + avgR) / 3;
 
-    double kb = avg / avgB;
-    double kg = avg / avgG;
-    double kr = avg / avgR;
+    LOG_F(INFO, "Averages - B: {}, G: {}, R: {}, Overall Avg: {}", avgB, avgG,
+          avgR, avg);
+
+    // Prevent division by zero
+    double kb = (avgB != 0) ? avg / avgB : 1.0;
+    double kg = (avgG != 0) ? avg / avgG : 1.0;
+    double kr = (avgR != 0) ? avg / avgR : 1.0;
 
     channels[0] = channels[0] * kb;
     channels[1] = channels[1] * kg;
@@ -299,32 +412,6 @@ auto autoWhiteBalance(const cv::Mat& img) -> cv::Mat {
 
     cv::Mat result;
     cv::merge(channels, result);
+    LOG_F(INFO, "Completed auto white balance.");
     return result;
-}
-
-void averageFilter(const cv::Mat& src, cv::Mat& dst, int kernelSize) {
-    cv::blur(src, dst, cv::Size(kernelSize, kernelSize));
-}
-
-void gaussianFilter(const cv::Mat& src, cv::Mat& dst, int kernelSize,
-                    double sigmaX, double sigmaY = 0) {
-    cv::GaussianBlur(src, dst, cv::Size(kernelSize, kernelSize), sigmaX,
-                     sigmaY);
-}
-
-void medianFilter(const cv::Mat& src, cv::Mat& dst, int kernelSize) {
-    cv::medianBlur(src, dst, kernelSize);
-}
-
-void bilateralFilter(const cv::Mat& src, cv::Mat& dst, int diameter,
-                     double sigmaColor, double sigmaSpace) {
-    cv::bilateralFilter(src, dst, diameter, sigmaColor, sigmaSpace);
-}
-
-void sharpen(const cv::Mat& src, cv::Mat& dst) {
-    // A simple sharpening kernel
-    cv::Mat kernel = (cv::Mat_<float>(KERNEL_SIZE, KERNEL_SIZE) << 0, -1, 0, -1,
-                      SHARPEN_VALUE, -1, 0, -1, 0);
-
-    cv::filter2D(src, dst, -1, kernel);
 }

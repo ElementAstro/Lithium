@@ -14,6 +14,12 @@
 
 namespace py = pybind11;
 
+struct LoadFitsResult {
+    bool success{};
+    FITSImage::Statistic imageStats;
+    uint8_t* imageBuffer{};
+};
+
 class SS : public QObject {
     Q_OBJECT
 public:
@@ -66,6 +72,9 @@ public:
     bool pixelToWCS(const QPointF& pixelPoint, FITSImage::wcs_point& skyPoint);
     bool wcsToPixel(const FITSImage::wcs_point& skyPoint, QPointF& pixelPoint);
 
+    auto findStarsByStellarSolver(bool AllStars,
+                                  bool runHFR) -> QList<FITSImage::Star>;
+
 signals:
     void logOutput(const QString& logText);
     void ready();
@@ -77,6 +86,11 @@ private slots:
 
 private:
     py::dict createObjectFromStar(const FITSImage::Star& star);
+
+    auto findStarsByStellarSolver(bool AllStars,
+                                  const FITSImage::Statistic& imagestats,
+                                  const uint8_t* imageBuffer,
+                                  bool runHFR) -> QList<FITSImage::Star>;
 
     // 成员变量
     QCoreApplication* app;

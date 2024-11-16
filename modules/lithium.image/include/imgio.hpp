@@ -18,4 +18,15 @@ auto loadImages(const std::string& folder,
 // 保存图像到文件
 auto saveImage(const std::string& filename, const cv::Mat& image) -> bool;
 
+auto saveMatTo8BitJpg(
+    const cv::Mat& image,
+    const std::string& output_path = "/dev/shm/MatTo8BitJPG.jpg") -> bool;
+
+auto saveMatTo16BitPng(
+    const cv::Mat& image,
+    const std::string& output_path = "/dev/shm/MatTo16BitPNG.png") -> bool;
+
+auto saveMatToFits(const cv::Mat& image, const std::string& output_path =
+                                             "/dev/shm/MatToFITS.fits") -> bool;
+
 #endif

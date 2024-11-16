@@ -14,7 +14,7 @@ enum StackMode {
     LIGHTEN
 };
 
-cv::Mat stackImages(const std::vector<cv::Mat>& images, StackMode mode,
-                    float sigma = 2.0) ;
+auto stackImages(const std::vector<cv::Mat>& images, StackMode mode,
+                 float sigma, const std::vector<float>& weights) -> cv::Mat;
 
 #endif

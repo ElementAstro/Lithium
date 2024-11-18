@@ -33,13 +33,14 @@ __all__ = [
 from collections import Counter
 from functools import partial
 from itertools import combinations
-from typing import Any, Tuple, Union
+from typing import Any, Tuple, Union, List
 
 import sep_pjw as sep
 import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial import KDTree
 from skimage.transform import estimate_transform, matrix_transform, warp
+from loguru import logger
 
 try:
     import bottleneck as bn
@@ -47,6 +48,9 @@ except ImportError:
     HAS_BOTTLENECK = False
 else:
     HAS_BOTTLENECK = True
+
+# Configure Loguru logger
+logger.add("astroalign.log", rotation="5 MB", level="DEBUG")
 
 PIXEL_TOL = 2
 """The pixel distance tolerance to assume two invariant points are the same.
@@ -81,7 +85,7 @@ Default mean function when/if optional bottleneck is available
 """
 
 
-def _invariantfeatures(x1: NDArray, x2: NDArray, x3: NDArray) -> list[float]:
+def _invariantfeatures(x1: NDArray, x2: NDArray, x3: NDArray) -> List[float]:
     """
     Given 3 points x1, x2, x3, return the invariant features for the set.
 
@@ -95,12 +99,18 @@ def _invariantfeatures(x1: NDArray, x2: NDArray, x3: NDArray) -> list[float]:
     Returns:
         List containing two invariant feature values derived from the triangle side ratios.
     """
+    logger.debug(
+        f"Calculating invariant features for points: {x1}, {x2}, {x3}")
     sides = np.sort(
-        [np.linalg.norm(x1 - x2), np.linalg.norm(x2 - x3), np.linalg.norm(x1 - x3)])
-    return [sides[2] / sides[1], sides[1] / sides[0]]
+        [np.linalg.norm(x1 - x2), np.linalg.norm(x2 - x3),
+         np.linalg.norm(x1 - x3)]
+    )
+    invariants = [sides[2] / sides[1], sides[1] / sides[0]]
+    logger.debug(f"Invariant features: {invariants}")
+    return invariants
 
 
-def _arrangetriplet(sources: NDArray, vertex_indices: tuple[int, int, int]) -> NDArray:
+def _arrangetriplet(sources: NDArray, vertex_indices: Tuple[int, int, int]) -> NDArray:
     """
     Reorder the given triplet of vertex indices according to the length of their sides.
 
@@ -118,8 +128,11 @@ def _arrangetriplet(sources: NDArray, vertex_indices: tuple[int, int, int]) -> N
     x1, x2, x3 = sources[vertex_indices]
 
     side_ind = np.array([(ind1, ind2), (ind2, ind3), (ind3, ind1)])
-    side_lengths = [np.linalg.norm(
-        x1 - x2), np.linalg.norm(x2 - x3), np.linalg.norm(x3 - x1)]
+    side_lengths = [
+        np.linalg.norm(x1 - x2),
+        np.linalg.norm(x2 - x3),
+        np.linalg.norm(x3 - x1),
+    ]
     l1_ind, l2_ind, l3_ind = np.argsort(side_lengths)
 
     count = Counter(side_ind[[l1_ind, l2_ind]].flatten())
@@ -129,7 +142,9 @@ def _arrangetriplet(sources: NDArray, vertex_indices: tuple[int, int, int]) -> N
     count = Counter(side_ind[[l3_ind, l1_ind]].flatten())
     c = count.most_common(1)[0][0]
 
-    return np.array([a, b, c])
+    arranged = np.array([a, b, c])
+    logger.debug(f"Arranged triplet indices: {arranged}")
+    return arranged
 
 
 def _generate_invariants(sources: NDArray) -> Tuple[NDArray, NDArray]:
@@ -154,18 +169,23 @@ def _generate_invariants(sources: NDArray) -> Tuple[NDArray, NDArray]:
     for asrc in sources:
         _, indx = coordtree.query(asrc, knn)
 
-        all_asterism_triang = [arrange(vertex_indices=list(cmb))
-                               for cmb in combinations(indx, 3)]
+        all_asterism_triang = [
+            arrange(vertex_indices=list(cmb)) for cmb in combinations(indx, 3)
+        ]
         triang_vrtx.extend(all_asterism_triang)
 
-        inv.extend([_invariantfeatures(*sources[triplet])
-                   for triplet in all_asterism_triang])
+        inv.extend(
+            [_invariantfeatures(*sources[triplet])
+             for triplet in all_asterism_triang]
+        )
 
-    uniq_ind = [pos for (pos, elem) in enumerate(inv)
-                if elem not in inv[pos + 1:]]
+    uniq_ind = [
+        pos for (pos, elem) in enumerate(inv) if elem not in inv[pos + 1:]
+    ]
     inv_uniq = np.array(inv)[uniq_ind]
     triang_vrtx_uniq = np.array(triang_vrtx)[uniq_ind]
 
+    logger.info(f"Generated {len(inv_uniq)} unique invariant features")
     return inv_uniq, triang_vrtx_uniq
 
 
@@ -187,6 +207,8 @@ class _MatchTransform:
         """
         self.source = source
         self.target = target
+        logger.debug(
+            "Initialized _MatchTransform with source and target control points")
 
     def fit(self, data: NDArray) -> Any:
         """
@@ -200,7 +222,10 @@ class _MatchTransform:
         """
         d1, d2, d3 = data.shape
         s, d = data.reshape(d1 * d2, d3).T
-        return estimate_transform("similarity", self.source[s], self.target[d])
+        transform = estimate_transform(
+            "similarity", self.source[s], self.target[d])
+        logger.debug("Fitted similarity transform using matched points")
+        return transform
 
     def get_error(self, data: NDArray, approx_t: Any) -> NDArray:
         """
@@ -217,7 +242,9 @@ class _MatchTransform:
         s, d = data.reshape(d1 * d2, d3).T
         resid = approx_t.residuals(
             self.source[s], self.target[d]).reshape(d1, d2)
-        return resid.max(axis=1)
+        max_resid = resid.max(axis=1)
+        logger.debug(f"Calculated maximum residual errors: {max_resid}")
+        return max_resid
 
 
 def _data(image: Union[NDArray, Any]) -> NDArray:
@@ -230,9 +257,10 @@ def _data(image: Union[NDArray, Any]) -> NDArray:
     Returns:
         The pixel data as a 2D NumPy array.
     """
-    if hasattr(image, "data") and isinstance(image.data, np.ndarray):
-        return image.data
-    return np.asarray(image)
+    data = image.data if hasattr(image, "data") and isinstance(
+        image.data, np.ndarray) else np.asarray(image)
+    logger.debug(f"Retrieved data with shape {data.shape}")
+    return data
 
 
 def _mask(image: Union[NDArray, Any]) -> Union[NDArray, None]:
@@ -247,7 +275,11 @@ def _mask(image: Union[NDArray, Any]) -> Union[NDArray, None]:
     """
     if hasattr(image, "mask"):
         thenp_mask = np.asarray(image.mask)
-        return thenp_mask if thenp_mask.ndim == 2 else np.logical_or.reduce(thenp_mask, axis=-1)
+        mask = thenp_mask if thenp_mask.ndim == 2 else np.logical_or.reduce(
+            thenp_mask, axis=-1)
+        logger.debug("Retrieved mask from image")
+        return mask
+    logger.debug("No mask found in image")
     return None
 
 
@@ -261,10 +293,12 @@ def _bw(image: NDArray) -> NDArray:
     Returns:
         Grayscale 2D NumPy array.
     """
-    return image if image.ndim == 2 else _default_average(image, axis=-1)
+    grayscale = image if image.ndim == 2 else _default_average(image, axis=-1)
+    logger.debug(f"Converted image to grayscale with shape {grayscale.shape}")
+    return grayscale
 
 
-def _shape(image: NDArray) -> tuple[int, int]:
+def _shape(image: NDArray) -> Tuple[int, int]:
     """
     Get the shape of the image, ignoring channels.
 
@@ -274,7 +308,9 @@ def _shape(image: NDArray) -> tuple[int, int]:
     Returns:
         A tuple representing the 2D shape (height, width) of the image.
     """
-    return image.shape if image.ndim == 2 else image.shape[:2]
+    shape = image.shape if image.ndim == 2 else image.shape[:2]
+    logger.debug(f"Image shape (height, width): {shape}")
+    return shape
 
 
 def find_transform(
@@ -282,7 +318,7 @@ def find_transform(
     target: Union[NDArray, Any],
     max_control_points: int = 50,
     detection_sigma: int = 5,
-    min_area: int = 5
+    min_area: int = 5,
 ) -> Tuple[Any, Tuple[NDArray, NDArray]]:
     """
     Estimate the geometric transformation between the source and target images.
@@ -306,21 +342,38 @@ def find_transform(
         ValueError: If fewer than 3 control points are found in either image.
         TypeError: If the input type of source or target is unsupported.
     """
+    logger.info("Starting find_transform process")
     try:
-        source_controlp = (np.array(source)[:max_control_points] if len(_data(source)[0]) == 2
-                           else _find_sources(_bw(_data(source)), detection_sigma, min_area, _mask(source))[:max_control_points])
-    except Exception:
+        source_data = _data(source)
+        source_controlp = (
+            np.array(source)[:max_control_points]
+            if len(source_data) and source_data.shape[1] == 2
+            else _find_sources(_bw(source_data), detection_sigma, min_area, _mask(source))[:max_control_points]
+        )
+        logger.debug(
+            f"Found {len(source_controlp)} control points in source image")
+    except Exception as e:
+        logger.error(f"Error finding sources in source image: {e}")
         raise TypeError("Input type for source not supported.")
 
     try:
-        target_controlp = (np.array(target)[:max_control_points] if len(_data(target)[0]) == 2
-                           else _find_sources(_bw(_data(target)), detection_sigma, min_area, _mask(target))[:max_control_points])
-    except Exception:
+        target_data = _data(target)
+        target_controlp = (
+            np.array(target)[:max_control_points]
+            if len(target_data) and target_data.shape[1] == 2
+            else _find_sources(_bw(target_data), detection_sigma, min_area, _mask(target))[:max_control_points]
+        )
+        logger.debug(
+            f"Found {len(target_controlp)} control points in target image")
+    except Exception as e:
+        logger.error(f"Error finding sources in target image: {e}")
         raise TypeError("Input type for target not supported.")
 
     if len(source_controlp) < 3 or len(target_controlp) < 3:
+        logger.error("Not enough control points in source or target image")
         raise ValueError(
-            "Reference stars in source or target image are less than the minimum value (3).")
+            "Reference stars in source or target image are less than the minimum value (3)."
+        )
 
     source_invariants, source_asterisms = _generate_invariants(source_controlp)
     target_invariants, target_asterisms = _generate_invariants(target_controlp)
@@ -329,21 +382,29 @@ def find_transform(
     target_tree = KDTree(target_invariants)
 
     matches_list = source_tree.query_ball_tree(target_tree, r=0.1)
-
-    matches = [list(zip(t1, t2)) for t1, t2_list in zip(
-        source_asterisms, matches_list) for t2 in target_asterisms[t2_list]]
+    matches = [
+        list(zip(t1, t2)) for t1, t2_list in zip(source_asterisms, matches_list) for t2 in target_asterisms[t2_list]
+    ]
     matches = np.array(matches)
+    logger.debug(f"Found {len(matches)} initial matches")
 
     inv_model = _MatchTransform(source_controlp, target_controlp)
     n_invariants = len(matches)
     min_matches = max(1, min(10, int(n_invariants * MIN_MATCHES_FRACTION)))
+    logger.debug(f"Minimum matches required: {min_matches}")
 
     if (len(source_controlp) == 3 or len(target_controlp) == 3) and len(matches) == 1:
         best_t = inv_model.fit(matches)
         inlier_ind = np.arange(len(matches))
+        logger.debug("Using direct fit due to minimal control points")
     else:
-        best_t, inlier_ind = _ransac(
-            matches, inv_model, PIXEL_TOL, min_matches)
+        try:
+            best_t, inlier_ind = _ransac(
+                matches, inv_model, PIXEL_TOL, min_matches)
+            logger.debug(f"RANSAC found {len(inlier_ind)} inliers")
+        except MaxIterError as e:
+            logger.error(f"RANSAC failed: {e}")
+            raise
 
     triangle_inliers = matches[inlier_ind]
     inl_arr = triangle_inliers.reshape(-1, 2)
@@ -355,7 +416,6 @@ def find_transform(
         t_vertex = target_controlp[t_i]
         t_vertex_pred = matrix_transform(s_vertex, best_t.params)
         error = np.linalg.norm(t_vertex_pred - t_vertex)
-
         if s_i not in inl_dict or error < inl_dict[s_i][1]:
             inl_dict[s_i] = (t_i, error)
 
@@ -363,6 +423,7 @@ def find_transform(
                               for s_i, (t_i, _) in inl_dict.items()])
     s, d = inl_arr_unique.T
 
+    logger.info("find_transform process completed successfully")
     return best_t, (source_controlp[s], target_controlp[d])
 
 
@@ -371,7 +432,7 @@ def apply_transform(
     source: Union[NDArray, Any],
     target: Union[NDArray, Any],
     fill_value: Union[float, None] = None,
-    propagate_mask: bool = False
+    propagate_mask: bool = False,
 ) -> Tuple[NDArray, NDArray]:
     """
     Apply the estimated transformation to align the source image to the target image.
@@ -390,6 +451,7 @@ def apply_transform(
     Returns:
         A tuple containing the aligned source image and the transformation footprint.
     """
+    logger.info("Applying transformation to source image")
     source_data = _data(source)
     target_shape = _data(target).shape
 
@@ -423,10 +485,13 @@ def apply_transform(
             )
             source_mask_rot = source_mask_rot > 0.4
             footprint |= source_mask_rot
+            logger.debug("Propagated source mask after transformation")
 
     if fill_value is not None:
         aligned_image[footprint] = fill_value
+        logger.debug(f"Applied fill value: {fill_value}")
 
+    logger.info("Transformation applied successfully")
     return aligned_image, footprint
 
 
@@ -437,7 +502,7 @@ def register(
     propagate_mask: bool = False,
     max_control_points: int = 50,
     detection_sigma: int = 5,
-    min_area: int = 5
+    min_area: int = 5,
 ) -> Tuple[NDArray, NDArray]:
     """
     Register and align the source image to the target image using triangle invariants.
@@ -458,6 +523,7 @@ def register(
     Returns:
         A tuple containing the aligned source image and the transformation footprint.
     """
+    logger.info("Starting registration process")
     t, _ = find_transform(
         source=source,
         target=target,
@@ -465,10 +531,18 @@ def register(
         detection_sigma=detection_sigma,
         min_area=min_area,
     )
-    return apply_transform(t, source, target, fill_value, propagate_mask)
+    aligned_image, footprint = apply_transform(
+        t, source, target, fill_value, propagate_mask)
+    logger.info("Registration process completed successfully")
+    return aligned_image, footprint
 
 
-def _find_sources(img: NDArray, detection_sigma: int = 5, min_area: int = 5, mask: Union[NDArray, None] = None) -> NDArray:
+def _find_sources(
+    img: NDArray,
+    detection_sigma: int = 5,
+    min_area: int = 5,
+    mask: Union[NDArray, None] = None,
+) -> NDArray:
     """
     Detect bright sources (e.g., stars) in the image using SEP (Source Extractor).
 
@@ -483,13 +557,17 @@ def _find_sources(img: NDArray, detection_sigma: int = 5, min_area: int = 5, mas
     Returns:
         A NumPy array of detected source coordinates (x, y), sorted by brightness.
     """
+    logger.debug("Starting source detection using SEP")
     image = img.astype("float32")
     bkg = sep.Background(image, mask=mask)
     thresh = detection_sigma * bkg.globalrms
     sources = sep.extract(image - bkg.back(), thresh,
                           minarea=min_area, mask=mask)
     sources.sort(order="flux")
-    return np.array([[asrc["x"], asrc["y"]] for asrc in sources[::-1]])
+    detected_sources = np.array([[asrc["x"], asrc["y"]]
+                                for asrc in sources[::-1]])
+    logger.info(f"Detected {len(detected_sources)} sources in image")
+    return detected_sources
 
 
 class MaxIterError(RuntimeError):
@@ -502,7 +580,9 @@ class MaxIterError(RuntimeError):
     pass
 
 
-def _ransac(data: NDArray, model: Any, thresh: float, min_matches: int) -> Tuple[Any, NDArray]:
+def _ransac(
+    data: NDArray, model: Any, thresh: float, min_matches: int
+) -> Tuple[Any, NDArray]:
     """
     Fit a model to data using the RANSAC (Random Sample Consensus) algorithm.
 
@@ -522,12 +602,13 @@ def _ransac(data: NDArray, model: Any, thresh: float, min_matches: int) -> Tuple
         MaxIterError: If the maximum number of iterations is reached without finding
                       an acceptable transformation.
     """
+    logger.debug("Starting RANSAC algorithm")
     n_data = data.shape[0]
     all_idxs = np.arange(n_data)
     np.random.default_rng().shuffle(all_idxs)
 
     for iter_i in range(n_data):
-        maybe_idxs = all_idxs[iter_i:iter_i + 1]
+        maybe_idxs = all_idxs[iter_i: iter_i + 1]
         test_idxs = np.concatenate([all_idxs[:iter_i], all_idxs[iter_i + 1:]])
         maybeinliers = data[maybe_idxs, :]
         test_points = data[test_idxs, :]
@@ -535,13 +616,19 @@ def _ransac(data: NDArray, model: Any, thresh: float, min_matches: int) -> Tuple
         test_err = model.get_error(test_points, maybemodel)
         also_idxs = test_idxs[test_err < thresh]
         alsoinliers = data[also_idxs, :]
+        logger.debug(
+            f"Iteration {iter_i}: Found {len(alsoinliers)} inliers with threshold {thresh}"
+        )
         if len(alsoinliers) >= min_matches:
             good_data = np.concatenate((maybeinliers, alsoinliers))
             good_fit = model.fit(good_data)
+            logger.info(f"RANSAC succeeded at iteration {iter_i}")
             break
     else:
+        logger.error("RANSAC failed to find a valid transformation")
         raise MaxIterError(
-            "List of matching triangles exhausted before an acceptable transformation was found")
+            "List of matching triangles exhausted before an acceptable transformation was found"
+        )
 
     better_fit = good_fit
     for _ in range(3):
@@ -549,5 +636,7 @@ def _ransac(data: NDArray, model: Any, thresh: float, min_matches: int) -> Tuple
         better_inlier_idxs = np.arange(n_data)[test_err < thresh]
         better_data = data[better_inlier_idxs]
         better_fit = model.fit(better_data)
+        logger.debug(f"Refined fit with {len(better_data)} inliers")
 
+    logger.info("RANSAC algorithm completed successfully")
     return better_fit, better_inlier_idxs

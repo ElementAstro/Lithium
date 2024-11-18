@@ -13,6 +13,9 @@
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 
+#include "tools/croods.hpp"
+#include "tools/solverutils.hpp"
+
 static auto astrometrySolver =
     std::make_shared<AstrometrySolver>("solver.astrometry");
 
@@ -359,6 +362,93 @@ std::string AstrometrySolver::buildCommand(
     }
 
     return commandStream.str();
+}
+
+bool AstrometrySolver::plateSolveInProgress = false;
+bool AstrometrySolver::isSolveImageFinished = false;
+
+SolveResults AstrometrySolver::plateSolve(const std::string &filename,
+                                          int focalLength,
+                                          double cameraSizeWidth,
+                                          double cameraSizeHeight) {
+    plateSolveInProgress = true;
+    isSolveImageFinished = false;
+    SolveResults result;
+
+    lithium::tools::MinMaxFOV fov = lithium::tools::calculateFOV(
+        focalLength, cameraSizeWidth, cameraSizeHeight);
+
+    std::stringstream cmd;
+    cmd << "solve-field " << filename
+        << " --overwrite --cpulimit 5 --scale-units degwidth"
+        << " --scale-low " << fov.minFOV << " --scale-high " << fov.maxFOV
+        << " --nsigma 8 --no-plots --no-remove-lines --uniformize 0 "
+           "--timestamp";
+
+    LOG_F(INFO, "Executing command: {}", cmd.str());
+    std::string output = atom::system::executeCommand(cmd.str());
+
+    return result;
+}
+
+auto AstrometrySolver::readSolveResult(const std::string &filename,
+                                       int imageWidth,
+                                       int imageHeight) -> SolveResults {
+    isSolveImageFinished = false;
+    SolveResults result;
+
+    // Remove .fits extension
+    std::string baseFilename = filename.substr(0, filename.length() - 5);
+
+    std::string cmd = "wcsinfo " + baseFilename + ".wcs";
+    LOG_F(INFO, "Executing command: {}", cmd);
+
+    std::string output = atom::system::executeCommand(cmd);
+    if (output.empty()) {
+        LOG_F(ERROR, "Tools:Plate Solve Failure");
+        result.RA_Degree = -1;
+        result.DEC_Degree = -1;
+        plateSolveInProgress = false;
+        return result;
+    }
+
+    // Parse wcsinfo output
+    size_t raPos = output.find("ra_center");
+    size_t decPos = output.find("dec_center");
+    size_t orientPos = output.find("orientation_center");
+    size_t raHPos = output.find("ra_center_h");
+
+    std::string raStr = output.substr(raPos + 10, decPos - raPos - 11);
+    std::string decStr =
+        output.substr(decPos + 11, orientPos - decPos - 12);
+    std::string rotStr =
+        output.substr(orientPos + 19, raHPos - orientPos - 20);
+
+    double raDegree = std::stod(raStr);
+    double decDegree = std::stod(decStr);
+    double rotationDegree = std::stod(rotStr);
+
+    lithium::tools::WCSParams wcs = lithium::tools::extractWCSParams(output);
+    std::vector<lithium::tools::SphericalCoordinates> corners =
+        getFOVCorners(wcs, imageWidth, imageHeight);
+
+    result.RA_0 = corners[0].rightAscension;
+    result.DEC_0 = corners[0].declination;
+    result.RA_1 = corners[1].rightAscension;
+    result.DEC_1 = corners[1].declination;
+    result.RA_2 = corners[2].rightAscension;
+    result.DEC_2 = corners[2].declination;
+    result.RA_3 = corners[3].rightAscension;
+    result.DEC_3 = corners[3].declination;
+
+    result.RA_Degree = raDegree;
+    result.DEC_Degree = decDegree;
+
+    LOG_F(INFO, "Plate Solve Success");
+    LOG_F(INFO, "RA: {} DEC: {}", raDegree, decDegree);
+
+    plateSolveInProgress = false;
+    return result;
 }
 
 ATOM_MODULE(astrometry, [](Component &component) {

@@ -98,3 +98,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+find_package(pybind11 REQUIRED)
+pybind11_add_module(lithium.imagepy pymodule.cpp ${${PROJECT_NAME}_SOURCES})
+target_include_directories(lithium.imagepy PRIVATE ${OpenCV_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)

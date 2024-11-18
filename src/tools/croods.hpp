@@ -28,6 +28,11 @@ struct MinMaxFOV {
     double maxFOV;
 } ATOM_ALIGNAS(16);
 
+struct AltAz {
+  double altitude;
+  double azimuth;
+} ATOM_ALIGNAS(16);
+
 auto rangeTo(double value, double max, double min) -> double;
 
 auto degreeToRad(double degree) -> double;

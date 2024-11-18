@@ -18,6 +18,15 @@ public:
     std::string error;
 };
 
+struct SolveResults {
+    double RA_Degree = 0;
+    double DEC_Degree = 0;
+    double RA_0 = 0, DEC_0 = 0;
+    double RA_1 = 0, DEC_1 = 0;
+    double RA_2 = 0, DEC_2 = 0;
+    double RA_3 = 0, DEC_3 = 0;
+};
+
 struct SolveOptions {
     // 基本选项
     std::optional<std::string> backend_config;
@@ -147,6 +156,10 @@ public:
                     int timeout, int debug,
                     const SolveOptions& options = SolveOptions()) -> bool;
 
+    auto plateSolve(const std::string& filename, int focalLength,
+                    double cameraSizeWidth,
+                    double cameraSizeHeight) -> SolveResults;
+
     auto getSolveResult(std::string_view image) -> SolveResult;
 
     auto readSolveResult(const std::string& output) -> SolveResult;
@@ -157,6 +170,12 @@ private:
     std::string solverVersion_;
 
     SolveResult solveResult_;
+
+    static bool plateSolveInProgress;
+    static bool isSolveImageFinished;
+
+    auto readSolveResult(const std::string& filename, int imageWidth,
+                         int imageHeight) -> SolveResults;
 
     // 辅助方法
     std::string buildCommand(std::string_view image,

@@ -154,7 +154,6 @@ void deconvolve(const cv::Mat& input, const cv::Mat& kernel, cv::Mat& output,
     }
 }
 
-// New functionality
 void separableConvolve(const cv::Mat& input, const cv::Mat& kernelX,
                        const cv::Mat& kernelY, cv::Mat& output) {
     LOG_F(INFO, "Starting separable convolution");

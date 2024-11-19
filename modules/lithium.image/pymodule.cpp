@@ -8,8 +8,11 @@
 #include "fwhm.hpp"
 #include "hfr.hpp"
 #include "hist.hpp"
+#include "imgio.hpp"
+#include "imgutils.hpp"
 #include "ndarray_converter.hpp"
 #include "stretch.hpp"
+#include "thumbhash.hpp"
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -939,4 +942,364 @@ PYBIND11_MODULE(base64, m) {
             ValueError: If blockSize is less than 1
     )pbdoc",
         py::arg("img"), py::arg("blockSize") = 16);
+
+    // Bind YCbCr struct
+    py::class_<YCbCr>(m, "YCbCr")
+        .def(py::init<>())
+        .def_readwrite("y", &YCbCr::y)
+        .def_readwrite("cb", &YCbCr::cb)
+        .def_readwrite("cr", &YCbCr::cr);
+
+    // Bind dct function
+    m.def(
+        "dct",
+        [](const py::array_t<uint8_t>& input, py::array_t<uint8_t>& output) {
+            cv::Mat input_mat = numpyToMat(input);
+            cv::Mat output_mat;
+            dct(input_mat, output_mat);
+            output = matToNumpy(output_mat);
+        },
+        R"pbdoc(
+        Perform Discrete Cosine Transform (DCT) on the input image
+        Parameters:
+            input (numpy.ndarray): Input image matrix
+            output (numpy.ndarray): Output matrix to store the DCT result
+    )pbdoc");
+
+    // Bind rgbToYCbCr function
+    m.def(
+        "rgbToYCbCr",
+        [](const py::array_t<uint8_t>& rgb) {
+            cv::Vec<unsigned char, 3> rgb_vec =
+                *reinterpret_cast<const cv::Vec<unsigned char, 3>*>(rgb.data());
+            return rgbToYCbCr(rgb_vec);
+        },
+        R"pbdoc(
+        Convert an RGB color to YCbCr color space
+        Parameters:
+            rgb (numpy.ndarray): Input RGB color
+        Returns:
+            YCbCr: The YCbCr color space values
+    )pbdoc");
+
+    // Bind encodeThumbHash function
+    m.def(
+        "encodeThumbHash",
+        [](const py::array_t<uint8_t>& image) {
+            cv::Mat mat = numpyToMat(image);
+            return encodeThumbHash(mat);
+        },
+        R"pbdoc(
+        Encode an image into a ThumbHash
+        Parameters:
+            image (numpy.ndarray): Input image to be encoded
+        Returns:
+            List[float]: Encoded ThumbHash
+    )pbdoc");
+
+    // Bind decodeThumbHash function
+    m.def(
+        "decodeThumbHash",
+        [](const std::vector<double>& thumbHash, int width, int height) {
+            cv::Mat result = decodeThumbHash(thumbHash, width, height);
+            return matToNumpy(result);
+        },
+        R"pbdoc(
+        Decode a ThumbHash into an image
+        Parameters:
+            thumbHash (List[float]): Encoded ThumbHash data
+            width (int): Width of the output thumbnail image
+            height (int): Height of the output thumbnail image
+        Returns:
+            numpy.ndarray: Decoded thumbnail image
+    )pbdoc");
+
+    // Bind insideCircle function
+    m.def("insideCircle", &insideCircle, R"pbdoc(
+        Check if a point is inside a circle
+        Parameters:
+            xCoord (int): X coordinate of the point
+            yCoord (int): Y coordinate of the point
+            centerX (int): X coordinate of the circle center
+            centerY (int): Y coordinate of the circle center
+            radius (float): Radius of the circle
+        Returns:
+            bool: True if the point is inside the circle, otherwise False
+    )pbdoc");
+
+    // Bind checkElongated function
+    m.def("checkElongated", &checkElongated, R"pbdoc(
+        Check if a rectangle is elongated
+        Parameters:
+            width (int): Width of the rectangle
+            height (int): Height of the rectangle
+        Returns:
+            bool: True if the rectangle is elongated, otherwise False
+    )pbdoc");
+
+    // Bind checkWhitePixel function
+    m.def(
+        "checkWhitePixel",
+        [](const py::array_t<uint8_t>& rect_contour, int x_coord, int y_coord) {
+            cv::Mat mat = numpyToMat(rect_contour);
+            return checkWhitePixel(mat, x_coord, y_coord);
+        },
+        R"pbdoc(
+        Check if a pixel is white
+        Parameters:
+            rect_contour (numpy.ndarray): Input image
+            x_coord (int): X coordinate of the pixel
+            y_coord (int): Y coordinate of the pixel
+        Returns:
+            int: 1 if the pixel is white, otherwise 0
+    )pbdoc");
+
+    // Bind checkEightSymmetryCircle function
+    m.def(
+        "checkEightSymmetryCircle",
+        [](const py::array_t<uint8_t>& rect_contour, const cv::Point& center,
+           int x_p, int y_p) {
+            cv::Mat mat = numpyToMat(rect_contour);
+            return checkEightSymmetryCircle(mat, center, x_p, y_p);
+        },
+        R"pbdoc(
+        Check eight symmetry of a circle
+        Parameters:
+            rect_contour (numpy.ndarray): Input image
+            center (cv::Point): Center of the circle
+            x_p (int): X coordinate of the point
+            y_p (int): Y coordinate of the point
+        Returns:
+            int: Symmetry score
+    )pbdoc");
+
+    // Bind checkFourSymmetryCircle function
+    m.def(
+        "checkFourSymmetryCircle",
+        [](const py::array_t<uint8_t>& rect_contour, const cv::Point& center,
+           float radius) {
+            cv::Mat mat = numpyToMat(rect_contour);
+            return checkFourSymmetryCircle(mat, center, radius);
+        },
+        R"pbdoc(
+        Check four symmetry of a circle
+        Parameters:
+            rect_contour (numpy.ndarray): Input image
+            center (cv::Point): Center of the circle
+            radius (float): Radius of the circle
+        Returns:
+            int: Symmetry score
+    )pbdoc");
+
+    // Bind defineNarrowRadius function
+    m.def("defineNarrowRadius", &defineNarrowRadius, R"pbdoc(
+        Define narrow radius
+        Parameters:
+            min_area (int): Minimum area
+            max_area (float): Maximum area
+            area (float): Area
+            scale (float): Scale
+        Returns:
+            tuple: A tuple containing the radius, a vector of radii, and a vector of scales
+    )pbdoc");
+
+    // Bind checkBresenhamCircle function
+    m.def(
+        "checkBresenhamCircle",
+        [](const py::array_t<uint8_t>& rect_contour, float radius,
+           float pixel_ratio, bool if_debug = false) {
+            cv::Mat mat = numpyToMat(rect_contour);
+            return checkBresenhamCircle(mat, radius, pixel_ratio, if_debug);
+        },
+        R"pbdoc(
+        Check Bresenham circle
+        Parameters:
+            rect_contour (numpy.ndarray): Input image
+            radius (float): Radius of the circle
+            pixel_ratio (float): Pixel ratio
+            if_debug (bool): Debug flag
+        Returns:
+            bool: True if the circle is valid, otherwise False
+    )pbdoc");
+
+    // Bind calculateAverageDeviation function
+    m.def(
+        "calculateAverageDeviation",
+        [](double mid, const py::array_t<uint8_t>& norm_img) {
+            cv::Mat mat = numpyToMat(norm_img);
+            return calculateAverageDeviation(mid, mat);
+        },
+        R"pbdoc(
+        Calculate average deviation
+        Parameters:
+            mid (float): Mid value
+            norm_img (numpy.ndarray): Normalized image
+        Returns:
+            float: Average deviation
+    )pbdoc");
+
+    // Bind calculateMTF function
+    m.def(
+        "calculateMTF",
+        [](double magnitude, const py::array_t<uint8_t>& img) {
+            cv::Mat mat = numpyToMat(img);
+            cv::Mat result = calculateMTF(magnitude, mat);
+            return matToNumpy(result);
+        },
+        R"pbdoc(
+        Calculate MTF
+        Parameters:
+            magnitude (float): Magnitude
+            img (numpy.ndarray): Input image
+        Returns:
+            numpy.ndarray: MTF image
+    )pbdoc");
+
+    // Bind calculateScale function
+    m.def(
+        "calculateScale",
+        [](const py::array_t<uint8_t>& img, int resize_size = 1552) {
+            cv::Mat mat = numpyToMat(img);
+            return calculateScale(mat, resize_size);
+        },
+        R"pbdoc(
+        Calculate scale
+        Parameters:
+            img (numpy.ndarray): Input image
+            resize_size (int): Resize size
+        Returns:
+            float: Scale
+    )pbdoc");
+
+    // Bind calculateMedianDeviation function
+    m.def(
+        "calculateMedianDeviation",
+        [](double mid, const py::array_t<uint8_t>& img) {
+            cv::Mat mat = numpyToMat(img);
+            return calculateMedianDeviation(mid, mat);
+        },
+        R"pbdoc(
+        Calculate median deviation
+        Parameters:
+            mid (float): Mid value
+            img (numpy.ndarray): Input image
+        Returns:
+            float: Median deviation
+    )pbdoc");
+
+    // Bind computeParamsOneChannel function
+    m.def(
+        "computeParamsOneChannel",
+        [](const py::array_t<uint8_t>& img) {
+            cv::Mat mat = numpyToMat(img);
+            auto result = computeParamsOneChannel(mat);
+            return py::make_tuple(std::get<0>(result), std::get<1>(result),
+                                  std::get<2>(result));
+        },
+        R"pbdoc(
+        Compute parameters for one channel
+        Parameters:
+            img (numpy.ndarray): Input image
+        Returns:
+            tuple: A tuple containing the parameters
+    )pbdoc");
+
+    // Bind autoWhiteBalance function
+    m.def(
+        "autoWhiteBalance",
+        [](const py::array_t<uint8_t>& img) {
+            cv::Mat mat = numpyToMat(img);
+            cv::Mat result = autoWhiteBalance(mat);
+            return matToNumpy(result);
+        },
+        R"pbdoc(
+        Perform automatic white balance
+        Parameters:
+            img (numpy.ndarray): Input image
+        Returns:
+            numpy.ndarray: White-balanced image
+    )pbdoc");
+
+    // Bind loadImage function
+    m.def(
+        "loadImage",
+        [](const std::string& filename, int flags = 1) {
+            cv::Mat mat = loadImage(filename, flags);
+            return matToNumpy(mat);
+        },
+        R"pbdoc(
+        Load a single image
+        Parameters:
+            filename (str): Path to the image file
+            flags (int): Flags for image loading
+        Returns:
+            numpy.ndarray: Loaded image
+    )pbdoc",
+        py::arg("filename"), py::arg("flags") = 1);
+
+    // Bind loadImages function
+    m.def(
+        "loadImages",
+        [](const std::string& folder,
+           const std::vector<std::string>& filenames = {}, int flags = 1) {
+            std::vector<std::pair<std::string, cv::Mat>> images =
+                loadImages(folder, filenames, flags);
+            std::vector<std::pair<std::string, py::array_t<uint8_t>>> result;
+            result.reserve(images.size());
+            for (const auto& [name, mat] : images) {
+                result.emplace_back(name, matToNumpy(mat));
+            }
+            return result;
+        },
+        R"pbdoc(
+        Load all images from a folder
+        Parameters:
+            folder (str): Path to the folder
+            filenames (List[str]): List of filenames to load
+            flags (int): Flags for image loading
+        Returns:
+            List[Tuple[str, numpy.ndarray]]: List of loaded images with their filenames
+    )pbdoc",
+        py::arg("folder"), py::arg("filenames") = std::vector<std::string>{},
+        py::arg("flags") = 1);
+
+    // Bind saveImage function
+    m.def("saveImage", &saveImage, R"pbdoc(
+        Save an image to a file
+        Parameters:
+            filename (str): Path to the output file
+            image (numpy.ndarray): Image to save
+        Returns:
+            bool: True if the image was saved successfully, otherwise False
+    )pbdoc");
+
+    // Bind saveMatTo8BitJpg function
+    m.def("saveMatTo8BitJpg", &saveMatTo8BitJpg, R"pbdoc(
+        Save a cv::Mat image to an 8-bit JPG file
+        Parameters:
+            image (numpy.ndarray): Image to save
+            output_path (str): Path to the output file
+        Returns:
+            bool: True if the image was saved successfully, otherwise False
+    )pbdoc");
+
+    // Bind saveMatTo16BitPng function
+    m.def("saveMatTo16BitPng", &saveMatTo16BitPng, R"pbdoc(
+        Save a cv::Mat image to a 16-bit PNG file
+        Parameters:
+            image (numpy.ndarray): Image to save
+            output_path (str): Path to the output file
+        Returns:
+            bool: True if the image was saved successfully, otherwise False
+    )pbdoc");
+
+    // Bind saveMatToFits function
+    m.def("saveMatToFits", &saveMatToFits, R"pbdoc(
+        Save a cv::Mat image to a FITS file
+        Parameters:
+            image (numpy.ndarray): Image to save
+            output_path (str): Path to the output file
+        Returns:
+            bool: True if the image was saved successfully, otherwise False
+    )pbdoc");
 }

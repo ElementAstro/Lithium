@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 from loguru import logger
+import argparse
 
 this_file_path = Path(__file__)
 star_file = this_file_path.parent / 'NamedStars.csv'
@@ -157,31 +158,45 @@ def get_light_star_list(observation_location: EarthLocation, observation_time: d
     return filtered_star_list
 
 
-# Example Usage
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(
+        description="Find named stars visible from a given location and time.")
+    parser.add_argument('--lat', type=float, required=True,
+                        help='Latitude of the observer in degrees')
+    parser.add_argument('--lon', type=float, required=True,
+                        help='Longitude of the observer in degrees')
+    parser.add_argument('--height', type=float, default=0,
+                        help='Height of the observer above sea level in meters')
+    parser.add_argument('--date', type=str, required=True,
+                        help='Date and time of the observation (format: YYYY-MM-DD HH:MM:SS)')
+    parser.add_argument('--max_magnitude', type=int, default=2,
+                        help='Maximum magnitude of stars to include')
+    parser.add_argument('--range_filter', type=str, nargs='*',
+                        help='Cardinal directions to filter the stars')
+    parser.add_argument('--constellation_filter', type=str,
+                        help='Constellation to filter the stars')
+    parser.add_argument('--constellation_zh_filter', type=str,
+                        help='Constellation Chinese name to filter the stars')
+    parser.add_argument('--name_filter', type=str,
+                        help='Star name to filter the stars')
+    parser.add_argument('--show_name_filter', type=str,
+                        help='Star Chinese name to filter the stars')
+
+    args = parser.parse_args()
+
     # Set up logging
     setup_logging()
 
-    # Example location: New York City, USA
-    observation_location = EarthLocation(
-        lat=40.7128*u.deg, lon=-74.0060*u.deg, height=10*u.m)
-
-    # Observation time: Current time in UTC
-    observation_time = datetime.datetime.now().astimezone(ZoneInfo("UTC"))
-
-    # Maximum magnitude of stars to display
-    max_magnitude = 2
-
-    # Range filter: Only show stars in the north and east skies
-    range_filter = ['north', 'east']
-
-    # Constellation filter: Only show stars in the Orion constellation
-    constellation_filter = 'Ori'
-
-    # Call the function to get the list of visible stars
     try:
+        observation_location = EarthLocation(
+            lat=args.lat * u.deg, lon=args.lon * u.deg, height=args.height * u.m)
+        observation_time = datetime.datetime.strptime(
+            args.date, '%Y-%m-%d %H:%M:%S').astimezone(ZoneInfo("UTC"))
+
+        # Get the list of visible stars
         visible_stars = get_light_star_list(
-            observation_location, observation_time, max_magnitude, range_filter, constellation_filter)
+            observation_location, observation_time, args.max_magnitude, args.range_filter,
+            args.constellation_filter, args.constellation_zh_filter, args.name_filter, args.show_name_filter)
 
         # Print the results
         if visible_stars:
@@ -197,3 +212,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         print(f"An error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()

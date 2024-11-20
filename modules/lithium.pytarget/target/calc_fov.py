@@ -1,5 +1,7 @@
 import numpy as np
 from loguru import logger
+import argparse
+from typing import Tuple
 
 
 def setup_logging():
@@ -32,7 +34,7 @@ def ra_dec2fixed_xyz(ra: float, dec: float) -> np.ndarray:
     return np.array([x, y, z])
 
 
-def fixed_xyz2ra_dec(vector: np.ndarray) -> tuple[float, float]:
+def fixed_xyz2ra_dec(vector: np.ndarray) -> Tuple[float, float]:
     """
     Convert fixed XYZ coordinates to RA/DEC.
 
@@ -57,12 +59,12 @@ def fixed_xyz2ra_dec(vector: np.ndarray) -> tuple[float, float]:
 
 
 def calc_fov_points(x_pixels: int, x_pixel_size: float, y_pixels: int, y_pixel_size: float, focal_length: int,
-                    target_ra: float, target_dec: float, camera_rotation: float) -> tuple[tuple[float, float],
-                                                                                          tuple[float,
+                    target_ra: float, target_dec: float, camera_rotation: float) -> Tuple[Tuple[float, float],
+                                                                                          Tuple[float,
                                                                                                 float],
-                                                                                          tuple[float,
+                                                                                          Tuple[float,
                                                                                                 float],
-                                                                                          tuple[float, float]]:
+                                                                                          Tuple[float, float]]:
     """
     Calculate the field of view (FOV) points in RA/DEC coordinates for a camera given its parameters.
 
@@ -142,12 +144,41 @@ def calc_fov_points(x_pixels: int, x_pixel_size: float, y_pixels: int, y_pixel_s
     return corners
 
 
-# Example usage:
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(
+        description="Calculate the field of view (FOV) points in RA/DEC coordinates for a camera.")
+    parser.add_argument('--x_pixels', type=int, required=True,
+                        help='Number of pixels in the x direction')
+    parser.add_argument('--x_pixel_size', type=float, required=True,
+                        help='Size of each pixel in the x direction in micrometers')
+    parser.add_argument('--y_pixels', type=int, required=True,
+                        help='Number of pixels in the y direction')
+    parser.add_argument('--y_pixel_size', type=float, required=True,
+                        help='Size of each pixel in the y direction in micrometers')
+    parser.add_argument('--focal_length', type=int, required=True,
+                        help='Focal length of the camera in millimeters')
+    parser.add_argument('--target_ra', type=float, required=True,
+                        help='Target right ascension in degrees')
+    parser.add_argument('--target_dec', type=float,
+                        required=True, help='Target declination in degrees')
+    parser.add_argument('--camera_rotation', type=float,
+                        default=0.0, help='Rotation of the camera in degrees')
+
+    args = parser.parse_args()
+
     # Set up logging
     setup_logging()
 
-    fov_points = calc_fov_points(x_pixels=4000, x_pixel_size=3.75, y_pixels=3000, y_pixel_size=3.75, focal_length=500,
-                                 target_ra=180.0, target_dec=45.0, camera_rotation=0.0)
-    for idx, point in enumerate(fov_points, start=1):
-        print(f"Corner {idx}: RA = {point[0]:.6f}°, DEC = {point[1]:.6f}°")
+    try:
+        fov_points = calc_fov_points(x_pixels=args.x_pixels, x_pixel_size=args.x_pixel_size, y_pixels=args.y_pixels,
+                                     y_pixel_size=args.y_pixel_size, focal_length=args.focal_length,
+                                     target_ra=args.target_ra, target_dec=args.target_dec, camera_rotation=args.camera_rotation)
+        for idx, point in enumerate(fov_points, start=1):
+            print(f"Corner {idx}: RA = {point[0]:.6f}°, DEC = {point[1]:.6f}°")
+    except Exception as e:
+        logger.error(f"Error calculating FOV points: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,31 +1,36 @@
-from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 import datetime
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 from astroplan import Observer, FixedTarget, moon_illumination
 from astropy.time import Time
 import astropy.units as u
 import numpy as np
 from dataclasses import dataclass
 from loguru import logger
+import argparse
+from typing import List, Tuple, Dict, Optional
 
 
 @dataclass
 class ObservationResult:
-    altitude: float
-    azimuth: float
-    highest_altitude: float | None
-    available_shoot_time: float | None
+    altitude: Optional[float]
+    azimuth: Optional[float]
+    highest_altitude: Optional[float]
+    available_shoot_time: Optional[float]
     is_above_horizon: bool
 
 
 def calculate_current_alt(observation_start_time: datetime.datetime, observer_location: EarthLocation, ra: float, dec: float) -> ObservationResult:
     """
-    Calculate the current altitude and azimuth of a celestial object.
+    Calculate the current altitude and azimuth of a celestial object given its RA and Dec.
 
-    :param observation_start_time: The start time of the observation.
-    :param observer_location: The location of the observer on Earth.
-    :param ra: Right Ascension of the celestial object in degrees.
-    :param dec: Declination of the celestial object in degrees.
-    :return: An ObservationResult containing the altitude, azimuth, highest altitude, available shoot time, and whether the object is above the horizon.
+    Parameters:
+    observation_start_time (datetime.datetime): The start time of the observation.
+    observer_location (EarthLocation): The location of the observer.
+    ra (float): Right Ascension of the celestial object in degrees.
+    dec (float): Declination of the celestial object in degrees.
+
+    Returns:
+    ObservationResult: A dataclass containing the altitude, azimuth, highest altitude, available shoot time, and whether the object is above the horizon.
     """
     logger.debug(
         f"Calculating current altitude and azimuth for RA: {ra}, Dec: {dec} at {observation_start_time}")
@@ -61,39 +66,44 @@ def calculate_current_alt(observation_start_time: datetime.datetime, observer_lo
         return ObservationResult(altitude=None, azimuth=None, highest_altitude=None, available_shoot_time=None, is_above_horizon=False)
 
 
-def calculate_highest_alt(observation_start_time: datetime.datetime, observer_location: EarthLocation, ra: float, dec: float) -> float | None:
+def calculate_highest_alt(observation_start_time: datetime.datetime, observer_location: EarthLocation, ra: float, dec: float) -> Optional[float]:
     """
     Calculate the highest altitude of a celestial object during the night.
 
-    :param observation_start_time: The start time of the observation.
-    :param observer_location: The location of the observer on Earth.
-    :param ra: Right Ascension of the celestial object in degrees.
-    :param dec: Declination of the celestial object in degrees.
-    :return: The highest altitude in degrees, or None if the object is not observable.
+    Parameters:
+    observation_start_time (datetime.datetime): The start time of the observation.
+    observer_location (EarthLocation): The location of the observer.
+    ra (float): Right Ascension of the celestial object in degrees.
+    dec (float): Declination of the celestial object in degrees.
+
+    Returns:
+    Optional[float]: The highest altitude of the celestial object in degrees, or None if not observable.
     """
     logger.debug(
         f"Calculating highest altitude for RA: {ra}, Dec: {dec} during the night of {observation_start_time}")
 
     try:
+        # Create a FixedTarget object for the celestial object
         target = FixedTarget(coord=SkyCoord(
             ra, dec, unit='deg', frame='icrs'), name="Target")
         observer = Observer(location=observer_location)
         observation_time = Time(observation_start_time)
 
-        # Calculate the beginning and end of the night
+        # Calculate the start and end of the night
         begin_night = observer.twilight_evening_astronomical(
             observation_time, which='nearest')
         end_night = observer.twilight_morning_astronomical(
             observation_time, which='next')
 
         if begin_night < end_night:
-            # Calculate the time of the object's meridian transit (highest point in the sky)
+            # Calculate the time of the object's meridian transit
             midnight = observer.target_meridian_transit_time(
                 observation_time, target, which='nearest')
 
             if begin_night < midnight < end_night:
                 max_altitude = observer.altaz(midnight, target).alt
             else:
+                # Calculate the altitudes at the start and end of the night
                 nighttime_altitudes = [observer.altaz(time, target).alt for time in [
                     begin_night, end_night]]
                 max_altitude = max(nighttime_altitudes)
@@ -107,20 +117,24 @@ def calculate_highest_alt(observation_start_time: datetime.datetime, observer_lo
         return None
 
 
-def calculate_available_shoot_time(observation_start_time: datetime.datetime, observer_location: EarthLocation, ra: float, dec: float) -> float | None:
+def calculate_available_shoot_time(observation_start_time: datetime.datetime, observer_location: EarthLocation, ra: float, dec: float) -> Optional[float]:
     """
     Calculate the available shooting time for a celestial object during the night.
 
-    :param observation_start_time: The start time of the observation.
-    :param observer_location: The location of the observer on Earth.
-    :param ra: Right Ascension of the celestial object in degrees.
-    :param dec: Declination of the celestial object in degrees.
-    :return: The available shooting time in hours, or None if the object is not observable.
+    Parameters:
+    observation_start_time (datetime.datetime): The start time of the observation.
+    observer_location (EarthLocation): The location of the observer.
+    ra (float): Right Ascension of the celestial object in degrees.
+    dec (float): Declination of the celestial object in degrees.
+
+    Returns:
+    Optional[float]: The available shooting time in hours, or None if not observable.
     """
     logger.debug(
         f"Calculating available shooting time for RA: {ra}, Dec: {dec} during the night of {observation_start_time}")
 
     try:
+        # Create a FixedTarget object for the celestial object
         target = FixedTarget(coord=SkyCoord(
             ra, dec, unit=u.deg), name="Target")
         observer = Observer(location=observer_location)
@@ -137,6 +151,7 @@ def calculate_available_shoot_time(observation_start_time: datetime.datetime, ob
                 "Invalid time period: Begin of night is after the end of night.")
             return None
 
+        # Generate time intervals throughout the night
         times = begin_of_night + delta_t * \
             np.arange(0, 1, step_size * 60.0 / delta_t.sec)
         altitudes = observer.altaz(times, target).alt
@@ -145,6 +160,7 @@ def calculate_available_shoot_time(observation_start_time: datetime.datetime, ob
         observable_time_indices = altitudes > 50 * u.deg
         observable_times = times[observable_time_indices]
 
+        # Estimate the total observable time in hours
         observable_time_estimate = len(observable_times) * step_size / 60
         logger.info(
             f"Calculated available shooting time: {observable_time_estimate} hours")
@@ -158,8 +174,11 @@ def calculate_moon_phase(observation_time: datetime.datetime) -> float:
     """
     Calculate the moon phase as a percentage of illumination.
 
-    :param observation_time: The time of the observation.
-    :return: The moon phase as a percentage, or -1 if an error occurs.
+    Parameters:
+    observation_time (datetime.datetime): The time of the observation.
+
+    Returns:
+    float: The moon phase as a percentage of illumination.
     """
     logger.debug(f"Calculating moon phase for {observation_time}")
 
@@ -172,15 +191,18 @@ def calculate_moon_phase(observation_time: datetime.datetime) -> float:
         return -1
 
 
-def evaluate_observation_conditions(observer_location: EarthLocation, observation_time: datetime.datetime, ra: float, dec: float) -> dict:
+def evaluate_observation_conditions(observer_location: EarthLocation, observation_time: datetime.datetime, ra: float, dec: float) -> Dict[str, Optional[float]]:
     """
     Evaluate the observation conditions for a celestial object.
 
-    :param observer_location: The location of the observer on Earth.
-    :param observation_time: The time of the observation.
-    :param ra: Right Ascension of the celestial object in degrees.
-    :param dec: Declination of the celestial object in degrees.
-    :return: A dictionary containing the current altitude, azimuth, highest altitude, available shoot time, whether the object is above the horizon, moon phase, and an overall score.
+    Parameters:
+    observer_location (EarthLocation): The location of the observer.
+    observation_time (datetime.datetime): The time of the observation.
+    ra (float): Right Ascension of the celestial object in degrees.
+    dec (float): Declination of the celestial object in degrees.
+
+    Returns:
+    Dict[str, Optional[float]]: A dictionary containing the current altitude, azimuth, highest altitude, available shoot time, whether the object is above the horizon, moon phase, and an overall score.
     """
     logger.debug(
         f"Evaluating observation conditions for RA: {ra}, Dec: {dec} at {observation_time}")
@@ -190,18 +212,15 @@ def evaluate_observation_conditions(observer_location: EarthLocation, observatio
             observation_time, observer_location, ra, dec)
         moon_phase_percent = calculate_moon_phase(observation_time)
 
-        # Initialize score
         score = 100
 
-        # Adjust score based on altitude
+        # Adjust score based on altitude and moon phase
         if result.altitude is not None and result.altitude < 30:
-            score -= 20  # Lower score if altitude is less than 30 degrees
+            score -= 20
 
-        # Adjust score based on moon phase
         if moon_phase_percent > 50:
-            score -= 30  # Lower score if the moon is more than 50% illuminated
+            score -= 30
 
-        # Ensure the score is not negative
         score = max(score, 0)
 
         logger.info(f"Evaluation complete with score: {score}")
@@ -219,15 +238,18 @@ def evaluate_observation_conditions(observer_location: EarthLocation, observatio
         return {}
 
 
-def plan_multiple_observations(observer_location: EarthLocation, start_time: datetime.datetime, ra_dec_list: list, days: int = 1) -> dict:
+def plan_multiple_observations(observer_location: EarthLocation, start_time: datetime.datetime, ra_dec_list: List[Tuple[float, float]], days: int = 1) -> Dict[str, Dict[str, Optional[float]]]:
     """
     Plan observations for multiple celestial objects over a specified number of days.
 
-    :param observer_location: The location of the observer on Earth.
-    :param start_time: The start time of the observation period.
-    :param ra_dec_list: A list of tuples containing the Right Ascension and Declination of the celestial objects.
-    :param days: The number of days over which to plan the observations.
-    :return: A dictionary containing the observation schedule.
+    Parameters:
+    observer_location (EarthLocation): The location of the observer.
+    start_time (datetime.datetime): The start time of the observations.
+    ra_dec_list (List[Tuple[float, float]]): A list of tuples containing the RA and Dec of the celestial objects.
+    days (int): The number of days to plan observations for.
+
+    Returns:
+    Dict[str, Dict[str, Optional[float]]]: A dictionary containing the observation conditions for each object on each day.
     """
     logger.debug(
         f"Planning observations for multiple objects over {days} days starting from {start_time}")
@@ -247,25 +269,46 @@ def plan_multiple_observations(observer_location: EarthLocation, start_time: dat
         return {}
 
 
-# Example usage:
+def main():
+    """
+    Main function to parse command line arguments and calculate observation conditions.
+    """
+    parser = argparse.ArgumentParser(
+        description="Calculate celestial object observation conditions.")
+    parser.add_argument("--lat", type=float, required=True,
+                        help="Latitude of the observer location.")
+    parser.add_argument("--lon", type=float, required=True,
+                        help="Longitude of the observer location.")
+    parser.add_argument("--height", type=float, default=0,
+                        help="Height of the observer location in meters.")
+    parser.add_argument("--ra", type=float, required=True,
+                        help="Right Ascension of the celestial object in degrees.")
+    parser.add_argument("--dec", type=float, required=True,
+                        help="Declination of the celestial object in degrees.")
+    parser.add_argument("--days", type=int, default=1,
+                        help="Number of days to plan observations for.")
+    args = parser.parse_args()
+
+    # Create an EarthLocation object for the observer's location
+    location = EarthLocation(lat=args.lat * u.deg,
+                             lon=args.lon * u.deg, height=args.height * u.m)
+    observation_time = datetime.datetime.now()
+
+    # Calculate the current altitude and azimuth
+    result = calculate_current_alt(
+        observation_time, location, args.ra, args.dec)
+    print(
+        f"Current Altitude: {result.altitude} degrees, Azimuth: {result.azimuth} degrees")
+    print(f"Highest Altitude: {result.highest_altitude} degrees")
+    print(f"Available Shooting Time: {result.available_shoot_time} hours")
+    print(f"Is Above Horizon: {result.is_above_horizon}")
+
+    # Plan observations for multiple days
+    ra_dec_list = [(args.ra, args.dec)]
+    schedule = plan_multiple_observations(
+        location, observation_time, ra_dec_list, days=args.days)
+    print(schedule)
+
+
 if __name__ == "__main__":
-    try:
-        location = EarthLocation(
-            lat=34.0522*u.deg, lon=-118.2437*u.deg, height=71*u.m)
-        observation_time = datetime.datetime.now()
-        ra, dec = 10.684, 41.269  # Example coordinates (RA, Dec in degrees)
-
-        result = calculate_current_alt(observation_time, location, ra, dec)
-        print(
-            f"Current Altitude: {result.altitude} degrees, Azimuth: {result.azimuth} degrees")
-        print(f"Highest Altitude: {result.highest_altitude} degrees")
-        print(f"Available Shooting Time: {result.available_shoot_time} hours")
-        print(f"Is Above Horizon: {result.is_above_horizon}")
-
-        # Plan observations for the next 3 days
-        ra_dec_list = [(10.684, 41.269), (83.822, -5.391)]
-        schedule = plan_multiple_observations(
-            location, observation_time, ra_dec_list, days=3)
-        print(schedule)
-    except Exception as e:
-        logger.error(f"Error in main execution: {e}")
+    main()

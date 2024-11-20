@@ -1,14 +1,14 @@
-from astropy.coordinates import EarthLocation
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord
+from astropy.time import Time
 import pandas as pd
 from pathlib import Path
 import numpy as np
-from astropy.coordinates import AltAz, SkyCoord
-from astropy.time import Time
 import datetime
 import re
 from pydantic import BaseModel, field_validator
 from typing import List, Optional, Dict, Tuple
 from loguru import logger
+import argparse
 
 from calc_alt import calculate_star_info
 
@@ -24,10 +24,10 @@ too_big_search_string = [
 class DSO(BaseModel):
     """Data model for Deep Sky Object (DSO)."""
     name: str
-    ra: Optional[float] = None  # 赤经 (0 <= ra <= 360)
-    dec: Optional[float] = None  # 赤纬 (-90 <= dec <= 90)
+    ra: Optional[float] = None  # Right Ascension (0 <= ra <= 360)
+    dec: Optional[float] = None  # Declination (-90 <= dec <= 90)
     alias: Optional[str] = None
-    magnitude: Optional[float] = None  # 星等
+    magnitude: Optional[float] = None  # Magnitude
     altitude_curve: Optional[List[float]] = None
     azimuth_curve: Optional[List[float]] = None
 
@@ -49,9 +49,7 @@ class DSO(BaseModel):
 
 
 def setup_logging():
-    """
-    Set up the loguru logging configuration to log both to console and to a file.
-    """
+    """Set up the loguru logging configuration to log both to console and to a file."""
     logger.add("dso_search.log", level="DEBUG",
                format="{time} {level} {message}", rotation="10 MB")
     logger.info("Logging setup complete.")
@@ -112,11 +110,11 @@ def search_DSO(to_search_name: str, observer_location: EarthLocation, date_time_
             results = results[(results['magnitude'] >= magnitude_range[0]) & (
                 results['magnitude'] <= magnitude_range[1])]
         if ra_range:
-            results = results[(results['ra'] >= ra_range[0]) & (
-                results['ra'] <= ra_range[1])]
+            results = results[(results['ra'] >= ra_range[0])
+                              & (results['ra'] <= ra_range[1])]
         if dec_range:
-            results = results[(results['dec'] >= dec_range[0]) & (
-                results['dec'] <= dec_range[1])]
+            results = results[(results['dec'] >= dec_range[0])
+                              & (results['dec'] <= dec_range[1])]
         if alias:
             results = results[results['alias'].str.contains(
                 alias, case=False, na=False)]
@@ -184,37 +182,57 @@ def batch_search_DSO(names: List[str], observer_location: EarthLocation, date_ti
     return results
 
 
-# 调用示例
-if __name__ == "__main__":
-    # 设置日志
+def main():
+    parser = argparse.ArgumentParser(
+        description="Search for Deep Sky Objects (DSOs) and calculate their altitude and azimuth curves.")
+    parser.add_argument('--lat', type=float, required=True,
+                        help='Latitude of the observer in degrees')
+    parser.add_argument('--lon', type=float, required=True,
+                        help='Longitude of the observer in degrees')
+    parser.add_argument('--height', type=float, default=0,
+                        help='Height of the observer above sea level in meters')
+    parser.add_argument('--date', type=str, required=True,
+                        help='Date and time of the observation (format: YYYY-MM-DD HH:MM:SS)')
+    parser.add_argument('--names', type=str, nargs='+',
+                        required=True, help='Names of the DSOs to search for')
+    parser.add_argument('--magnitude_range', type=float,
+                        nargs=2, help='Magnitude range for filtering DSOs')
+    parser.add_argument('--ra_range', type=float, nargs=2,
+                        help='Right Ascension range for filtering DSOs')
+    parser.add_argument('--dec_range', type=float, nargs=2,
+                        help='Declination range for filtering DSOs')
+    parser.add_argument('--alias', type=str, help='Alias for filtering DSOs')
+
+    args = parser.parse_args()
+
+    # Set up logging
     setup_logging()
 
-    # 定义观测者位置和时间
-    observer_location = EarthLocation(
-        lat=34.0522, lon=-118.2437, height=100)  # 例如洛杉矶
-    date_time_string = datetime.datetime(
-        2024, 8, 29, 22, 0, 0)  # 2024年8月29日22点
+    try:
+        observer_location = EarthLocation(
+            lat=args.lat * u.deg, lon=args.lon * u.deg, height=args.height * u.m)
+        date_time_string = datetime.datetime.strptime(
+            args.date, '%Y-%m-%d %H:%M:%S')
 
-    # 单一DSO搜索
-    dso_name = "M42"
-    dso_results = search_DSO(dso_name, observer_location, date_time_string,
-                             magnitude_range=(0, 10),
-                             ra_range=(0, 360),
-                             dec_range=(-90, 90),
-                             alias="Orion")
-    for dso in dso_results:
-        print(
-            f"Name: {dso.name}, Altitude Curve: {dso.altitude_curve}, Azimuth Curve: {dso.azimuth_curve}")
+        # Batch search DSOs
+        batch_results = batch_search_DSO(args.names, observer_location, date_time_string,
+                                         magnitude_range=tuple(
+                                             args.magnitude_range) if args.magnitude_range else None,
+                                         ra_range=tuple(
+                                             args.ra_range) if args.ra_range else None,
+                                         dec_range=tuple(
+                                             args.dec_range) if args.dec_range else None,
+                                         alias=args.alias)
+        for name, results in batch_results.items():
+            print(f"Results for {name}:")
+            for dso in results:
+                print(
+                    f"Name: {dso.name}, Altitude Curve: {dso.altitude_curve}, Azimuth Curve: {dso.azimuth_curve}")
 
-    # 批量DSO搜索
-    dso_names = ["M42", "NGC224"]
-    batch_results = batch_search_DSO(dso_names, observer_location, date_time_string,
-                                     magnitude_range=(0, 10),
-                                     ra_range=(0, 360),
-                                     dec_range=(-90, 90),
-                                     alias="Andromeda")
-    for name, results in batch_results.items():
-        print(f"Results for {name}:")
-        for dso in results:
-            print(
-                f"Name: {dso.name}, Altitude Curve: {dso.altitude_curve}, Azimuth Curve: {dso.azimuth_curve}")
+    except Exception as e:
+        logger.error(f"Error in main execution: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,10 +1,19 @@
+import sys
 from astroplan import Observer
 from astropy.time import Time
-from astropy.coordinates import Angle
+from astropy.coordinates import Angle, EarthLocation
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Dict, Union, Optional
 from loguru import logger
+import argparse
+
+
+def setup_logging():
+    """Set up the loguru logging configuration to log both to console and to a file."""
+    logger.add("twilight_calculation.log", level="DEBUG",
+               format="{time} {level} {message}", rotation="10 MB")
+    logger.info("Logging setup complete.")
 
 
 def calculate_twilight(observer: Observer, time: Time, time_offset: ZoneInfo) -> Dict[str, Dict[str, str]]:
@@ -176,29 +185,52 @@ def calculate_golden_hour(observer: Observer, time: Time, time_offset: ZoneInfo)
         return {}
 
 
-# Example usage:
+def main():
+    parser = argparse.ArgumentParser(
+        description="Calculate twilight and golden hour times for a given location and time.")
+    parser.add_argument('--lat', type=float, required=True,
+                        help='Latitude of the observer in degrees')
+    parser.add_argument('--lon', type=float, required=True,
+                        help='Longitude of the observer in degrees')
+    parser.add_argument('--height', type=float, default=0,
+                        help='Height of the observer above sea level in meters')
+    parser.add_argument('--date', type=str, required=True,
+                        help='Date and time of the observation (format: YYYY-MM-DD HH:MM:SS)')
+    parser.add_argument('--timezone', type=str, required=True,
+                        help='Timezone of the observation (e.g., America/Los_Angeles)')
+
+    args = parser.parse_args()
+
+    # Set up logging
+    setup_logging()
+
+    try:
+        observer_location = EarthLocation(
+            lat=args.lat * u.deg, lon=args.lon * u.deg, height=args.height * u.m)
+        observer = Observer(location=observer_location)
+        observation_time = Time(datetime.strptime(
+            args.date, '%Y-%m-%d %H:%M:%S'))
+        time_offset = ZoneInfo(args.timezone)
+
+        # Calculate twilight times
+        twilight_times = calculate_twilight(
+            observer, observation_time, time_offset)
+        print("Twilight times:", twilight_times)
+
+        # Find when the Sun reaches a specific altitude (-6 degrees is often used for civil twilight)
+        sun_altitude_time = find_sun_altitude_time(
+            observer, -6, observation_time, time_offset)
+        print("Sun altitude time (-6 degrees):", sun_altitude_time)
+
+        # Calculate golden hour times
+        golden_hour_times = calculate_golden_hour(
+            observer, observation_time, time_offset)
+        print("Golden hour times:", golden_hour_times)
+
+    except Exception as e:
+        logger.error(f"Error in main execution: {e}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    from astropy.coordinates import EarthLocation
-    import astropy.units as u
-
-    # Observer location example
-    observer_location = EarthLocation(
-        lat=34.0522*u.deg, lon=-118.2437*u.deg, height=71*u.m)
-    observer = Observer(location=observer_location)
-    observation_time = Time(datetime.now())
-    time_offset = ZoneInfo("America/Los_Angeles")
-
-    # Calculate twilight times
-    twilight_times = calculate_twilight(
-        observer, observation_time, time_offset)
-    print("Twilight times:", twilight_times)
-
-    # Find when the Sun reaches a specific altitude (-6 degrees is often used for civil twilight)
-    sun_altitude_time = find_sun_altitude_time(
-        observer, -6, observation_time, time_offset)
-    print("Sun altitude time (-6 degrees):", sun_altitude_time)
-
-    # Calculate golden hour times
-    golden_hour_times = calculate_golden_hour(
-        observer, observation_time, time_offset)
-    print("Golden hour times:", golden_hour_times)
+    main()

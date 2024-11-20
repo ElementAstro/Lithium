@@ -10,6 +10,11 @@
 #include "atom/components/component.hpp"
 #include "atom/components/registry.hpp"
 
+#ifdef ATOM_USE_BOOST
+#include <boost/asio.hpp>
+#include <boost/optional.hpp>
+#endif
+
 INDIFilterwheel::INDIFilterwheel(std::string name) : AtomFilterWheel(name) {}
 
 auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
@@ -21,7 +26,8 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
 
     deviceName_ = deviceName;
     LOG_F(INFO, "Connecting to {}...", deviceName_);
-    // Max: 需要获取初始的参数，然后再注册对应的回调函数
+    // Max: need to get initial parameters and then register corresponding
+    // callback functions
     watchDevice(deviceName_.c_str(), [this](INDI::BaseDevice device) {
         device_ = device;  // save device
 
@@ -76,7 +82,9 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             },
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
 
-        // Max: 这个参数其实挺重要的，但是除了行星相机都不需要调整，默认就好
+        // Max: this parameter is actually quite important, but except for
+        // planetary cameras, it does not need to be adjusted, the default is
+        // fine
         device.watchProperty(
             "POLLING_PERIOD",
             [this](const INDI::PropertyNumber &property) {
@@ -146,20 +154,33 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
 
     return true;
 }
-auto INDIFilterwheel::disconnect(bool force, int timeout,
-                                 int maxRetry) -> bool {}
-auto INDIFilterwheel::reconnect(int timeout, int maxRetry) -> bool {}
 
-auto INDIFilterwheel::watchAdditionalProperty() -> bool {}
+auto INDIFilterwheel::disconnect(bool force, int timeout,
+                                 int maxRetry) -> bool {
+    // Implement disconnect logic here
+    return true;
+}
+
+auto INDIFilterwheel::reconnect(int timeout, int maxRetry) -> bool {
+    // Implement reconnect logic here
+    return true;
+}
+
+auto INDIFilterwheel::watchAdditionalProperty() -> bool {
+    // Implement additional property watching logic here
+    return true;
+}
 
 void INDIFilterwheel::setPropertyNumber(std::string_view propertyName,
-                                        double value) {}
+                                        double value) {
+    // Implement setting property number logic here
+}
 
 auto INDIFilterwheel::getCFWPosition()
     -> std::optional<std::tuple<double, double, double>> {
     INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find  FILTER_SLOT property...");
+        LOG_F(ERROR, "Unable to find FILTER_SLOT property...");
         return std::nullopt;
     }
     return std::make_tuple(property[0].getValue(), property[0].getMin(),
@@ -169,7 +190,8 @@ auto INDIFilterwheel::getCFWPosition()
 auto INDIFilterwheel::setCFWPosition(int position) -> bool {
     INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find  FILTER_SLOT property...");
+        LOG_F(ERROR, "Unable to find FILTER_SLOT property...");
+        return false;
     }
     property[0].value = position;
     sendNewProperty(property);
@@ -192,7 +214,7 @@ auto INDIFilterwheel::setCFWPosition(int position) -> bool {
 auto INDIFilterwheel::getCFWSlotName() -> std::optional<std::string> {
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find  FILTER_NAME property...");
+        LOG_F(ERROR, "Unable to find FILTER_NAME property...");
         return std::nullopt;
     }
     return property[0].getText();
@@ -201,7 +223,7 @@ auto INDIFilterwheel::getCFWSlotName() -> std::optional<std::string> {
 auto INDIFilterwheel::setCFWSlotName(std::string_view name) -> bool {
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
-        LOG_F(ERROR, "Unable to find  FILTER_NAME property...");
+        LOG_F(ERROR, "Unable to find FILTER_NAME property...");
         return false;
     }
     property[0].setText(std::string(name).c_str());
@@ -227,14 +249,14 @@ ATOM_MODULE(filterwheel_indi, [](Component &component) {
     component.def("destroy", &INDIFilterwheel::destroy, "device",
                   "Destroy a filterwheel device.");
 
-    component.def("get_position", &INDIFilterwheel::getCFWPosition,
-                  "device", "Get the current filter position.");
-    component.def("set_position", &INDIFilterwheel::setCFWPosition,
-                  "device", "Set the current filter position.");
-    component.def("get_slot_name", &INDIFilterwheel::getCFWSlotName,
-                  "device", "Get the current filter slot name.");
-    component.def("set_slot_name", &INDIFilterwheel::setCFWSlotName,
-                  "device", "Set the current filter slot name.");
+    component.def("get_position", &INDIFilterwheel::getCFWPosition, "device",
+                  "Get the current filter position.");
+    component.def("set_position", &INDIFilterwheel::setCFWPosition, "device",
+                  "Set the current filter position.");
+    component.def("get_slot_name", &INDIFilterwheel::getCFWSlotName, "device",
+                  "Get the current filter slot name.");
+    component.def("set_slot_name", &INDIFilterwheel::setCFWSlotName, "device",
+                  "Set the current filter slot name.");
 
     component.def(
         "create_instance",

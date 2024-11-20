@@ -158,6 +158,103 @@ public:
      */
     std::vector<std::string> list_scripts() const;
 
+    void add_sys_path(const std::string &path) {
+        py::module_ sys = py::module_::import("sys");
+        py::list sys_path = sys.attr("path");
+        sys_path.append(path);
+    }
+
+    // 同步变量到 Python 全局变量
+    void sync_variable_to_python(const std::string &name, py::object value) {
+        py::globals()[name.c_str()] = value;
+    }
+
+    // 从 Python 全局变量同步到 C++
+    py::object sync_variable_from_python(const std::string &name) {
+        return py::globals()[name.c_str()];
+    }
+
+    // 多线程运行 Python 脚本
+    void execute_script_multithreaded(const std::vector<std::string> &scripts) {
+        std::vector<std::thread> threads;
+        std::mutex print_mutex;
+
+        for (const auto &script : scripts) {
+            threads.emplace_back([&, script]() {
+                try {
+                    py::exec(script);
+                } catch (const py::error_already_set &e) {
+                    std::lock_guard<std::mutex> lock(print_mutex);
+                    std::cerr << "Error in thread: " << e.what() << std::endl;
+                }
+            });
+        }
+
+        for (auto &t : threads) {
+            t.join();
+        }
+    }
+
+    // 执行并统计脚本性能
+    void execute_with_profiling(const std::string &script_content) {
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        try {
+            py::exec(script_content);
+        } catch (const py::error_already_set &e) {
+            handle_exception(e);
+        }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end_time - start_time;
+
+        std::cout << "Execution time: " << duration.count() << " seconds." << std::endl;
+    }
+
+    // 动态代码注入
+    void inject_code(const std::string &code_snippet) {
+        try {
+            py::exec(code_snippet);
+        } catch (const py::error_already_set &e) {
+            handle_exception(e);
+        }
+    }
+
+    // Python 调用 C++ 方法支持
+    void register_function(const std::string &name, std::function<void()> func) {
+        py::globals()[name.c_str()] = py::cpp_function(func);
+    }
+
+    // 内存诊断工具
+    py::object get_memory_usage() {
+        py::module_ gc = py::module_::import("gc");
+        return gc.attr("get_objects")();
+    }
+
+    // 捕获详细异常信息
+    static void handle_exception(const py::error_already_set &e) {
+        std::cerr << "Python Exception:\n" << e.what() << "\n";
+
+        py::module_ traceback = py::module_::import("traceback");
+        py::object tb = traceback.attr("format_exc")();
+        std::cerr << "Traceback:\n" << py::cast<std::string>(tb) << std::endl;
+    }
+
+    // 执行带日志支持的脚本
+    void execute_script_with_logging(const std::string &script_content, const std::string &log_file) {
+        std::ofstream log_stream(log_file, std::ios::app);
+        if (!log_stream.is_open()) {
+            throw std::runtime_error("Cannot open log file: " + log_file);
+        }
+
+        py::scoped_ostream_redirect stream_redirect(log_stream, py::module_::import("sys").attr("stdout"));
+        try {
+            py::exec(script_content);
+        } catch (const py::error_already_set &e) {
+            handle_exception(e);
+        }
+    }
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl;

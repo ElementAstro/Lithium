@@ -19,33 +19,70 @@ else()
 endif()
 
 # Check and set compiler version requirements
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    execute_process(
-        COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion -std=c++${CMAKE_CXX_STANDARD}
-        OUTPUT_VARIABLE GCC_VERSION
-    )
-    string(REGEX MATCH "[0-9]+\\.[0-9]+" GCC_VERSION ${GCC_VERSION})
-    if(GCC_VERSION VERSION_LESS 10.0)
-        message(FATAL_ERROR "Minimum required version of g++ is 10.0")
+function(check_compiler_version)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        execute_process(
+            COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion -std=c++${CMAKE_CXX_STANDARD}
+            OUTPUT_VARIABLE GCC_VERSION
+        )
+        string(REGEX MATCH "[0-9]+\\.[0-9]+" GCC_VERSION ${GCC_VERSION})
+        if(GCC_VERSION VERSION_LESS 13.0)
+            message(WARNING "g++ version ${GCC_VERSION} is too old. Checking for other available compilers.")
+            find_program(GCC_COMPILER NAMES g++-13 g++-14 g++-15)
+            if(GCC_COMPILER)
+                set(CMAKE_CXX_COMPILER ${GCC_COMPILER} CACHE STRING "C++ compiler" FORCE)
+                message(STATUS "Using g++ compiler found at ${GCC_COMPILER}")
+            else()
+                message(FATAL_ERROR "Minimum required version of g++ is 13.0")
+            endif()
+        else()
+            message(STATUS "Using g++ version ${GCC_VERSION}")
+        endif()
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        execute_process(
+            COMMAND ${CMAKE_CXX_COMPILER} --version
+            OUTPUT_VARIABLE CLANG_VERSION_OUTPUT
+        )
+        string(REGEX MATCH "clang version ([0-9]+\\.[0-9]+)" CLANG_VERSION ${CLANG_VERSION_OUTPUT})
+        string(REGEX REPLACE "clang version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION ${CLANG_VERSION})
+        if(CLANG_VERSION VERSION_LESS 16.0)
+            message(WARNING "clang version ${CLANG_VERSION} is too old. Checking for other available compilers.")
+            find_program(CLANG_COMPILER NAMES clang-17 clang-18 clang-19)
+            if(CLANG_COMPILER)
+                set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "C++ compiler" FORCE)
+                message(STATUS "Using clang compiler found at ${CLANG_COMPILER}")
+            else()
+                message(FATAL_ERROR "Minimum required version of clang is 16.0")
+            endif()
+        else()
+            message(STATUS "Using clang version ${CLANG_VERSION}")
+        endif()
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28)
+            message(WARNING "MSVC version ${CMAKE_CXX_COMPILER_VERSION} is too old. Checking for other available compilers.")
+            find_program(MSVC_COMPILER NAMES cl)
+            if(MSVC_COMPILER)
+                execute_process(
+                    COMMAND ${MSVC_COMPILER} /?
+                    OUTPUT_VARIABLE MSVC_VERSION_OUTPUT
+                )
+                string(REGEX MATCH "Version ([0-9]+\\.[0-9]+)" MSVC_VERSION ${MSVC_VERSION_OUTPUT})
+                if(MSVC_VERSION VERSION_LESS 19.28)
+                    message(FATAL_ERROR "Minimum required version of MSVC is 19.28 (Visual Studio 2019 version 16.10)")
+                else()
+                    set(CMAKE_CXX_COMPILER ${MSVC_COMPILER} CACHE STRING "C++ compiler" FORCE)
+                    message(STATUS "Using MSVC compiler found at ${MSVC_COMPILER}")
+                endif()
+            else()
+                message(FATAL_ERROR "Minimum required version of MSVC is 19.28 (Visual Studio 2019 version 16.10)")
+            endif()
+        else()
+            message(STATUS "Using MSVC version ${CMAKE_CXX_COMPILER_VERSION}")
+        endif()
     endif()
-    message(STATUS "Using g++ version ${GCC_VERSION}")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    execute_process(
-        COMMAND ${CMAKE_CXX_COMPILER} --version
-        OUTPUT_VARIABLE CLANG_VERSION_OUTPUT
-    )
-    string(REGEX MATCH "clang version ([0-9]+\\.[0-9]+)" CLANG_VERSION ${CLANG_VERSION_OUTPUT})
-    string(REGEX REPLACE "clang version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION ${CLANG_VERSION})
-    if(CLANG_VERSION VERSION_LESS 10.0)
-        message(FATAL_ERROR "Minimum required version of clang is 10.0")
-    endif()
-    message(STATUS "Using clang version ${CLANG_VERSION}")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28)
-        message(FATAL_ERROR "Minimum required version of MSVC is 19.28 (Visual Studio 2019 version 16.10)")
-    endif()
-    message(STATUS "Using MSVC version ${CMAKE_CXX_COMPILER_VERSION}")
-endif()
+endfunction()
+
+check_compiler_version()
 
 # Set C standard
 set(CMAKE_C_STANDARD 17)

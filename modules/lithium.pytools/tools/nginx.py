@@ -3,6 +3,8 @@ import os
 import sys
 import platform
 import shutil
+from loguru import logger
+from pathlib import Path
 
 # Define Nginx paths
 NGINX_PATH = "/etc/nginx" if platform.system() != "Windows" else "C:\\nginx"
@@ -13,19 +15,26 @@ NGINX_BINARY = "/usr/sbin/nginx" if platform.system(
 BACKUP_PATH = f"{NGINX_PATH}/backup" if platform.system(
 ) != "Windows" else f"{NGINX_PATH}\\backup"
 
-# Define output colors
-GREEN = '\033[0;32m' if platform.system() != "Windows" else ""
-RED = '\033[0;31m' if platform.system() != "Windows" else ""
-NC = '\033[0m' if platform.system() != "Windows" else ""
+# Configure loguru logger
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="INFO"
+)
+logger.add("nginx_manager.log", rotation="500 MB", retention="10 days")
 
 
 def install_nginx():
     """Install Nginx if not already installed"""
-    if platform.system() == "Linux":
-        result = subprocess.run("nginx -v", shell=True,
+    logger.info("Checking if Nginx is installed")
+    try:
+        result = subprocess.run([NGINX_BINARY, "-v"],
                                 stderr=subprocess.PIPE, check=True)
-        if result.returncode != 0:
-            print("Installing Nginx...")
+        logger.info("Nginx is already installed")
+    except subprocess.CalledProcessError:
+        logger.info("Nginx is not installed, installing now")
+        if platform.system() == "Linux":
             if os.path.isfile("/etc/debian_version"):
                 subprocess.run(
                     "sudo apt-get update && sudo apt-get install nginx -y", shell=True, check=True)
@@ -33,105 +42,127 @@ def install_nginx():
                 subprocess.run(
                     "sudo yum update && sudo yum install nginx -y", shell=True, check=True)
             else:
-                print(
-                    f"{RED}Unsupported platform. Please install Nginx manually.{NC}")
+                logger.error(
+                    "Unsupported Linux distribution. Please install Nginx manually.")
                 sys.exit(1)
+        elif platform.system() == "Windows":
+            logger.error("Please install Nginx manually on Windows.")
+            sys.exit(1)
+        else:
+            logger.error(
+                "Unsupported platform. Please install Nginx manually.")
+            sys.exit(1)
 
 
 def start_nginx():
     """Start Nginx"""
+    logger.info("Starting Nginx")
     if os.path.isfile(NGINX_BINARY):
         subprocess.run([NGINX_BINARY], check=True)
-        print(f"{GREEN}Nginx has been started{NC}")
+        logger.success("Nginx has been started")
     else:
-        print(f"{RED}Nginx binary not found{NC}")
+        logger.error("Nginx binary not found")
 
 
 def stop_nginx():
     """Stop Nginx"""
+    logger.info("Stopping Nginx")
     if os.path.isfile(NGINX_BINARY):
         subprocess.run([NGINX_BINARY, '-s', 'stop'], check=True)
-        print(f"{GREEN}Nginx has been stopped{NC}")
+        logger.success("Nginx has been stopped")
     else:
-        print(f"{RED}Nginx binary not found{NC}")
+        logger.error("Nginx binary not found")
 
 
 def reload_nginx():
     """Reload Nginx configuration"""
+    logger.info("Reloading Nginx configuration")
     if os.path.isfile(NGINX_BINARY):
         subprocess.run([NGINX_BINARY, '-s', 'reload'], check=True)
-        print(f"{GREEN}Nginx configuration has been reloaded{NC}")
+        logger.success("Nginx configuration has been reloaded")
     else:
-        print(f"{RED}Nginx binary not found{NC}")
+        logger.error("Nginx binary not found")
 
 
 def restart_nginx():
     """Restart Nginx"""
+    logger.info("Restarting Nginx")
     stop_nginx()
     start_nginx()
 
 
 def check_config():
     """Check Nginx configuration syntax"""
+    logger.info("Checking Nginx configuration syntax")
     if os.path.isfile(NGINX_CONF):
         result = subprocess.run(
             [NGINX_BINARY, '-t', '-c', NGINX_CONF], check=True)
         if result.returncode == 0:
-            print(f"{GREEN}Nginx configuration syntax is correct{NC}")
+            logger.success("Nginx configuration syntax is correct")
         else:
-            print(f"{RED}Nginx configuration syntax is incorrect{NC}")
+            logger.error("Nginx configuration syntax is incorrect")
     else:
-        print(f"{RED}Nginx configuration file not found{NC}")
+        logger.error("Nginx configuration file not found")
 
 
 def show_status():
     """Show Nginx status"""
-    if subprocess.run("pgrep nginx", shell=True, stdout=subprocess.PIPE, check=True).stdout:
-        print(f"{GREEN}Nginx is running{NC}")
+    logger.info("Checking Nginx status")
+    result = subprocess.run("pgrep nginx", shell=True, stdout=subprocess.PIPE)
+    if result.stdout:
+        logger.success("Nginx is running")
     else:
-        print(f"{RED}Nginx is not running{NC}")
+        logger.error("Nginx is not running")
 
 
 def show_version():
     """Show Nginx version"""
+    logger.info("Showing Nginx version")
     result = subprocess.run([NGINX_BINARY, '-v'],
                             stderr=subprocess.PIPE, check=True)
-    print(result.stderr.decode())
+    logger.info(result.stderr.decode())
 
 
 def backup_config():
     """Backup Nginx configuration file"""
+    logger.info("Backing up Nginx configuration file")
     if not os.path.exists(BACKUP_PATH):
         os.makedirs(BACKUP_PATH)
     backup_file = os.path.join(BACKUP_PATH, "nginx.conf.bak")
     shutil.copy(NGINX_CONF, backup_file)
-    print(f"{GREEN}Nginx configuration file has been backed up to {backup_file}{NC}")
+    logger.success(
+        f"Nginx configuration file has been backed up to {backup_file}")
 
 
 def restore_config():
     """Restore Nginx configuration file"""
+    logger.info("Restoring Nginx configuration file from backup")
     backup_file = os.path.join(BACKUP_PATH, "nginx.conf.bak")
     if os.path.isfile(backup_file):
         shutil.copy(backup_file, NGINX_CONF)
-        print(f"{GREEN}Nginx configuration file has been restored from backup{NC}")
+        logger.success(
+            "Nginx configuration file has been restored from backup")
     else:
-        print(f"{RED}Backup file not found{NC}")
+        logger.error("Backup file not found")
 
 
 def show_help():
     """Show help message"""
-    print(
-        "Usage: python nginx_manager.py [start|stop|reload|restart|check|status|version|backup|restore|help]")
-    print("  start    Start Nginx")
-    print("  stop     Stop Nginx")
-    print("  reload   Reload Nginx configuration")
-    print("  restart  Restart Nginx")
-    print("  check    Check Nginx configuration syntax")
-    print("  status   Show Nginx status")
-    print("  version  Show Nginx version")
-    print("  backup   Backup Nginx configuration file")
-    print("  restore  Restore Nginx configuration file")
-    print("  help     Show help message")
+    help_message = """
+    Usage: python nginx_manager.py [start|stop|reload|restart|check|status|version|backup|restore|help]
+      start    Start Nginx
+      stop     Stop Nginx
+      reload   Reload Nginx configuration
+      restart  Restart Nginx
+      check    Check Nginx configuration syntax
+      status   Show Nginx status
+      version  Show Nginx version
+      backup   Backup Nginx configuration file
+      restore  Restore Nginx configuration file
+      help     Show help message
+    """
+    print(help_message)
+    logger.info("Displayed help message")
 
 
 def main():
@@ -160,7 +191,7 @@ def main():
     if command in commands:
         commands[command]()
     else:
-        print(f"{RED}Invalid command{NC}")
+        logger.error("Invalid command")
         show_help()
         sys.exit(1)
 

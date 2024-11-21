@@ -7,28 +7,21 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(lithium-task VERSION 1.0.0 LANGUAGES C CXX)
-
-# Include subdirectories
-add_subdirectory(simple)
+project(lithium-script VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources and Headers
 set(PROJECT_SOURCES
-    container.cpp
-    generator.cpp
-    loader.cpp
+    checker.cpp
     manager.cpp
-    singlepool.cpp
-    task.cpp
+    pycaller.cpp
+    sheller.cpp
 )
 
 set(PROJECT_HEADERS
-    container.hpp
-    generator.hpp
-    loader.hpp
+    checker.hpp
     manager.hpp
-    singlepool.hpp
-    task.hpp
+    pycaller.hpp
+    sheller.hpp
 )
 
 # Required libraries
@@ -51,6 +44,9 @@ function(create_library TARGET_NAME)
         SOVERSION 1
         OUTPUT_NAME ${TARGET_NAME}
     )
+    find_package(pybind11 REQUIRED)
+    target_link_libraries(${TARGET_NAME} PRIVATE pybind11::embed)
+    target_include_directories(${TARGET_NAME} PRIVATE ${pybind11_INCLUDE_DIR})
 endfunction()
 
 # Create Object Library

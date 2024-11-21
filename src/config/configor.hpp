@@ -272,4 +272,55 @@ private:
 
 }  // namespace lithium
 
+constexpr auto isValidFormat(const char* str) -> bool {
+    if ((str == nullptr) || str[0] == '\0') {
+        return false;
+    }
+
+    std::size_t index = 0;
+    bool isSlashFormat = (str[0] == '/');
+    if (isSlashFormat || str[0] == '.') {
+        ++index;
+    }
+
+    std::size_t segmentCount = 0;
+    bool lastWasSeparator = true;
+    char separator = isSlashFormat ? '/' : '.';
+
+    while (str[index] != '\0') {
+        if (str[index] == separator) {
+            if (lastWasSeparator) {
+                return false;
+            }
+            lastWasSeparator = true;
+            ++segmentCount;
+        } else if ((str[index] >= 'a' && str[index] <= 'z') ||
+                   (str[index] >= 'A' && str[index] <= 'Z')) {
+            lastWasSeparator = false;
+        } else {
+            return false;
+        }
+        ++index;
+    }
+
+    if (lastWasSeparator) {
+        return false;
+    }
+
+    return (segmentCount == 2);
+}
+
+template <const std::array<char, 10>& str>
+constexpr auto checkString() -> bool {
+    return isValidFormat(str.data());
+}
+
+constexpr auto operator"" _valid(const char* str,
+                                 std::size_t /*unused*/) -> const char* {
+    if (!isValidFormat(str)) {
+        throw std::invalid_argument("Invalid format");
+    }
+    return str;
+}
+
 #endif

@@ -13,10 +13,14 @@ Description: Main Entry
 **************************************************/
 
 #include "LithiumApp.hpp"
-
 #include "preload.hpp"
 
+#include "config/configor.hpp"
+
+#include "atom/error/exception.hpp"
+#include "atom/function/concept.hpp"
 #include "atom/function/global_ptr.hpp"
+#include "atom/function/invoke.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
@@ -43,7 +47,7 @@ using namespace lithium::debug;
 #ifdef _WIN32
 #include <Windows.h>
 #else
-#include <signal.h>
+#include <csignal>
 #endif
 
 #include "atom/utils/argsview.hpp"
@@ -55,16 +59,27 @@ using namespace std::literals;
  * @note This is called in main function
  */
 void setupLogFile() {
-    std::filesystem::path logsFolder = std::filesystem::current_path() / "logs";
-    if (!std::filesystem::exists(logsFolder)) {
-        std::filesystem::create_directory(logsFolder);
+    using namespace std::chrono;
+    using namespace std::filesystem;
+
+    path logsFolder = current_path() / "logs";
+    if (!exists(logsFolder)) {
+        create_directory(logsFolder);
     }
-    auto now = std::chrono::system_clock::now();
-    auto nowTimeT = std::chrono::system_clock::to_time_t(now);
-    std::tm *localTime = std::localtime(&nowTimeT);
-    char filename[100];
-    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", localTime);
-    std::filesystem::path logFilePath = logsFolder / filename;
+
+    auto now = system_clock::now();
+    auto nowTimeT = system_clock::to_time_t(now);
+    std::tm localTime;
+#ifdef _WIN32
+    localtime_s(&localTime, &nowTimeT);
+#else
+    localtime_r(&nowTimeT, &localTime);
+#endif
+
+    std::ostringstream filenameStream;
+    filenameStream << std::put_time(&localTime, "%Y%m%d_%H%M%S.log");
+    path logFilePath = logsFolder / filenameStream.str();
+
     loguru::add_file(logFilePath.string().c_str(), loguru::Append,
                      loguru::Verbosity_MAX);
 
@@ -72,6 +87,15 @@ void setupLogFile() {
         atom::system::saveCrashLog(std::string(message.prefix) +
                                    message.message);
     });
+}
+
+auto convertArgs(int argc, char **argv) -> std::vector<std::string> {
+    std::vector<std::string> args;
+    args.reserve(argc);
+    for (int i = 0; i < argc; ++i) {
+        args.emplace_back(argv[i]);
+    }
+    return args;
 }
 
 /**
@@ -125,70 +149,37 @@ auto main(int argc, char *argv[]) -> int {
     program.addDescription("Lithium Command Line Interface:");
     program.addEpilog("End.");
 
-    program.parse(argc, argv);
+    program.parse(argc, convertArgs(argc, argv));
 
     lithium::initLithiumApp(argc, argv);
     // Create shared instance
     lithium::myApp = lithium::LithiumApp::createShared();
     // Parse arguments
     try {
-        auto cmdHost = program.get<std::string>("host");
-        auto cmdPort = program.get<int>("port");
-        auto cmdConfigPath = program.get<std::string>("config");
-        auto cmdModulePath = program.get<std::string>("module-path");
-        auto cmdWebPanel = program.get<bool>("web-panel");
-        auto cmdDebug = program.get<bool>("debug");
-
-        // TODO: We need a new way to handle command line arguments.
-        // Maybe we will generate a json object or a map and then given to the
-        // lithiumapp for initialization.
-        /*
-        if (!cmd_host.empty()) {
-            lithium::MyApp->SetConfig(
-                {{"key", "config/server/host"}, {"value", cmd_host}});
-            DLOG_F(INFO, "Set server host to {}", cmd_host);
-        }
-        if (cmd_port != 8000) {
-            DLOG_F(INFO, "Command line server port : {}", cmd_port);
-
-            auto port = lithium::MyApp->GetConfig("config/server")
-                            .value<int>("port", 8000);
-            if (port != cmd_port) {
-                lithium::MyApp->SetConfig(
-                    {{"key", "config/server/port"}, {"value", cmd_port}});
-                DLOG_F(INFO, "Set server port to {}", cmd_port);
+        auto setConfig = []<typename T>(const std::string &key, T value)
+            requires IsBuiltIn<T>
+        {
+            if (!key.empty()) {
+                lithium::myApp->setValue(key, value);
+            } else {
+                THROW_INVALID_ARGUMENT("Invalid key: " + key);
             }
-        }
-        if (!cmd_config_path.empty()) {
-            lithium::MyApp->SetConfig({{"key", "config/server/configpath"},
-                                       {"value", cmd_config_path}});
-            DLOG_F(INFO, "Set server config path to {}", cmd_config_path);
-        }
-        if (!cmd_module_path.empty()) {
-            lithium::MyApp->SetConfig({{"key", "config/server/modulepath"},
-                                       {"value", cmd_module_path}});
-            DLOG_F(INFO, "Set server module path to {}", cmd_module_path);
-        }
+        };
 
-        if (!cmd_web_panel) {
-            if (lithium::MyApp->GetConfig("config/server/web").get<bool>()) {
-                lithium::MyApp->SetConfig(
-                    {{"key", "config/server/web"}, {"value", false}});
-                DLOG_F(INFO, "Disable web panel");
-            }
-        }
-
-        if (cmd_debug) {
-            if (!lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
-                lithium::MyApp->SetConfig(
-                    {{"key", "config/server/debug"}, {"value", true}});
-            }
-        } else {
-            lithium::MyApp->SetConfig(
-                {{"key", "config/server/debug"}, {"value", false}});
-            DLOG_F(INFO, "Disable debug mode");
-        }
-        */
+        setConfig("/lithium/server/host"_valid,
+                  program.get<std::string>("host").value());
+        setConfig("/lithium/server/port"_valid,
+                  program.get<int>("port").value());
+        setConfig("/lithium/server/configpath"_valid,
+                  program.get<std::string>("config").value());
+        setConfig("/lithium/server/modulepath"_valid,
+                  program.get<std::string>("module-path").value());
+        setConfig("/lithium/server/web"_valid,
+                  program.get<bool>("web-panel").value());
+        setConfig("/lithium/server/debug"_valid,
+                  program.get<bool>("debug").value());
+        setConfig("/lithium/server/logfile"_valid,
+                  program.get<std::string>("log-file").value());
 
     } catch (const std::bad_any_cast &e) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());

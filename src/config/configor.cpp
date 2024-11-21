@@ -22,6 +22,7 @@ Description: Configor
 #include <asio.hpp>
 
 #include "addon/manager.hpp"
+#include "script/pycaller.hpp"
 
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/io.hpp"
@@ -259,8 +260,7 @@ auto ConfigManager::loadFromDir(const fs::path& dir_path,
                         return false;
                     }
                     mergeConfig(j);
-                }
-                else if (entry.path().extension() == ".yaml") {
+                } else if (entry.path().extension() == ".yaml") {
                     // There we will use yaml->json component to convert yaml to
                     // json
                     if (!yamlToJsonComponent) {
@@ -272,10 +272,28 @@ auto ConfigManager::loadFromDir(const fs::path& dir_path,
                             LOG_F(ERROR, "yamlToJson component not found");
                             return false;
                         }
-
                     }
-                    yamlToJsonComponent->dispatch("yaml_to_json",
-                                                  entry.path().string());
+                    try {
+                        yamlToJsonComponent->dispatch("yaml_to_json",
+                                                      entry.path().string());
+                    } catch (const std::exception& e) {
+                        LOG_F(ERROR, "Failed to convert yaml to json: {}",
+                              e.what());
+                        // Here we will try to use python to convert yaml to
+                        // json
+                        std::shared_ptr<PythonManager> pythonManager;
+                        GET_OR_CREATE_PTR(pythonManager, PythonManager,
+                                          Constants::PYTHON_MANAGER);
+                        pythonManager->loadScript("yaml_to_json.py",
+                                                  "yamlToJson");
+                        pythonManager->callFunction<void>(
+                            "yamlToJson", "yaml_to_json",
+                            entry.path().string());
+                        if (!atom::io::isFileExists("yaml_to_json.json")) {
+                            LOG_F(ERROR, "Failed to convert yaml to json");
+                            return false;
+                        }
+                    }
                     if (!loadFromFile(entry.path())) {
                         LOG_F(WARNING, "Failed to load config file: {}",
                               entry.path().string());

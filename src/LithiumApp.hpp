@@ -22,7 +22,6 @@ Description: Lithium App Enter
 #include "atom/async/message_bus.hpp"
 #include "atom/components/component.hpp"
 #include "atom/type/json_fwd.hpp"
-#include "atom/type/message.hpp"
 
 #include "atom/macro.hpp"
 
@@ -58,7 +57,8 @@ class ConfigManager;
 
 class TaskPool;
 
-class TaskInterpreter;
+struct Program;
+class Interpreter;
 
 class LithiumApp : public Component {
 public:
@@ -102,6 +102,8 @@ public:
     auto loadFromFile(const fs::path& path) -> bool;
     auto loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
     ATOM_NODISCARD auto saveToFile(const fs::path& file_path) const -> bool;
+    [[nodiscard]] auto getKeys() const -> std::vector<std::string>;
+    [[nodiscard]] auto listPaths() const -> std::vector<std::string>;
     void tidyConfig();
     void clearConfig();
     void mergeConfig(const nlohmann::json& src);
@@ -110,35 +112,19 @@ public:
     // Task methods
     // -------------------------------------------------------------------
 
-    void loadScript(const std::string& name, const json& script);
-    void unloadScript(const std::string& name);
+    void loadScript(const std::string& filename);
 
-    ATOM_NODISCARD auto hasScript(const std::string& name) const -> bool;
-    ATOM_NODISCARD auto getScript(const std::string& name) const
-        -> std::optional<json>;
+    void interpretScript(const std::string& filename);
 
-    void registerFunction(const std::string& name,
-                          std::function<json(const json&)> func);
-    void registerExceptionHandler(
-        const std::string& name,
-        std::function<void(const std::exception&)> handler);
-
-    void setVariable(const std::string& name, const json& value);
-    auto getVariable(const std::string& name) -> json;
-
-    void parseLabels(const json& script);
-    void execute(const std::string& scriptName);
-    void stop();
-    void pause();
-    void resume();
-    void queueEvent(const std::string& eventName, const json& eventData);
+    void interpret(const std::shared_ptr<Program>& ast);
 
 private:
     std::weak_ptr<TaskPool> m_taskpool_;
     std::weak_ptr<atom::async::MessageBus> m_messagebus_;
     std::weak_ptr<atom::error::ErrorStack> m_errorstack_;
     std::weak_ptr<ComponentManager> m_component_manager_;
-    std::weak_ptr<TaskInterpreter> m_task_interpreter_;
+    std::weak_ptr<Interpreter> m_task_interpreter_;
+    std::weak_ptr<ConfigManager> m_config_manager_;
 
     std::weak_ptr<PyScriptManager> m_py_script_manager_;
 };

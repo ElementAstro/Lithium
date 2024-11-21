@@ -14,31 +14,23 @@ Description: Lithium App Enter
 
 #include "LithiumApp.hpp"
 
-#include "components/component.hpp"
-#include "config.h"
-
 #include "addon/addons.hpp"
 #include "addon/loader.hpp"
 #include "addon/manager.hpp"
 
 #include "config/configor.hpp"
 
-#include "device/manager.hpp"
-
 #include "task/container.hpp"
 #include "task/generator.hpp"
 #include "task/loader.hpp"
 #include "task/manager.hpp"
 
-#include "script/manager.hpp"
-
+#include "atom/components/component.hpp"
 #include "atom/components/dispatch.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/env.hpp"
-#include "atom/system/process.hpp"
-#include "atom/utils/time.hpp"
 
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"
@@ -96,8 +88,7 @@ LithiumApp::LithiumApp() : Component("lithium.main") {
         CHECK_WEAK_PTR_EXPIRED(m_messagebus_,
                                "load message bus from gpm: lithium.bus");
 
-        m_task_interpreter_ =
-            GetWeakPtr<TaskInterpreter>("lithium.task.manager");
+        m_task_interpreter_ = GetWeakPtr<Interpreter>("lithium.task.manager");
         CHECK_WEAK_PTR_EXPIRED(
             m_task_interpreter_,
             "load task manager from gpm: lithium.task.manager");
@@ -133,17 +124,11 @@ LithiumApp::LithiumApp() : Component("lithium.main") {
         "Get a list of all components");
 
     def("load_script", &LithiumApp::loadScript, "script", "Load a script");
-    def("unload_script", &LithiumApp::unloadScript, "script",
-        "Unload a script");
-    def("has_script", &LithiumApp::hasScript, "script",
-        "Check if a script is ");
-    def("get_script", &LithiumApp::getScript, "script", "Get a script");
 
     DLOG_F(INFO, "Lithium App Initialized");
 }
 
-LithiumApp::~LithiumApp() {
-}
+LithiumApp::~LithiumApp() {}
 
 auto LithiumApp::createShared() -> std::shared_ptr<LithiumApp> {
     return std::make_shared<LithiumApp>();
@@ -195,82 +180,61 @@ auto LithiumApp::getComponentList() -> std::vector<std::string> {
     return m_component_manager_.lock()->getComponentList();
 }
 
-void LithiumApp::loadScript(const std::string &name, const json &script) {
-    m_task_interpreter_.lock()->loadScript(name, script);
-}
-
-void LithiumApp::unloadScript(const std::string &name) {
-    m_task_interpreter_.lock()->unloadScript(name);
-}
-
-auto LithiumApp::hasScript(const std::string &name) const -> bool {
-    return m_task_interpreter_.lock()->hasScript(name);
-}
-
-auto LithiumApp::getScript(const std::string &name) const
-    -> std::optional<json> {
-    return m_task_interpreter_.lock()->getScript(name);
-}
-
-void LithiumApp::registerFunction(const std::string &name,
-                                  std::function<json(const json &)> func) {
-    m_task_interpreter_.lock()->registerFunction(name, func);
-}
-
-void LithiumApp::registerExceptionHandler(
-    const std::string &name,
-    std::function<void(const std::exception &)> handler) {
-    m_task_interpreter_.lock()->registerExceptionHandler(name, handler);
-}
-
-void LithiumApp::setVariable(const std::string &name, const json &value) {
-    m_task_interpreter_.lock()->setVariable(name, value, determineType(value));
-}
-
-auto LithiumApp::getVariable(const std::string &name) -> json {
-    return m_task_interpreter_.lock()->getVariable(name);
-}
-
-void LithiumApp::parseLabels(const json &script) {
-    m_task_interpreter_.lock()->parseLabels(script);
-}
-
-void LithiumApp::execute(const std::string &scriptName) {
-    m_task_interpreter_.lock()->execute(scriptName);
-}
-
-void LithiumApp::stop() { m_task_interpreter_.lock()->stop(); }
-
-void LithiumApp::pause() { m_task_interpreter_.lock()->pause(); }
-
-void LithiumApp::resume() { m_task_interpreter_.lock()->resume(); }
-
-void LithiumApp::queueEvent(const std::string &eventName,
-                            const json &eventData) {
-    m_task_interpreter_.lock()->queueEvent(eventName, eventData);
-}
-
 auto LithiumApp::getValue(const std::string &key_path) const
-    -> std::optional<nlohmann::json> {}
+    -> std::optional<nlohmann::json> {
+    return m_config_manager_.lock()->getValue(key_path);
+}
+
 auto LithiumApp::setValue(const std::string &key_path,
-                          const nlohmann::json &value) -> bool {}
+                          const json &value) -> bool {
+    return m_config_manager_.lock()->setValue(key_path, value);
+}
 
 auto LithiumApp::appendValue(const std::string &key_path,
-                             const nlohmann::json &value) -> bool {}
-auto LithiumApp::deleteValue(const std::string &key_path) -> bool {}
-auto LithiumApp::hasValue(const std::string &key_path) const -> bool {}
-auto LithiumApp::loadFromFile(const fs::path &path) -> bool {}
-auto LithiumApp::loadFromDir(const fs::path &dir_path,
-                             bool recursive) -> bool {}
-auto LithiumApp::saveToFile(const fs::path &file_path) const -> bool {}
-void LithiumApp::tidyConfig() {}
-void LithiumApp::clearConfig() {}
-void LithiumApp::mergeConfig(const nlohmann::json &src) {}
+                             const json &value) -> bool {
+    return m_config_manager_.lock()->appendValue(key_path, value);
+}
+
+auto LithiumApp::deleteValue(const std::string &key_path) -> bool {
+    return m_config_manager_.lock()->deleteValue(key_path);
+}
+
+auto LithiumApp::hasValue(const std::string &key_path) const -> bool {
+    return m_config_manager_.lock()->hasValue(key_path);
+}
+
+auto LithiumApp::loadFromFile(const fs::path &path) -> bool {
+    return m_config_manager_.lock()->loadFromFile(path);
+}
+
+auto LithiumApp::loadFromDir(const fs::path &dir_path, bool recursive) -> bool {
+    return m_config_manager_.lock()->loadFromDir(dir_path, recursive);
+}
+
+auto LithiumApp::saveToFile(const fs::path &file_path) const -> bool {
+    return m_config_manager_.lock()->saveToFile(file_path);
+}
+
+auto LithiumApp::getKeys() const -> std::vector<std::string> {
+    return m_config_manager_.lock()->getKeys();
+}
+
+auto LithiumApp::listPaths() const -> std::vector<std::string> {
+    return m_config_manager_.lock()->listPaths();
+}
+
+void LithiumApp::tidyConfig() { m_config_manager_.lock()->tidyConfig(); }
+
+void LithiumApp::clearConfig() { m_config_manager_.lock()->clearConfig(); }
+
+void LithiumApp::mergeConfig(const json &src) {
+    m_config_manager_.lock()->mergeConfig(src);
+}
 
 void initLithiumApp(int argc, char **argv) {
     LOG_F(INFO, "Init Lithium App");
     // Message Bus
-    AddPtr("lithium.bus", atom::async::MessageBus::createShared());
+    // AddPtr("lithium.bus", atom::async::MessageBus::createShared());
     // AddPtr("ModuleLoader", ModuleLoader::createShared());
     // AddPtr("lithium.async.thread",
     // Atom::Async::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
@@ -289,7 +253,7 @@ void initLithiumApp(int argc, char **argv) {
     AddPtr("lithium.task.container", TaskContainer::createShared());
     AddPtr("lithiun.task.generator", TaskGenerator::createShared());
     AddPtr("lithium.task.loader", TaskLoader::createShared());
-    AddPtr("lithium.task.manager", TaskInterpreter::createShared());
+    AddPtr("lithium.task.manager", Interpreter::createShared());
 
     AddPtr("lithium.utils.env", atom::utils::Env::createShared(argc, argv));
 

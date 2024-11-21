@@ -25,37 +25,21 @@ using json = nlohmann::json;
 namespace lithium {
 class Preloader::Impl {
 public:
-    Impl()
-        : download_progress_(0.0),
-          resource_server_(resource::LITHIUM_RESOURCE_SERVER) {
-        std::shared_ptr<lithium::PythonWrapper> pythonWrapperPtr;
-        GET_OR_CREATE_PTR(pythonWrapperPtr, lithium::PythonWrapper,
-                          Constants::PYTHON_WRAPPER);
+    Impl() : resource_server_(resource::LITHIUM_RESOURCE_SERVER) {
+        std::shared_ptr<lithium::PythonManager> pythonManagerPtr;
+        GET_OR_CREATE_PTR(pythonManagerPtr, lithium::PythonManager,
+                          Constants::PYTHON_MANAGER);
     }
 
     auto checkResources() -> bool {
         LOG_F(INFO, "Checking resources...");
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         bool allResourcesValid = true;
 
         for (auto &[key, value] : resource::LITHIUM_RESOURCES) {
-            if (!atom::io::isFileExists(key.data())) {
-                LOG_F(ERROR, "Resource file '{}' is missing.", key);
-                allResourcesValid = false;
-                continue;
-            }
-            auto sha256_val = atom::utils::calculateSha256(key);
-            if (sha256_val.empty()) {
-                LOG_F(ERROR, "Failed to calculate SHA256 value of '{}'.", key);
-                allResourcesValid = false;
-                continue;
-            }
-            auto expected_sha256 = value.first;
-            if (sha256_val != expected_sha256) {
-                LOG_F(ERROR, "SHA256 check failed for '{}'.", key);
+            if (!validateResource(key, value.first)) {
                 allResourcesValid = false;
             } else {
-                LOG_F(INFO, "Resource '{}' is valid.", key);
                 value.second = true;
             }
         }
@@ -72,92 +56,26 @@ public:
     void downloadResources() {
         LOG_F(INFO, "Starting download of missing resources...");
 
-        std::lock_guard<std::mutex> lock(mutex_);
-        // 创建线程池
+        std::lock_guard lock(mutex_);
         atom::async::ThreadPool pool(std::thread::hardware_concurrency());
-
-        // 创建任务列表
         std::vector<std::future<bool>> tasks;
         size_t totalTasks = 0;
         size_t completedTasks = 0;
 
         for (auto &[key, value] : resource::LITHIUM_RESOURCES) {
             if (value.second) {
-                continue;  // 跳过已存在且有效的资源
+                continue;
             }
 
-            const auto url =
+            const auto URL =
                 atom::utils::joinStrings({resource_server_, key}, "/");
             totalTasks++;
 
-            // 添加下载任务到线程池
-            tasks.emplace_back(pool.enqueue([this, url, key, &completedTasks,
-                                             &totalTasks]() -> bool {
-                try {
-                    atom::web::CurlWrapper curl;
-                    std::string response;
-                    curl.setUrl(url)
-                        .setRequestMethod("GET")
-                        .onResponse([&response](const std::string &data) {
-                            response = data;
-                        })
-                        .onError([](CURLcode code) {
-                            LOG_F(ERROR, "Curl error: %d", code);
-                        })
-                        .perform();
-
-                    if (response.empty()) {
-                        LOG_F(ERROR, "Failed to download resource: {}", url);
-                        return false;
-                    }
-
-                    // 将下载的数据写入文件
-                    std::ofstream outfile(std::string(key), std::ios::binary);
-                    if (!outfile) {
-                        LOG_F(ERROR, "Failed to open file '{}' for writing.",
-                              key);
-                        return false;
-                    }
-                    outfile.write(
-                        response.c_str(),
-                        static_cast<std::streamsize>(response.size()));
-                    outfile.close();
-
-                    // 验证下载的文件
-                    auto sha256_val = atom::utils::calculateSha256(key);
-                    if (sha256_val.empty()) {
-                        LOG_F(ERROR,
-                              "Failed to calculate SHA256 for downloaded file "
-                              "'{}'.",
-                              key);
-                        return false;
-                    }
-
-                    auto expected_sha256 =
-                        resource::LITHIUM_RESOURCES[key].first;
-                    if (sha256_val != expected_sha256) {
-                        LOG_F(ERROR, "SHA256 mismatch for '{}'.", key);
-                        return false;
-                    }
-
-                    LOG_F(INFO,
-                          "Resource '{}' downloaded and verified successfully.",
-                          key);
-                    {
-                        std::lock_guard<std::mutex> progressLock(
-                            progress_mutex_);
-                        completedTasks++;
-                        download_progress_ =
-                            static_cast<double>(completedTasks) / totalTasks *
-                            100.0;
-                    }
-                    return true;
-                } catch (const std::exception &e) {
-                    LOG_F(ERROR, "Exception while downloading '{}': {}", url,
-                          e.what());
-                    return false;
-                }
-            }));
+            tasks.emplace_back(pool.enqueue(
+                [this, URL, key, &completedTasks, &totalTasks]() -> bool {
+                    return downloadAndValidateResource(
+                        URL, std::string(key), completedTasks, totalTasks);
+                }));
         }
 
         if (totalTasks == 0) {
@@ -165,17 +83,12 @@ public:
             return;
         }
 
-        // 等待所有任务完成
         for (auto &&task : tasks) {
             task.wait();
         }
 
-        bool allDownloadsSuccessful = true;
-        for (auto &&task : tasks) {
-            if (!task.get()) {
-                allDownloadsSuccessful = false;
-            }
-        }
+        bool allDownloadsSuccessful = std::all_of(
+            tasks.begin(), tasks.end(), [](auto &task) { return task.get(); });
 
         if (allDownloadsSuccessful) {
             LOG_F(INFO, "All resources downloaded and verified successfully.");
@@ -185,47 +98,104 @@ public:
     }
 
     auto getDownloadProgress() const -> double {
-        std::lock_guard<std::mutex> lock(progress_mutex_);
+        std::lock_guard lock(progress_mutex_);
         return download_progress_;
     }
 
     void setResourceServer(const std::string &server) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         resource_server_ = server;
         LOG_F(INFO, "Resource server set to '{}'.", server);
     }
 
 private:
+    static auto validateResource(std::string_view key,
+                                 const std::string &expectedSha256) -> bool {
+        if (!atom::io::isFileExists(key.data())) {
+            LOG_F(ERROR, "Resource file '{}' is missing.", key);
+            return false;
+        }
+        auto sha256Val = atom::utils::calculateSha256(key);
+        if (sha256Val.empty()) {
+            LOG_F(ERROR, "Failed to calculate SHA256 value of '{}'.", key);
+            return false;
+        }
+        if (sha256Val != expectedSha256) {
+            LOG_F(ERROR, "SHA256 check failed for '{}'.", key);
+            return false;
+        }
+        LOG_F(INFO, "Resource '{}' is valid.", key);
+        return true;
+    }
+
+    bool downloadAndValidateResource(const std::string &URL,
+                                     const std::string &key,
+                                     size_t &completedTasks,
+                                     size_t totalTasks) {
+        try {
+            atom::web::CurlWrapper curl;
+            std::string response;
+            curl.setUrl(URL)
+                .setRequestMethod("GET")
+                .onResponse(
+                    [&response](const std::string &data) { response = data; })
+                .onError(
+                    [](CURLcode code) { LOG_F(ERROR, "Curl error: %d", code); })
+                .perform();
+
+            if (response.empty()) {
+                LOG_F(ERROR, "Failed to download resource: {}", URL);
+                return false;
+            }
+
+            std::ofstream outfile(std::string(key), std::ios::binary);
+            if (!outfile) {
+                LOG_F(ERROR, "Failed to open file '{}' for writing.", key);
+                return false;
+            }
+            outfile.write(response.c_str(),
+                          static_cast<std::streamsize>(response.size()));
+            outfile.close();
+
+            if (!validateResource(key,
+                                  resource::LITHIUM_RESOURCES[key].first)) {
+                return false;
+            }
+
+            {
+                std::lock_guard progressLock(progress_mutex_);
+                completedTasks++;
+                download_progress_ = static_cast<double>(completedTasks) /
+                                     static_cast<double>(totalTasks) * 100.0;
+            }
+            return true;
+        } catch (const std::exception &e) {
+            LOG_F(ERROR, "Exception while downloading '{}': {}", URL, e.what());
+            return false;
+        }
+    }
+
     std::unordered_map<std::string, std::pair<std::string, bool>> scripts_;
     mutable std::mutex mutex_;
-
-    // 新增成员用于下载进度
-    double download_progress_;
+    double download_progress_{};
     mutable std::mutex progress_mutex_;
-
     std::string resource_server_;
 };
 
-// Preloader 实现
-
-Preloader::Preloader() : pImpl(std::make_unique<Impl>()) {}
+Preloader::Preloader() : impl_(std::make_unique<Impl>()) {}
 
 Preloader::~Preloader() = default;
 
-Preloader::Preloader(Preloader &&) noexcept = default;
+auto Preloader::checkResources() -> bool { return impl_->checkResources(); }
 
-auto Preloader::operator=(Preloader &&) noexcept -> Preloader & = default;
-
-auto Preloader::checkResources() -> bool { return pImpl->checkResources(); }
-
-void Preloader::downloadResources() { pImpl->downloadResources(); }
+void Preloader::downloadResources() { impl_->downloadResources(); }
 
 auto Preloader::getDownloadProgress() const -> double {
-    return pImpl->getDownloadProgress();
+    return impl_->getDownloadProgress();
 }
 
 void Preloader::setResourceServer(const std::string &server) {
-    pImpl->setResourceServer(server);
+    impl_->setResourceServer(server);
 }
 
 }  // namespace lithium

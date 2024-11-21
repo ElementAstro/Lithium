@@ -1,5 +1,8 @@
 #include "libastro.hpp"
+
 #include <cmath>
+
+#include "atom/log/loguru.hpp"
 
 namespace lithium::tools {
 
@@ -24,6 +27,7 @@ auto getObliquity(double julianDate) -> double {
 }  // anonymous namespace
 
 auto getNutation(double julianDate) -> std::tuple<double, double> {
+    LOG_F(INFO, "Calculating nutation for Julian date: {}", julianDate);
     double centuriesSinceJ2000 = (julianDate - JD2000) / CENTURY;
     double omega = 125.04452 - 1934.136261 * centuriesSinceJ2000 +
                    0.0020708 * centuriesSinceJ2000 * centuriesSinceJ2000 +
@@ -42,12 +46,16 @@ auto getNutation(double julianDate) -> std::tuple<double, double> {
                                0.1 * std::cos(2 * degToRad(meanLongitudeMoon)) -
                                0.09 * std::cos(2 * degToRad(omega));
 
+    LOG_F(INFO, "Nutation longitude: {}, Nutation obliquity: {}", nutationLongitude, nutationObliquity);
+
     return {nutationLongitude * ARCSEC_TO_DEG,
             nutationObliquity * ARCSEC_TO_DEG};
 }
 
 auto applyNutation(const EquatorialCoordinates& position, double julianDate,
                    bool reverse) -> EquatorialCoordinates {
+    LOG_F(INFO, "Applying nutation for position: RA={}, Dec={}, Julian date: {}, Reverse: %d",
+          position.rightAscension, position.declination, julianDate, reverse);
     auto [nutationLongitude, nutationObliquity] = getNutation(julianDate);
     double obliquity = degToRad(getObliquity(julianDate));
 
@@ -65,13 +73,20 @@ auto applyNutation(const EquatorialCoordinates& position, double julianDate,
         (std::sin(obliquity) * std::cos(rightAscension)) * nutationLongitude +
         std::sin(rightAscension) * nutationObliquity;
 
-    return {
+    EquatorialCoordinates result = {
         radToDeg(rightAscension + sign * degToRad(deltaRightAscension)) / 15.0,
         radToDeg(declination + sign * degToRad(deltaDeclination))};
+
+    LOG_F(INFO, "Resulting position after nutation: RA={}, Dec={}",
+          result.rightAscension, result.declination);
+
+    return result;
 }
 
 auto applyAberration(const EquatorialCoordinates& position,
                      double julianDate) -> EquatorialCoordinates {
+    LOG_F(INFO, "Applying aberration for position: RA={}, Dec={}, Julian date: {}",
+          position.rightAscension, position.declination, julianDate);
     double centuriesSinceJ2000 = (julianDate - JD2000) / CENTURY;
     double eccentricity =
         0.016708634 - 0.000042037 * centuriesSinceJ2000 -
@@ -102,13 +117,21 @@ auto applyAberration(const EquatorialCoordinates& position,
           std::cos(declination) * std::sin(rightAscension) *
               std::sin(degToRad(meanLongitude))));
 
-    return {radToDeg(rightAscension + degToRad(deltaRightAscension)) / 15.0,
-            radToDeg(declination + degToRad(deltaDeclination))};
+    EquatorialCoordinates result = {
+        radToDeg(rightAscension + degToRad(deltaRightAscension)) / 15.0,
+        radToDeg(declination + degToRad(deltaDeclination))};
+
+    LOG_F(INFO, "Resulting position after aberration: RA={}, Dec={}",
+          result.rightAscension, result.declination);
+
+    return result;
 }
 
 auto applyPrecession(const EquatorialCoordinates& position,
                      double fromJulianDate,
                      double toJulianDate) -> EquatorialCoordinates {
+    LOG_F(INFO, "Applying precession for position: RA={}, Dec={}, From Julian date: {}, To Julian date: {}",
+          position.rightAscension, position.declination, fromJulianDate, toJulianDate);
     double centuriesSinceJ2000 = (fromJulianDate - JD2000) / CENTURY;
     double centuriesBetweenDates = (toJulianDate - fromJulianDate) / CENTURY;
 
@@ -152,11 +175,18 @@ auto applyPrecession(const EquatorialCoordinates& position,
     double newRightAscension = std::atan2(A, B) + z;
     double newDeclination = std::asin(C);
 
-    return {radToDeg(newRightAscension) / 15.0, radToDeg(newDeclination)};
+    EquatorialCoordinates result = {radToDeg(newRightAscension) / 15.0, radToDeg(newDeclination)};
+
+    LOG_F(INFO, "Resulting position after precession: RA={}, Dec={}",
+          result.rightAscension, result.declination);
+
+    return result;
 }
 
 auto observedToJ2000(const EquatorialCoordinates& observed,
                      double julianDate) -> EquatorialCoordinates {
+    LOG_F(INFO, "Converting observed coordinates to J2000 for position: RA={}, Dec={}, Julian date: {}",
+          observed.rightAscension, observed.declination, julianDate);
     auto temp = applyAberration(observed, julianDate);
     temp = applyNutation(temp, julianDate, true);
     return applyPrecession(temp, julianDate, JD2000);
@@ -164,6 +194,8 @@ auto observedToJ2000(const EquatorialCoordinates& observed,
 
 auto j2000ToObserved(const EquatorialCoordinates& j2000,
                      double julianDate) -> EquatorialCoordinates {
+    LOG_F(INFO, "Converting J2000 coordinates to observed for position: RA={}, Dec={}, Julian date: {}",
+          j2000.rightAscension, j2000.declination, julianDate);
     auto temp = applyPrecession(j2000, JD2000, julianDate);
     temp = applyNutation(temp, julianDate);
     return applyAberration(temp, julianDate);
@@ -172,6 +204,8 @@ auto j2000ToObserved(const EquatorialCoordinates& j2000,
 auto equatorialToHorizontal(const EquatorialCoordinates& object,
                             const GeographicCoordinates& observer,
                             double julianDate) -> HorizontalCoordinates {
+    LOG_F(INFO, "Converting equatorial coordinates to horizontal for position: RA={}, Dec={}, Observer: Lat={}, Lon={}, Julian date: {}",
+          object.rightAscension, object.declination, observer.latitude, observer.longitude, julianDate);
     double localSiderealTime =
         range360(280.46061837 + 360.98564736629 * (julianDate - JD2000) +
                  observer.longitude);
@@ -194,12 +228,19 @@ auto equatorialToHorizontal(const EquatorialCoordinates& object,
         azimuth = 360 - azimuth;
     }
 
-    return {range360(azimuth + 180), altitude};
+    HorizontalCoordinates result = {range360(azimuth + 180), altitude};
+
+    LOG_F(INFO, "Resulting horizontal coordinates: Azimuth={}, Altitude={}",
+          result.azimuth, result.altitude);
+
+    return result;
 }
 
 auto horizontalToEquatorial(const HorizontalCoordinates& object,
                             const GeographicCoordinates& observer,
                             double julianDate) -> EquatorialCoordinates {
+    LOG_F(INFO, "Converting horizontal coordinates to equatorial for position: Azimuth={}, Altitude={}, Observer: Lat={}, Lon={}, Julian date: {}",
+          object.azimuth, object.altitude, observer.latitude, observer.longitude, julianDate);
     double altitude = degToRad(object.altitude);
     double azimuth = degToRad(range360(object.azimuth + 180));
     double latitude = degToRad(observer.latitude);
@@ -224,7 +265,12 @@ auto horizontalToEquatorial(const HorizontalCoordinates& object,
                  observer.longitude);
     double rightAscension = range360(localSiderealTime - hourAngle) / 15.0;
 
-    return {rightAscension, declination};
+    EquatorialCoordinates result = {rightAscension, declination};
+
+    LOG_F(INFO, "Resulting equatorial coordinates: RA={}, Dec={}",
+          result.rightAscension, result.declination);
+
+    return result;
 }
 
-}  // namespace lithium
+}  // namespace lithium::tools

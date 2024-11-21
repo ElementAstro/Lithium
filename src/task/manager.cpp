@@ -6,7 +6,6 @@
 #include <iostream>
 #include <memory>
 #include <ranges>
-#include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -20,6 +19,7 @@
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/macro.hpp"
+#include "atom/utils/print.hpp"
 
 namespace fs = std::filesystem;
 
@@ -770,8 +770,8 @@ public:
                     ++current_;
                     return {TokenType::COMMA, ","};
                 default:
-                    throw std::runtime_error(
-                        std::string("Unexpected character: ") + ch);
+                    THROW_RUNTIME_ERROR(std::string("Unexpected character: ") +
+                                        ch);
             }
         }
 
@@ -796,7 +796,7 @@ private:
                ((std::isdigit(src_[current_]) != 0) || src_[current_] == '.')) {
             if (src_[current_] == '.') {
                 if (hasDot) {
-                    throw std::runtime_error(
+                    THROW_RUNTIME_ERROR(
                         "Invalid number format with multiple dots");
                 }
                 hasDot = true;
@@ -817,7 +817,7 @@ private:
             }
         }
         if (current_ >= src_.size()) {
-            throw std::runtime_error("Unterminated string literal");
+            THROW_RUNTIME_ERROR("Unterminated string literal");
         }
         std::string str = src_.substr(start, current_ - start);
         ++current_;  // 跳过结束的双引号
@@ -910,8 +910,7 @@ private:
         if (currentToken_.type == type) {
             currentToken_ = lexer_.nextToken();
         } else {
-            throw std::runtime_error("Unexpected token: " +
-                                     currentToken_.value);
+            THROW_RUNTIME_ERROR("Unexpected token: " + currentToken_.value);
         }
     }
 
@@ -941,8 +940,8 @@ private:
                 consume(TokenType::COLON);
                 return std::make_shared<LabelStatement>(identifierName);
             }
-            throw std::runtime_error("Unexpected token after identifier: " +
-                                     currentToken_.value);
+            THROW_RUNTIME_ERROR("Unexpected token after identifier: " +
+                                currentToken_.value);
         }
         if (currentToken_.type == TokenType::IF) {
             return ifStatement();
@@ -1054,7 +1053,7 @@ private:
         if (currentToken_.type != TokenType::RIGHT_PARENTHESIS) {
             do {
                 if (currentToken_.type != TokenType::IDENTIFIER) {
-                    throw std::runtime_error("Expected parameter name");
+                    THROW_RUNTIME_ERROR("Expected parameter name");
                 }
                 params.push_back(currentToken_.value);
                 consume(TokenType::IDENTIFIER);
@@ -1092,8 +1091,7 @@ private:
                 members[varName] = std::make_shared<Assignment>(
                     std::make_shared<Identifier>(varName), std::move(value));
             } else {
-                throw std::runtime_error(
-                    "Unexpected token in class definition");
+                THROW_RUNTIME_ERROR("Unexpected token in class definition");
             }
         }
         consume(TokenType::RIGHT_BRACE);
@@ -1262,7 +1260,7 @@ private:
                 if (currentToken_.type == TokenType::LEFT_PARENTHESIS) {
                     return parseFunctionCall(name + "::" + funcName);
                 }
-                throw std::runtime_error(
+                THROW_RUNTIME_ERROR(
                     "Expected '(' after external function name");
             }
             if (currentToken_.type == TokenType::LEFT_PARENTHESIS) {
@@ -1277,8 +1275,8 @@ private:
             consume(TokenType::RIGHT_PARENTHESIS);
             return node;
         }
-        throw std::runtime_error("Unexpected token in primary expression: " +
-                                 currentToken_.value);
+        THROW_RUNTIME_ERROR("Unexpected token in primary expression: " +
+                            currentToken_.value);
     }
 
     [[nodiscard]] auto parseFunctionCall(const std::string& name)
@@ -1334,7 +1332,7 @@ public:
     void loadScript(const std::string& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
-            throw std::runtime_error("Failed to open script file: " + filename);
+            THROW_RUNTIME_ERROR("Failed to open script file: " + filename);
         }
         std::stringstream buffer;
         buffer << file.rdbuf();
@@ -1345,10 +1343,29 @@ public:
         scripts_[filename] = program;
     }
 
+    void loadScript(const std::string& filename, const std::string& script) {
+        Lexer lexer(script);
+        Parser parser(lexer);
+        auto program = parser.parse();
+        scripts_[filename] = program;
+    }
+
+    void loadScript(const std::string& filename,
+                    std::shared_ptr<Program> program) {
+        scripts_[filename] = std::move(program);
+    }
+
+    void unloadScript(const std::string& filename) {
+        auto it = scripts_.find(filename);
+        if (it != scripts_.end()) {
+            scripts_.erase(it);
+        }
+    }
+
     void interpretScript(const std::string& filename) {
         auto it = scripts_.find(filename);
         if (it == scripts_.end()) {
-            throw std::runtime_error("Script not loaded: " + filename);
+            THROW_RUNTIME_ERROR("Script not loaded: " + filename);
         }
         interpret(it->second);
     }
@@ -1359,7 +1376,7 @@ public:
             if (auto* funcDef = dynamic_cast<FunctionDef*>(stmt.get())) {
                 functions_[funcDef->getName()] =
                     std::dynamic_pointer_cast<FunctionDef>(funcDef->clone());
-                log("Function '" + funcDef->getName() + "' defined.");
+                LOG_F(INFO, "Function '{}' defined.", funcDef->getName());
             }
         }
 
@@ -1370,8 +1387,9 @@ public:
                 try {
                     execute(stmt.get());
                 } catch (const GotoException& e) {
-                    log("Goto exception caught, searching for label: " +
-                        e.label);
+                    LOG_F(INFO,
+                          "Goto exception caught, searching for label: {}",
+                          e.label);
                     // 搜索标签
                     for (size_t j = 0; j < ast->getStatements().size(); ++j) {
                         if (auto* labelStmt = dynamic_cast<LabelStatement*>(
@@ -1388,6 +1406,23 @@ public:
                 }
             }
         }
+    }
+
+    void registerFunction(const std::string& name,
+                          std::shared_ptr<FunctionDef> func) {
+        functions_[name] = std::move(func);
+    }
+
+    void registerGlobal(const std::string& name, int value) {
+        globals_[name] = value;
+    }
+
+    void registerGlobal(const std::string& name, double value) {
+        globals_[name] = value;
+    }
+
+    void registerGlobal(const std::string& name, const std::string& value) {
+        globals_[name] = value;
     }
 
 private:
@@ -1409,11 +1444,6 @@ private:
     // 脚本表
     std::unordered_map<std::string, std::shared_ptr<Program>> scripts_;
 
-    // 日志输出
-    static void log(const std::string& message) {
-        std::cout << "[LOG] " << message << std::endl;
-    }
-
     void printStackTrace() const {
         std::cerr << "Stack trace:" << std::endl;
         for (const auto& funcName : callStack_) {
@@ -1427,8 +1457,8 @@ private:
         if (auto* binaryOp = dynamic_cast<BinaryOp*>(node)) {
             auto left = evaluate(binaryOp->getLeft().get());
             auto right = evaluate(binaryOp->getRight().get());
-            log("Evaluating binary operation: " +
-                tokenTypeToString(binaryOp->getOp().type));
+            LOG_F(INFO, "Evaluating binary operation: {}",
+                  tokenTypeToString(binaryOp->getOp().type));
 
             return evaluateBinaryOp(binaryOp->getOp().type, left, right);
         }
@@ -1436,47 +1466,37 @@ private:
             const auto& value = numberNode->getValue();
             if (value.contains('.')) {
                 double val = std::stod(value);
-                log("Number literal (double): " + std::to_string(val));
+                LOG_F(INFO, "Number literal (double): {}", val);
                 return val;
             }
             int val = std::stoi(value);
-            log("Number literal (int): " + std::to_string(val));
+            LOG_F(INFO, "Number literal (int): {}", val);
             return val;
         }
         if (auto* strNode = dynamic_cast<StringLiteral*>(node)) {
-            log("String literal: \"" + strNode->getValue() + "\"");
             return strNode->getValue();
         }
         if (auto* idNode = dynamic_cast<Identifier*>(node)) {
             auto val = getVariable(idNode->getName());
-            log("Variable '" + idNode->getName() +
-                "' accessed with value: " + variantToString(val));
             return val;
         }
         if (auto* funcCall = dynamic_cast<FunctionCall*>(node)) {
-            log("Function call: " + funcCall->getName());
+            LOG_F(INFO, "Function call: {}", funcCall->getName());
             return callFunction(funcCall->getName(), funcCall->getArguments());
         }
-        throw std::runtime_error("Unknown expression type");
+        THROW_RUNTIME_ERROR("Unknown expression type");
     }
 
     // 执行语句
     void execute(ASTNode* node) {
         if (auto* exprStmt = dynamic_cast<ExpressionStatement*>(node)) {
             auto result = evaluate(exprStmt->getExpression().get());
-            log("Expression statement executed with result: " +
-                variantToString(result));
         } else if (auto* assignStmt = dynamic_cast<Assignment*>(node)) {
             auto value = evaluate(assignStmt->getValue().get());
             setVariable(assignStmt->getIdentifier()->getName(), value);
-            log("Assigned value to variable '" +
-                assignStmt->getIdentifier()->getName() +
-                "': " + variantToString(value));
         } else if (auto* ifStmt = dynamic_cast<IfStatement*>(node)) {
             auto condition = evaluate(ifStmt->getCondition().get());
             bool cond = variantToBool(condition);
-            log("If statement condition evaluated to: " +
-                std::string(cond ? "true" : "false"));
             if (cond) {
                 execute(ifStmt->getThenBranch().get());
             } else if (ifStmt->getElseBranch()) {
@@ -1484,18 +1504,18 @@ private:
             }
         } else if (auto* whileStmt = dynamic_cast<WhileStatement*>(node)) {
             while (variantToBool(evaluate(whileStmt->getCondition().get()))) {
-                log("While loop condition true, executing body.");
+                LOG_F(INFO, "While loop condition true, executing body.");
                 execute(whileStmt->getBody().get());
             }
-            log("While loop condition false, exiting loop.");
+            LOG_F(INFO, "While loop condition false, exiting loop.");
         } else if (auto* forStmt = dynamic_cast<ForStatement*>(node)) {
             for (execute(forStmt->getInitializer().get());
                  variantToBool(evaluate(forStmt->getCondition().get()));
                  execute(forStmt->getIncrement().get())) {
-                log("For loop condition true, executing body.");
+                LOG_F(INFO, "For loop condition true, executing body.");
                 execute(forStmt->getBody().get());
             }
-            log("For loop condition false, exiting loop.");
+            LOG_F(INFO, "For loop condition false, exiting loop.");
         } else if (auto* switchStmt = dynamic_cast<SwitchStatement*>(node)) {
             auto condition = evaluate(switchStmt->getCondition().get());
             for (const auto& [caseValue, caseBlock] : switchStmt->getCases()) {
@@ -1510,8 +1530,6 @@ private:
             }
         } else if (auto* returnStmt = dynamic_cast<ReturnStatement*>(node)) {
             auto value = evaluate(returnStmt->getValue().get());
-            log("Return statement executed with value: " +
-                variantToString(value));
             throw ReturnException(value);
         } else if (auto* importStmt = dynamic_cast<ImportStatement*>(node)) {
             importModule(importStmt->getModuleName(), importStmt->getAlias());
@@ -1520,33 +1538,26 @@ private:
             try {
                 execute(tryCatchStmt->getTryBlock().get());
             } catch (const std::exception& e) {
-                log("Exception caught: " + std::string(e.what()));
                 execute(tryCatchStmt->getCatchBlock().get());
             }
         } else if (auto* throwStmt = dynamic_cast<ThrowStatement*>(node)) {
             auto value = evaluate(throwStmt->getExpression().get());
-            log("Throw statement executed with value: " +
-                variantToString(value));
-            throw std::runtime_error(variantToString(value));
+            THROW_RUNTIME_ERROR(variantToString(value));
         } else if (auto* gotoStmt = dynamic_cast<GotoStatement*>(node)) {
             auto label = gotoStmt->getLabel();
-            log("Goto statement executed, jumping to label: " + label);
             throw GotoException(label);
         } else if (auto* labelStmt = dynamic_cast<LabelStatement*>(node)) {
             // 标签语句不执行任何操作
         } else if (auto* classDef = dynamic_cast<ClassDefinition*>(node)) {
-            log("Class definition: " + classDef->getName());
             for (const auto& [name, member] : classDef->getMembers()) {
                 execute(member.get());
             }
         } else if (auto* enumClassDef =
                        dynamic_cast<EnumClassDefinition*>(node)) {
-            log("Enum class definition: " + enumClassDef->getName());
-            for (const auto& enumerator : enumClassDef->getEnumerators()) {
-                log("Enumerator: " + enumerator);
-            }
+            // for (const auto& enumerator : enumClassDef->getEnumerators()) {
+            // }
         } else {
-            throw std::runtime_error("Unknown statement type");
+            THROW_RUNTIME_ERROR("Unknown statement type");
         }
     }
 
@@ -1580,25 +1591,24 @@ private:
         const std::vector<std::shared_ptr<ASTNode>>& args) {
         if (name == "print") {
             if (args.size() != 1) {
-                throw std::runtime_error("print function expects 1 argument");
+                THROW_RUNTIME_ERROR("print function expects 1 argument");
             }
             auto message = evaluate(args[0].get());
             std::visit([](auto&& arg) { std::cout << arg << std::endl; },
                        message);
         } else if (name == "len") {
             if (args.size() != 1) {
-                throw std::runtime_error("len function expects 1 argument");
+                THROW_RUNTIME_ERROR("len function expects 1 argument");
             }
             auto value = evaluate(args[0].get());
             if (std::holds_alternative<std::string>(value)) {
                 std::cout << std::get<std::string>(value).size() << std::endl;
             } else {
-                throw std::runtime_error(
-                    "len function expects a string argument");
+                THROW_RUNTIME_ERROR("len function expects a string argument");
             }
         } else if (name == "toInt") {
             if (args.size() != 1) {
-                throw std::runtime_error("toInt function expects 1 argument");
+                THROW_RUNTIME_ERROR("toInt function expects 1 argument");
             }
             auto value = evaluate(args[0].get());
             if (std::holds_alternative<std::string>(value)) {
@@ -1608,13 +1618,12 @@ private:
                 std::cout << static_cast<int>(std::get<double>(value))
                           << std::endl;
             } else {
-                throw std::runtime_error(
+                THROW_RUNTIME_ERROR(
                     "toInt function expects a string or double argument");
             }
         } else if (name == "toDouble") {
             if (args.size() != 1) {
-                throw std::runtime_error(
-                    "toDouble function expects 1 argument");
+                THROW_RUNTIME_ERROR("toDouble function expects 1 argument");
             }
             auto value = evaluate(args[0].get());
             if (std::holds_alternative<std::string>(value)) {
@@ -1624,18 +1633,18 @@ private:
                 std::cout << static_cast<double>(std::get<int>(value))
                           << std::endl;
             } else {
-                throw std::runtime_error(
+                THROW_RUNTIME_ERROR(
                     "toDouble function expects a string or int argument");
             }
         } else if (name == "thread::create") {
             if (args.size() != 1) {
-                throw std::runtime_error(
+                THROW_RUNTIME_ERROR(
                     "thread::create function expects 1 argument");
             }
             auto funcName = std::get<std::string>(evaluate(args[0].get()));
             auto funcIt = functions_.find(funcName);
             if (funcIt == functions_.end()) {
-                throw std::runtime_error("Undefined function: " + funcName);
+                THROW_RUNTIME_ERROR("Undefined function: " + funcName);
             }
             auto* func = funcIt->second.get();
             std::thread([this, func]() {
@@ -1648,7 +1657,7 @@ private:
                 }
             }).detach();
         } else {
-            throw std::runtime_error("Unknown built-in function: " + name);
+            THROW_RUNTIME_ERROR("Unknown built-in function: " + name);
         }
     }
 
@@ -1671,14 +1680,13 @@ private:
         auto* func = funcIt->second.get();
 
         if (args.size() != func->getParams().size()) {
-            throw std::runtime_error("Function " + name + " expects " +
-                                     std::to_string(func->getParams().size()) +
-                                     " arguments, got " +
-                                     std::to_string(args.size()));
+            THROW_RUNTIME_ERROR("Function " + name + " expects " +
+                                std::to_string(func->getParams().size()) +
+                                " arguments, got " +
+                                std::to_string(args.size()));
         }
 
-        log("Calling function '" + name + "' with " +
-            std::to_string(args.size()) + " arguments.");
+        LOG_F(INFO, "Calling function '{}'", name);
 
         // 创建新的局部作用域
         locals_.emplace_back();
@@ -1687,8 +1695,8 @@ private:
         for (size_t idx = 0; idx < args.size(); ++idx) {
             auto argValue = evaluate(args[idx].get());
             locals_.back()[func->getParams()[idx]] = argValue;
-            log("Function parameter '" + func->getParams()[idx] +
-                "' assigned value: " + variantToString(argValue));
+            LOG_F(INFO, "Function parameter '{}' assigned value: {}",
+                  func->getParams()[idx], variantToString(argValue));
         }
 
         // 添加到调用堆栈
@@ -1704,8 +1712,8 @@ private:
             locals_.pop_back();
             // 从调用堆栈中移除
             callStack_.pop_back();
-            log("Function '" + name +
-                "' returned with value: " + variantToString(ret.value));
+            LOG_F(INFO, "Function '{}' returned value: {}", name,
+                  variantToString(ret.value));
             return ret.value;
         } catch (const std::exception& e) {
             // 从调用堆栈中移除
@@ -1717,8 +1725,6 @@ private:
         locals_.pop_back();
         // 从调用堆栈中移除
         callStack_.pop_back();
-        log("Function '" + name +
-            "' completed without return statement, defaulting to 0.");
         return 0;
     }
 
@@ -1728,7 +1734,7 @@ private:
         -> std::variant<int, double, std::string> {
         void* funcPtr = dlsym(RTLD_DEFAULT, name.c_str());
         if (funcPtr == nullptr) {
-            throw std::runtime_error("Undefined external function: " + name);
+            THROW_RUNTIME_ERROR("Undefined external function: " + name);
         }
 
         // 准备libffi调用
@@ -1755,7 +1761,7 @@ private:
                 argTypes[i] = &ffi_type_pointer;
                 argValues[i] = &cStringStorage[i];
             } else {
-                throw std::runtime_error(
+                THROW_RUNTIME_ERROR(
                     "Unsupported argument type for external function");
             }
         }
@@ -1764,8 +1770,7 @@ private:
         ffi_type* returnType = &ffi_type_double;
         if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, args.size(), returnType,
                          argTypes.data()) != FFI_OK) {
-            throw std::runtime_error(
-                "Failed to prepare CIF for external function");
+            THROW_RUNTIME_ERROR("Failed to prepare CIF for external function");
         }
 
         ffi_arg result;
@@ -1783,17 +1788,17 @@ private:
     void importModule(const std::string& moduleName, const std::string& alias) {
         std::string fileName = "./" + moduleName + ".so";
         if (!fs::exists(fileName)) {
-            throw std::runtime_error("Module not found: " + fileName);
+            THROW_RUNTIME_ERROR("Module not found: " + fileName);
         }
         if (dlopen(fileName.c_str(), RTLD_NOLOAD) != nullptr) {
-            log("Module '" + moduleName + "' already loaded.");
+            LOG_F(INFO, "Module '{}' already loaded.", moduleName);
             return;
         }
         void* handle = dlopen(fileName.c_str(), RTLD_LAZY);
         if (handle == nullptr) {
-            throw std::runtime_error("Failed to load module: " + fileName);
+            THROW_RUNTIME_ERROR("Failed to load module: " + fileName);
         }
-        log("Module '" + moduleName + "' loaded.");
+        LOG_F(INFO, "Module '{}' loaded.", moduleName);
 
         // 导入模块中的函数
         std::vector<std::string> importedFunctions;
@@ -1804,12 +1809,13 @@ private:
         for (const auto& funcName : importedFunctions) {
             auto funcIt = functions_.find(funcName);
             if (funcIt == functions_.end()) {
-                throw std::runtime_error("Undefined function: " + funcName);
+                THROW_RUNTIME_ERROR("Undefined function: " + funcName);
             }
             auto* func = funcIt->second.get();
             if (func->getName() == funcName) {
-                functions_[alias + "::" + funcName] = funcIt->second;
-                log("Function '" + alias + "::" + funcName + "' imported.");
+                functions_["{}::{}"_fmt(alias, funcName)] = funcIt->second;
+                LOG_F(INFO, "Function '{}' imported from module '{}' as '{}'",
+                      funcName, moduleName, alias + "::" + funcName);
             }
         }
     }
@@ -1829,7 +1835,7 @@ private:
         if (it != globals_.end()) {
             return it->second;
         }
-        throw std::runtime_error("Variable not found: " + name);
+        THROW_RUNTIME_ERROR("Variable not found: " + name);
     }
 
     // 设置变量值
@@ -1929,7 +1935,7 @@ private:
                     return leftVal * rightVal;
                 case TokenType::DIVIDE:
                     if (rightVal == 0.0) {
-                        throw std::runtime_error("Division by zero");
+                        THROW_RUNTIME_ERROR("Division by zero");
                     }
                     return leftVal / rightVal;
                 case TokenType::GREATER:
@@ -1945,7 +1951,7 @@ private:
                 case TokenType::NOT_EQUAL:
                     return (leftVal != rightVal) ? 1 : 0;
                 default:
-                    throw std::runtime_error("Unknown binary operator");
+                    THROW_RUNTIME_ERROR("Unknown binary operator");
             }
         }
 
@@ -1968,7 +1974,7 @@ private:
                                                  double>) {
                                    return std::to_string(arg);
                                } else {
-                                   throw std::runtime_error(
+                                   THROW_RUNTIME_ERROR(
                                        "Unsupported type for string "
                                        "concatenation");
                                }
@@ -1986,7 +1992,7 @@ private:
                                                  double>) {
                                    return std::to_string(arg);
                                } else {
-                                   throw std::runtime_error(
+                                   THROW_RUNTIME_ERROR(
                                        "Unsupported type for string "
                                        "concatenation");
                                }
@@ -2019,17 +2025,20 @@ private:
                 case TokenType::NOT_EQUAL:
                     return (leftStr != rightStr) ? 1 : 0;
                 default:
-                    throw std::runtime_error(
-                        "Unknown binary operator for strings");
+                    THROW_RUNTIME_ERROR("Unknown binary operator for strings");
             }
         }
 
-        throw std::runtime_error(
+        THROW_RUNTIME_ERROR(
             "Unsupported binary operation between different types");
     }
 };
 
 Interpreter::Interpreter() : impl_(std::make_unique<Impl>()) {}
+
+auto Interpreter::createShared() -> std::shared_ptr<Interpreter> {
+    return std::make_shared<Interpreter>();
+}
 
 void Interpreter::loadScript(const std::string& filename) {
     impl_->loadScript(filename);

@@ -131,6 +131,7 @@ add_subdirectory(${lithium_src_dir}/addon)
 add_subdirectory(${lithium_src_dir}/client)
 add_subdirectory(${lithium_src_dir}/target)
 add_subdirectory(${lithium_src_dir}/device)
+add_subdirectory(${lithium_src_dir}/script)
 add_subdirectory(tests)
 
 # Set source files

@@ -30,6 +30,8 @@ class Interpreter {
 public:
     Interpreter();
 
+    static auto createShared() -> std::shared_ptr<Interpreter>;
+
     void loadScript(const std::string& filename);
 
     void interpretScript(const std::string& filename);

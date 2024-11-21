@@ -70,6 +70,14 @@ void showCursor();
 auto getTerminalSize() -> std::pair<int, int>;
 
 /**
+ * @brief Sets the size of the terminal.
+ *
+ * @param width The width to set the terminal to.
+ * @param height The height to set the terminal to.
+ */
+void setTerminalSize(int width, int height);
+
+/**
  * @brief Checks if the terminal supports color.
  *
  * @return True if the terminal supports color, false otherwise.

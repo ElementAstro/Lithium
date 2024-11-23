@@ -240,7 +240,7 @@ void TaskLoader::batchProcessDirectory(
 auto TaskLoader::validateJson(const json& jsonData,
                               const json& schema) -> bool {
     try {
-        json_schema::JsonValidator validator;
+        atom::type::JsonValidator validator;
         validator.setRootSchema(schema);
         validator.validate(jsonData);
         LOG_F(INFO, "JSON validation succeeded");

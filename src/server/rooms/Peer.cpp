@@ -4,9 +4,7 @@
 #include <utility>
 #include "Room.hpp"
 
-#include "async/message_bus.hpp"
-#include "config/configor.hpp"
-#include "dto/DTOs.hpp"
+#include "oatpp/dto/DTOs.hpp"
 #include "oatpp/encoding/Base64.hpp"
 
 #include "middleware/gpio.hpp"
@@ -16,8 +14,10 @@
 
 #include "matchit/matchit.h"
 
+#include "config/configor.hpp"
 #include "tools/croods.hpp"
 
+#include "atom/async/message_bus.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"

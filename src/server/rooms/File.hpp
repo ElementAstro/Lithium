@@ -1,6 +1,11 @@
+// File.hpp
+
 #ifndef File_hpp
 #define File_hpp
 
+#include <atomic>
+#include <memory>
+#include <mutex>
 #include <unordered_map>
 #include "oatpp/async/CoroutineWaitList.hpp"
 #include "oatpp/data/stream/Stream.hpp"
@@ -20,12 +25,7 @@ public:
             WaitListListener(Subscriber* subscriber)
                 : m_subscriber(subscriber) {}
 
-            void onNewItem(oatpp::async::CoroutineWaitList& list) override {
-                std::lock_guard<std::mutex> lock(m_subscriber->m_chunkLock);
-                if (m_subscriber->m_chunk || !m_subscriber->m_valid) {
-                    list.notifyAll();
-                }
-            }
+            void onNewItem(oatpp::async::CoroutineWaitList& list) override;
         };
 
     private:
@@ -57,6 +57,8 @@ public:
         v_int64 getId();
 
         void invalidate();
+
+        bool isValid();
     };
 
 private:
@@ -92,6 +94,9 @@ public:
     v_int64 getFileSize();
 
     void clearSubscribers();
+
+    // 新增功能：获取当前订阅者数量
+    size_t getSubscriberCount();
 };
 
 #endif  // File_hpp

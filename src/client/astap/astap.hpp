@@ -41,6 +41,11 @@ public:
 
     auto scanSolver() -> bool;
 
+    auto solve(const std::string& imageFilePath,
+               const std::optional<Coordinates>& initialCoordinates,
+               double fovW, double fovH, int imageWidth,
+               int imageHeight) -> PlateSolveResult override;
+
     auto solveImage(std::string_view image,
                     std::optional<double> radius_search_field = {},
                     std::optional<double> field_height = {},

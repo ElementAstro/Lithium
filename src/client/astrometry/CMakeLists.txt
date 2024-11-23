@@ -19,6 +19,7 @@ set(LIBS
     atom-utils
     atom-component
     atom-error
+    lithium-tools
 )
 
 # Create the module library

@@ -105,6 +105,20 @@ auto AstapSolver::scanSolver() -> bool {
     return true;
 }
 
+auto AstapSolver::solve(const std::string &imageFilePath,
+                        const std::optional<Coordinates> &initialCoordinates,
+                        double fovW, double fovH, int imageWidth,
+                        int imageHeight) -> PlateSolveResult {
+    DLOG_F(INFO, "Solving Image {}...", imageFilePath);
+    ATOM_UNREF_PARAM(imageFilePath);
+    ATOM_UNREF_PARAM(initialCoordinates);
+    ATOM_UNREF_PARAM(fovW);
+    ATOM_UNREF_PARAM(fovH);
+    ATOM_UNREF_PARAM(imageWidth);
+    ATOM_UNREF_PARAM(imageHeight);
+    return {};
+}
+
 auto AstapSolver::solveImage(
     std::string_view image, std::optional<double> radius_search_field,
     std::optional<double> field_height, std::optional<double> ra,

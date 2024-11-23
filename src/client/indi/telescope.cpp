@@ -132,7 +132,7 @@ auto INDITelescope::connect(const std::string &deviceName, int timeout,
                         if (property[i].getState() == ISS_ON) {
                             LOG_F(INFO, "Baud rate is {}",
                                   property[i].getLabel());
-                            baudRate_ = static_cast<BAUD_RATE>(i);
+                            baudRate_ = static_cast<T_BAUD_RATE>(i);
                         }
                     }
                 }

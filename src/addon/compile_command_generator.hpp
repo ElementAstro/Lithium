@@ -82,7 +82,7 @@ public:
      * @param library_path The path to the library.
      * @return Reference to the current instance for method chaining.
      */
-    auto addLibrary(const std::string& library_path)
+    auto addLibrary(const std::string& libraryPath)
         -> CompileCommandGenerator&;
 
     /**
@@ -94,7 +94,7 @@ public:
      * @param template_str The command template string.
      * @return Reference to the current instance for method chaining.
      */
-    auto setCommandTemplate(const std::string& template_str)
+    auto setCommandTemplate(const std::string& templateStr)
         -> CompileCommandGenerator&;
 
     /**
@@ -113,7 +113,7 @@ public:
      *
      * @param config_path The path to the configuration file.
      */
-    void loadConfigFromFile(const std::string& config_path);
+    void loadConfigFromFile(const std::string& configPath);
 
     /**
      * @brief Generates the compile commands based on the configured options.

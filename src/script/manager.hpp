@@ -15,7 +15,7 @@ Description: Lithium Python scripting engine
 #ifndef LITHIUM_SCRIPT_PYTHON_HPP
 #define LITHIUM_SCRIPT_PYTHON_HPP
 
-#include "pocketpy/include/pocketpy.h"
+#include "pocketpy.h"
 
 #include "config/configor.hpp"
 

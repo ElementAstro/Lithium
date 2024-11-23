@@ -19,7 +19,7 @@
 using namespace atom::meta;
 
 template <>
-struct EnumTraits<lithium::sequencer::task::ExposureType> {
+struct atom::meta::EnumTraits<lithium::sequencer::task::ExposureType> {
     static constexpr std::array<lithium::sequencer::task::ExposureType, 5>
         values = {lithium::sequencer::task::ExposureType::LIGHT,
                   lithium::sequencer::task::ExposureType::DARK,

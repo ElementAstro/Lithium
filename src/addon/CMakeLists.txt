@@ -15,6 +15,14 @@ project(lithium-addons VERSION 1.0.0 LANGUAGES C CXX)
 
 if (NOT MINGW OR NOT WIN32)
 find_package(Seccomp REQUIRED)
+find_package(LibGit2 REQUIRED)
+
+if (LIBGIT2_FOUND)
+    message(STATUS "LibGit2 found!")
+    include_directories(${LIBGIT2_INCLUDE_DIRS})
+else ()
+    message(FATAL_ERROR "LibGit2 not found!")
+endif ()
 endif()
 
 # Project sources
@@ -42,9 +50,6 @@ set(PROJECT_SOURCES
     platform/cmake.cpp
     platform/meson.cpp
     platform/xmake.cpp
-
-    project/git_impl.cpp
-    project/git.cpp
 
     remote/github_impl.cpp
     remote/github.cpp
@@ -79,15 +84,23 @@ set(PROJECT_HEADERS
     platform/meson.hpp
     platform/xmake.hpp
 
-    project/git_impl.hpp
-    project/git.hpp
-
     remote/github_impl.hpp
     remote/github.hpp
 
     template/remote.hpp
     template/standalone.hpp
 )
+
+if (NOT MINGW OR NOT WIN32)
+set(PROJECT_SOURCES ${PROJECT_SOURCES} 
+    project/git_impl.cpp
+    project/git.cpp
+)
+set(PROJECT_HEADERS ${PROJECT_HEADERS}
+    project/git_impl.hpp
+    project/git.hpp
+)
+endif()
 
 # Required libraries for the project
 set(PROJECT_LIBS
@@ -96,11 +109,18 @@ set(PROJECT_LIBS
     atom-function
     atom-system
     atom-utils
+    atom-component
     loguru
     lithium-utils
     ${CMAKE_THREAD_LIBS_INIT}
     ${Seccomp_LIBRARIES}
 )
+
+if (NOT MINGW OR NOT WIN32)
+set(PROJECT_LIBS ${PROJECT_LIBS}
+    ${LIBGIT2_LIBRARIES}
+)
+endif()
 
 # Create object library
 add_library(${PROJECT_NAME}_OBJECT OBJECT ${PROJECT_SOURCES} ${PROJECT_HEADERS})

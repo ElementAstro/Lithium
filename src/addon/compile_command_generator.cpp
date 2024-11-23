@@ -536,6 +536,63 @@ CompileCommandGenerator::~CompileCommandGenerator() {
     LOG_F(INFO, "CompileCommandGenerator instance destroyed.");
 }
 
+auto CompileCommandGenerator::setOption(const std::string& key,
+                                        const std::string& value)
+    -> CompileCommandGenerator& {
+    impl_->setOption(key, value);
+    return *this;
+}
+
+auto CompileCommandGenerator::addTarget(const std::string& target_name)
+    -> CompileCommandGenerator& {
+    impl_->addTarget(target_name);
+    return *this;
+}
+
+auto CompileCommandGenerator::setTargetOption(
+    const std::string& target_name, const std::string& key,
+    const std::string& value) -> CompileCommandGenerator& {
+    impl_->setTargetOption(target_name, key, value);
+    return *this;
+}
+
+auto CompileCommandGenerator::addConditionalOption(
+    const std::string& condition, const std::string& key,
+    const std::string& value) -> CompileCommandGenerator& {
+    impl_->addConditionalOption(condition, key, value);
+    return *this;
+}
+
+auto CompileCommandGenerator::addDefine(const std::string& define)
+    -> CompileCommandGenerator& {
+    impl_->addDefine(define);
+    return *this;
+}
+
+auto CompileCommandGenerator::addFlag(const std::string& flag)
+    -> CompileCommandGenerator& {
+    impl_->addFlag(flag);
+    return *this;
+}
+
+auto CompileCommandGenerator::addLibrary(const std::string& libraryPath)
+    -> CompileCommandGenerator& {
+    impl_->addLibrary(libraryPath);
+    return *this;
+}
+
+auto CompileCommandGenerator::setCommandTemplate(const std::string& templateStr)
+    -> CompileCommandGenerator& {
+    impl_->setCommandTemplate(templateStr);
+    return *this;
+}
+
+auto CompileCommandGenerator::setCompiler(const std::string& compiler)
+    -> CompileCommandGenerator& {
+    impl_->setCompiler(compiler);
+    return *this;
+}
+
 void CompileCommandGenerator::loadConfigFromFile(
     const std::string& configPath) {
     impl_->loadConfiguration(configPath);

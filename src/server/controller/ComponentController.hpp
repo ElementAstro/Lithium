@@ -1,29 +1,28 @@
 #ifndef LITHIUM_SERVER_COMPONENT_CONTROLLER_HPP
 #define LITHIUM_SERVER_COMPONENT_CONTROLLER_HPP
 
-#include <algorithm>
 #include <any>
 #include <exception>
 #include <optional>
 #include <stdexcept>
-#include "Types.hpp"
-#include "addon/toolchain.hpp"
-#include "components/dispatch.hpp"
-#include "components/var.hpp"
-#include "oatpp/json/ObjectMapper.hpp"
-#include "oatpp/web/server/api/ApiController.hpp"
 
+#include "oatpp/Types.hpp"
+#include "oatpp/json/ObjectMapper.hpp"
 #include "oatpp/macro/codegen.hpp"
 #include "oatpp/macro/component.hpp"
+#include "oatpp/web/server/api/ApiController.hpp"
 
 #include "data/ComponentDto.hpp"
 #include "data/RequestDto.hpp"
 
 #include "addon/manager.hpp"
+#include "addon/toolchain.hpp"
 #include "utils/constant.hpp"
 
 #include "atom/async/message_bus.hpp"
 #include "atom/async/queue.hpp"
+#include "atom/components/dispatch.hpp"
+#include "atom/components/var.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/container.hpp"
@@ -238,8 +237,7 @@ public:
 
     ENDPOINT_INFO(getUIApiServreComponentUnload) {
         info->summary = "Unload component";
-        info->addConsumes<RequestComponentUnloadDto>(
-            "application/json");
+        info->addConsumes<RequestComponentUnloadDto>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
                                              "application/json");
         info->addResponse<Object<ReturnComponentUnloadNotFoundDto>>(
@@ -339,8 +337,7 @@ public:
 
     ENDPOINT_INFO(getUIApiServreComponentReload) {
         info->summary = "Reload component";
-        info->addConsumes<RequestComponentReloadDto>(
-            "application/json");
+        info->addConsumes<RequestComponentReloadDto>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
                                              "application/json");
     }
@@ -444,6 +441,7 @@ public:
                       componentInstance.getValue(""));
                 return _return(createSuccessResponse("Components reloaded"));
             }
+            return _return(createSuccessResponse("Components reloaded"));
         }
     };
 
@@ -677,6 +675,7 @@ public:
                 }
                 return false;
             }
+            return false;
         }
 
         template <typename RetrieveFunc, typename... Types>
@@ -749,7 +748,7 @@ public:
                         if (realArg.has_value()) {
                             functionArgs.push_back(realArg.value());
                         } else {
-                            LOG_F(ERROR, "Failed to parse argument: {}", arg);
+                            // LOG_F(ERROR, "Failed to parse argument: {}", arg);
                             return _return(createErrorResponse<
                                            ReturnComponentFunctionNotFoundDto>(
                                 "Failed to parse argument", component, function,

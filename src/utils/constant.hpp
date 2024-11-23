@@ -26,7 +26,7 @@ Description: Constants for Lithium
 
 #define DEFINE_LITHIUM_CONSTANT(name)                     \
     static constexpr const char* name = "lithium." #name; \
-    static constexpr unsigned int name##_hash = atom::algorithm::hash(name);
+    static constexpr std::size_t name##_hash = atom::algorithm::hash(name);
 
 class Constants {
 public:

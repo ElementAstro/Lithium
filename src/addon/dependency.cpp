@@ -21,8 +21,10 @@
 #include <tinyxml2.h>
 #elif __has_include(<tinyxml2/tinyxml2.h>)
 #include <tinyxml2/tinyxml2.h>
-using namespace tinyxml2;
+#else
+#include "extra/tinyxml2/tinyxml2.h"
 #endif
+using namespace tinyxml2;
 
 #include "utils/constant.hpp"
 

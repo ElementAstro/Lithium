@@ -31,6 +31,7 @@ Description: Lithium App Enter
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/env.hpp"
+#include "atom/utils/error_stack.hpp"
 
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"

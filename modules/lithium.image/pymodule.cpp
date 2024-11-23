@@ -68,6 +68,31 @@ auto numpyToMat(const py::array_t<uint8_t>& array) -> cv::Mat {
     return {height, width, CV_8UC(channels), info.ptr};
 }
 
+cv::Mat numpyToCvMat(py::array_t<uint8_t>& input) {
+    py::buffer_info buf = input.request();
+    int rows = buf.shape[0];
+    int cols = buf.shape[1];
+    return cv::Mat(rows, cols, CV_8UC1, buf.ptr);
+}
+
+py::tuple calcSubPixelCenterWrapper(
+    const py::array_t<uint8_t>& roi, const std::pair<float, float>& initCenter,
+    float epsilon = DEFAULT_EPSILON,
+    int maxIterations = MAX_ITERATIONS_DEFAULT) {
+    // Convert numpy.ndarray to cv::Mat
+    cv::Mat roiMat = numpyToCvMat(const_cast<py::array_t<uint8_t>&>(roi));
+
+    // Convert Python tuple (x, y) to cv::Point2f
+    cv::Point2f center(initCenter.first, initCenter.second);
+
+    // Call the actual C++ implementation
+    cv::Point2f result = StarCentroid::calcSubPixelCenter(
+        roiMat, std::move(center), epsilon, maxIterations);
+
+    // Return as a Python tuple
+    return py::make_tuple(result.x, result.y);
+}
+
 PYBIND11_MODULE(base64, m) {
     m.doc() = "Base64 encoding and decoding module";
 
@@ -147,7 +172,7 @@ PYBIND11_MODULE(base64, m) {
             Returns:
                 tuple: Coordinates of the intensity-weighted center (x, y)
         )pbdoc")
-        .def_static("calcSubPixelCenter", &StarCentroid::calcSubPixelCenter,
+        .def_static("calcSubPixelCenter", &calcSubPixelCenterWrapper,
                     R"pbdoc(
             Calculate the sub-pixel center
             Parameters:
@@ -167,7 +192,8 @@ PYBIND11_MODULE(base64, m) {
                 image (numpy.ndarray): Input image
             Returns:
                 CentroidResult: Centroid result
-        )pbdoc")
+        )pbdoc",
+                    py::arg("image"))
         .def_static("visualizeResults", &StarCentroid::visualizeResults,
                     R"pbdoc(
             Visualize the centroid results

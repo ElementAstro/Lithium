@@ -6,10 +6,10 @@
 #include <stdexcept>
 #include <thread>
 
-#include "async/safetype.hpp"
 #include "config/configor.hpp"
 
 #include "atom/async/message_bus.hpp"
+#include "atom/async/safetype.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"

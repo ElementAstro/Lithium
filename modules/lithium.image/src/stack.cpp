@@ -69,7 +69,7 @@ auto sigmaClippingStack(const std::vector<cv::Mat>& images,
     try {
         std::tie(mean, stdDev) = computeMeanAndStdDev(images);
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to compute mean and standard deviation: %s",
+        LOG_F(ERROR, "Failed to compute mean and standard deviation: {}",
               e.what());
         throw;
     }
@@ -81,7 +81,7 @@ auto sigmaClippingStack(const std::vector<cv::Mat>& images,
         cv::Mat mask = cv::abs(temp - mean) < (sigma * stdDev);
         temp.setTo(0, ~mask);
         layers.push_back(temp);
-        LOG_F(INFO, "Processed image %zu, applied sigma clipping mask.", i + 1);
+        LOG_F(INFO, "Processed image {}, applied sigma clipping mask.", i + 1);
     }
 
     cv::Mat sum = cv::Mat::zeros(images[0].size(), CV_32F);
@@ -91,7 +91,7 @@ auto sigmaClippingStack(const std::vector<cv::Mat>& images,
         cv::Mat mask = layers[i] != 0;
         sum += layers[i];
         count += mask;
-        LOG_F(INFO, "Accumulated layer %zu.", i + 1);
+        LOG_F(INFO, "Accumulated layer {}.", i + 1);
     }
 
     // Prevent division by zero
@@ -159,8 +159,6 @@ auto stackImagesByLayers(const std::vector<cv::Mat>& images, StackMode mode,
         THROW_RUNTIME_ERROR("No images to stack");
     }
 
-    LOG_F(INFO, "Starting image stacking by layers. Mode: {}", mode);
-
     std::vector<cv::Mat> channels;
     cv::split(images[0], channels);
 
@@ -173,6 +171,7 @@ auto stackImagesByLayers(const std::vector<cv::Mat>& images, StackMode mode,
     }
 
     std::vector<cv::Mat> stackedChannels;
+    stackedChannels.reserve(channels.size());
     for (auto& channel : channels) {
         stackedChannels.push_back(stackImages(channel, mode, sigma, weights));
     }
@@ -192,8 +191,6 @@ auto stackImages(const std::vector<cv::Mat>& images, StackMode mode,
         LOG_F(ERROR, "No input images for stacking.");
         THROW_RUNTIME_ERROR("No images to stack");
     }
-
-    LOG_F(INFO, "Starting image stacking. Mode: {}", mode);
 
     cv::Mat stackedImage;
 
@@ -247,7 +244,7 @@ auto stackImages(const std::vector<cv::Mat>& images, StackMode mode,
                 stackedImage = images[0].clone();
                 for (size_t i = 1; i < images.size(); ++i) {
                     cv::max(stackedImage, images[i], stackedImage);
-                    LOG_F(INFO, "Applied maximum stack: Image %zu", i + 1);
+                    LOG_F(INFO, "Applied maximum stack: Image {}", i + 1);
                 }
                 break;
             }
@@ -256,7 +253,7 @@ auto stackImages(const std::vector<cv::Mat>& images, StackMode mode,
                 stackedImage = images[0].clone();
                 for (size_t i = 1; i < images.size(); ++i) {
                     cv::min(stackedImage, images[i], stackedImage);
-                    LOG_F(INFO, "Applied minimum stack: Image %zu", i + 1);
+                    LOG_F(INFO, "Applied minimum stack: Image {}", i + 1);
                 }
                 break;
             }
@@ -291,7 +288,7 @@ auto stackImages(const std::vector<cv::Mat>& images, StackMode mode,
                     images[i].convertTo(floatImg, CV_32F);
                     weightedSum += floatImg * weights[i];
                     totalWeight += weights[i];
-                    LOG_F(INFO, "Applied weight %zu: %.2f", i + 1, weights[i]);
+                    LOG_F(INFO, "Applied weight {}: %.2f", i + 1, weights[i]);
                 }
 
                 // Compute weighted mean
@@ -305,19 +302,18 @@ auto stackImages(const std::vector<cv::Mat>& images, StackMode mode,
                 for (size_t i = 1; i < images.size(); ++i) {
                     cv::Mat mask = images[i] > stackedImage;
                     images[i].copyTo(stackedImage, mask);
-                    LOG_F(INFO, "Applied lighten stack: Image %zu", i + 1);
+                    LOG_F(INFO, "Applied lighten stack: Image {}", i + 1);
                 }
                 break;
             }
             default: {
-                LOG_F(ERROR, "Unknown stacking mode: %d", mode);
-                throw std::invalid_argument("Unknown stacking mode");
+                THROW_INVALID_ARGUMENT("Unknown stacking mode");
             }
         }
 
         LOG_F(INFO, "Image stacking completed.");
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Exception occurred during image stacking: %s", e.what());
+        LOG_F(ERROR, "Exception occurred during image stacking: {}", e.what());
         throw;
     }
 

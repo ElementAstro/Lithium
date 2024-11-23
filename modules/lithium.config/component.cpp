@@ -17,6 +17,7 @@ Description: Config Component for Atom Addon
 
 #include "config/configor.hpp"
 
+#include "atom/function/overload.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/tests/test.hpp"
 #include "atom/type/json.hpp"
@@ -27,7 +28,10 @@ ATOM_MODULE(lithium_config, [](Component& com) {
     DLOG_F(INFO, "Loading module {}", com.getName());
 
     com.def("getConfig", &lithium::ConfigManager::getValue, mConfigManager);
-    com.def("setConfig", &lithium::ConfigManager::setValue, mConfigManager);
+    com.def("setConfig",
+            atom::meta::overload_cast<const std::string&, const json&>(
+                &lithium::ConfigManager::setValue),
+            mConfigManager);
     com.def("hasConfig", &lithium::ConfigManager::hasValue, mConfigManager);
     com.def("deleteConfig", &lithium::ConfigManager::deleteValue,
             mConfigManager);

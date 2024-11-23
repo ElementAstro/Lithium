@@ -20,8 +20,8 @@
 #include "atom/type/json.hpp"
 #include "atom/utils/aes.hpp"
 #include "atom/utils/difflib.hpp"
+#include "atom/utils/string.hpp"
 #include "atom/utils/time.hpp"
-#include "utils/string.hpp"
 
 namespace lithium {
 class FailToScanDirectory : public atom::error::Exception {

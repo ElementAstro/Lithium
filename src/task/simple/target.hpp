@@ -145,7 +145,7 @@ public:
     /**
      * @brief Executes the target.
      */
-    void execute();
+    virtual void execute();
 
      /**
      * @brief Loads tasks from a JSON array.

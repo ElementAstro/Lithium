@@ -15,7 +15,9 @@
 #include <boost/optional.hpp>
 #endif
 
-INDIFilterwheel::INDIFilterwheel(std::string name) : AtomFilterWheel(name) {}
+INDIFilterwheel::INDIFilterwheel(std::string name) : AtomFilterWheel(name) {
+    LOG_F(INFO, "INDIFilterwheel created with name: {}", name);
+}
 
 auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
                               int maxRetry) -> bool {
@@ -152,42 +154,57 @@ auto INDIFilterwheel::connect(const std::string &deviceName, int timeout,
             INDI::BaseDevice::WATCH_NEW_OR_UPDATE);
     });
 
+    LOG_F(INFO, "Connection to {} initiated.", deviceName_);
     return true;
 }
 
 auto INDIFilterwheel::disconnect(bool force, int timeout,
                                  int maxRetry) -> bool {
+    LOG_F(INFO, "Disconnecting from {}...", deviceName_);
     // Implement disconnect logic here
+    LOG_F(INFO, "Disconnected from {}.", deviceName_);
     return true;
 }
 
 auto INDIFilterwheel::reconnect(int timeout, int maxRetry) -> bool {
+    LOG_F(INFO, "Reconnecting to {}...", deviceName_);
     // Implement reconnect logic here
+    LOG_F(INFO, "Reconnected to {}.", deviceName_);
     return true;
 }
 
 auto INDIFilterwheel::watchAdditionalProperty() -> bool {
+    LOG_F(INFO, "Watching additional properties for {}...", deviceName_);
     // Implement additional property watching logic here
+    LOG_F(INFO, "Started watching additional properties for {}.", deviceName_);
     return true;
 }
 
 void INDIFilterwheel::setPropertyNumber(std::string_view propertyName,
                                         double value) {
+    LOG_F(INFO, "Setting property number {} to {} for {}...", propertyName,
+          value, deviceName_);
     // Implement setting property number logic here
+    LOG_F(INFO, "Property number {} set to {} for {}.", propertyName, value,
+          deviceName_);
 }
 
 auto INDIFilterwheel::getCFWPosition()
     -> std::optional<std::tuple<double, double, double>> {
+    LOG_F(INFO, "Getting CFW position for {}...", deviceName_);
     INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
     if (!property.isValid()) {
         LOG_F(ERROR, "Unable to find FILTER_SLOT property...");
         return std::nullopt;
     }
+    LOG_F(INFO, "CFW position for {}: {}, min: {}, max: {}", deviceName_,
+          property[0].getValue(), property[0].getMin(), property[0].getMax());
     return std::make_tuple(property[0].getValue(), property[0].getMin(),
                            property[0].getMax());
 }
 
 auto INDIFilterwheel::setCFWPosition(int position) -> bool {
+    LOG_F(INFO, "Setting CFW position to {} for {}...", position, deviceName_);
     INDI::PropertyNumber property = device_.getProperty("FILTER_SLOT");
     if (!property.isValid()) {
         LOG_F(ERROR, "Unable to find FILTER_SLOT property...");
@@ -208,19 +225,23 @@ auto INDIFilterwheel::setCFWPosition(int position) -> bool {
         LOG_F(ERROR, "setCFWPosition | ERROR : timeout ");
         return false;
     }
+    LOG_F(INFO, "CFW position set to {} for {}.", position, deviceName_);
     return true;
 }
 
 auto INDIFilterwheel::getCFWSlotName() -> std::optional<std::string> {
+    LOG_F(INFO, "Getting CFW slot name for {}...", deviceName_);
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
         LOG_F(ERROR, "Unable to find FILTER_NAME property...");
         return std::nullopt;
     }
+    LOG_F(INFO, "CFW slot name for {}: {}", deviceName_, property[0].getText());
     return property[0].getText();
 }
 
 auto INDIFilterwheel::setCFWSlotName(std::string_view name) -> bool {
+    LOG_F(INFO, "Setting CFW slot name to {} for {}...", name, deviceName_);
     INDI::PropertyText property = device_.getProperty("FILTER_NAME");
     if (!property.isValid()) {
         LOG_F(ERROR, "Unable to find FILTER_NAME property...");
@@ -228,6 +249,7 @@ auto INDIFilterwheel::setCFWSlotName(std::string_view name) -> bool {
     }
     property[0].setText(std::string(name).c_str());
     sendNewProperty(property);
+    LOG_F(INFO, "CFW slot name set to {} for {}.", name, deviceName_);
     return true;
 }
 

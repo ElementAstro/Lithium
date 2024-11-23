@@ -2,11 +2,11 @@
 
 #include "addon/manager.hpp"
 
+#include "atom/components/registry.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/system/user.hpp"
 #include "atom/type/json.hpp"
 
-#include "components/registry.hpp"
 #include "utils/constant.hpp"
 
 #include <cstdlib>  // Include for std::exit

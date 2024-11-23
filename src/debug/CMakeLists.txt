@@ -1,25 +1,35 @@
-# CMakeLists.txt for Lithium-Task
+# CMakeLists.txt for Lithium-Debug
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Lithium-Task
+# Project Name: Lithium-Debug
 # Description: The official config module for lithium server
 # Author: Max Qian
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(lithium-script VERSION 1.0.0 LANGUAGES C CXX)
+project(lithium-debug VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources and Headers
 set(PROJECT_SOURCES
-    checker.cpp
-    pycaller.cpp
-    sheller.cpp
+    check.cpp
+    command.cpp
+    console.cpp
+    history.cpp
+    output_style.cpp
+    progress.cpp
+    suggestion.cpp
+    terminal.cpp
 )
 
 set(PROJECT_HEADERS
-    checker.hpp
-    pycaller.hpp
-    sheller.hpp
+    check.hpp
+    command.hpp
+    console.hpp
+    history.hpp
+    output_style.hpp
+    progress.hpp
+    suggestion.hpp
+    terminal.hpp
 )
 
 # Required libraries
@@ -42,9 +52,6 @@ function(create_library TARGET_NAME)
         SOVERSION 1
         OUTPUT_NAME ${TARGET_NAME}
     )
-    find_package(pybind11 REQUIRED)
-    target_link_libraries(${TARGET_NAME} PRIVATE pybind11::embed)
-    target_include_directories(${TARGET_NAME} PRIVATE ${pybind11_INCLUDE_DIR})
 endfunction()
 
 # Create Object Library

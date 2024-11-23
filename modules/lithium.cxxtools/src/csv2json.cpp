@@ -4,6 +4,7 @@
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
+#include "atom/utils/to_string.hpp"
 
 #include <fstream>
 
@@ -35,7 +36,8 @@ json Csv2Json::convertImpl(std::string_view csvFilePath) {
         if (isFirstLine) {
             headers = fields;
             isFirstLine = false;
-            LOG_F(INFO, "Parsed CSV headers: {}", headers);
+            LOG_F(INFO, "Parsed CSV headers: {}",
+                  atom::utils::toString(headers));
         } else {
             if (fields.size() != headers.size()) {
                 LOG_F(WARNING,

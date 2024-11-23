@@ -27,9 +27,6 @@ endif()
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    _main.cpp
-    _component.cpp
-
     src/base64.cpp
     src/convolve.cpp
     src/debayer.cpp
@@ -40,6 +37,8 @@ set(${PROJECT_NAME}_SOURCES
     src/stack.cpp
     src/stretch.cpp
     src/imgutils.cpp
+
+    component.cpp
 )
 
 # Headers
@@ -52,11 +51,6 @@ set(${PROJECT_NAME}_HEADERS
     include/stack.hpp
     include/stretch.hpp
     include/imgutils.hpp
-)
-
-# Private Headers
-set(${PROJECT_NAME}_PRIVATE_HEADERS
-    _component.hpp
 )
 
 set(${PROJECT_NAME}_LIBS
@@ -77,7 +71,6 @@ target_sources(${PROJECT_NAME}_OBJECT
     ${${PROJECT_NAME}_HEADERS}
     PRIVATE
     ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
 )
 
 add_library(${PROJECT_NAME} SHARED)

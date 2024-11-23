@@ -123,51 +123,14 @@ add_subdirectory(modules)
 
 add_subdirectory(${atom_module})
 
-add_subdirectory(${lithium_src_dir}/config)
-add_subdirectory(${lithium_src_dir}/task)
-add_subdirectory(${lithium_src_dir}/server)
-add_subdirectory(${lithium_src_dir}/utils)
-add_subdirectory(${lithium_src_dir}/addon)
-add_subdirectory(${lithium_src_dir}/client)
-add_subdirectory(${lithium_src_dir}/target)
-add_subdirectory(${lithium_src_dir}/device)
-add_subdirectory(${lithium_src_dir}/script)
+foreach(dir config task server utils addon client target device script debug tools)
+    add_subdirectory(${lithium_src_dir}/${dir})
+endforeach()
+
 add_subdirectory(tests)
-
-# Set source files
-set(component_module
-    ${lithium_component_dir}/addons.cpp
-    ${lithium_component_dir}/compiler.cpp
-    ${lithium_component_dir}/dependency.cpp
-    ${lithium_component_dir}/loader.cpp
-    ${lithium_component_dir}/manager.cpp
-    ${lithium_component_dir}/sandbox.cpp
-)
-
-set(config_module
-    ${lithium_src_dir}/config/configor.cpp
-)
-
-set(debug_module
-    ${lithium_src_dir}/debug/terminal.cpp
-    ${lithium_src_dir}/debug/suggestion.cpp
-    ${lithium_src_dir}/debug/command.cpp
-    ${lithium_src_dir}/debug/console.cpp
-    ${lithium_src_dir}/debug/history.cpp
-    ${lithium_src_dir}/debug/progress.cpp
-    ${lithium_src_dir}/debug/output_style.cpp
-    ${lithium_src_dir}/debug/check.cpp
-)
 
 set(device_module
     ${lithium_src_dir}/device/template/device.cpp
-)
-
-set(script_module
-    ${lithium_src_dir}/script/manager.cpp
-    ${lithium_src_dir}/script/pycaller.cpp
-    ${lithium_src_dir}/script/pycaller.hpp
-    ${lithium_src_dir}/script/sheller.cpp
 )
 
 set(Lithium_module

@@ -289,10 +289,10 @@ PYBIND11_MODULE(algorithm, m) {
           "Generate Huffman codes", py::arg("root"), py::arg("code"),
           py::arg("huffman_codes"));
 
-    m.def("compress_text", &compressText, "Compress text", py::arg("text"),
+    m.def("compress_data", &compressData, "Compress text", py::arg("text"),
           py::arg("huffman_codes"));
 
-    m.def("decompress_text", &decompressText, "Decompress text",
+    m.def("decompress_data", &decompressData, "Decompress text",
           py::arg("compressed_text"), py::arg("root"));
 
     m.def("mul_div64", &mulDiv64,

@@ -1,22 +1,5 @@
-# CMakeLists.txt for lithium.cxxtools
-# This project is licensed under the terms of the GPL3 license.
-#
-# Author: Max Qian
-# License: GPL3
-
 cmake_minimum_required(VERSION 3.20)
-project(lithium.cxxtools)
-
-set(CMAKE_LITHIUM_CXXTOOLS_VERSION_MAJOR 1)
-set(CMAKE_LITHIUM_CXXTOOLS_VERSION_MINOR 0)
-set(CMAKE_LITHIUM_CXXTOOLS_VERSION_RELEASE 0)
-
-set(LITHIUM_CXXTOOLS_SOVERSION ${CMAKE_LITHIUM_CXXTOOLS_VERSION_MAJOR})
-set(CMAKE_LITHIUM_CXXTOOLS_VERSION_STRING "${CMAKE_LITHIUM_CXXTOOLS_VERSION_MAJOR}.${CMAKE_LITHIUM_CXXTOOLS_VERSION_MINOR}.${CMAKE_LITHIUM_CXXTOOLS_VERSION_RELEASE}")
-set(LITHIUM_CXXTOOLS_VERSION ${CMAKE_LITHIUM_CXXTOOLS_VERSION_MAJOR}.${CMAKE_LITHIUM_CXXTOOLS_VERSION_MINOR}.${CMAKE_LITHIUM_CXXTOOLS_VERSION_RELEASE})
-
-# Set the C++ standard
-set(CMAKE_CXX_STANDARD 20)
+project(lithium.cxxtools VERSION 1.0.0)
 
 # Add source files
 set(SOURCE_FILES
@@ -26,12 +9,11 @@ set(SOURCE_FILES
     src/json2xml.cpp
     src/xml2json.cpp
     src/pci_generator.cpp
-
-    _component.cpp
-    _main.cpp
+    component.cpp
 )
 
-set(${PROJECT_NAME}_LIBS
+# Libraries to link
+set(LIBS
     atom-component
     atom-utils
     atom-error
@@ -41,10 +23,10 @@ set(${PROJECT_NAME}_LIBS
 )
 
 # Create the module library
-add_library(lithium.cxxtools SHARED ${SOURCE_FILES})
-target_link_libraries(lithium.cxxtools ${${PROJECT_NAME}_LIBS})
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 # Include directories
-target_include_directories(lithium.cxxtools PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_subdirectory(tests)

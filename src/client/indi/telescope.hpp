@@ -126,7 +126,7 @@ private:
     ConnectionMode connectionMode_;
 
     std::string devicePort_;
-    BAUD_RATE baudRate_;
+    T_BAUD_RATE baudRate_;
 
     bool isTrackingEnabled_;
     std::atomic_bool isTracking_;

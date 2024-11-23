@@ -1,5 +1,5 @@
 import ctypes
-from asi_efw import *
+from libs.efw import *
 from loguru import logger
 
 

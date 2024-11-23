@@ -1,3 +1,4 @@
+# python
 #!/usr/bin/env python
 """
 GitHub Release Script
@@ -26,30 +27,37 @@ import sys
 import time
 import traceback
 import threading
-from github import Github
+from typing import Optional
+from github import Github, Repository, PullRequest
 from github.GithubException import UnknownObjectException
+from rich.console import Console
+from rich.traceback import install
+
+# Initialize rich traceback
+install()
+console = Console()
 
 # Constants
-MAX_PR_WALKING = int(os.getenv('MAX_PR_WALKING', '5'))
-GITHUB_OAUTH_TOKEN = os.getenv('GITHUB_OAUTH_TOKEN')
-TRAVIS_REPO_SLUG = os.getenv('TRAVIS_REPO_SLUG')
-PROJECT_VERSION = os.getenv('PROJECT_VERSION')
-TRAVIS_COMMIT_MESSAGE = os.getenv('TRAVIS_COMMIT_MESSAGE')
-TRAVIS_COMMIT = os.getenv('TRAVIS_COMMIT')
-GITHUB_DRAFT_RELEASE = os.getenv('GITHUB_DRAFT_RELEASE', '0')
-GITHUB_PRERELEASE = os.getenv('GITHUB_PRERELEASE', '1')
-TRAVIS_PULL_REQUEST = os.getenv('TRAVIS_PULL_REQUEST', 'false')
+MAX_PR_WALKING: int = int(os.getenv('MAX_PR_WALKING', '5'))
+GITHUB_OAUTH_TOKEN: str = os.getenv('GITHUB_OAUTH_TOKEN', '')
+TRAVIS_REPO_SLUG: str = os.getenv('TRAVIS_REPO_SLUG', '')
+PROJECT_VERSION: str = os.getenv('PROJECT_VERSION', '')
+TRAVIS_COMMIT_MESSAGE: str = os.getenv('TRAVIS_COMMIT_MESSAGE', '')
+TRAVIS_COMMIT: str = os.getenv('TRAVIS_COMMIT', '')
+GITHUB_DRAFT_RELEASE: str = os.getenv('GITHUB_DRAFT_RELEASE', '0')
+GITHUB_PRERELEASE: str = os.getenv('GITHUB_PRERELEASE', '1')
+TRAVIS_PULL_REQUEST: str = os.getenv('TRAVIS_PULL_REQUEST', 'false')
 
 
-def get_github_repo():
+def get_github_repo() -> Repository.Repository:
     """
-    Get the GitHub repository object.
-
-    Returns:
-        github.Repository.Repository: The repository object.
+    Retrieve the GitHub repository object using the provided OAuth token and repository slug.
 
     Raises:
         ValueError: If the GitHub token or repository slug is not provided.
+
+    Returns:
+        Repository.Repository: The GitHub repository object.
     """
     if not GITHUB_OAUTH_TOKEN or not TRAVIS_REPO_SLUG:
         raise ValueError("GitHub token or repository slug not provided")
@@ -57,29 +65,29 @@ def get_github_repo():
     return github.get_repo(TRAVIS_REPO_SLUG)
 
 
-def is_true(env_var):
+def is_true(env_var: str) -> bool:
     """
-    Convert an environment variable to a boolean value.
+    Determine if the environment variable represents a true value.
 
     Args:
         env_var (str): The environment variable value.
 
     Returns:
-        bool: True if the environment variable represents a true value, False otherwise.
+        bool: True if the value is '1' or 'true' (case-insensitive), else False.
     """
     return env_var == '1' or env_var.lower() == 'true'
 
 
-def find_pr(repo, commit_id):
+def find_pr(repo: Repository.Repository, commit_id: str) -> Optional[PullRequest.PullRequest]:
     """
     Find the pull request associated with a given commit ID.
 
     Args:
-        repo (github.Repository.Repository): The repository object.
+        repo (Repository.Repository): The GitHub repository object.
         commit_id (str): The commit SHA to search for.
 
     Returns:
-        github.PullRequest.PullRequest or None: The pull request object if found, None otherwise.
+        Optional[PullRequest.PullRequest]: The pull request object if found, else None.
     """
     all_pulls = list(repo.get_pulls(state='closed', sort='updated'))[::-1]
     for index, merged_pr in enumerate(all_pulls):
@@ -90,76 +98,82 @@ def find_pr(repo, commit_id):
     return None
 
 
-def get_pr(repo, pr_number, commit_id):
+def get_pr(repo: Repository.Repository, pr_number: str, commit_id: str) -> Optional[PullRequest.PullRequest]:
     """
-    Get the pull request object.
+    Retrieve the pull request object either by PR number or commit ID.
 
     Args:
-        repo (github.Repository.Repository): The repository object.
+        repo (Repository.Repository): The GitHub repository object.
         pr_number (str): The pull request number.
-        commit_id (str): The commit SHA to search for if the PR number is not valid.
+        commit_id (str): The commit SHA to search for if PR number is invalid.
 
     Returns:
-        github.PullRequest.PullRequest or None: The pull request object if found, None otherwise.
+        Optional[PullRequest.PullRequest]: The pull request object if found, else None.
     """
-    pr = None
+    pr: Optional[PullRequest.PullRequest] = None
     if pr_number and pr_number != 'false':
         try:
             pr = repo.get_pull(int(pr_number))
-        except ValueError:
-            print("Invalid pull request number")
+        except (ValueError, UnknownObjectException):
+            console.print(
+                "[red]Invalid or non-existent pull request number.[/red]")
     if not pr:
         retry = 0
         while not pr and retry < 5:
             time.sleep(retry * 10)
             try:
                 pr = find_pr(repo, commit_id)
-                break
+                if pr:
+                    break
             except Exception:
                 traceback.print_exc()
                 retry += 1
     return pr
 
 
-def create_or_update_release(repo, tag, name, body, is_draft, is_prerelease, commit):
+def create_or_update_release(repo: Repository.Repository, tag: str, name: str, body: str,
+                             is_draft: bool, is_prerelease: bool, commit: str):
     """
-    Create or update a GitHub release.
+    Create a new release or update an existing one on GitHub.
 
     Args:
-        repo (github.Repository.Repository): The repository object.
-        tag (str): The tag for the release.
+        repo (Repository.Repository): The GitHub repository object.
+        tag (str): The tag name for the release.
         name (str): The name of the release.
-        body (str): The body description of the release.
-        is_draft (bool): Whether the release is a draft.
-        is_prerelease (bool): Whether the release is a pre-release.
-        commit (str): The commit SHA for the release.
+        body (str): The body content of the release.
+        is_draft (bool): Flag indicating if the release is a draft.
+        is_prerelease (bool): Flag indicating if the release is a pre-release.
+        commit (str): The commit SHA the release is based on.
 
     Returns:
-        github.GitRelease.GitRelease: The created or updated release object.
+        GitRelease.GitRelease: The created or updated release object.
     """
     try:
         release = repo.get_release(tag)
         release.update_release(name=name, message=body, draft=is_draft,
                                prerelease=is_prerelease, target_commitish=commit)
+        console.print(f"[green]Updated release: {tag}[/green]")
     except UnknownObjectException:
         release = repo.create_git_release(
             tag, name, body, draft=is_draft, prerelease=is_prerelease, target_commitish=commit)
+        console.print(f"[green]Created release: {tag}[/green]")
     return release
 
 
-def upload_asset(release, asset):
+def upload_asset(release, asset: str):
     """
-    Upload an asset to the GitHub release.
+    Upload an asset to the specified GitHub release.
 
     Args:
-        release (github.GitRelease.GitRelease): The release object.
+        release (GitRelease.GitRelease): The GitHub release object.
         asset (str): The file path of the asset to upload.
     """
     try:
         release.upload_asset(asset)
-        print(f'Successfully uploaded asset: {asset}')
+        console.print(f"[blue]Successfully uploaded asset: {asset}[/blue]")
     except Exception as e:
-        print(f'Failed to upload asset: {asset}, error: {e}')
+        console.print(
+            f"[red]Failed to upload asset: {asset}, error: {e}[/red]")
 
 
 def main():

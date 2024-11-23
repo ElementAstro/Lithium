@@ -9,16 +9,30 @@ The script also includes a function to check if a given file is a Google Test bi
 
 Finally, the script provides a main function that takes a directory path as an argument and prints the list of test binaries.
 """
+
 import os
 import subprocess
 import concurrent.futures
 import json
 import argparse
 from datetime import datetime
+from typing import List, Tuple, Any, Dict, Optional
+
 import pytest
+from rich.console import Console
+from rich.table import Table
+from rich.logging import RichHandler
+import logging
+
+# Initialize Rich console and logger
+console = Console()
+logging.basicConfig(
+    level=logging.INFO, format="%(message)s", handlers=[RichHandler()]
+)
+logger = logging.getLogger("rich")
 
 
-def is_test_binary(file_path):
+def is_test_binary(file_path: str) -> bool:
     """
     Checks if the given file is a Google Test binary by running `--gtest_list_tests`.
 
@@ -44,7 +58,7 @@ def is_test_binary(file_path):
         return False
 
 
-def get_test_binaries(directory):
+def get_test_binaries(directory: str) -> List[str]:
     """
     Recursively searches the given directory for Google Test binaries.
 
@@ -63,7 +77,7 @@ def get_test_binaries(directory):
     return test_binaries
 
 
-def run_test_binary(test_binary, timeout):
+def run_test_binary(test_binary: str, timeout: int) -> Tuple[str, int, int, List[str], List[Dict[str, Any]], datetime, datetime]:
     """
     Runs a Google Test binary and collects the test results.
 
@@ -89,18 +103,18 @@ def run_test_binary(test_binary, timeout):
         output = result.stdout
         try:
             result_json = json.loads(output)
-            num_tests = result_json['tests']
-            num_failures = result_json['failures']
+            num_tests = result_json.get('tests', 0)
+            num_failures = result_json.get('failures', 0)
             failures = result_json.get('failures', [])
             failure_reasons = [failure['message'] for failure in failures]
             test_details = []
-            for testcase in result_json.get('testsuites', []):
-                for test in testcase['testsuite']:
+            for testsuite in result_json.get('testsuites', []):
+                for testcase in testsuite.get('testsuite', []):
                     test_details.append({
-                        "test": test['name'],
-                        "status": test['result'],
-                        "time": test['time'],
-                        "failure_message": test.get('failure', {}).get('message', '') if test['result'] == 'FAILED' else ''
+                        "test": testcase['name'],
+                        "status": testcase['result'],
+                        "time": testcase['time'],
+                        "failure_message": testcase.get('failure', {}).get('message', '') if testcase['result'] == 'FAILED' else ''
                     })
             return (test_binary, num_tests, num_failures, failure_reasons, test_details, start_time, end_time)
         except json.JSONDecodeError:
@@ -113,7 +127,7 @@ def run_test_binary(test_binary, timeout):
         return (test_binary, 0, 0, [str(e)], [], start_time, end_time)
 
 
-def write_summary(log, results):
+def write_summary(log: Any, results: List[Tuple[str, int, int, List[str], List[Dict[str, Any]], datetime, datetime]]) -> None:
     """
     Writes a summary of the test results to the log file.
 
@@ -145,8 +159,8 @@ def write_summary(log, results):
             log.write(f"    Status: {status}\n")
             log.write(f"    Time: {detail['time']}\n")
             if detail["failure_message"]:
-                log.write(f"    Failure message: {
-                          detail['failure_message']}\n")
+                log.write(
+                    f"    Failure message: {detail['failure_message']}\n")
         log.write("\n")
 
     log.write("Summary:\n")
@@ -154,7 +168,7 @@ def write_summary(log, results):
     log.write(f"  Total failures: {total_failures}\n")
 
 
-def pytest_write_summary(results):
+def pytest_write_summary(results: List[Tuple[str, int, int, List[str], List[Dict[str, Any]], datetime, datetime]]) -> Dict[str, Any]:
     """
     Writes a summary of the test results for pytest.
 
@@ -189,7 +203,7 @@ def pytest_write_summary(results):
 
 
 @pytest.fixture(scope="session")
-def google_test_results(request):
+def google_test_results(request: Any) -> Dict[str, Any]:
     """
     Pytest fixture to get Google Test results.
 
@@ -214,12 +228,14 @@ def google_test_results(request):
                 results.append(future.result())
             except Exception as exc:
                 results.append(
-                    (binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
+                    (binary, 0, 0, [str(exc)], [],
+                     datetime.now(), datetime.now())
+                )
 
     return pytest_write_summary(results)
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: Any) -> None:
     """
     Adds custom command-line options to pytest.
 
@@ -234,7 +250,7 @@ def pytest_addoption(parser):
                      type=int, help="Maximum number of parallel workers")
 
 
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     """
     Configures pytest with custom settings.
 
@@ -244,7 +260,7 @@ def pytest_configure(config):
     config._google_test_results = None
 
 
-def pytest_sessionstart(session):
+def pytest_sessionstart(session: Any) -> None:
     """
     Called after the pytest session has started.
 
@@ -256,7 +272,7 @@ def pytest_sessionstart(session):
         "google_test_results")
 
 
-def pytest_terminal_summary(terminalreporter, config):
+def pytest_terminal_summary(terminalreporter: Any, config: Any) -> None:
     """
     Writes a summary of the test results to the terminal.
 
@@ -266,22 +282,24 @@ def pytest_terminal_summary(terminalreporter, config):
     """
     if config._google_test_results:
         results = config._google_test_results
-        terminalreporter.write_sep("=", "Google Test Summary")
-        terminalreporter.write_line(
-            f"Total tests run: {results['total_tests']}")
-        terminalreporter.write_line(
-            f"Total failures: {results['total_failures']}")
+        table = Table(title="Google Test Summary")
+        table.add_column("Metric", style="cyan", no_wrap=True)
+        table.add_column("Value", style="magenta")
+
+        table.add_row("Total tests run", str(results["total_tests"]))
+        table.add_row("Total failures", str(results["total_failures"]))
+
+        terminalreporter.write(table)
         for detail in results["details"]:
-            terminalreporter.write_line(f"Binary: {detail['binary']}")
-            terminalreporter.write_line(
-                f"  Total tests: {detail['total_tests']}")
-            terminalreporter.write_line(
-                f"  Total failures: {detail['total_failures']}")
+            terminalreporter.write(f"Binary: {detail['binary']}\n")
+            terminalreporter.write(f"  Total tests: {detail['total_tests']}\n")
+            terminalreporter.write(
+                f"  Total failures: {detail['total_failures']}\n")
             for reason in detail["failure_reasons"]:
-                terminalreporter.write_line(f"    - {reason}")
+                terminalreporter.write(f"    - {reason}\n")
 
 
-def main(directory, log_file, max_workers, only_failed, timeout, retries):
+def main(directory: str, log_file: str, max_workers: int, only_failed: bool, timeout: int, retries: int) -> None:
     """
     Main function to find, run, and log Google Test binaries.
 
@@ -294,6 +312,10 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
         retries (int): Number of retries for failed tests.
     """
     test_binaries = get_test_binaries(directory)
+    if not test_binaries:
+        logger.warning(
+            "No Google Test binaries found in the specified directory.")
+        return
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -303,9 +325,13 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
             binary = future_to_binary[future]
             try:
                 results.append(future.result())
+                logger.info(f"Completed tests for binary: {binary}")
             except Exception as exc:
                 results.append(
-                    (binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
+                    (binary, 0, 0, [str(exc)], [],
+                     datetime.now(), datetime.now())
+                )
+                logger.error(f"Error running binary {binary}: {exc}")
 
     with open(log_file, 'w', encoding="utf-8") as log:
         write_summary(log, results)
@@ -313,8 +339,9 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
     if only_failed:
         failed_tests = [result for result in results if result[2] > 0]
         if failed_tests:
-            print("\nRe-running failed tests...")
-            for _ in range(retries):
+            logger.info("\nRe-running failed tests...")
+            for attempt in range(retries):
+                logger.info(f"Retry attempt {attempt + 1}...")
                 with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                     future_to_binary = {executor.submit(
                         run_test_binary, result[0], timeout): result[0] for result in failed_tests}
@@ -323,28 +350,39 @@ def main(directory, log_file, max_workers, only_failed, timeout, retries):
                         binary = future_to_binary[future]
                         try:
                             new_results.append(future.result())
+                            logger.info(
+                                f"Retry completed for binary: {binary}")
                         except Exception as exc:
                             new_results.append(
-                                (binary, 0, 0, [str(exc)], [], datetime.now(), datetime.now()))
+                                (binary, 0, 0, [str(exc)], [],
+                                 datetime.now(), datetime.now())
+                            )
+                            logger.error(
+                                f"Error re-running binary {binary}: {exc}")
 
                 failed_tests = [
                     result for result in new_results if result[2] > 0]
                 results.extend(new_results)
                 if not failed_tests:
+                    logger.info("All failed tests have passed on retry.")
                     break
+            else:
+                logger.warning("Some tests are still failing after retries.")
 
             with open(log_file, 'a', encoding="utf-8") as log:
                 log.write("\nRe-run Summary:\n")
                 write_summary(log, new_results)
 
-    print(f"\nResults have been written to {log_file}")
+    logger.info(f"\nResults have been written to {log_file}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run all Google Test binaries in a directory and summarize results.")
+        description="Run all Google Test binaries in a directory and summarize results."
+    )
     parser.add_argument(
-        "directory", help="Directory to search for test binaries")
+        "directory", help="Directory to search for test binaries"
+    )
     parser.add_argument(
         "--log_file",
         default=f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",

@@ -1,14 +1,22 @@
+# docker.py
+
 import docker
 import argparse
 import sys
 import json
 from typing import Literal, Union
 from dataclasses import dataclass, asdict
-from prettytable import PrettyTable
+from rich.table import Table
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich import box
 import os
 import tempfile
 import tarfile
 import yaml
+
+
+console = Console()
 
 
 @dataclass
@@ -56,9 +64,11 @@ class DockerManager:
         try:
             container = self.client.containers.get(container_id)
             getattr(container, action)()
-            return f"Container {container_id} {action}ed"
+            return f"Container {container_id} {action}ed successfully."
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def create_container(self, image: str, name: str, ports: dict = None, volumes: list = None, environment: dict = None) -> Union[str, ContainerInfo]:
         try:
@@ -76,24 +86,35 @@ class DockerManager:
                 container.ports, cpu_usage, memory_usage
             )
         except docker.errors.ImageNotFound:
-            return f"Image {image} not found"
+            return f"Image {image} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def pull_image(self, image: str) -> str:
         try:
-            self.client.images.pull(image)
-            return f"Image {image} pulled successfully"
+            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                task = progress.add_task(
+                    f"Pulling image {image}...", start=False)
+                self.client.images.pull(image)
+                progress.start_task(task.id)
+            return f"Image {image} pulled successfully."
         except docker.errors.ImageNotFound:
-            return f"Image {image} not found"
+            return f"Image {image} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def list_images(self) -> list[str]:
-        return [image.tags[0] for image in self.client.images.list() if image.tags]
+        images = self.client.images.list()
+        return [tag if tag else "None" for image in images for tag in image.tags]
 
     def get_container_logs(self, container_id: str, lines: int = 50) -> str:
         try:
             container = self.client.containers.get(container_id)
             return container.logs(tail=lines).decode('utf-8')
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def exec_command(self, container_id: str, cmd: str) -> str:
         try:
@@ -101,7 +122,9 @@ class DockerManager:
             exit_code, output = container.exec_run(cmd)
             return f"Exit Code: {exit_code}\nOutput:\n{output.decode('utf-8')}"
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def get_container_stats(self, container_id: str) -> Union[str, dict]:
         try:
@@ -114,7 +137,11 @@ class DockerManager:
                 "Block I/O": f"In: {stats['blkio_stats']['io_service_bytes_recursive'][0]['value']/1024/1024:.2f}MB, Out: {stats['blkio_stats']['io_service_bytes_recursive'][1]['value']/1024/1024:.2f}MB"
             }
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
+        except KeyError:
+            return f"Error retrieving stats for container {container_id}."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def copy_to_container(self, container_id: str, src: str, dest: str) -> str:
         try:
@@ -122,12 +149,15 @@ class DockerManager:
             with tempfile.NamedTemporaryFile() as tmp:
                 with tarfile.open(tmp.name, "w:gz") as tar:
                     tar.add(src, arcname=os.path.basename(src))
-                container.put_archive(os.path.dirname(dest), tmp.read())
-            return f"File {src} copied to container {container_id} at {dest}"
+                with open(tmp.name, 'rb') as f:
+                    container.put_archive(os.path.dirname(dest), f.read())
+            return f"File {src} copied to container {container_id} at {dest}."
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
         except FileNotFoundError:
-            return f"Source file {src} not found"
+            return f"Source file {src} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def copy_from_container(self, container_id: str, src: str, dest: str) -> str:
         try:
@@ -139,11 +169,13 @@ class DockerManager:
                 tmp.seek(0)
                 with tarfile.open(fileobj=tmp) as tar:
                     tar.extractall(path=dest)
-            return f"File {src} copied from container {container_id} to {dest}"
+            return f"File {src} copied from container {container_id} to {dest}."
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
         except KeyError:
-            return f"Source file {src} not found in container"
+            return f"Source file {src} not found in container."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def export_container(self, container_id: str, output_path: str) -> str:
         try:
@@ -151,33 +183,47 @@ class DockerManager:
             with open(output_path, 'wb') as f:
                 for chunk in container.export():
                     f.write(chunk)
-            return f"Container {container_id} exported to {output_path}"
+            return f"Container {container_id} exported to {output_path}."
         except docker.errors.NotFound:
-            return f"Container {container_id} not found"
+            return f"Container {container_id} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def import_image(self, image_path: str, repository: str, tag: str) -> str:
         try:
             with open(image_path, 'rb') as f:
-                image = self.client.images.import_image(
+                self.client.images.import_image(
                     f, repository=repository, tag=tag)
-            return f"Image imported as {repository}:{tag}"
+            return f"Image imported as {repository}:{tag}."
         except FileNotFoundError:
-            return f"Image file {image_path} not found"
+            return f"Image file {image_path} not found."
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def build_image(self, dockerfile_path: str, tag: str) -> str:
         try:
-            image, logs = self.client.images.build(path=os.path.dirname(
-                dockerfile_path), dockerfile=os.path.basename(dockerfile_path), tag=tag)
-            return f"Image built successfully with tag {tag}"
+            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                task = progress.add_task(
+                    f"Building image {tag}...", start=False)
+                image, logs = self.client.images.build(path=os.path.dirname(
+                    dockerfile_path), dockerfile=os.path.basename(dockerfile_path), tag=tag)
+                progress.start_task(task.id)
+            return f"Image built successfully with tag {tag}."
         except docker.errors.BuildError as e:
             return f"Error building image: {str(e)}"
+        except docker.errors.APIError as e:
+            return f"Docker API Error: {str(e)}"
 
     def compose_up(self, compose_file: str) -> str:
         try:
             project = self.client.compose.project.from_config(
                 project_name="myproject", config_files=[compose_file])
-            project.up()
-            return f"Docker Compose services started from {compose_file}"
+            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                task = progress.add_task(
+                    f"Starting Docker Compose services from {compose_file}...", start=False)
+                project.up()
+                progress.start_task(task.id)
+            return f"Docker Compose services started from {compose_file}."
         except docker.errors.APIError as e:
             return f"Error starting Docker Compose services: {str(e)}"
 
@@ -185,24 +231,35 @@ class DockerManager:
         try:
             project = self.client.compose.project.from_config(
                 project_name="myproject", config_files=[compose_file])
-            project.down()
-            return f"Docker Compose services stopped from {compose_file}"
+            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+                task = progress.add_task(
+                    f"Stopping Docker Compose services from {compose_file}...", start=False)
+                project.down()
+                progress.start_task(task.id)
+            return f"Docker Compose services stopped from {compose_file}."
         except docker.errors.APIError as e:
             return f"Error stopping Docker Compose services: {str(e)}"
 
 
 def print_table(data, headers):
-    table = PrettyTable()
-    table.field_names = headers
+    table = Table(show_header=True, header_style="bold magenta",
+                  box=box.MINIMAL_DOUBLE_EDGE)
+    for header in headers:
+        table.add_column(header, style="dim", overflow="fold")
     for row in data:
-        table.add_row(row)
-    print(table)
+        table.add_row(*row)
+    console.print(table)
 
 
 def parse_key_value_pairs(s: str) -> dict:
     if not s:
         return {}
-    return dict(item.split("=") for item in s.split(","))
+    try:
+        return dict(item.split("=") for item in s.split(","))
+    except ValueError:
+        console.print(
+            "[red]Invalid format for key-value pairs. Use 'KEY=VALUE' separated by commas.[/red]")
+        sys.exit(1)
 
 
 def main():
@@ -314,7 +371,8 @@ def main():
         if args.command == "list":
             containers = manager.list_containers(all=args.all)
             if args.format == "json":
-                print(json.dumps([asdict(c) for c in containers], indent=2))
+                console.print(json.dumps([asdict(c)
+                              for c in containers], indent=2))
             else:
                 data = [[c.id[:12], c.name, c.status, c.image,
                          f"{c.cpu_usage:.2f}%", f"{c.memory_usage:.2f}%"] for c in containers]
@@ -324,7 +382,10 @@ def main():
 
         elif args.command == "manage":
             result = manager.manage_container(args.action, args.container_id)
-            print(result)
+            if "successfully" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "create":
             ports = parse_key_value_pairs(args.ports)
@@ -333,73 +394,108 @@ def main():
             result = manager.create_container(
                 args.image, args.name, ports, volumes, env)
             if isinstance(result, ContainerInfo):
-                print(
-                    f"Container created - ID: {result.id}, Name: {result.name}, Status: {result.status}")
+                console.print(
+                    f"[green]Container created - ID: {result.id}, Name: {result.name}, Status: {result.status}[/green]")
             else:
-                print(result)
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "pull":
             result = manager.pull_image(args.image)
-            print(result)
+            if "successfully" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "images":
             images = manager.list_images()
-            print("Available images:")
+            table = Table(title="Available Images",
+                          box=box.MINIMAL_DOUBLE_EDGE)
+            table.add_column("Image", style="cyan")
             for image in images:
-                print(image)
+                table.add_row(image)
+            console.print(table)
 
         elif args.command == "logs":
             logs = manager.get_container_logs(args.container_id, args.lines)
-            print(f"Logs for container {args.container_id}:")
-            print(logs)
+            console.print(
+                f"[bold]Logs for container {args.container_id}[/bold]:")
+            console.print(logs)
 
         elif args.command == "exec":
             result = manager.exec_command(args.container_id, args.command)
-            print(result)
+            console.print(result)
 
         elif args.command == "stats":
             stats = manager.get_container_stats(args.container_id)
             if isinstance(stats, dict):
+                table = Table(
+                    title=f"Statistics for {args.container_id}", box=box.MINIMAL_DOUBLE_EDGE)
                 for key, value in stats.items():
-                    print(f"{key}: {value}")
+                    table.add_row(key, value)
+                console.print(table)
             else:
-                print(stats)
+                console.print(f"[red]{stats}[/red]")
 
         elif args.command == "cp-to":
             result = manager.copy_to_container(
                 args.container_id, args.src, args.dest)
-            print(result)
+            if "copied" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "cp-from":
             result = manager.copy_from_container(
                 args.container_id, args.src, args.dest)
-            print(result)
+            if "copied" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "export":
             result = manager.export_container(args.container_id, args.output)
-            print(result)
+            if "exported" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "import":
             result = manager.import_image(
                 args.image_path, args.repository, args.tag)
-            print(result)
+            if "imported" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "build":
             result = manager.build_image(args.dockerfile, args.tag)
-            print(result)
+            if "successfully" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "compose-up":
             result = manager.compose_up(args.compose_file)
-            print(result)
+            if "started" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
 
         elif args.command == "compose-down":
             result = manager.compose_down(args.compose_file)
-            print(result)
+            if "stopped" in result:
+                console.print(f"[green]{result}[/green]")
+            else:
+                console.print(f"[red]{result}[/red]")
+
+        else:
+            console.print("[red]Invalid command.[/red]")
+            sys.exit(1)
 
     except docker.errors.APIError as e:
-        print(f"Docker API Error: {str(e)}")
+        console.print(f"[red]Docker API Error: {str(e)}[/red]")
     except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
+        console.print(f"[red]An unexpected error occurred: {str(e)}[/red]")
 
 
 if __name__ == "__main__":

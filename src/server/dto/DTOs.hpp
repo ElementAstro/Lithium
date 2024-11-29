@@ -57,7 +57,7 @@ public:
 };
 
 class StatPointDto : public oatpp::DTO {
-    DTO_INIT(StatPointDto, DTO);
+    DTO_INIT(StatPointDto, DTO)
 
     DTO_FIELD(Int64, timestamp);
 

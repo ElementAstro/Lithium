@@ -1,0 +1,23 @@
+{
+    "name": "lithium_pytools",
+    "version": "0.1.0",
+    "description": "A collection of Python tools for the Lithium project",
+    "license": "GPL-3.0-or-later",
+    "author": "Max Qian",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium/modules/lithium.pytools"
+    },
+    "keywords": [
+        "python",
+        "setuptools",
+        "json",
+        "tools",
+        "lithium"
+    ],
+    "dependencies": {
+        "requests": "^2.25.1",
+        "numpy": "^1.20.0",
+        "pandas": "^1.2.2"
+    }
+}

@@ -15,15 +15,20 @@ Description: Data Transform Object for Config Controller
 #ifndef CONFIGDTO_HPP
 #define CONFIGDTO_HPP
 
+#include "data/INDIDto.hpp"
 #include "oatpp/Types.hpp"
 #include "oatpp/macro/codegen.hpp"
 
+#include "RequestDto.hpp"
 #include "StatusDto.hpp"
 
 #include OATPP_CODEGEN_BEGIN(DTO)  ///< Begin DTO codegen section
 
-class GetConfigDTO : public oatpp::DTO {
-    DTO_INIT(GetConfigDTO, DTO)
+ENUM(PathType, v_int32, VALUE(File, 0, "File"), VALUE(Folder, 1, "Folder"),
+     VALUE(Symlink, 2, "Symlink"), VALUE(Other, 3, "Other"))
+
+class GetConfigDTO : public RequestDto {
+    DTO_INIT(GetConfigDTO, RequestDto)
 
     DTO_FIELD_INFO(path) {
         info->description = "The name of the config value to get, split by '/'";
@@ -43,8 +48,8 @@ class GetConfigDTO : public oatpp::DTO {
     DTO_FIELD(String, defaultValue);
 };
 
-class SetConfigDTO : public oatpp::DTO {
-    DTO_INIT(SetConfigDTO, DTO)
+class SetConfigDTO : public RequestDto {
+    DTO_INIT(SetConfigDTO, RequestDto)
 
     DTO_FIELD_INFO(path) {
         info->description = "The name of the config value to set, split by '/'";
@@ -70,8 +75,19 @@ class SetConfigDTO : public oatpp::DTO {
     DTO_FIELD(Boolean, check);
 };
 
-class DeleteConfigDTO : public oatpp::DTO {
-    DTO_INIT(DeleteConfigDTO, DTO)
+class HasConfigDTO : public RequestDto {
+    DTO_INIT(HasConfigDTO, RequestDto)
+
+    DTO_FIELD_INFO(path) {
+        info->description =
+            "The name of the config value to check, split by '/' or '.'";
+        info->required = true;
+    }
+    DTO_FIELD(String, path);
+};
+
+class DeleteConfigDTO : public RequestDto {
+    DTO_INIT(DeleteConfigDTO, RequestDto)
 
     DTO_FIELD_INFO(path) {
         info->description =
@@ -79,21 +95,31 @@ class DeleteConfigDTO : public oatpp::DTO {
         info->required = true;
     }
     DTO_FIELD(String, path);
-
-    DTO_FIELD_INFO(force) {
-        info->description = "Whether to force delete the config value";
-    }
-    DTO_FIELD(Boolean, force);
 };
 
-class LoadConfigDTO : public oatpp::DTO {
-    DTO_INIT(LoadConfigDTO, DTO)
+class TidyConfigDto : public RequestDto {
+    DTO_INIT(TidyConfigDto, RequestDto)
+};
+
+class LoadConfigDTO : public RequestDto {
+    DTO_INIT(LoadConfigDTO, RequestDto)
 
     DTO_FIELD_INFO(path) {
         info->description = "The path of the config value to load";
         info->required = true;
     }
     DTO_FIELD(String, path);
+
+    DTO_FIELD_INFO(type) {
+        info->description = "The type of the config value";
+        info->required = true;
+    }
+    DTO_FIELD(Enum<PathType>, type);
+
+    DTO_FIELD_INFO(refresh) {
+        info->description = "Whether to refresh the config value";
+    }
+    DTO_FIELD(Boolean, refresh);
 
     DTO_FIELD_INFO(isAbsolute) {
         info->description = "Whether the path is absolute or not";
@@ -106,8 +132,18 @@ class LoadConfigDTO : public oatpp::DTO {
     DTO_FIELD(String, rootPath);
 };
 
-class SaveConfigDTO : public oatpp::DTO {
-    DTO_INIT(SaveConfigDTO, DTO)
+class ReloadConfigDto : public RequestDto {
+    DTO_INIT(ReloadConfigDto, RequestDto)
+
+    DTO_FIELD_INFO(name) {
+        info->description = "The name of the config value to reload";
+        info->required = true;
+    }
+    DTO_FIELD(String, name);
+};
+
+class SaveConfigDTO : public RequestDto {
+    DTO_INIT(SaveConfigDTO, RequestDto)
 
     DTO_FIELD_INFO(path) {
         info->description = "The path of the config value to save";
@@ -141,6 +177,31 @@ class ReturnConfigDTO : public StatusDto {
 
     DTO_FIELD_INFO(type) { info->description = "The type of the config value"; }
     DTO_FIELD(String, type);
+};
+
+class ReturnGetConfigDTO : public ReturnConfigDTO {
+    DTO_INIT(ReturnGetConfigDTO, ReturnConfigDTO)
+
+    DTO_FIELD_INFO(value) {
+        info->description = "The value of the config value";
+        info->required = true;
+    }
+    DTO_FIELD(String, value);
+
+    DTO_FIELD_INFO(type) {
+        info->description = "The type of the config value";
+        info->required = true;
+    }
+    DTO_FIELD(String, type);
+};
+
+class ReturnListConfigDTO : public StatusDto {
+    DTO_INIT(ReturnListConfigDTO, StatusDto)
+
+    DTO_FIELD_INFO(config) {
+        info->description = "The object of the config value";
+    }
+    DTO_FIELD(String, config);
 };
 
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section

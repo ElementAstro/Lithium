@@ -6,6 +6,14 @@
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
+void File::Subscriber::WaitListListener::onNewItem(
+    oatpp::async::CoroutineWaitList& list) {
+    std::lock_guard lock(m_subscriber->m_chunkLock);
+    if (m_subscriber->m_chunk || !m_subscriber->m_valid) {
+        list.notifyAll();
+    }
+}
+
 File::Subscriber::Subscriber(v_int64 id, const std::shared_ptr<File>& file)
     : m_id(id),
       m_file(file),

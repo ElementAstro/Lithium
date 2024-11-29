@@ -18,6 +18,8 @@ Description: Status Data Transform Object
 #include "oatpp/Types.hpp"
 #include "oatpp/macro/codegen.hpp"
 
+#include "atom/utils/print.hpp"
+
 #include OATPP_CODEGEN_BEGIN(DTO)
 
 class StatusDto : public oatpp::DTO {
@@ -43,6 +45,26 @@ class StatusDto : public oatpp::DTO {
         info->required = true;
     }
     DTO_FIELD(String, command);
+};
+
+class UnknownErrorDto : public StatusDto {
+    DTO_INIT(UnknownErrorDto, StatusDto)
+};
+
+class InternalServerErrorDto : public StatusDto {
+    DTO_INIT(InternalServerErrorDto, StatusDto)
+};
+
+class InvalidParametersDto : public StatusDto {
+    DTO_INIT(InvalidParametersDto, StatusDto)
+};
+
+class PathNotFoundDto : public StatusDto {
+    DTO_INIT(PathNotFoundDto, StatusDto)
+};
+
+class ForbiddenDto : public StatusDto {
+    DTO_INIT(ForbiddenDto, StatusDto)
 };
 
 #include OATPP_CODEGEN_END(DTO)

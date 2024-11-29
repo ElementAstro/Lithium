@@ -54,7 +54,29 @@ public:
 
     template <Number Type>
     auto getNumericProperty(const std::string& propertyName) -> Type {
-        return std::get<Type>(get(propertyName));
+        auto value = get(propertyName);
+        if (value.is_number()) {
+            if constexpr (std::is_floating_point_v<Type>) {
+                if (value.is_number_float()) {
+                    return value.get<float>();
+                }
+                THROW_INVALID_ARGUMENT("Property is not a floating point");
+            } else {
+                if (value.is_number_integer()) {
+                    return value.get<int>();
+                }
+                THROW_INVALID_ARGUMENT("Property is not an integer");
+            }
+        }
+        THROW_RUNTIME_ERROR("Property is not a number");
+    }
+
+    auto getBooleanProperty(const std::string& propertyName) -> bool {
+        auto value = get(propertyName);
+        if (value.is_boolean()) {
+            return value.get<bool>();
+        }
+        THROW_RUNTIME_ERROR("Property is not a boolean");
     }
 
     template <JsonCompatible Type>

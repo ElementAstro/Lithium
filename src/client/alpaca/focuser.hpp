@@ -12,16 +12,16 @@ public:
     ~AlpacaFocuser() override;
 
     // Properties
-    auto getAbsolute() const -> bool;
-    auto getIsMoving() const -> bool;
-    auto getMaxIncrement() const -> int;
-    auto getMaxStep() const -> int;
-    auto getPosition() const -> int;
-    auto getStepSize() const -> float;
-    auto getTempComp() const -> bool;
+    auto getAbsolute() -> bool;
+    auto getIsMoving() -> bool;
+    auto getMaxIncrement() -> int;
+    auto getMaxStep() -> int;
+    auto getPosition() -> int;
+    auto getStepSize() -> float;
+    auto getTempComp() -> bool;
     void setTempComp(bool tempCompState);
-    auto getTempCompAvailable() const -> bool;
-    auto getTemperature() const -> std::optional<float>;
+    auto getTempCompAvailable() -> bool;
+    auto getTemperature() -> std::optional<float>;
 
     // Methods
     void halt();

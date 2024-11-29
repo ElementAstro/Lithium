@@ -158,8 +158,6 @@ PYBIND11_MODULE(algorithm, m) {
 
     m.def("base64_encode", &base64Encode, "Base64 encoding function");
     m.def("base64_decode", &base64Decode, "Base64 decoding function");
-    m.def("fbase64_encode", &fbase64Encode, "Faster Base64 encoding function");
-    m.def("fbase64_decode", &fbase64Decode, "Faster Base64 decoding function");
     m.def("xor_encrypt", &xorEncrypt, "Encrypt string using XOR algorithm");
     m.def("xor_decrypt", &xorDecrypt, "Decrypt string using XOR algorithm");
 

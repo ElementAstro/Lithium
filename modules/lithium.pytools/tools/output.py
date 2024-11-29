@@ -8,8 +8,10 @@ import configparser
 from loguru import logger
 from rich.console import Console
 from rich.syntax import Syntax
+from rich.table import Table
+from rich.prompt import Prompt
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import Optional, Union
 import sys
 
 # Initialize Rich Console
@@ -17,7 +19,7 @@ console = Console()
 
 # Configure Loguru Logger
 logger.add("ra.log", format="{time} {level} {message}",
-           level="INFO", rotation="10 MB")
+           level="DEBUG", rotation="10 MB")
 
 
 def pretty_print_json(data: str, indent: Optional[int] = 4) -> None:
@@ -34,6 +36,7 @@ def pretty_print_json(data: str, indent: Optional[int] = 4) -> None:
         syntax = Syntax(pretty_json, "json",
                         theme="monokai", line_numbers=True)
         console.print(syntax)
+        logger.debug("Successfully pretty-printed JSON data.")
     except json.JSONDecodeError as e:
         console.print(f"[red]JSON Decode Error: {e}[/red]")
         logger.error(f"JSON Decode Error: {e}")
@@ -53,6 +56,7 @@ def pretty_print_yaml(data: str) -> None:
         syntax = Syntax(pretty_yaml, "yaml",
                         theme="monokai", line_numbers=True)
         console.print(syntax)
+        logger.debug("Successfully pretty-printed YAML data.")
     except yaml.YAMLError as e:
         console.print(f"[red]YAML Parse Error: {e}[/red]")
         logger.error(f"YAML Parse Error: {e}")
@@ -71,6 +75,7 @@ def pretty_print_toml(data: str) -> None:
         syntax = Syntax(pretty_toml, "toml",
                         theme="monokai", line_numbers=True)
         console.print(syntax)
+        logger.debug("Successfully pretty-printed TOML data.")
     except toml.TomlDecodeError as e:
         console.print(f"[red]TOML Decode Error: {e}[/red]")
         logger.error(f"TOML Decode Error: {e}")
@@ -88,6 +93,7 @@ def pretty_print_xml(data: str) -> None:
         pretty_xml = ET.tostring(parsed_data, encoding='unicode', method='xml')
         syntax = Syntax(pretty_xml, "xml", theme="monokai", line_numbers=True)
         console.print(syntax)
+        logger.debug("Successfully pretty-printed XML data.")
     except ET.ParseError as e:
         console.print(f"[red]XML Parse Error: {e}[/red]")
         logger.error(f"XML Parse Error: {e}")
@@ -104,16 +110,17 @@ def pretty_print_csv(data: str) -> None:
         reader = csv.reader(data.splitlines())
         rows = list(reader)
         if rows:
-            max_lengths = [max(len(str(item)) for item in column)
-                           for column in zip(*rows)]
-            table = ""
-            for row in rows:
-                line = " | ".join(
-                    f"{item:<{max_lengths[i]}}" for i, item in enumerate(row))
-                table += line + "\n"
+            table = Table(show_header=True, header_style="bold cyan")
+            headers = rows[0]
+            for header in headers:
+                table.add_column(header)
+            for row in rows[1:]:
+                table.add_row(*row)
             console.print(table)
+            logger.debug("Successfully pretty-printed CSV data.")
         else:
             console.print("[yellow]CSV file is empty.[/yellow]")
+            logger.warning("CSV file is empty.")
     except Exception as e:
         console.print(f"[red]CSV Parse Error: {e}[/red]")
         logger.error(f"CSV Parse Error: {e}")
@@ -129,14 +136,15 @@ def pretty_print_ini(data: str) -> None:
     try:
         config = configparser.ConfigParser()
         config.read_string(data)
-        pretty_ini = ""
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Section", style="dim")
+        table.add_column("Key")
+        table.add_column("Value")
         for section in config.sections():
-            pretty_ini += f"[{section}]\n"
             for key, value in config.items(section):
-                pretty_ini += f"{key} = {value}\n"
-            pretty_ini += "\n"
-        syntax = Syntax(pretty_ini, "ini", theme="monokai", line_numbers=True)
-        console.print(syntax)
+                table.add_row(section, key, value)
+        console.print(table)
+        logger.debug("Successfully pretty-printed INI data.")
     except configparser.Error as e:
         console.print(f"[red]INI Parse Error: {e}[/red]")
         logger.error(f"INI Parse Error: {e}")
@@ -198,63 +206,33 @@ def display_file(file_path: Path, file_format: str, output: Optional[Path] = Non
             is_valid = validate_file(file_path, file_format)
             if not is_valid:
                 return
-            else:
-                return
 
         if file_format == "json":
-            result = json.dumps(json.loads(content),
-                                indent=indent, ensure_ascii=False)
+            pretty_print_json(content, indent)
         elif file_format == "yaml":
-            result = yaml.dump(yaml.safe_load(content),
-                               sort_keys=False, allow_unicode=True)
+            pretty_print_yaml(content)
         elif file_format == "toml":
-            result = toml.dumps(toml.loads(content))
+            pretty_print_toml(content)
         elif file_format == "xml":
-            parsed = ET.ElementTree(ET.fromstring(content))
-            result = ET.tostring(
-                parsed.getroot(), encoding='unicode', method='xml')
+            pretty_print_xml(content)
         elif file_format == "csv":
-            reader = csv.reader(content.splitlines())
-            rows = list(reader)
-            if rows:
-                max_lengths = [max(len(str(item)) for item in column)
-                               for column in zip(*rows)]
-                formatted_rows = [
-                    " | ".join(
-                        f"{item:<{max_lengths[i]}}" for i, item in enumerate(row))
-                    for row in rows
-                ]
-                result = "\n".join(formatted_rows)
-            else:
-                result = "CSV file is empty."
+            pretty_print_csv(content)
         elif file_format == "ini":
-            config = configparser.ConfigParser()
-            config.read_string(content)
-            result = ""
-            for section in config.sections():
-                result += f"[{section}]\n"
-                for key, value in config.items(section):
-                    result += f"{key} = {value}\n"
-                result += "\n"
+            pretty_print_ini(content)
         else:
             console.print("[red]Unsupported file format![/red]")
             logger.error("Unsupported file format!")
             return
 
         if output:
-            if output.exists():
-                console.print(
-                    f"[red]Output file {output} already exists. Use --overwrite to overwrite.[/red]")
-                logger.error(f"Output file {output} already exists.")
+            if output.exists() and not Prompt.ask(f"Output file {output} exists. Overwrite?", choices=["y", "n"]) == "y":
+                console.print(f"[yellow]Skipped writing to {output}.[/yellow]")
+                logger.warning(f"Skipped writing to {output}.")
                 return
-            output.write_text(result, encoding='utf-8')
+            output.write_text(content, encoding='utf-8')
             console.print(
                 f"[green]Content has been written to {output}[/green]")
             logger.info(f"Content has been written to {output}")
-        else:
-            syntax = Syntax(result, file_format,
-                            theme="monokai", line_numbers=True)
-            console.print(syntax)
     except FileNotFoundError:
         console.print(f"[red]File not found: {file_path}[/red]")
         logger.error(f"File not found: {file_path}")
@@ -355,7 +333,8 @@ Examples:
             logger.debug("Reading from standard input.")
             data = read_stdin()
             file_path = '-'  # Indicate stdin
-            file_format = args.format or 'json'  # Default to JSON if not specified
+            file_format = args.format or Prompt.ask("Specify the format", choices=[
+                                                    "json", "yaml", "toml", "xml", "csv", "ini"])
         else:
             file_path = Path(file)
             suffix_map = {
@@ -367,13 +346,13 @@ Examples:
                 ".csv": "csv",
                 ".ini": "ini",
             }
-            file_format = args.format or suffix_map.get(
-                file_path.suffix.lower())
+            file_format = args.format or suffix_map.get(file_path.suffix.lower(), Prompt.ask(
+                f"Unable to detect format for {file}. Specify the format", choices=["json", "yaml", "toml", "xml", "csv", "ini"]))
 
         if not file_format:
             console.print(
-                f"[red]Unable to auto-detect file format for {file}. Please use --format to specify the format.[/red]")
-            logger.error(f"Unable to auto-detect file format for {file}.")
+                f"[red]Unable to determine file format for {file}.[/red]")
+            logger.error(f"Unable to determine file format for {file}.")
             continue
 
         output = None

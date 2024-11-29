@@ -32,8 +32,8 @@
               - `PyYAML` Python library (optional for YAML conversion)
               - `dicttoxml` Python library (optional for XML export)
 
-@version      3.0
-@date         2024-04-27
+@version      3.1
+@date         2024-05-01
 """
 
 import json
@@ -41,7 +41,7 @@ import argparse
 import sys
 from json.decoder import JSONDecodeError
 from loguru import logger
-from pathlib import Path
+from typing import Optional, List, Dict, Any
 
 try:
     import yaml
@@ -53,7 +53,13 @@ try:
 except ImportError:
     dicttoxml = None
 
-import os
+from rich.console import Console
+from rich.table import Table
+from rich.traceback import install
+
+# Initialize Rich console and install rich traceback
+console = Console()
+install(show_locals=True)
 
 # Configure Loguru
 logger.remove()
@@ -75,7 +81,7 @@ logger.add(
 logger.debug("Logging is configured.")
 
 
-def load_json(file_path: str) -> dict:
+def load_json(file_path: str) -> Dict[str, Any]:
     """
     Load JSON data from a file and return it as a dictionary.
 
@@ -96,18 +102,23 @@ def load_json(file_path: str) -> dict:
             return data
     except JSONDecodeError as e:
         logger.error(f"Invalid JSON in file '{file_path}': {e}")
+        console.print(
+            f"[bold red]Invalid JSON in file '{file_path}': {e}[/bold red]")
         sys.exit(1)
     except FileNotFoundError:
         logger.error(f"File not found: {file_path}")
+        console.print(f"[bold red]File not found: {file_path}[/bold red]")
         sys.exit(1)
     except IOError as e:
         logger.error(f"Error reading file '{file_path}': {e}")
+        console.print(
+            f"[bold red]Error reading file '{file_path}': {e}[/bold red]")
         sys.exit(1)
 
 
-def print_json(obj: dict, minify: bool = False, indent: int = 4):
+def print_json(obj: Dict[str, Any], minify: bool = False, indent: Optional[int] = 4):
     """
-    Print a JSON object as a formatted or minified string.
+    Print a JSON object as a formatted or minified string using Rich.
 
     Args:
         obj (dict): The JSON object to print.
@@ -121,16 +132,18 @@ def print_json(obj: dict, minify: bool = False, indent: int = 4):
         if minify:
             json_str = json.dumps(obj, separators=(',', ':'))
             logger.debug("Printing minified JSON.")
+            console.print(f"[bold green]{json_str}[/bold green]")
         else:
             json_str = json.dumps(obj, indent=indent)
             logger.debug(f"Printing formatted JSON with indent={indent}.")
-        print(json_str)
+            console.print_json(json_str)
     except (TypeError, OverflowError) as e:
         logger.error(f"Error printing JSON: {e}")
+        console.print(f"[bold red]Error printing JSON: {e}[/bold red]")
         sys.exit(1)
 
 
-def save_json_to_yaml(json_obj: dict, output_file: str):
+def save_json_to_yaml(json_obj: Dict[str, Any], output_file: str):
     """
     Save a JSON object to a YAML file.
 
@@ -147,7 +160,8 @@ def save_json_to_yaml(json_obj: dict, output_file: str):
     if yaml is None:
         logger.error(
             "YAML support is not available. Install PyYAML to enable this feature.")
-        print("YAML support is not available. Install PyYAML to enable this feature.")
+        console.print(
+            "[bold red]YAML support is not available. Install PyYAML to enable this feature.[/bold red]")
         return
     try:
         with open(output_file, 'w', encoding='utf-8') as file:
@@ -155,14 +169,16 @@ def save_json_to_yaml(json_obj: dict, output_file: str):
                       default_flow_style=False)
         logger.info(
             f"Successfully converted JSON to YAML and saved to '{output_file}'.")
-        print(f"YAML saved to '{output_file}'.")
+        console.print(
+            f"[bold green]YAML saved to '{output_file}'.[/bold green]")
     except IOError as e:
         logger.error(f"Error writing YAML file '{output_file}': {e}")
-        print(f"Error writing YAML file '{output_file}': {e}")
+        console.print(
+            f"[bold red]Error writing YAML file '{output_file}': {e}[/bold red]")
         sys.exit(1)
 
 
-def export_json_to_xml(json_obj: dict, output_file: str):
+def export_json_to_xml(json_obj: Dict[str, Any], output_file: str):
     """
     Export a JSON object to an XML file.
 
@@ -179,7 +195,8 @@ def export_json_to_xml(json_obj: dict, output_file: str):
     if dicttoxml is None:
         logger.error(
             "XML support is not available. Install dicttoxml to enable this feature.")
-        print("XML support is not available. Install dicttoxml to enable this feature.")
+        console.print(
+            "[bold red]XML support is not available. Install dicttoxml to enable this feature.[/bold red]")
         return
     try:
         xml_bytes = dicttoxml(json_obj, custom_root='root', attr_type=False)
@@ -188,14 +205,15 @@ def export_json_to_xml(json_obj: dict, output_file: str):
             file.write(xml_str)
         logger.info(
             f"Successfully exported JSON to XML and saved to '{output_file}'.")
-        print(f"XML exported to '{output_file}'.")
+        console.print(
+            f"[bold green]XML exported to '{output_file}'.[/bold green]")
     except Exception as e:
         logger.error(f"Error exporting JSON to XML: {e}")
-        print(f"Error exporting JSON to XML: {e}")
+        console.print(f"[bold red]Error exporting JSON to XML: {e}[/bold red]")
         sys.exit(1)
 
 
-def query_json(json_obj: dict, query_path: str):
+def query_json(json_obj: Dict[str, Any], query_path: str):
     """
     Query a JSON object using a simple dot notation path.
 
@@ -223,7 +241,8 @@ def query_json(json_obj: dict, query_path: str):
         print_json(result)
     except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Failed to query JSON with path '{query_path}': {e}")
-        print(f"Failed to query JSON with path '{query_path}': {e}")
+        console.print(
+            f"[bold red]Failed to query JSON with path '{query_path}': {e}[/bold red]")
         sys.exit(1)
 
 
@@ -240,14 +259,16 @@ def validate_json(file_path: str):
     try:
         load_json(file_path)
         logger.info(f"JSON file '{file_path}' is valid.")
-        print(f"JSON file '{file_path}' is valid.")
+        console.print(
+            f"[bold green]JSON file '{file_path}' is valid.[/bold green]")
     except SystemExit:
         logger.warning(f"JSON file '{file_path}' is invalid.")
-        print(f"JSON file '{file_path}' is invalid.")
+        console.print(
+            f"[bold red]JSON file '{file_path}' is invalid.[/bold red]")
         sys.exit(1)
 
 
-def merge_json(files: list) -> dict:
+def merge_json(files: List[str]) -> Dict[str, Any]:
     """
     Merge multiple JSON files into one.
 
@@ -263,12 +284,14 @@ def merge_json(files: list) -> dict:
         data = load_json(file)
         merged_data.update(data)
     logger.info(f"Successfully merged {len(files)} files.")
+    console.print(
+        f"[bold green]Successfully merged {len(files)} files.[/bold green]")
     return merged_data
 
 
 def diff_json(file1: str, file2: str):
     """
-    Compare two JSON files and print the differences.
+    Compare two JSON files and display the differences in a table.
 
     Args:
         file1 (str): Path to the first JSON file.
@@ -284,10 +307,19 @@ def diff_json(file1: str, file2: str):
     diff = {key: data2[key]
             for key in data2 if key not in data1 or data1[key] != data2[key]}
     logger.info(f"Differences found between '{file1}' and '{file2}'.")
-    print_json(diff)
+
+    if diff:
+        table = Table(title=f"Differences between '{file1}' and '{file2}'")
+        table.add_column("Key", style="cyan", no_wrap=True)
+        table.add_column("Value in File2", style="magenta")
+        for key, value in diff.items():
+            table.add_row(key, str(value))
+        console.print(table)
+    else:
+        console.print("[bold green]No differences found.[/bold green]")
 
 
-def display_stats(json_obj: dict):
+def display_stats(json_obj: Dict[str, Any]):
     """
     Display statistics about the JSON structure.
 
@@ -302,16 +334,22 @@ def display_stats(json_obj: dict):
         total_elements = count_elements(json_obj)
         depth = get_depth(json_obj)
         logger.info("Displaying JSON statistics.")
-        print(f"Total Keys: {total_keys}")
-        print(f"Total Elements: {total_elements}")
-        print(f"Depth: {depth}")
+
+        table = Table(title="JSON Statistics")
+        table.add_column("Statistic", style="cyan", no_wrap=True)
+        table.add_column("Value", style="magenta")
+        table.add_row("Total Keys", str(total_keys))
+        table.add_row("Total Elements", str(total_elements))
+        table.add_row("Depth", str(depth))
+        console.print(table)
     except Exception as e:
         logger.error(f"Error displaying JSON statistics: {e}")
-        print(f"Error displaying JSON statistics: {e}")
+        console.print(
+            f"[bold red]Error displaying JSON statistics: {e}[/bold red]")
         sys.exit(1)
 
 
-def count_keys(obj):
+def count_keys(obj: Any) -> int:
     """Recursively count the number of keys in the JSON object."""
     if isinstance(obj, dict):
         return sum(count_keys(v) for v in obj.values()) + len(obj)
@@ -321,7 +359,7 @@ def count_keys(obj):
         return 0
 
 
-def count_elements(obj):
+def count_elements(obj: Any) -> int:
     """Recursively count the number of elements in the JSON object."""
     if isinstance(obj, dict):
         return sum(count_elements(v) for v in obj.values()) + 1
@@ -331,7 +369,7 @@ def count_elements(obj):
         return 1
 
 
-def get_depth(obj, current_depth=1):
+def get_depth(obj: Any, current_depth: int = 1) -> int:
     """Recursively determine the depth of the JSON object."""
     if isinstance(obj, dict):
         return max([get_depth(v, current_depth + 1) for v in obj.values()], default=current_depth)
@@ -341,7 +379,7 @@ def get_depth(obj, current_depth=1):
         return current_depth
 
 
-def flatten_json(y: dict) -> dict:
+def flatten_json(y: Dict[str, Any]) -> Dict[str, Any]:
     """
     Flatten a nested JSON object.
 
@@ -353,7 +391,7 @@ def flatten_json(y: dict) -> dict:
     """
     out = {}
 
-    def flatten(x, name=''):
+    def flatten(x: Any, name: str = ''):
         if isinstance(x, dict):
             for a in x:
                 flatten(x[a], f"{name}{a}.")
@@ -368,7 +406,7 @@ def flatten_json(y: dict) -> dict:
     return out
 
 
-def unflatten_json(x: dict) -> dict:
+def unflatten_json(x: Dict[str, Any]) -> Dict[str, Any]:
     """
     Unflatten a JSON object.
 
@@ -386,6 +424,7 @@ def unflatten_json(x: dict) -> dict:
             if part.isdigit():
                 part = int(part)
                 if not isinstance(d, list):
+                    d_type = type(d)
                     d = []
                 while len(d) <= part:
                     d.append({})
@@ -405,7 +444,7 @@ def unflatten_json(x: dict) -> dict:
     return result_dict
 
 
-def flatten_data(json_obj: dict):
+def flatten_data(json_obj: Dict[str, Any]):
     """
     Flatten the JSON data and print it.
 
@@ -416,10 +455,11 @@ def flatten_data(json_obj: dict):
         None
     """
     flattened = flatten_json(json_obj)
+    console.print("[bold green]Flattened JSON:[/bold green]")
     print_json(flattened, minify=True)
 
 
-def unflatten_data(json_obj: dict):
+def unflatten_data(json_obj: Dict[str, Any]):
     """
     Unflatten the JSON data and print it.
 
@@ -430,10 +470,11 @@ def unflatten_data(json_obj: dict):
         None
     """
     unflattened = unflatten_json(json_obj)
+    console.print("[bold green]Unflattened JSON:[/bold green]")
     print_json(unflattened)
 
 
-def remove_key(json_obj: dict, key: str):
+def remove_key(json_obj: Dict[str, Any], key: str):
     """
     Remove a specific key from the JSON object.
 
@@ -447,14 +488,16 @@ def remove_key(json_obj: dict, key: str):
     try:
         del json_obj[key]
         logger.info(f"Removed key '{key}' from JSON.")
+        console.print(
+            f"[bold green]Removed key '{key}' from JSON.[/bold green]")
         print_json(json_obj)
     except KeyError:
         logger.error(f"Key '{key}' not found in JSON.")
-        print(f"Key '{key}' not found in JSON.")
+        console.print(f"[bold red]Key '{key}' not found in JSON.[/bold red]")
         sys.exit(1)
 
 
-def rename_key(json_obj: dict, old_key: str, new_key: str):
+def rename_key(json_obj: Dict[str, Any], old_key: str, new_key: str):
     """
     Rename a key in the JSON object.
 
@@ -469,10 +512,13 @@ def rename_key(json_obj: dict, old_key: str, new_key: str):
     try:
         json_obj[new_key] = json_obj.pop(old_key)
         logger.info(f"Renamed key '{old_key}' to '{new_key}'.")
+        console.print(
+            f"[bold green]Renamed key '{old_key}' to '{new_key}'.[/bold green]")
         print_json(json_obj)
     except KeyError:
         logger.error(f"Key '{old_key}' not found in JSON.")
-        print(f"Key '{old_key}' not found in JSON.")
+        console.print(
+            f"[bold red]Key '{old_key}' not found in JSON.[/bold red]")
         sys.exit(1)
 
 
@@ -526,6 +572,7 @@ def main():
         validate_json(args.file)
     elif args.merge:
         merged_data = merge_json(args.merge)
+        console.print("[bold green]Merged JSON Data:[/bold green]")
         print_json(merged_data)
     elif args.diff:
         diff_json(args.diff[0], args.diff[1])
@@ -541,6 +588,10 @@ def main():
         old_key, new_key = args.rename_key
         rename_key(data, old_key, new_key)
     else:
+        if args.minify:
+            console.print("[bold green]JSON Output (Minified):[/bold green]")
+        else:
+            console.print("[bold green]JSON Output (Formatted):[/bold green]")
         print_json(data, minify=args.minify, indent=None if args.minify else 4)
 
 
@@ -549,9 +600,11 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         logger.warning("Operation interrupted by user.")
-        print("\nOperation interrupted by user.")
+        console.print(
+            "\n[bold yellow]Operation interrupted by user.[/bold yellow]")
         sys.exit(0)
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
-        print(f"An unexpected error occurred: {e}")
+        console.print(
+            f"[bold red]An unexpected error occurred: {e}[/bold red]")
         sys.exit(1)

@@ -124,7 +124,7 @@ LithiumApp::LithiumApp() : Component("lithium.main") {
     def("get_component_list", &LithiumApp::getComponentList,
         "Get a list of all components");
 
-    def("load_script", &LithiumApp::loadScript, "script", "Load a script");
+    // def("load_script", &LithiumApp::loadScript, "script", "Load a script");
 
     DLOG_F(INFO, "Lithium App Initialized");
 }

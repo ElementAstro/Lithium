@@ -1,3 +1,5 @@
+# python
+import shutil
 import subprocess
 import os
 import sys
@@ -5,6 +7,12 @@ from pathlib import Path
 import argparse
 from loguru import logger
 from typing import Optional, List, Dict
+
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+
+console = Console()
 
 
 class CoreRunner:
@@ -26,9 +34,12 @@ class CoreRunner:
         self.log_file: Optional[Path] = Path(
             args.log_file).resolve() if args.log_file else None
 
+        self.setup_logging()
+        self.validate_environment()
+
     def setup_logging(self) -> None:
         """
-        Configure Loguru for logging.
+        Configure loguru for logging.
         """
         logger.remove()
         logger.add(
@@ -44,10 +55,28 @@ class CoreRunner:
                 compression="zip",
                 enqueue=True,
                 encoding="utf-8",
-                format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
+                format=(
+                    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                    "<level>{level}</level> | {message}"
+                ),
                 level="DEBUG"
             )
         logger.debug("Logging is configured.")
+
+    def validate_environment(self) -> None:
+        """
+        Validate that necessary tools and permissions are available.
+        """
+        logger.debug("Validating environment.")
+        # Check if g++ is available
+        if not shutil.which("g++"):
+            logger.error("g++ compiler not found in PATH.")
+            sys.exit(1)
+        # Check if gdb is available
+        if not shutil.which("gdb"):
+            logger.error("gdb debugger not found in PATH.")
+            sys.exit(1)
+        logger.debug("Environment validation completed.")
 
     def set_ulimit(self) -> None:
         """
@@ -55,7 +84,7 @@ class CoreRunner:
         """
         size = "unlimited" if self.ulimit_unlimited else "0"
         try:
-            subprocess.run(["bash", "-c", f"ulimit -c {size}"], check=True)
+            subprocess.run(["ulimit", "-c", size], shell=True, check=True)
             logger.info(f"Core dump size set to {size}.")
         except subprocess.CalledProcessError as e:
             logger.error(f"Error setting ulimit: {e}")
@@ -66,13 +95,13 @@ class CoreRunner:
         Set the core pattern for core dump files.
         """
         if os.geteuid() != 0:
-            logger.error(
-                "Setting core pattern requires root privileges. Please run as root.")
-            sys.exit(1)
+            logger.warning(
+                "Root privileges required to set core pattern. Skipping this step.")
+            return
 
         try:
-            core_path = Path("/proc/sys/kernel/core_pattern")
-            core_path.write_text(self.core_pattern, encoding="utf-8")
+            core_pattern_path = Path("/proc/sys/kernel/core_pattern")
+            core_pattern_path.write_text(self.core_pattern, encoding="utf-8")
             logger.info(f"Core pattern set to: {self.core_pattern}")
         except PermissionError as e:
             logger.error(
@@ -90,19 +119,22 @@ class CoreRunner:
             logger.error(f"Source file not found: {self.source_file}")
             sys.exit(1)
 
-        flags = self.compile_flags + [f"-std={self.cpp_standard}"]
+        flags = self.compile_flags + [f"-std={self.cpp_standard}", "-g"]
         compile_cmd = ["g++", *flags,
-                       str(self.source_file), "-o", str(self.output_file), "-g"]
-        logger.info(f"Running compile command: {' '.join(compile_cmd)}")
-        try:
-            subprocess.run(compile_cmd, check=True)
-            logger.success(f"Compilation successful: {self.output_file}")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Compilation failed: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logger.exception(f"Unexpected error during compilation: {e}")
-            sys.exit(1)
+                       str(self.source_file), "-o", str(self.output_file)]
+        logger.info(f"Compiling program: {' '.join(compile_cmd)}")
+
+        with console.status("[bold green]Compiling...[/bold green]"):
+            try:
+                subprocess.run(compile_cmd, check=True,
+                               stderr=subprocess.PIPE, text=True)
+                logger.success(f"Compilation successful: {self.output_file}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Compilation failed: {e.stderr}")
+                sys.exit(1)
+            except Exception as e:
+                logger.exception(f"Unexpected error during compilation: {e}")
+                sys.exit(1)
 
     def run_cpp_program(self) -> None:
         """
@@ -112,9 +144,10 @@ class CoreRunner:
             logger.error(f"Executable not found: {self.output_file}")
             sys.exit(1)
 
+        logger.info(f"Running program: {self.output_file}")
         try:
-            logger.info(f"Running program: {self.output_file}")
-            subprocess.run([str(self.output_file)], check=True)
+            with console.status("[bold green]Running program...[/bold green]"):
+                subprocess.run([str(self.output_file)], check=True)
             logger.info(
                 f"Program {self.output_file} ran successfully without crashing.")
         except subprocess.CalledProcessError as e:
@@ -159,19 +192,22 @@ class CoreRunner:
         gdb_cmd = ["gdb", str(self.output_file), str(
             core_file), *self.gdb_commands]
         logger.info(f"Running GDB with command: {' '.join(gdb_cmd)}")
-        try:
-            result = subprocess.run(
-                gdb_cmd,
-                text=True,
-                capture_output=True,
-                check=True
-            )
-            logger.info("Core dump analysis output:")
-            logger.info(result.stdout)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"GDB analysis failed: {e.stderr}")
-        except Exception as e:
-            logger.exception(f"Unexpected error during GDB analysis: {e}")
+
+        with console.status("[bold green]Analyzing core dump...[/bold green]"):
+            try:
+                result = subprocess.run(
+                    gdb_cmd,
+                    text=True,
+                    capture_output=True,
+                    check=True
+                )
+                logger.info("Core dump analysis output:")
+                console.print("[bold blue]GDB Analysis Result:[/bold blue]")
+                console.print(result.stdout)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"GDB analysis failed: {e.stderr}")
+            except Exception as e:
+                logger.exception(f"Unexpected error during GDB analysis: {e}")
 
     def run(self) -> None:
         """
@@ -186,12 +222,12 @@ class CoreRunner:
         logger.debug("CoreRunner workflow completed successfully.")
 
 
-def configure_logging(log_file: str) -> None:
+def configure_logging(log_file: Optional[str]) -> None:
     """
     Configure the loguru logger.
 
     Parameters:
-        log_file (str): The path to the log file. If empty, logs will only be written to stderr.
+        log_file (Optional[str]): The path to the log file. If empty, logs will only be written to stderr.
     """
     logger.remove()  # Remove the default logger
     logger.add(
@@ -207,7 +243,10 @@ def configure_logging(log_file: str) -> None:
             compression="zip",
             enqueue=True,
             encoding="utf-8",
-            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
+            format=(
+                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                "<level>{level}</level> | {message}"
+            ),
             level="DEBUG"
         )
     logger.debug("Logging is configured.")
@@ -232,16 +271,17 @@ def parse_arguments() -> argparse.Namespace:
                         default="/tmp/core.%e.%p", help="Core pattern for dump files")
     parser.add_argument("-u", "--ulimit", action="store_true",
                         help="Set core dump size to unlimited")
-    parser.add_argument("-f", "--flags", nargs='*', default=[],
-                        help="Additional flags for g++ compilation")
+    parser.add_argument(
+        "-f", "--flags", nargs='*', default=[], help="Additional flags for g++ compilation (e.g., -O2 -Wall)"
+    )
     parser.add_argument("-s", "--std", default="c++17",
                         help="C++ standard to use (e.g., c++11, c++14, c++17, c++20)")
-    parser.add_argument("-g", "--gdb-commands", nargs='*', default=[
-                        "-ex", "bt", "-ex", "quit"], help="GDB commands for core dump analysis")
+    parser.add_argument(
+        "-g", "--gdb-commands", nargs='*', default=["-ex", "bt", "-ex", "quit"], help="GDB commands for core dump analysis"
+    )
     parser.add_argument("-a", "--auto-analyze", action="store_true",
                         help="Automatically analyze core dump if program crashes")
-    parser.add_argument("-l", "--log-file", default="",
-                        help="Log file to write logs to")
+    parser.add_argument("-l", "--log-file", help="Log file to write logs to")
     return parser.parse_args()
 
 
@@ -252,15 +292,15 @@ def main():
     args = parse_arguments()
     configure_logging(args.log_file)
     runner = CoreRunner(args)
-    runner.run()
-
-
-if __name__ == "__main__":
     try:
-        main()
+        runner.run()
     except KeyboardInterrupt:
         logger.warning("Operation interrupted by user.")
         sys.exit(0)
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

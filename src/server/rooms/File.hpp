@@ -25,6 +25,8 @@ public:
             WaitListListener(Subscriber* subscriber)
                 : m_subscriber(subscriber) {}
 
+            ~WaitListListener() override = default;
+
             void onNewItem(oatpp::async::CoroutineWaitList& list) override;
         };
 

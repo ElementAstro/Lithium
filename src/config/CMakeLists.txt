@@ -23,6 +23,8 @@ set(PROJECT_HEADERS
     configor.hpp
 )
 
+set(CXX_STANDARD 23)
+
 # Required libraries for the project
 set(PROJECT_LIBS
     loguru

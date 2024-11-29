@@ -20,7 +20,11 @@ import sys
 from pathlib import Path
 from dataclasses import dataclass, field
 import platform
+from typing import List, Optional
 from loguru import logger
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
 
 
 @dataclass
@@ -36,14 +40,14 @@ class ProjectConfig:
         static_library (bool): Whether to generate a static library.
         shared_library (bool): Whether to generate a shared library.
         enable_testing (bool): Whether to enable testing with CMake's `enable_testing()`.
-        include_dirs (list): List of directories to include in the project.
+        include_dirs (List[str]): List of directories to include in the project.
         sources (str): Glob pattern to specify source files (default is `src/*.cpp`).
-        compiler_flags (list): List of compiler flags (e.g., `-O3`, `-Wall`).
-        linker_flags (list): List of linker flags (e.g., `-lpthread`).
-        dependencies (list): List of third-party dependencies.
-        subdirs (list): List of subdirectories for multi-directory project structure.
+        compiler_flags (List[str]): List of compiler flags (e.g., `-O3`, `-Wall`).
+        linker_flags (List[str]): List of linker flags (e.g., `-lpthread`).
+        dependencies (List[str]): List of third-party dependencies.
+        subdirs (List[str]): List of subdirectories for multi-directory project structure.
         install_path (str): Custom installation path (default is `bin`).
-        test_framework (str): The test framework to be used (optional, e.g., `GoogleTest`).
+        test_framework (Optional[str]): The test framework to be used (optional, e.g., `GoogleTest`).
     """
     project_name: str
     version: str = "1.0"
@@ -52,14 +56,14 @@ class ProjectConfig:
     static_library: bool = False
     shared_library: bool = False
     enable_testing: bool = False
-    include_dirs: list = field(default_factory=list)
+    include_dirs: List[str] = field(default_factory=list)
     sources: str = "src/*.cpp"
-    compiler_flags: list = field(default_factory=list)
-    linker_flags: list = field(default_factory=list)
-    dependencies: list = field(default_factory=list)
-    subdirs: list = field(default_factory=list)
+    compiler_flags: List[str] = field(default_factory=list)
+    linker_flags: List[str] = field(default_factory=list)
+    dependencies: List[str] = field(default_factory=list)
+    subdirs: List[str] = field(default_factory=list)
     install_path: str = "bin"
-    test_framework: str = None  # Optional: e.g., GoogleTest
+    test_framework: Optional[str] = None  # Optional: e.g., GoogleTest
 
 
 def setup_logging() -> None:
@@ -74,7 +78,7 @@ def setup_logging() -> None:
         compression="zip",
         enqueue=True,
         encoding="utf-8",
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <level>{message}</level>",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
         level="DEBUG"
     )
     logger.add(
@@ -83,6 +87,9 @@ def setup_logging() -> None:
         format="<level>{message}</level>",
     )
     logger.debug("Logging is set up.")
+
+
+console = Console()
 
 
 def detect_os() -> str:
@@ -182,10 +189,12 @@ file(GLOB_RECURSE SOURCES "{config.sources}")
 
     # Testing support
     if config.enable_testing:
-        cmake_template += """
+        cmake_template += f"""
 # Enable testing
 enable_testing()
-add_subdirectory(tests)
+if(NOT {config.test_framework} STREQUAL "")
+    add_subdirectory(tests)
+endif()
 """
         logger.debug("Enabled testing support.")
 
@@ -319,26 +328,62 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate a CMake template for C++ projects."
     )
-    parser.add_argument(
-        "--json",
+    subparsers = parser.add_subparsers(
+        dest='command', help='Available commands')
+
+    # Generate CMakeLists.txt from JSON
+    parser_json = subparsers.add_parser(
+        'generate', help='Generate CMakeLists.txt from JSON configuration')
+    parser_json.add_argument(
+        '--json',
         type=str,
+        required=True,
         help="Path to JSON config file to generate CMakeLists.txt."
     )
-    parser.add_argument(
-        "--find-package",
-        type=str,
-        help="Generate a FindXXX.cmake file for a specified library."
-    )
-    parser.add_argument(
-        "--output-dir",
+    parser_json.add_argument(
+        '--output-dir',
         type=str,
         default=".",
         help="Directory to save the generated CMake files (default is current directory)."
     )
+
+    # Generate FindXXX.cmake
+    parser_find = subparsers.add_parser(
+        'find', help='Generate FindXXX.cmake for a specified library')
+    parser_find.add_argument(
+        '--library',
+        type=str,
+        required=True,
+        help="Name of the library to generate FindXXX.cmake for."
+    )
+    parser_find.add_argument(
+        '--output-dir',
+        type=str,
+        default="cmake",
+        help="Directory to save the generated FindXXX.cmake (default is cmake/)."
+    )
+
     return parser.parse_args()
 
 
-def main():
+def display_table(title: str, headers: List[str], rows: List[List[str]]) -> None:
+    """
+    Displays a formatted table using Rich.
+
+    Args:
+        title (str): Title of the table.
+        headers (List[str]): List of column headers.
+        rows (List[List[str]]): List of rows, where each row is a list of string values.
+    """
+    table = Table(title=title)
+    for header in headers:
+        table.add_column(header, style="cyan", no_wrap=True)
+    for row in rows:
+        table.add_row(*row)
+    console.print(table)
+
+
+def main() -> None:
     """
     Main function to execute the CMake generator script.
     """
@@ -347,41 +392,53 @@ def main():
     logger.debug(f"Command-line arguments: {args}")
 
     try:
-        if args.json:
+        if args.command == 'generate':
             logger.info(
                 f"Generating CMakeLists.txt from JSON configuration: {args.json}")
             project_config = generate_from_json(args.json)
-            cmake_content = generate_cmake(project_config)
-            save_file(cmake_content, directory=args.output_dir,
-                      filename="CMakeLists.txt")
+            with Progress(transient=True) as progress:
+                task = progress.add_task(
+                    "Generating CMakeLists.txt...", total=100)
+                cmake_content = generate_cmake(project_config)
+                progress.update(task, advance=50)
+
+                save_file(cmake_content, directory=args.output_dir,
+                          filename="CMakeLists.txt")
+                progress.update(task, advance=50)
 
             if project_config.dependencies:
                 cmake_dir = Path(args.output_dir) / "cmake"
+                cmake_dir.mkdir(parents=True, exist_ok=True)
                 for dependency in project_config.dependencies:
                     find_cmake_content = generate_find_cmake(dependency)
                     save_file(find_cmake_content, directory=cmake_dir,
                               filename=f"Find{dependency}.cmake")
 
-        if args.find_package:
+        elif args.command == 'find':
             logger.info(
-                f"Generating FindXXX.cmake for package: {args.find_package}")
-            find_cmake_content = generate_find_cmake(args.find_package)
-            cmake_dir = Path(args.output_dir) / "cmake"
-            save_file(find_cmake_content, directory=cmake_dir,
-                      filename=f"Find{args.find_package}.cmake")
+                f"Generating FindXXX.cmake for library: {args.library}")
+            with Progress(transient=True) as progress:
+                task = progress.add_task(
+                    f"Generating Find{args.library}.cmake...", total=100)
+                find_cmake_content = generate_find_cmake(args.library)
+                progress.update(task, advance=50)
 
-        if not args.json and not args.find_package:
+                save_file(find_cmake_content, directory=args.output_dir,
+                          filename=f"Find{args.library}.cmake")
+                progress.update(task, advance=50)
+
+        else:
             logger.warning(
-                "No action specified. Use --json or --find-package.")
-            print("Usage:")
-            print(
-                "  --json <path_to_json>          Generate CMakeLists.txt from JSON configuration.")
-            print(
-                "  --find-package <library_name>  Generate FindXXX.cmake for a specified library.")
+                "No valid command specified. Use 'generate' or 'find'.")
+            parser = argparse.ArgumentParser(
+                description="Generate CMake templates for C++ projects."
+            )
+            parser.print_help()
             sys.exit(1)
 
     except Exception as e:
         logger.exception(f"An error occurred: {e}")
+        console.print(f"[red]Error: {str(e)}[/red]")
         sys.exit(1)
 
 
@@ -390,4 +447,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         logger.warning("Operation interrupted by user.")
+        console.print("[yellow]Operation interrupted by user.[/yellow]")
         sys.exit(0)

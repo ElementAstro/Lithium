@@ -22,10 +22,10 @@
 #endif
 
 #include <algorithm>
-#include <iostream>
-#include <thread>
 #include <vector>
 
+#include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
 using json = nlohmann::json;
@@ -44,12 +44,18 @@ private:
     void receiveResponses(int sock, std::vector<std::string>& addresses);
 };
 
-AlpacaDiscovery::AlpacaDiscovery() : pImpl(std::make_unique<Impl>()) {}
+AlpacaDiscovery::AlpacaDiscovery() : pImpl(std::make_unique<Impl>()) {
+    LOG_F(INFO, "AlpacaDiscovery instance created");
+}
 
-AlpacaDiscovery::~AlpacaDiscovery() = default;
+AlpacaDiscovery::~AlpacaDiscovery() {
+    LOG_F(INFO, "AlpacaDiscovery instance destroyed");
+}
 
 auto AlpacaDiscovery::searchIPv4(int numQuery,
                                  int timeout) -> std::vector<std::string> {
+    LOG_F(INFO, "Starting IPv4 search with numQuery: {}, timeout: {}", numQuery,
+          timeout);
     return pImpl->searchIPv4(numQuery, timeout);
 }
 
@@ -60,33 +66,43 @@ auto AlpacaDiscovery::Impl::searchIPv4(int numQuery, int timeout)
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        throw std::runtime_error("Failed to initialize Winsock");
+        LOG_F(ERROR, "Failed to initialize Winsock");
+        THROW_RUNTIME_ERROR("Failed to initialize Winsock");
     }
+    LOG_F(INFO, "Winsock initialized");
 #endif
 
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock == -1) {
-        throw std::runtime_error("Failed to create socket");
+        LOG_F(ERROR, "Failed to create socket");
+        THROW_RUNTIME_ERROR("Failed to create socket");
     }
+    LOG_F(INFO, "Socket created");
 
     int broadcastEnable = 1;
     if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
                    reinterpret_cast<char*>(&broadcastEnable),
                    sizeof(broadcastEnable)) < 0) {
-        throw std::runtime_error("Failed to set socket option");
+        LOG_F(ERROR, "Failed to set socket option");
+        THROW_RUNTIME_ERROR("Failed to set socket option");
     }
+    LOG_F(INFO, "Socket option set to broadcast");
 
     struct timeval tv {};
     tv.tv_sec = timeout;
     tv.tv_usec = 0;
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&tv),
                    sizeof(tv)) < 0) {
-        throw std::runtime_error("Failed to set socket timeout");
+        LOG_F(ERROR, "Failed to set socket timeout");
+        THROW_RUNTIME_ERROR("Failed to set socket timeout");
     }
+    LOG_F(INFO, "Socket timeout set to {} seconds", timeout);
 
     std::vector<std::string> interfaceAs = getInterfaces();
+    LOG_F(INFO, "Network interfaces retrieved: {}", interfaceAs.size());
 
     for (int i = 0; i < numQuery; ++i) {
+        LOG_F(INFO, "Query iteration {}", i + 1);
         for (const auto& iface : interfaceAs) {
             sendBroadcast(sock, iface);
         }
@@ -97,10 +113,14 @@ auto AlpacaDiscovery::Impl::searchIPv4(int numQuery, int timeout)
 #ifdef _WIN32
     closesocket(sock);
     WSACleanup();
+    LOG_F(INFO, "Socket closed and Winsock cleaned up");
 #else
     close(sock);
+    LOG_F(INFO, "Socket closed");
 #endif
 
+    LOG_F(INFO, "IPv4 search completed with {} addresses found",
+          addresses.size());
     return addresses;
 }
 
@@ -115,7 +135,9 @@ auto AlpacaDiscovery::Impl::getInterfaces() -> std::vector<std::string> {
     do {
         pAddresses = *static_cast<PIP_ADAPTER_ADDRESSES*>(malloc(bufferSize));
         if (pAddresses == nullptr) {
-            throw std::runtime_error(
+            LOG_F(ERROR,
+                  "Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
+            THROW_RUNTIME_ERROR(
                 "Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
         }
 
@@ -153,12 +175,14 @@ auto AlpacaDiscovery::Impl::getInterfaces() -> std::vector<std::string> {
     struct ifaddrs* ifa = nullptr;
 
     if (getifaddrs(&ifAddrStruct) == -1) {
-        throw std::runtime_error("Failed to get network interfaceAs");
+        LOG_F(ERROR, "Failed to get network interfaces");
+        THROW_RUNTIME_ERROR("Failed to get network interfaces");
     }
 
     for (ifa = ifAddrStruct; ifa != nullptr; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == nullptr)
+        if (ifa->ifa_addr == nullptr) {
             continue;
+        }
 
         if (ifa->ifa_addr->sa_family == AF_INET) {
             void* tmpAddrPtr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
@@ -168,10 +192,12 @@ auto AlpacaDiscovery::Impl::getInterfaces() -> std::vector<std::string> {
         }
     }
 
-    if (ifAddrStruct != nullptr)
+    if (ifAddrStruct != nullptr) {
         freeifaddrs(ifAddrStruct);
+    }
 #endif
 
+    LOG_F(INFO, "Retrieved {} network interfaces", interfaceAs.size());
     return interfaceAs;
 }
 
@@ -190,8 +216,9 @@ void AlpacaDiscovery::Impl::sendBroadcast(int sock,
     if (sendto(sock, ALPACA_DISCOVERY,
                static_cast<int>(strlen(ALPACA_DISCOVERY)), 0,
                (struct sockaddr*)&broadcastAddr, sizeof(broadcastAddr)) == -1) {
-        std::cerr << "Failed to send broadcast on interfaceA " << interfaceA
-                  << std::endl;
+        LOG_F(ERROR, "Failed to send broadcast on interface {}", interfaceA);
+    } else {
+        LOG_F(INFO, "Broadcast sent on interface {}", interfaceA);
     }
 }
 
@@ -206,6 +233,7 @@ void AlpacaDiscovery::Impl::receiveResponses(
             recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
                      (struct sockaddr*)&senderAddr, &senderAddrLen);
         if (bytesReceived == -1) {
+            LOG_F(WARNING, "No more responses received or timeout occurred");
             break;  // Timeout or error
         }
 
@@ -223,9 +251,10 @@ void AlpacaDiscovery::Impl::receiveResponses(
             if (std::find(addresses.begin(), addresses.end(), addressPort) ==
                 addresses.end()) {
                 addresses.push_back(addressPort);
+                LOG_F(INFO, "Received response from {}", addressPort);
             }
         } catch (const std::exception& e) {
-            std::cerr << "Failed to parse response: " << e.what() << std::endl;
+            LOG_F(ERROR, "Failed to parse response: {}", e.what());
         }
     }
 }

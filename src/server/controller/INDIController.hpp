@@ -29,8 +29,8 @@
 #include "atom/system/process.hpp"
 #include "atom/system/user.hpp"
 #include "atom/utils/container.hpp"
-#include "atom/utils/to_string.hpp"
 #include "atom/utils/ranges.hpp"
+#include "atom/utils/to_string.hpp"
 
 #include "atom/macro.hpp"
 
@@ -55,13 +55,13 @@ inline auto splitVersion(const std::string& version) -> std::vector<int> {
                 ERROR,
                 "Invalid version number: {}. Part '{}' is not a valid integer.",
                 version, part);
-            THROW_NESTED_RUNTIME_ERROR("Invalid version number: " + version +
-                                       ". Part '" + part +
-                                       "' is not a valid integer.");
+            // THROW_NESTED_RUNTIME_ERROR("Invalid version number: " + version +
+            //                            ". Part '" + part +
+            //                            "' is not a valid integer.");
         } catch (const std::out_of_range&) {
             LOG_F(ERROR, "Number out of range in version number: {}", part);
-            THROW_NESTED_RUNTIME_ERROR(
-                "Number out of range in version number: " + part);
+            // THROW_NESTED_RUNTIME_ERROR(
+            //  "Number out of range in version number: " + part);
         }
     }
 
@@ -437,47 +437,76 @@ public:
                 }
 
                 oatpp::Vector<String> availableDrivers = {
-                    "all", "camera", "telescope", "focuser", "filterwheel", "dome",
+                    "all",     "camera",      "telescope",
+                    "focuser", "filterwheel", "dome",
                 };
                 // Check if type is subset of available drivers
-                if (auto [isSubsetResult, invalidElements] = isSubset(type, availableDrivers); !isSubsetResult) {
-                    LOG_F(ERROR, "Invalid type, must be either driver or device: {}", atom::utils::toString(invalidElements));
-                    auto res = ReturnINDIDriverListInvalidTypeDto::createShared();
+                if (auto [isSubsetResult, invalidElements] =
+                        isSubset(type, availableDrivers);
+                    !isSubsetResult) {
+                    LOG_F(ERROR,
+                          "Invalid type, must be either driver or device: {}",
+                          atom::utils::toString(invalidElements));
+                    auto res =
+                        ReturnINDIDriverListInvalidTypeDto::createShared();
                     res->command = COMMAND;
                     res->status = "error";
-                    res->error = "Invalid type, must be either driver or device";
+                    res->error =
+                        "Invalid type, must be either driver or device";
                     for (const auto& missElem : invalidElements) {
                         res->invalidType->push_back(missElem);
                     }
-                    return _return(controller->createDtoResponse(Status::CODE_400, res));
+                    return _return(
+                        controller->createDtoResponse(Status::CODE_400, res));
                 }
 
                 std::weak_ptr<Component> indiComponent;
                 std::weak_ptr<lithium::ComponentManager> componentManager;
-                GET_OR_CREATE_WEAK_PTR(componentManager, lithium::ComponentManager, Constants::COMPONENT_MANAGER);
-                if (auto com = componentManager.lock()->getComponent("lithium.indiserver"); com.has_value()) {
+                GET_OR_CREATE_WEAK_PTR(componentManager,
+                                       lithium::ComponentManager,
+                                       Constants::COMPONENT_MANAGER);
+                if (auto com = componentManager.lock()->getComponent(
+                        "lithium.indiserver");
+                    com.has_value()) {
                     indiComponent = com.value();
                 } else {
                     LOG_F(ERROR, "INDI server component not found");
-                    return _return(createErrorResponse("INDI server component not found",
-                                                       Status::CODE_404));
+                    return _return(createErrorResponse(
+                        "INDI server component not found", Status::CODE_404));
                 }
 
                 static constexpr auto COM_COMMAND = "get_all_drivers";
 
                 if (!indiComponent.lock()->has(COM_COMMAND)) {
-                    LOG_F(ERROR, "{} command not found in the component, try to update it!", COM_COMMAND);
-                    return _return(createErrorResponse(std::format("{} command not found in the component, try to update it!", COM_COMMAND),
-                                                       Status::CODE_404));
+                    LOG_F(ERROR,
+                          "{} command not found in the component, try to "
+                          "update it!",
+                          COM_COMMAND);
+                    return _return(createErrorResponse(
+                        std::format("{} command not found in the component, "
+                                    "try to update it!",
+                                    COM_COMMAND),
+                        Status::CODE_404));
                 }
 
-                if (const auto &argsAndRet = indiComponent.lock()->getCommandArgAndReturnType(COM_COMMAND); argsAndRet.first.size() != 0 || argsAndRet.second.empty())
-                {
-                    LOG_F(ERROR, "Invalid command arguments or return type for command: {}", COM_COMMAND);
+                if (const auto& argsAndRet =
+                        indiComponent.lock()->getCommandArgAndReturnType(
+                            COM_COMMAND);
+                    argsAndRet[0].argTypes.size() != 0 ||
+                    argsAndRet[0].returnType.empty()) {
+                    LOG_F(ERROR,
+                          "Invalid command arguments or return type for "
+                          "command: {}",
+                          COM_COMMAND);
                     // TODO: toString needs custom type support
-                    // LOG_F(ERROR, "Arguments: {}, Return: {}", atom::utils::toString(argsAndRet.first), argsAndRet.second);
-                    return _return(createErrorResponse(std::format("Invalid command arguments or return type for command: {}", COM_COMMAND),
-                                                       Status::CODE_404));
+                    // LOG_F(ERROR, "Arguments: {}, Return: {}",
+                    // atom::utils::toString(argsAndRet.first),
+                    // argsAndRet.second);
+                    return _return(createErrorResponse(
+                        std::format("Invalid command arguments or return type "
+                                    "for command: {}",
+                                    COM_COMMAND),
+                        Status::CODE_404));
                 }
 
                 auto drivers = atom::system::getProcessIdByName("indiserver");

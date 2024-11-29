@@ -1,3 +1,4 @@
+# python
 import argparse
 import asyncio
 import json
@@ -6,7 +7,10 @@ import sys
 from typing import List, Tuple
 
 from loguru import logger
+from rich.console import Console
+from rich.table import Table
 
+console = Console()
 
 """
 Asynchronous Port Scanner tool.
@@ -284,6 +288,28 @@ def get_ports(
     return ports
 
 
+def display_results(ip: str, results: List[Tuple[int, str, str]]) -> None:
+    """
+    Display scan results using Rich for better terminal formatting.
+
+    Args:
+        ip (str): The target IP address.
+        results (List[Tuple[int, str, str]]): The list of scan results.
+    """
+    table = Table(title=f"Scan Results for {ip}")
+
+    table.add_column("Port", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Status", style="magenta")
+    table.add_column("Service", style="green")
+
+    for port, status, service in results:
+        status_style = "green" if status == "open" else "red"
+        table.add_row(
+            str(port), f"[{status_style}]{status}[/{status_style}]", service)
+
+    console.print(table)
+
+
 def main() -> None:
     """
     Main function to coordinate the scanning process.
@@ -317,6 +343,7 @@ def main() -> None:
             logger.error(f"Error scanning {ip}: {scan_result}")
             continue
         save_results(ip, scan_result, args.output, args.json)
+        display_results(ip, scan_result)
 
 
 if __name__ == '__main__':

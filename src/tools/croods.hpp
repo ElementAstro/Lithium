@@ -72,9 +72,6 @@ auto calculatePointC(const CartesianCoordinates& pointA,
 auto convertToSphericalCoordinates(const CartesianCoordinates& cartesianPoint)
     -> std::optional<SphericalCoordinates>;
 
-auto calculateFOV(int focalLength, double cameraSizeWidth,
-                  double cameraSizeHeight) -> MinMaxFOV;
-
 constexpr double EARTHRADIUSEQUATORIAL = 6378137.0;
 constexpr double EARTHRADIUSPOLAR = 6356752.0;
 constexpr double ASTRONOMICALUNIT = 1.495978707e11;

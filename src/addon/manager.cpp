@@ -217,7 +217,8 @@ auto ComponentManager::loadModules() -> bool {
         getQualifiedSubDirs(impl_->modulePath));
 
     for (const auto& [dep, version] : systemDeps) {
-        impl_->dependencyManager->addDependency({dep, version.toString()});
+        impl_->dependencyManager->addDependency(
+            {dep, version.toString(), "default"});
     }
     impl_->dependencyManager->checkAndInstallDependencies();
 
@@ -978,8 +979,8 @@ auto ComponentManager::loadRemoteComponent(
     }
     auto componentFullPath = module_path + Constants::PATH_SEPARATOR +
                              component_name + Constants::EXECUTABLE_EXTENSION;
-    auto remoteComponent = std::make_shared<RemoteStandAloneComponent>(
-        component_name);
+    auto remoteComponent =
+        std::make_shared<RemoteStandAloneComponent>(component_name);
 
     LOG_F(INFO, "Successfully loaded remote component {}", component_name);
     return true;

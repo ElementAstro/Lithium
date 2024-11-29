@@ -43,7 +43,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 
 # Configure Loguru
@@ -93,7 +93,7 @@ def create_self_signed_cert(
     valid_days: int = 365,
     san_list: Optional[List[str]] = None,
     cert_type: str = "server"
-) -> (Path, Path):
+) -> Tuple[Path, Path]:
     """
     Creates a self-signed SSL certificate for a hostname with optional SANs.
 

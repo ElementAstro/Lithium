@@ -30,6 +30,8 @@ Description: Configor
 #include "atom/log/loguru.hpp"
 #include "atom/system/env.hpp"
 #include "atom/type/json.hpp"
+#include "atom/utils/difflib.hpp"
+#include "atom/utils/string.hpp"
 
 #include "utils/constant.hpp"
 
@@ -42,63 +44,28 @@ auto removeComments(const std::string& json5) -> std::string {
     std::string result;
     bool inSingleLineComment = false;
     bool inMultiLineComment = false;
-    size_t index = 0;
 
-    while (index < json5.size()) {
-        // Check for single-line comments
+    for (size_t index = 0; index < json5.size(); ++index) {
         if (!inMultiLineComment && !inSingleLineComment &&
-            index + 1 < json5.size() && json5[index] == '/' &&
-            json5[index + 1] == '/') {
-            inSingleLineComment = true;
-            index += 2;  // Skip "//"
-        }
-        // Check for multi-line comments
-        else if (!inSingleLineComment && !inMultiLineComment &&
-                 index + 1 < json5.size() && json5[index] == '/' &&
-                 json5[index + 1] == '*') {
-            inMultiLineComment = true;
-            index += 2;  // Skip "/*"
-        }
-        // Handle end of single-line comments
-        else if (inSingleLineComment && json5[index] == '\n') {
-            inSingleLineComment = false;  // End single-line comment at newline
-            result += '\n';               // Keep the newline
-            index++;                      // Move to the next character
-        }
-        // Handle end of multi-line comments
-        else if (inMultiLineComment && index + 1 < json5.size() &&
-                 json5[index] == '*' && json5[index + 1] == '/') {
-            inMultiLineComment = false;  // End multi-line comment at "*/"
-            index += 2;                  // Skip "*/"
-        }
-        // Handle multi-line strings
-        else if (!inSingleLineComment && !inMultiLineComment &&
-                 json5[index] == '"') {
-            result += json5[index];  // Add starting quote
-            index++;                 // Move to the string content
-            while (index < json5.size() &&
-                   (json5[index] != '"' || json5[index - 1] == '\\')) {
-                // Check if the end of the string is reached
-                if (json5[index] == '\\' && index + 1 < json5.size() &&
-                    json5[index + 1] == '\n') {
-                    // Handle multi-line strings
-                    index += 2;  // Skip backslash and newline
-                } else {
-                    result += json5[index];
-                    index++;
-                }
+            json5[index] == '/' && index + 1 < json5.size()) {
+            if (json5[index + 1] == '/') {
+                inSingleLineComment = true;
+                ++index;
+            } else if (json5[index + 1] == '*') {
+                inMultiLineComment = true;
+                ++index;
+            } else {
+                result += json5[index];
             }
-            if (index < json5.size()) {
-                result += json5[index];  // Add ending quote
-            }
-            index++;  // Move to the next character
-        }
-        // If not in a comment, add character to result
-        else if (!inSingleLineComment && !inMultiLineComment) {
+        } else if (inSingleLineComment && json5[index] == '\n') {
+            inSingleLineComment = false;
+            result += '\n';
+        } else if (inMultiLineComment && json5[index] == '*' &&
+                   index + 1 < json5.size() && json5[index + 1] == '/') {
+            inMultiLineComment = false;
+            ++index;
+        } else if (!inSingleLineComment && !inMultiLineComment) {
             result += json5[index];
-            index++;
-        } else {
-            index++;  // If in a comment, continue moving
         }
     }
 
@@ -164,6 +131,7 @@ public:
     json config;
     asio::io_context ioContext;
     std::thread ioThread;
+    std::string rootPath;
 };
 
 ConfigManager::ConfigManager()
@@ -171,7 +139,9 @@ ConfigManager::ConfigManager()
     asio::executor_work_guard<asio::io_context::executor_type> workGuard(
         m_impl_->ioContext.get_executor());
     m_impl_->ioThread = std::thread([this] { m_impl_->ioContext.run(); });
-    if (loadFromFile("config.json")) {
+    GET_WEAK_PTR(atom::utils::Env, env, ENVIRONMENT);
+    m_impl_->rootPath = env->getEnv("LITHIUM_CONFIG_DIR", "./config");
+    if (loadFromDir(m_impl_->rootPath)) {
         DLOG_F(INFO, "Config loaded successfully.");
     }
 }
@@ -198,23 +168,41 @@ auto ConfigManager::createUnique() -> std::unique_ptr<ConfigManager> {
 
 auto ConfigManager::loadFromFile(const fs::path& path) -> bool {
     std::shared_lock lock(m_impl_->rwMutex);
+    if (!atom::io::isFileExists(path)) {
+        LOG_F(ERROR, "Config file not found: {}", path.string());
+        return false;
+    }
+    // Check if the file format is supported
+    auto suffix = path.extension().string();
+    const std::vector<std::string> SUPPORTED_EXTENSIONS{
+        ".json", ".lithium", ".json5", ".lithium5", ".yaml"};
+    if (SUPPORTED_EXTENSIONS.end() ==
+        std::find_if(SUPPORTED_EXTENSIONS.begin(), SUPPORTED_EXTENSIONS.end(),
+                     [&suffix](const std::string& s) { return s == suffix; })) {
+        LOG_F(ERROR, "Unsupported config file format: {}", path.string());
+        return false;
+    }
     try {
         std::ifstream ifs(path);
-        if (!ifs || ifs.peek() == std::ifstream::traits_type::eof()) {
+        if (!ifs) {
             LOG_F(ERROR, "Failed to open file: {}", path.string());
             return false;
         }
-        json j = json::parse(ifs);
-        if (j.empty()) {
-            LOG_F(WARNING, "Config file is empty: {}", path.string());
+        json j = json::parse(ifs, nullptr, false);
+        if (j.is_discarded()) {
+            LOG_F(ERROR, "Failed to parse file: {}", path.string());
             return false;
         }
-        mergeConfig(j);
+
+        // Merge the loaded config under the appropriate keys
+        auto folder = path.parent_path().filename().string();
+        auto file = path.stem().string();
+
+        m_impl_->config[folder][file] = j;
+
+        // mergeConfig(j);
         LOG_F(INFO, "Config loaded from file: {}", path.string());
         return true;
-    } catch (const json::exception& e) {
-        LOG_F(ERROR, "Failed to parse file: {}, error message: {}",
-              path.string(), e.what());
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to load config file: {}, error message: {}",
               path.string(), e.what());
@@ -225,80 +213,64 @@ auto ConfigManager::loadFromFile(const fs::path& path) -> bool {
 auto ConfigManager::loadFromDir(const fs::path& dir_path,
                                 bool recursive) -> bool {
     std::shared_lock lock(m_impl_->rwMutex);
-    std::weak_ptr<ComponentManager> componentManagerPtr;
-    GET_OR_CREATE_WEAK_PTR(componentManagerPtr, ComponentManager,
-                           Constants::COMPONENT_MANAGER);
-    auto componentManager = componentManagerPtr.lock();
-    if (!componentManager) {
-        LOG_F(ERROR, "ComponentManager not found");
+    if (!atom::io::isFolderExists(dir_path)) {
+        LOG_F(ERROR, "Config directory not found: {}", dir_path.string());
         return false;
     }
+    GET_WEAK_PTR(ComponentManager, componentManager, COMPONENT_MANAGER);
     std::shared_ptr<Component> yamlToJsonComponent;
+
+    auto processFile = [&](const fs::path& path) {
+        if (path.extension() == ".json" || path.extension() == ".lithium") {
+            return loadFromFile(path);
+        }
+        if (path.extension() == ".json5" || path.extension() == ".lithium5") {
+            std::ifstream ifs(path);
+            if (!ifs || ifs.peek() == std::ifstream::traits_type::eof()) {
+                LOG_F(ERROR, "Failed to open file: {}", path.string());
+                return false;
+            }
+            std::string json5((std::istreambuf_iterator<char>(ifs)),
+                              std::istreambuf_iterator<char>());
+            json j = json::parse(internal::convertJSON5toJSON(json5));
+            if (j.empty()) {
+                LOG_F(WARNING, "Config file is empty: {}", path.string());
+                return false;
+            }
+            mergeConfig(j);
+            return true;
+        }
+        if (path.extension() == ".yaml") {
+            if (!yamlToJsonComponent) {
+                yamlToJsonComponent =
+                    componentManager->getComponent("yamlToJson").value().lock();
+                if (!yamlToJsonComponent) {
+                    LOG_F(ERROR, "yamlToJson component not found");
+                    return false;
+                }
+            }
+            try {
+                yamlToJsonComponent->dispatch("yaml_to_json", path.string());
+            } catch (const std::exception& e) {
+                LOG_F(ERROR, "Failed to convert yaml to json: {}", e.what());
+                GET_WEAK_PTR(PythonManager, pythonManager, PYTHON_MANAGER);
+                pythonManager->loadScript("yaml_to_json.py", "yamlToJson");
+                if (!atom::io::isFileExists("yaml_to_json.json")) {
+                    LOG_F(ERROR, "Failed to convert yaml to json");
+                    return false;
+                }
+            }
+            return loadFromFile(path);
+        }
+        return true;
+    };
+
     try {
         for (const auto& entry : fs::directory_iterator(dir_path)) {
             if (entry.is_regular_file()) {
-                if (entry.path().extension() == ".json" ||
-                    entry.path().extension() == ".lithium") {
-                    if (!loadFromFile(entry.path())) {
-                        LOG_F(WARNING, "Failed to load config file: {}",
-                              entry.path().string());
-                    }
-                } else if (entry.path().extension() == ".json5" ||
-                           entry.path().extension() == ".lithium5") {
-                    std::ifstream ifs(entry.path());
-                    if (!ifs ||
-                        ifs.peek() == std::ifstream::traits_type::eof()) {
-                        LOG_F(ERROR, "Failed to open file: {}",
-                              entry.path().string());
-                        return false;
-                    }
-                    std::string json5((std::istreambuf_iterator<char>(ifs)),
-                                      std::istreambuf_iterator<char>());
-                    json j = json::parse(internal::convertJSON5toJSON(json5));
-                    if (j.empty()) {
-                        LOG_F(WARNING, "Config file is empty: {}",
-                              entry.path().string());
-                        return false;
-                    }
-                    mergeConfig(j);
-                } else if (entry.path().extension() == ".yaml") {
-                    // There we will use yaml->json component to convert yaml to
-                    // json
-                    if (!yamlToJsonComponent) {
-                        yamlToJsonComponent =
-                            componentManager->getComponent("yamlToJson")
-                                .value()
-                                .lock();
-                        if (!yamlToJsonComponent) {
-                            LOG_F(ERROR, "yamlToJson component not found");
-                            return false;
-                        }
-                    }
-                    try {
-                        yamlToJsonComponent->dispatch("yaml_to_json",
-                                                      entry.path().string());
-                    } catch (const std::exception& e) {
-                        LOG_F(ERROR, "Failed to convert yaml to json: {}",
-                              e.what());
-                        // Here we will try to use python to convert yaml to
-                        // json
-                        std::shared_ptr<PythonManager> pythonManager;
-                        GET_OR_CREATE_PTR(pythonManager, PythonManager,
-                                          Constants::PYTHON_MANAGER);
-                        pythonManager->loadScript("yaml_to_json.py",
-                                                  "yamlToJson");
-                        pythonManager->callFunction<void>(
-                            "yamlToJson", "yaml_to_json",
-                            entry.path().string());
-                        if (!atom::io::isFileExists("yaml_to_json.json")) {
-                            LOG_F(ERROR, "Failed to convert yaml to json");
-                            return false;
-                        }
-                    }
-                    if (!loadFromFile(entry.path())) {
-                        LOG_F(WARNING, "Failed to load config file: {}",
-                              entry.path().string());
-                    }
+                if (!processFile(entry.path())) {
+                    LOG_F(WARNING, "Failed to load config file: {}",
+                          entry.path().string());
                 }
             } else if (recursive && entry.is_directory()) {
                 loadFromDir(entry.path(), true);
@@ -331,35 +303,7 @@ auto ConfigManager::getValue(const std::string& key_path) const
 
 auto ConfigManager::setValue(const std::string& key_path,
                              const json& value) -> bool {
-    std::unique_lock lock(m_impl_->rwMutex);
-
-    // Check if the key_path is "/" and set the root value directly
-    if (key_path == "/") {
-        m_impl_->config = value;
-        LOG_F(INFO, "Set root config: {}", m_impl_->config.dump());
-        return true;
-    }
-
-    json* p = &m_impl_->config;
-    auto keys = key_path | std::views::split('/');
-
-    for (auto it = keys.begin(); it != keys.end(); ++it) {
-        std::string keyStr = std::string((*it).begin(), (*it).end());
-        LOG_F(INFO, "Set config: {}", keyStr);
-
-        if (std::next(it) == keys.end()) {  // If this is the last key
-            (*p)[keyStr] = value;
-            LOG_F(INFO, "Final config: {}", m_impl_->config.dump());
-            return true;
-        }
-
-        if (!p->contains(keyStr) || !(*p)[keyStr].is_object()) {
-            (*p)[keyStr] = json::object();
-        }
-        p = &(*p)[keyStr];
-        LOG_F(INFO, "Current config: {}", p->dump());
-    }
-    return false;
+    return setValue(key_path, json(value));
 }
 
 auto ConfigManager::setValue(const std::string& key_path,
@@ -440,6 +384,28 @@ auto ConfigManager::deleteValue(const std::string& key_path) -> bool {
             if (p->is_object() && p->contains(*it)) {
                 p->erase(*it);
                 LOG_F(INFO, "Deleted key: {}", key_path);
+
+                if (keys.size() == 1) {
+                    auto folder = keys[0];
+                    fs::path dirPath = m_impl_->rootPath + folder;
+                    if (atom::io::removeDirectory(dirPath)) {
+                        LOG_F(INFO, "Deleted folder: {}", dirPath.string());
+                        return true;
+                    }
+                    LOG_F(ERROR, "Folder does not exist: {}", dirPath.string());
+                } else if (keys.size() == 2) {
+                    auto folder = keys[0];
+                    auto file = keys[1];
+                    fs::path filePath =
+                        m_impl_->rootPath + Constants::PATH_SEPARATOR + folder +
+                        Constants::PATH_SEPARATOR + file + ".json";
+                    if (atom::io::removeFile(filePath)) {
+                        LOG_F(INFO, "Deleted file: {}", filePath.string());
+                        return true;
+                    }
+                    LOG_F(ERROR, "File does not exist: {}", filePath.string());
+                }
+
                 return true;
             }
             LOG_F(WARNING, "Key not found for deletion: {}", key_path);
@@ -458,6 +424,18 @@ auto ConfigManager::hasValue(const std::string& key_path) const -> bool {
     return getValue(key_path).has_value();
 }
 
+auto ConfigManager::reload(const fs::path& path) -> bool {
+    std::unique_lock lock(m_impl_->rwMutex);
+    if (fs::is_directory(path)) {
+        return loadFromDir(path, true);
+    }
+    if (fs::is_regular_file(path)) {
+        return loadFromFile(path);
+    }
+    LOG_F(ERROR, "Invalid path to reload: {}", path.string());
+    return false;
+}
+
 auto ConfigManager::saveToFile(const fs::path& file_path) const -> bool {
     std::unique_lock lock(m_impl_->rwMutex);
     std::ofstream ofs(file_path);
@@ -473,6 +451,34 @@ auto ConfigManager::saveToFile(const fs::path& file_path) const -> bool {
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to save config to file: {}, error message: {}",
               file_path.string(), e.what());
+        return false;
+    }
+}
+
+auto ConfigManager::saveToDir(const fs::path& dir_path) const -> bool {
+    std::unique_lock lock(m_impl_->rwMutex);
+    try {
+        for (const auto& [folder, files] : m_impl_->config.items()) {
+            fs::path folderPath = dir_path / folder;
+            if (!fs::exists(folderPath)) {
+                fs::create_directories(folderPath);
+            }
+            for (const auto& [file, content] : files.items()) {
+                fs::path filePath = folderPath / (file + ".json");
+                std::ofstream ofs(filePath);
+                if (!ofs) {
+                    LOG_F(ERROR, "Failed to open file: {}", filePath.string());
+                    continue;
+                }
+                ofs << content.dump(4);
+                LOG_F(INFO, "Config saved to file: {}", filePath.string());
+            }
+        }
+        return true;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR,
+              "Failed to save config to directory: {}, error message: {}",
+              dir_path.string(), e.what());
         return false;
     }
 }
@@ -558,11 +564,12 @@ auto ConfigManager::getKeys() const -> std::vector<std::string> {
     std::vector<std::string> paths;
     std::function<void(const json&, std::string)> listPaths =
         [&](const json& j, std::string path) {
-            for (auto it = j.begin(); it != j.end(); ++it) {
-                if (it.value().is_object()) {
-                    listPaths(it.value(), path + "/" + it.key());
-                } else {
-                    paths.emplace_back(path + "/" + it.key());
+            if (j.is_object()) {
+                for (const auto& [key, value] : j.items()) {
+                    std::string currentPath =
+                        path.empty() ? key : path + "/" + key;
+                    paths.push_back(currentPath);
+                    listPaths(value, currentPath);
                 }
             }
         };
@@ -573,14 +580,7 @@ auto ConfigManager::getKeys() const -> std::vector<std::string> {
 auto ConfigManager::listPaths() const -> std::vector<std::string> {
     std::shared_lock lock(m_impl_->rwMutex);
     std::vector<std::string> paths;
-    std::weak_ptr<atom::utils::Env> envPtr;
-    GET_OR_CREATE_WEAK_PTR(envPtr, atom::utils::Env, Constants::ENVIRONMENT);
-    auto env = envPtr.lock();
-    if (!env) {
-        LOG_F(ERROR, "Failed to get environment instance");
-        return paths;
-    }
-
+    GET_WEAK_PTR(atom::utils::Env, env, ENVIRONMENT);
     // Get the config directory from the command line arguments
     auto configDir = env->get("config");
     if (configDir.empty() || !atom::io::isFolderExists(configDir)) {
@@ -591,5 +591,18 @@ auto ConfigManager::listPaths() const -> std::vector<std::string> {
     // Check for JSON files in the config directory
     return atom::io::checkFileTypeInFolder(configDir, {".json"},
                                            atom::io::FileOption::PATH);
+}
+
+auto ConfigManager::compareConfig(const json& src) -> std::vector<std::string> {
+    std::shared_lock lock(m_impl_->rwMutex);
+    return atom::utils::Differ::compare(
+        atom::utils::splitString(m_impl_->config.dump(4), '\n'),
+        atom::utils::splitString(src.dump(4), '\n'));
+}
+
+auto ConfigManager::dumpConfig() const -> std::string {
+    std::shared_lock lock(m_impl_->rwMutex);
+    // Max: 4 spaces for indentation
+    return m_impl_->config.dump(4);
 }
 }  // namespace lithium

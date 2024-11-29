@@ -7,9 +7,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom_iosysinfo)
 
-# Set the C++ standard
-set(CMAKE_CXX_STANDARD 20)
-
 # Add source files
 set(SOURCE_FILES
     component.cpp

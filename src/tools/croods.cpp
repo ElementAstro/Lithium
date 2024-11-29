@@ -279,24 +279,6 @@ auto convertToSphericalCoordinates(const CartesianCoordinates& cartesianPoint)
     return SphericalCoordinates{rightAscension, declination};
 }
 
-auto calculateFOV(int focalLength, double cameraSizeWidth,
-                  double cameraSizeHeight) -> MinMaxFOV {
-    LOG_F(
-        INFO,
-        "calculateFOV: FocalLength={}, CameraWidth={:.6f}, CameraHeight={:.6f}",
-        focalLength, cameraSizeWidth, cameraSizeHeight);
-
-    double cameraSizeDiagonal = std::hypot(cameraSizeWidth, cameraSizeHeight);
-
-    double minFOV = 2 * std::atan(cameraSizeHeight / (2.0 * focalLength)) *
-                    K_RADIANS_TO_DEGREES;
-    double maxFOV = 2 * std::atan(cameraSizeDiagonal / (2.0 * focalLength)) *
-                    K_RADIANS_TO_DEGREES;
-
-    LOG_F(INFO, "FOV: Min={:.6f}°, Max={:.6f}°", minFOV, maxFOV);
-    return {minFOV, maxFOV};
-}
-
 auto calculateGST(const std::tm& date) -> double {
     LOG_F(INFO, "calculateGST: Date={:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}",
           date.tm_year + 1900, date.tm_mon + 1, date.tm_mday, date.tm_hour,

@@ -1,10 +1,10 @@
 #include "device.hpp"
-#include <format>
+
 #include <random>
 #include <sstream>
-#include <stdexcept>
 
 #include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
 
 int AlpacaDevice::clientId = std::random_device{}() % 65536;
 int AlpacaDevice::clientTransId = 1;
@@ -23,46 +23,60 @@ AlpacaDevice::AlpacaDevice(const std::string& address,
     curl_ = std::unique_ptr<CURL, std::function<void(CURL*)>>(
         curl_easy_init(), [](CURL* curl) { curl_easy_cleanup(curl); });
     if (!curl_) {
+        LOG_F(ERROR, "Failed to initialize CURL");
         THROW_CURL_INITIALIZATION_ERROR("Failed to initialize CURL");
     }
+    LOG_F(INFO, "AlpacaDevice initialized with base URL: {}", baseUrl_);
 }
 
-AlpacaDevice::~AlpacaDevice() = default;
+AlpacaDevice::~AlpacaDevice() {
+    LOG_F(INFO, "AlpacaDevice instance destroyed");
+}
 
 auto AlpacaDevice::action(const std::string& actionName,
                           const std::vector<std::string>& parameters)
     -> std::string {
+    LOG_F(INFO, "Performing action: {} with parameters: {}", actionName, json(parameters).dump());
     json params = {{"Action", actionName}, {"Parameters", parameters}};
     return put("action", params)["Value"];
 }
 
 void AlpacaDevice::commandBlind(const std::string& command, bool raw) {
+    LOG_F(INFO, "Sending commandBlind: {}, raw: {}", command, raw ? "true" : "false");
     put("commandblind",
         {{"Command", command}, {"Raw", raw ? "true" : "false"}});
 }
 
 auto AlpacaDevice::commandBool(const std::string& command, bool raw) -> bool {
+    LOG_F(INFO, "Sending commandBool: {}, raw: {}", command, raw ? "true" : "false");
     return put("commandbool", {{"Command", command},
                                {"Raw", raw ? "true" : "false"}})["Value"];
 }
 
 auto AlpacaDevice::commandString(const std::string& command,
                                  bool raw) -> std::string {
+    LOG_F(INFO, "Sending commandString: {}, raw: {}", command, raw ? "true" : "false");
     return put("commandstring", {{"Command", command},
                                  {"Raw", raw ? "true" : "false"}})["Value"];
 }
 
-auto AlpacaDevice::getConnected() -> bool { return get("connected"); }
+auto AlpacaDevice::getConnected() -> bool {
+    LOG_F(INFO, "Getting connected state");
+    return get("connected");
+}
 
 void AlpacaDevice::setConnected(bool connectedState) {
+    LOG_F(INFO, "Setting connected state to: {}", connectedState ? "true" : "false");
     put("connected", {{"Connected", connectedState ? "true" : "false"}});
 }
 
 auto AlpacaDevice::getDescription() -> std::string {
+    LOG_F(INFO, "Getting description");
     return get("description");
 }
 
 auto AlpacaDevice::getDriverInfo() -> std::vector<std::string> {
+    LOG_F(INFO, "Getting driver info");
     std::string info = get("driverinfo");
     std::vector<std::string> result;
     std::istringstream iss(info);
@@ -74,16 +88,22 @@ auto AlpacaDevice::getDriverInfo() -> std::vector<std::string> {
 }
 
 auto AlpacaDevice::getDriverVersion() -> std::string {
+    LOG_F(INFO, "Getting driver version");
     return get("driverversion");
 }
 
 auto AlpacaDevice::getInterfaceVersion() -> int {
+    LOG_F(INFO, "Getting interface version");
     return std::stoi(get("interfaceversion").get<std::string>());
 }
 
-auto AlpacaDevice::getName() -> std::string { return get("name"); }
+auto AlpacaDevice::getName() -> std::string {
+    LOG_F(INFO, "Getting name");
+    return get("name");
+}
 
 auto AlpacaDevice::getSupportedActions() -> std::vector<std::string> {
+    LOG_F(INFO, "Getting supported actions");
     return get("supportedactions").get<std::vector<std::string>>();
 }
 
@@ -113,6 +133,8 @@ auto AlpacaDevice::get(const std::string& attribute,
         url += "?" + queryString;
     }
 
+    LOG_F(INFO, "Sending GET request to URL: {}", url);
+
     std::string responseString;
     curl_easy_setopt(curl_.get(), CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl_.get(), CURLOPT_WRITEFUNCTION, writeCallback);
@@ -120,9 +142,12 @@ auto AlpacaDevice::get(const std::string& attribute,
 
     CURLcode res = curl_easy_perform(curl_.get());
     if (res != CURLE_OK) {
-        throw std::runtime_error(
+        LOG_F(ERROR, "CURL error: {}", curl_easy_strerror(res));
+        THROW_RUNTIME_ERROR(
             std::format("CURL error: {}", curl_easy_strerror(res)));
     }
+
+    LOG_F(INFO, "Received response: {}", responseString);
 
     json response = json::parse(responseString);
     checkError(response);
@@ -150,6 +175,8 @@ auto AlpacaDevice::put(const std::string& attribute,
                                   clientTransId++, clientId);
     }
 
+    LOG_F(INFO, "Sending PUT request to URL: {} with data: {}", url, postFields);
+
     std::string responseString;
     curl_easy_setopt(curl_.get(), CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl_.get(), CURLOPT_POSTFIELDS, postFields.c_str());
@@ -158,9 +185,12 @@ auto AlpacaDevice::put(const std::string& attribute,
 
     CURLcode res = curl_easy_perform(curl_.get());
     if (res != CURLE_OK) {
-        throw std::runtime_error(
+        LOG_F(ERROR, "CURL error: {}", curl_easy_strerror(res));
+        THROW_RUNTIME_ERROR(
             std::format("CURL error: {}", curl_easy_strerror(res)));
     }
+
+    LOG_F(INFO, "Received response: {}", responseString);
 
     json response = json::parse(responseString);
     checkError(response);
@@ -173,6 +203,7 @@ auto AlpacaDevice::writeCallback(void* contents, size_t size, size_t nmemb,
     try {
         s->append((char*)contents, newLength);
     } catch (std::bad_alloc& e) {
+        LOG_F(ERROR, "Memory allocation error in writeCallback");
         return 0;
     }
     return newLength;
@@ -183,35 +214,36 @@ void AlpacaDevice::checkError(const json& response) {
     std::string errorMessage = response["ErrorMessage"];
 
     if (errorNumber != 0) {
+        LOG_F(ERROR, "Error received: %d - {}", errorNumber, errorMessage);
         switch (errorNumber) {
             case 0x0400:
-                throw std::runtime_error("NotImplementedException: " +
+                THROW_RUNTIME_ERROR("NotImplementedException: " +
                                          errorMessage);
             case 0x0401:
-                throw std::invalid_argument("InvalidValueException: " +
+                THROW_INVALID_ARGUMENT("InvalidValueException: " +
                                             errorMessage);
             case 0x0402:
-                throw std::runtime_error("ValueNotSetException: " +
+                THROW_RUNTIME_ERROR("ValueNotSetException: " +
                                          errorMessage);
             case 0x0407:
-                throw std::runtime_error("NotConnectedException: " +
+                THROW_RUNTIME_ERROR("NotConnectedException: " +
                                          errorMessage);
             case 0x0408:
-                throw std::runtime_error("ParkedException: " + errorMessage);
+                THROW_RUNTIME_ERROR("ParkedException: " + errorMessage);
             case 0x0409:
-                throw std::runtime_error("SlavedException: " + errorMessage);
+                THROW_RUNTIME_ERROR("SlavedException: " + errorMessage);
             case 0x040B:
-                throw std::runtime_error("InvalidOperationException: " +
+                THROW_RUNTIME_ERROR("InvalidOperationException: " +
                                          errorMessage);
             case 0x040C:
-                throw std::runtime_error("ActionNotImplementedException: " +
+                THROW_RUNTIME_ERROR("ActionNotImplementedException: " +
                                          errorMessage);
             default:
                 if (errorNumber >= 0x500 && errorNumber <= 0xFFF) {
-                    throw std::runtime_error(std::format(
+                    THROW_RUNTIME_ERROR(std::format(
                         "DriverException: ({}) {}", errorNumber, errorMessage));
                 } else {
-                    throw std::runtime_error(
+                    THROW_RUNTIME_ERROR(
                         std::format("UnknownException: ({}) {}", errorNumber,
                                     errorMessage));
                 }

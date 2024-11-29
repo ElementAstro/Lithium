@@ -14,31 +14,29 @@ AlpacaFocuser::~AlpacaFocuser() {
     }
 }
 
-auto AlpacaFocuser::getAbsolute() const -> bool {
+auto AlpacaFocuser::getAbsolute() -> bool {
     return getNumericProperty<bool>("absolute");
 }
 
-auto AlpacaFocuser::getIsMoving() const -> bool {
-    return isMoving_.load();
-}
+auto AlpacaFocuser::getIsMoving() -> bool { return isMoving_.load(); }
 
-auto AlpacaFocuser::getMaxIncrement() const -> int {
+auto AlpacaFocuser::getMaxIncrement() -> int {
     return getNumericProperty<int>("maxincrement");
 }
 
-auto AlpacaFocuser::getMaxStep() const -> int {
+auto AlpacaFocuser::getMaxStep() -> int {
     return getNumericProperty<int>("maxstep");
 }
 
-auto AlpacaFocuser::getPosition() const -> int {
+auto AlpacaFocuser::getPosition() -> int {
     return getNumericProperty<int>("position");
 }
 
-auto AlpacaFocuser::getStepSize() const -> float {
+auto AlpacaFocuser::getStepSize() -> float {
     return getNumericProperty<float>("stepsize");
 }
 
-auto AlpacaFocuser::getTempComp() const -> bool {
+auto AlpacaFocuser::getTempComp() -> bool {
     return getNumericProperty<bool>("tempcomp");
 }
 
@@ -46,11 +44,11 @@ void AlpacaFocuser::setTempComp(bool tempCompState) {
     put("tempcomp", {{"TempComp", tempCompState ? "true" : "false"}});
 }
 
-auto AlpacaFocuser::getTempCompAvailable() const -> bool {
+auto AlpacaFocuser::getTempCompAvailable() -> bool {
     return getNumericProperty<bool>("tempcompavailable");
 }
 
-auto AlpacaFocuser::getTemperature() const -> std::optional<float> {
+auto AlpacaFocuser::getTemperature() -> std::optional<float> {
     try {
         return getNumericProperty<float>("temperature");
     } catch (const std::runtime_error& e) {

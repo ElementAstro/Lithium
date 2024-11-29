@@ -7,11 +7,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium.indiserver)
 
-# Set the C++ standard
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 # Add source and header files in one place for better management
 set(SOURCE_FILES
     src/driverlist.cpp

@@ -385,9 +385,8 @@ void ConsoleTerminal::ConsoleTerminalImpl::handleInput(
     callCommand(command, args);
 }
 
-char** ConsoleTerminal::ConsoleTerminalImpl::commandCompletion(const char* text,
-                                                               int start,
-                                                               int end) {
+char** ConsoleTerminal::ConsoleTerminalImpl::commandCompletion(
+    [[maybe_unused]] const char* text, int start, int end) {
     (void)start;
     (void)end;
 #if __has_include(<ncurses.h>) || __has_include(<ncurses/ncurses.h>)

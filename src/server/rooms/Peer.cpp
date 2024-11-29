@@ -1,10 +1,10 @@
 #include "Peer.hpp"
 
 #include <array>
+#include <asio/io_context.hpp>
 #include <utility>
 #include "Room.hpp"
 
-#include "oatpp/dto/DTOs.hpp"
 #include "oatpp/encoding/Base64.hpp"
 
 #include "middleware/gpio.hpp"
@@ -285,9 +285,7 @@ auto Peer::handleQTextMessage(const std::string& message)
                 LOG_F(INFO, "focusSpeed: {}", speed);
                 int result = setFocusSpeed(speed);
                 LOG_F(INFO, "focusSpeed result: {}", result);
-                std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-                GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                                  Constants::MESSAGE_BUS)
+                auto messageBusPtr = GetPtr<atom::async::MessageBus>(Constants::MESSAGE_BUS).value();
                 messageBusPtr->publish(
                     "main", "FocusChangeSpeedSuccess:{}"_fmt(result));
             },
@@ -340,9 +338,7 @@ auto Peer::handleQTextMessage(const std::string& message)
                 auto [x, y] =
                     configManager->getValue("/lithium/device/camera/frame")
                         ->get<std::array<int, 2>>();
-                std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-                GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                                  Constants::MESSAGE_BUS)
+                auto messageBusPtr = GetPtr<atom::async::MessageBus>(Constants::MESSAGE_BUS).value();
                 messageBusPtr->publish("main",
                                        "MainCameraSize:{}:{}"_fmt(x, y));
             },
@@ -518,9 +514,7 @@ auto Peer::handleQTextMessage(const std::string& message)
                                  ->get<double>();
                 double lng = configManager->getValue("/lithium/location/lng")
                                  ->get<double>();
-                std::shared_ptr<atom::async::MessageBus> messageBusPtr;
-                GET_OR_CREATE_PTR(messageBusPtr, atom::async::MessageBus,
-                                  Constants::MESSAGE_BUS)
+                auto messageBusPtr = GetPtr<atom::async::MessageBus>(Constants::MESSAGE_BUS).value();
                 messageBusPtr->publish(
                     "main", "SetCurrentLocation:{}:{}"_fmt(lat, lng));
             },
@@ -574,6 +568,7 @@ auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
         auto process() -> Action {
             if (!m_jsonData_.contains("name")) {
             }
+            return yieldTo(&SendMessageCoroutine::send);
         }
 
         auto send() -> Action {
@@ -587,6 +582,7 @@ auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
         m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock_, m_socket_,
                                                        message->message);
     }
+    return nullptr;
 }
 
 auto Peer::handleMessage(const oatpp::Object<MessageDto>& message)

@@ -1,6 +1,7 @@
 #ifndef PHD2CONTROLLER_HPP
 #define PHD2CONTROLLER_HPP
 
+#include "Types.hpp"
 #include "oatpp/web/server/api/ApiController.hpp"
 
 #include "oatpp/macro/codegen.hpp"
@@ -31,136 +32,109 @@
 #include <fstream>
 #include <string>
 
-inline auto to_json(const oatpp::Vector<oatpp::String>& vec) -> json {
-    json j = json::array();
-    for (const auto& str : *vec) {
-        j.push_back(str);
+namespace lithium::controller::phd2 {
+
+class AsyncEndpointHelper {
+protected:
+    static auto createErrorResponse(
+        const std::string& command, const std::string& message,
+        oatpp::web::server::api::ApiController* controller,
+        oatpp::web::protocol::http::Status status =
+            oatpp::web::protocol::http::Status::CODE_500) {
+        LOG_F(ERROR, "Command '{}' failed with error: {}", command, message);
+        auto res = StatusDto::createShared();
+        res->command = command;
+        res->status = "error";
+        res->error = message;
+        return controller->createDtoResponse(status, res);
+    }
+
+    static auto createWarningResponse(
+        const std::string& command, const std::string& message,
+        oatpp::web::server::api::ApiController* controller,
+        oatpp::web::protocol::http::Status status =
+            oatpp::web::protocol::http::Status::CODE_400) {
+        LOG_F(WARNING, "Command '{}' encountered a warning: {}", command,
+              message);
+        auto res = StatusDto::createShared();
+        res->command = command;
+        res->status = "warning";
+        res->warning = message;
+        return controller->createDtoResponse(status, res);
+    }
+
+    static auto createSuccessResponse(
+        const std::string& command,
+        oatpp::web::server::api::ApiController* controller) {
+        LOG_F(INFO, "Command '{}' executed successfully", command);
+        auto res = StatusDto::createShared();
+        res->command = command;
+        res->status = "success";
+        return controller->createDtoResponse(
+            oatpp::web::protocol::http::Status::CODE_200, res);
+    }
+
+    static void updatePHD2RunningStatus(bool isRunning) {
+        if (configManagerPtr) {
+            configManagerPtr->setValue("/lithium/client/phd2/running",
+                                       isRunning);
+            LOG_F(INFO, "PHD2 running status updated to: {}",
+                  isRunning ? "true" : "false");
+        } else {
+            THROW_BAD_CONFIG_EXCEPTION("ConfigManager is not initialized");
+        }
+    }
+
+    static std::shared_ptr<lithium::ConfigManager> configManagerPtr;
+    static std::shared_ptr<atom::system::ProcessManager> processManagerPtr;
+    static std::shared_ptr<atom::utils::Env> envPtr;
+};
+
+std::shared_ptr<lithium::ConfigManager> AsyncEndpointHelper::configManagerPtr =
+    nullptr;
+std::shared_ptr<atom::system::ProcessManager>
+    AsyncEndpointHelper::processManagerPtr = nullptr;
+std::shared_ptr<atom::utils::Env> AsyncEndpointHelper::envPtr = nullptr;
+
+}  // namespace lithium::controller::phd2
+
+#include OATPP_CODEGEN_BEGIN(ApiController)  // <-- Begin Code-Gen
+
+inline auto to_json(const oatpp::Vector<oatpp::String>& vec) {
+    nlohmann::json j;
+    for (int i = 0; i < vec->size(); ++i) {
+        j.push_back(vec[i]->c_str());
     }
     return j;
 }
 
-namespace lithium::controller::phd2 {
-// Function to determine if the value is a special type (e.g., bounded by {})
-auto isSpecialType(const std::string& value) -> bool {
-    return value.find('{') != std::string::npos &&
-           value.find('}') != std::string::npos;
-}
-
-// Function to parse special type values into an array
-auto parseSpecialType(const std::string& value)
-    -> std::vector<std::pair<std::string, std::string>> {
-    std::vector<std::pair<std::string, std::string>> result;
-    std::string trimmed = value;  // Remove the surrounding {}
-    std::istringstream ss(trimmed);
-    std::string item;
-    while (std::getline(ss, item, '}')) {
-        auto start = item.find('{');
-        if (start != std::string::npos) {
-            item = item.substr(start + 1);
-            item.erase(
-                0, item.find_first_not_of(" \t"));  // Trim leading whitespace
-            item.erase(item.find_last_not_of(" \t") +
-                       1);  // Trim trailing whitespace
-            auto pos = item.find(' ');
-            if (pos != std::string::npos) {
-                std::string first = item.substr(0, pos);
-                std::string second = item.substr(pos + 1);
-                result.emplace_back(first, second);
-            }
-        }
-    }
-    return result;
-}
-
-// Function to parse each line correctly considering special cases
-auto parseLine(const std::string& line)
-    -> std::tuple<std::vector<std::string>, std::string> {
-    std::istringstream iss(line);
-    std::string key;
-    std::string value;
-
-    int temp;
-    if (iss >> key >> temp) {
-        key.erase(0, 1);  // Remove the leading '/'
-
-        // Use getline to read the remainder of the line (value can contain
-        // spaces)
-        std::getline(iss, value);
-        value.erase(0,
-                    value.find_first_not_of(" \t"));  // Trim leading whitespace
-
-        // Check for specific keys and extract device if necessary
-        if ((key.find("camera/LastMenuChoice") != std::string::npos ||
-             key.find("rotator/LastMenuChoice") != std::string::npos ||
-             key.find("scope/LastMenuChoice") != std::string::npos) &&
-            value.find("INDI") != std::string::npos &&
-            value.find('[') != std::string::npos) {
-            auto start = value.find('[');
-            auto end = value.find(']');
-            if (start != std::string::npos && end != std::string::npos &&
-                end > start) {
-                value = value.substr(
-                    start + 1, end - start - 1);  // Extract the device name
-            }
-        }
-
-        return {atom::utils::splitString(key, '/'),
-                value};  // Split the key by '/'
-    }
-    return {std::vector<std::string>{}, std::string{}};
-}
-}  // namespace lithium::controller::phd2
-
-#include OATPP_CODEGEN_BEGIN(ApiController)  /// <-- Begin Code-Gen
-
-class PHD2Controller : public oatpp::web::server::api::ApiController {
-private:
-    typedef PHD2Controller __ControllerType;
-    static std::shared_ptr<lithium::ConfigManager> configManagerPtr;
-    static std::shared_ptr<atom::system::ProcessManager> processManagerPtr;
-    static std::shared_ptr<atom::utils::Env> envPtr;
-
+class PHD2Controller
+    : public oatpp::web::server::api::ApiController,
+      protected lithium::controller::phd2::AsyncEndpointHelper {
 public:
     PHD2Controller(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
         : oatpp::web::server::api::ApiController(objectMapper) {}
 
-    static auto createShared() -> std::shared_ptr<PHD2Controller> {
-        return std::make_shared<PHD2Controller>();
+    static std::shared_ptr<PHD2Controller> createShared(
+        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)) {
+        return std::make_shared<PHD2Controller>(objectMapper);
     }
 
+public:
     ENDPOINT_INFO(getUIApiPHD2Scan) {
-        info->summary = "Scan PHD2 server";
+        info->summary = "Scan PHD2 Server";
         info->addConsumes<RequestDto>("application/json");
         info->addResponse<ReturnPHD2ScanDto>(Status::CODE_200,
                                              "application/json");
         info->addResponse<StatusDto>(Status::CODE_500, "application/json");
     }
     ENDPOINT_ASYNC("GET", "/api/client/phd2/scan"_path, getUIApiPHD2Scan) {
-        ENDPOINT_ASYNC_INIT(getUIApiPHD2Scan);
+        ENDPOINT_ASYNC_INIT(getUIApiPHD2Scan)
 
         static constexpr auto COMMAND = "lithium.client.phd2.scan";
 
-        auto createErrorResponse(const std::string& message, Status status) {
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "error";
-            res->error = message;
-            return controller->createDtoResponse(status, res);
-        }
-
-        auto createWarningResponse(const std::string& message, Status status) {
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "warning";
-            res->warning = message;
-            return controller->createDtoResponse(status, res);
-        }
-
-    public:
-        auto act() -> Action override {
-            // Check if PHD2 is installed
+        Action act() override {
             auto res = ReturnPHD2ScanDto::createShared();
-
             try {
                 if (atom::system::checkSoftwareInstalled("phd2")) {
                     auto phd2Dto = PHD2ExecutableDto::createShared();
@@ -175,35 +149,38 @@ public:
                     }
                     res->server->try_emplace("phd2", phd2Dto);
                 } else {
-                    // Here we cannot find PHD2 in normal way, so we will try to
-                    // find it in the PATH
-#if _WIN32
-
+                    // Attempt to find PHD2 in other paths
+#if defined(_WIN32)
+                    // Windows implementation
 #else
-#define PROCESS_PHD2_PATHS(var, paths)                             \
-    auto var = atom::io::searchExecutableFiles(paths, "phd2");     \
-    for (const auto& path : var) {                                 \
-        auto phd2Dto = PHD2ExecutableDto::createShared();          \
-        auto version = atom::system::getAppVersion(path.string()); \
-        auto permission = atom::system::getAppPermissions(path);   \
-        phd2Dto->executable = path.string();                       \
-        phd2Dto->version = version;                                \
-        for (const auto& perm : permission) {                      \
-            phd2Dto->permission->emplace_back(perm);               \
-        }                                                          \
-        res->server->try_emplace("phd2", phd2Dto);                 \
-    }
-                    PROCESS_PHD2_PATHS(phd2PathInUsrBin, "/usr/bin")
-                    PROCESS_PHD2_PATHS(phd2PathInUsrLocalBin, "/usr/local/bin")
-                    PROCESS_PHD2_PATHS(phd2PathInOpt, "/opt")
-#undef PROCESS_PHD2_PATHS
+#define SEARCH_PATHS(paths)                                             \
+    do {                                                                \
+        auto pathList = atom::io::searchExecutableFiles(paths, "phd2"); \
+        for (const auto& path : pathList) {                             \
+            auto phd2Dto = PHD2ExecutableDto::createShared();           \
+            auto version = atom::system::getAppVersion(path.string());  \
+            auto permission = atom::system::getAppPermissions(path);    \
+            phd2Dto->executable = path.string();                        \
+            phd2Dto->version = version;                                 \
+            for (const auto& perm : permission) {                       \
+                phd2Dto->permission->emplace_back(perm);                \
+            }                                                           \
+            res->server->try_emplace("phd2", phd2Dto);                  \
+        }                                                               \
+    } while (0)
+
+                    SEARCH_PATHS("/usr/bin");
+                    SEARCH_PATHS("/usr/local/bin");
+                    SEARCH_PATHS("/opt");
+#undef SEARCH_PATHS
 #endif
                 }
-                // Save the PHD2 server configurations to the config manager
+
+                // Save PHD2 server configuration to config manager
                 GET_OR_CREATE_PTR(configManagerPtr, lithium::ConfigManager,
                                   Constants::CONFIG_MANAGER)
                 json j;
-                for (auto& it : *res->server) {
+                for (const auto& it : *res->server) {
                     j[it.first] = {
                         {"name", atom::utils::generateRandomString(5)},
                         {"executable", it.second.executable},
@@ -212,11 +189,11 @@ public:
                 }
                 configManagerPtr->appendValue("/lithium/client/phd2/servers",
                                               j);
-
             } catch (const std::exception& e) {
-                LOG_F(ERROR, "getUIApiPHD2Scan: {}", e.what());
-                return _return(createErrorResponse("Failed to scan PHD2",
-                                                   Status::CODE_500));
+                LOG_F(ERROR, "getUIApiPHD2Scan: Exception occurred: {}",
+                      e.what());
+                return _return(createErrorResponse(
+                    COMMAND, "Failed to scan PHD2", controller));
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
@@ -224,10 +201,9 @@ public:
     };
 
     ENDPOINT_INFO(getUIApiPHD2Configs) {
-        info->summary = "Get PHD2 configurations";
+        info->summary = "Get PHD2 Configurations";
         info->description =
-            "Get the PHD2 server configurations from specified "
-            " directory";
+            "Retrieve PHD2 server configurations from the specified directory";
         info->addConsumes<RequestPHD2ConfigDto>("application/json");
         info->addResponse<ReturnPHD2ConfigDto>(Status::CODE_200,
                                                "application/json");
@@ -235,63 +211,47 @@ public:
     }
     ENDPOINT_ASYNC("GET", "/api/client/phd2/configs"_path,
                    getUIApiPHD2Configs) {
-        ENDPOINT_ASYNC_INIT(getUIApiPHD2Configs);
+        ENDPOINT_ASYNC_INIT(getUIApiPHD2Configs)
 
         static constexpr auto COMMAND = "lithium.client.phd2.configs";
 
-        auto createErrorResponse(const std::string& message, Status status) {
-            LOG_F(ERROR, "getUIApiPHD2Configs: {}", message);
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "error";
-            res->error = message;
-            return controller->createDtoResponse(status, res);
-        }
-
-        auto createWarningResponse(const std::string& message, Status status) {
-            LOG_F(WARNING, "getUIApiPHD2Configs: {}", message);
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "warning";
-            res->warning = message;
-            return controller->createDtoResponse(status, res);
-        }
-
-    public:
-        auto act() -> Action override {
+        Action act() override {
             return request
                 ->readBodyToDtoAsync<oatpp::Object<RequestPHD2ConfigDto>>(
                     controller->getDefaultObjectMapper())
-                .callbackTo(&getUIApiPHD2Configs::returnResponse);
+                .callbackTo(&getUIApiPHD2Configs::onRequestDtoParsed);
         }
 
-        auto returnResponse(
-            const oatpp::Object<RequestPHD2ConfigDto>& body) -> Action {
+        Action onRequestDtoParsed(
+            const oatpp::Object<RequestPHD2ConfigDto>& body) {
             auto path = body->path;
-            OATPP_ASSERT_HTTP(atom::io::isFolderNameValid(path),
-                              Status::CODE_400,
-                              "The specified path is invalid");
-            OATPP_ASSERT_HTTP(atom::io::isFolderExists(path), Status::CODE_400,
-                              "The specified path does not exist");
-            auto res = PHDConfigDto::createShared();
+            if (!atom::io::isFolderNameValid(path) ||
+                !atom::io::isFolderExists(path)) {
+                return _return(createWarningResponse(
+                    COMMAND, "Invalid or non-existent path specified",
+                    controller, Status::CODE_400));
+            }
+            auto res = ReturnPHD2ConfigDto::createShared();
             try {
-#ifdef _WIN32
-
+#if defined(_WIN32)
+                // Windows implementation
 #else
-                auto configPath = atom::io::checkFileTypeInFolder(
+                auto configPaths = atom::io::checkFileTypeInFolder(
                     path, {".phd2", ".sodium", ".ini"},
                     atom::io::FileOption::PATH);
-                if (configPath.empty()) {
+                if (configPaths.empty()) {
                     return _return(createWarningResponse(
-                        "No PHD2 configuration found", Status::CODE_404));
+                        COMMAND, "No PHD2 configurations found", controller,
+                        Status::CODE_404));
                 }
-                for (const auto& config : configPath) {
-
-                }
+                // TODO: Process configuration files and populate res
 #endif
             } catch (const std::exception& e) {
+                LOG_F(ERROR, "getUIApiPHD2Configs: Exception occurred: {}",
+                      e.what());
                 return _return(createErrorResponse(
-                    "Failed to get PHD2 configuration", Status::CODE_500));
+                    COMMAND, "Failed to retrieve PHD2 configurations",
+                    controller));
             }
             return _return(
                 controller->createDtoResponse(Status::CODE_200, res));
@@ -299,171 +259,79 @@ public:
     };
 
     ENDPOINT_INFO(getUIApiPHD2IsRunning) {
-        info->summary = "Check if PHD2 server is running";
+        info->summary = "Check if PHD2 Server is Running";
         info->addConsumes<RequestDto>("application/json");
         info->addResponse<StatusDto>(Status::CODE_200, "application/json");
         info->addResponse<StatusDto>(Status::CODE_500, "application/json");
-        info->addResponse<StatusDto>(Status::CODE_400, "application/json");
-        info->addResponse<StatusDto>(Status::CODE_404, "application/json");
     }
     ENDPOINT_ASYNC("GET", "/api/client/phd2/isrunning"_path,
                    getUIApiPHD2IsRunning) {
-        ENDPOINT_ASYNC_INIT(getUIApiPHD2IsRunning);
+        ENDPOINT_ASYNC_INIT(getUIApiPHD2IsRunning)
 
         static constexpr auto COMMAND = "lithium.client.phd2.isrunning";
 
-        auto createErrorResponse(const std::string& message, Status status) {
-            LOG_F(ERROR, "getUIApiPHD2IsRunning: {}", message);
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "error";
-            res->error = message;
-            return controller->createDtoResponse(status, res);
-        }
-
-        auto createWarningResponse(const std::string& message, Status status) {
-            LOG_F(WARNING, "getUIApiPHD2IsRunning: {}", message);
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "warning";
-            res->warning = message;
-            return controller->createDtoResponse(status, res);
-        }
-
-        auto createSuccessResponse() {
-            // Set the PHD2 running status to true
-            if (configManagerPtr) {
-                configManagerPtr->setValue("/lithium/client/phd2/running",
-                                           true);
-            } else {
-                THROW_BAD_CONFIG_EXCEPTION("ConfigManager is not initialized");
-            }
-            auto res = StatusDto::createShared();
-            res->command = COMMAND;
-            res->status = "success";
-            return controller->createDtoResponse(Status::CODE_200, res);
-        }
-
-    public:
-        auto act() -> Action override {
+        Action act() override {
             return request
                 ->readBodyToDtoAsync<oatpp::Object<RequestDto>>(
                     controller->getDefaultObjectMapper())
-                .callbackTo(&getUIApiPHD2IsRunning::returnResponse);
+                .callbackTo(&getUIApiPHD2IsRunning::onRequestDtoParsed);
         }
 
-        static auto checkPHD2Status() -> bool {
-            if (!atom::system::isProcessRunning("phd2")) {
-                LOG_F(WARNING, "No PHD2 process found");
-                return false;
-            }
-            return true;
-        }
-
-        auto returnResponse(const oatpp::Object<RequestDto>& body) -> Action {
+        Action onRequestDtoParsed(const oatpp::Object<RequestDto>& body) {
             auto retry = body->retry;
             auto timeout = body->timeout;
-            OATPP_ASSERT_HTTP(retry >= 0 && retry <= 5, Status::CODE_400,
-                              "Invalid retry value");
-            OATPP_ASSERT_HTTP(timeout >= 0 && timeout <= 300, Status::CODE_400,
-                              "Invalid timeout");
 
-            auto callback = []() { LOG_F(INFO, "PHD2 process is running"); };
-
-            auto exceptionHandler = [](const std::exception& e) {
-                LOG_F(ERROR, "getUIApiPHD2IsRunning: {}", e.what());
-            };
-
-            auto completeHandler = []() {
-                LOG_F(INFO, "Completed PHD2 status check");
-            };
+            if (retry < 0 || retry > 5 || timeout < 0 || timeout > 300) {
+                return _return(
+                    createWarningResponse(COMMAND, "Invalid parameters",
+                                          controller, Status::CODE_400));
+            }
 
             try {
-                auto future = atom::async::asyncRetryE(
-                    checkPHD2Status, retry, std::chrono::milliseconds(1000),
-                    atom::async::BackoffStrategy::EXPONENTIAL,
-                    std::chrono::milliseconds(timeout), callback,
-                    exceptionHandler, completeHandler);
-
-                auto sharedFuture =
-                    std::make_shared<decltype(future)>(std::move(future));
-
-                sharedFuture->then([this](bool result) {
-                    if (result) {
-                        return _return(createSuccessResponse());
-                    }
-                    return _return(createWarningResponse("PHD2 is not running",
-                                                         Status::CODE_404));
-                });
+                auto isRunning = atom::system::isProcessRunning("phd2");
+                updatePHD2RunningStatus(isRunning);
+                if (isRunning) {
+                    return _return(createSuccessResponse(COMMAND, controller));
+                }                      return _return(
+                        createWarningResponse(COMMAND, "PHD2 is not running",
+                                              controller, Status::CODE_404));
+               
             } catch (const std::exception& e) {
+                LOG_F(ERROR, "getUIApiPHD2IsRunning: Exception occurred: {}",
+                      e.what());
                 return _return(createErrorResponse(
-                    "Failed to check PHD2 status", Status::CODE_500));
+                    COMMAND, "Failed to check PHD2 status", controller));
             }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, nullptr));
         }
     };
 
-#define CREATE_RESPONSE_FUNCTIONS(COMMAND_NAME)                             \
-    auto createErrorResponse(const std::string& message, Status status) {   \
-        LOG_F(ERROR, "{}: {}", ATOM_FUNC_NAME, message);                    \
-        auto res = StatusDto::createShared();                               \
-        res->command = COMMAND_NAME;                                        \
-        res->status = "error";                                              \
-        res->error = message;                                               \
-        return controller->createDtoResponse(status, res);                  \
-    }                                                                       \
-    auto createWarningResponse(const std::string& message, Status status) { \
-        LOG_F(WARNING, "{}: {}", ATOM_FUNC_NAME, message);                  \
-        auto res = StatusDto::createShared();                               \
-        res->command = COMMAND_NAME;                                        \
-        res->status = "warning";                                            \
-        res->warning = message;                                             \
-        return controller->createDtoResponse(status, res);                  \
-    }                                                                       \
-    auto createSuccessResponse() {                                          \
-        if (configManagerPtr) {                                             \
-            configManagerPtr->setValue(                                     \
-                "/lithium/client/phd2/running",                             \
-                COMMAND_NAME == "lithium.client.phd2.start");               \
-        } else {                                                            \
-            THROW_BAD_CONFIG_EXCEPTION("ConfigManager is not initialized"); \
-        }                                                                   \
-        auto res = StatusDto::createShared();                               \
-        res->command = COMMAND_NAME;                                        \
-        res->status = "success";                                            \
-        return controller->createDtoResponse(Status::CODE_200, res);        \
-    }
-
     ENDPOINT_INFO(getUIApiPHD2Start) {
-        info->summary = "Start PHD2 server";
+        info->summary = "Start PHD2 Server";
         info->addConsumes<RequestPHD2StartDto>("application/json");
         info->addResponse<StatusDto>(Status::CODE_200, "application/json");
         info->addResponse<StatusDto>(Status::CODE_500, "application/json");
     }
     ENDPOINT_ASYNC("POST", "/api/client/phd2/start"_path, getUIApiPHD2Start) {
-        ENDPOINT_ASYNC_INIT(getUIApiPHD2Start);
+        ENDPOINT_ASYNC_INIT(getUIApiPHD2Start)
 
         static constexpr auto COMMAND = "lithium.client.phd2.start";
-        CREATE_RESPONSE_FUNCTIONS(COMMAND)
 
-    public:
-        auto act() -> Action override {
+        Action act() override {
             return request
                 ->readBodyToDtoAsync<oatpp::Object<RequestPHD2StartDto>>(
                     controller->getDefaultObjectMapper())
-                .callbackTo(&getUIApiPHD2Start::returnResponse);
+                .callbackTo(&getUIApiPHD2Start::onRequestDtoParsed);
         }
 
-        auto returnResponse(
-            const oatpp::Object<RequestPHD2StartDto>& body) -> Action {
+        Action onRequestDtoParsed(
+            const oatpp::Object<RequestPHD2StartDto>& body) {
             if (configManagerPtr) {
-                if (auto value = configManagerPtr->getValue(
-                        "/lithium/client/phd2/running");
-                    value.has_value() && value.value().get<bool>()) {
-                    LOG_F(WARNING, "PHD2 is already running");
+                auto value =
+                    configManagerPtr->getValue("/lithium/client/phd2/running");
+                if (value.has_value() && value.value().get<bool>()) {
                     return _return(createWarningResponse(
-                        "PHD2 is already running", Status::CODE_400));
+                        COMMAND, "PHD2 is already running", controller,
+                        Status::CODE_400));
                 }
             } else {
                 THROW_BAD_CONFIG_EXCEPTION("ConfigManager is not initialized");
@@ -471,96 +339,92 @@ public:
 
             auto name = body->name;
             auto args = body->args;
-            auto env = body->env;
+            auto envVars = body->env;
+
             try {
                 auto serverList =
                     configManagerPtr->getValue("/lithium/client/phd2/servers");
                 if (!serverList.has_value()) {
-                    return _return(createWarningResponse("No PHD2 server found",
-                                                         Status::CODE_404));
+                    return _return(
+                        createWarningResponse(COMMAND, "No PHD2 servers found",
+                                              controller, Status::CODE_404));
                 }
                 auto servers = serverList.value();
                 if (!servers.is_array()) {
                     return _return(createErrorResponse(
-                        "Invalid PHD2 server configurations",
-                        Status::CODE_500));
+                        COMMAND, "Invalid PHD2 server configuration",
+                        controller));
                 }
+                bool found = false;
                 for (const auto& server : servers) {
                     if (server["name"] == name) {
                         auto path = server["executable"].get<std::string>();
                         if (path.empty() || !atom::io::isFileNameValid(path)) {
                             return _return(createErrorResponse(
-                                "Invalid PHD2 executable path",
-                                Status::CODE_500));
+                                COMMAND, "Invalid PHD2 executable path",
+                                controller));
                         }
 
                         GET_OR_CREATE_PTR(envPtr, atom::utils::Env,
                                           Constants::ENVIRONMENT)
-                        for (const auto& [key, value] : *env) {
-                            if (envPtr->setEnv(key, value)) {
-                                LOG_F(INFO, "Set environment variable: {}={}",
-                                      key, value);
-                            } else {
-                                LOG_F(WARNING,
-                                      "Failed to set environment "
-                                      "variable: {}={}",
-                                      key, value);
-                            }
+                        for (const auto& [key, value] : *envVars) {
+                            envPtr->setEnv(key, value);
                         }
 
                         GET_OR_CREATE_PTR(processManagerPtr,
                                           atom::system::ProcessManager,
                                           Constants::PROCESS_MANAGER)
-
                         if (!processManagerPtr->createProcess(path, "phd2",
                                                               true)) {
                             return _return(createErrorResponse(
-                                "Failed to start PHD2", Status::CODE_500));
+                                COMMAND, "Failed to start PHD2", controller));
                         }
-
-                        configManagerPtr->setValue(
-                            "/lithium/client/phd2/running", true);
-                        return _return(createSuccessResponse());
+                        updatePHD2RunningStatus(true);
+                        found = true;
+                        break;
                     }
                 }
+                if (!found) {
+                    return _return(createWarningResponse(
+                        COMMAND, "Specified PHD2 server not found", controller,
+                        Status::CODE_404));
+                }
             } catch (const std::exception& e) {
+                LOG_F(ERROR, "getUIApiPHD2Start: Exception occurred: {}",
+                      e.what());
                 return _return(createErrorResponse(
-                    std::format("Failed to start PHD2: {}", e.what()),
-                    Status::CODE_500));
+                    COMMAND, "Failed to start PHD2", controller));
             }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, nullptr));
+            return _return(createSuccessResponse(COMMAND, controller));
         }
     };
 
     ENDPOINT_INFO(getUIApiPHD2Stop) {
-        info->summary = "Stop PHD2 server";
+        info->summary = "Stop PHD2 Server";
         info->addConsumes<RequestDto>("application/json");
         info->addResponse<StatusDto>(Status::CODE_200, "application/json");
         info->addResponse<StatusDto>(Status::CODE_500, "application/json");
     }
     ENDPOINT_ASYNC("POST", "/api/client/phd2/stop"_path, getUIApiPHD2Stop) {
-        ENDPOINT_ASYNC_INIT(getUIApiPHD2Stop);
+        ENDPOINT_ASYNC_INIT(getUIApiPHD2Stop)
 
         static constexpr auto COMMAND = "lithium.client.phd2.stop";
-        CREATE_RESPONSE_FUNCTIONS(COMMAND)
 
-    public:
-        auto act() -> Action override {
+        Action act() override {
             return request
                 ->readBodyToDtoAsync<oatpp::Object<RequestDto>>(
                     controller->getDefaultObjectMapper())
-                .callbackTo(&getUIApiPHD2Stop::returnResponse);
+                .callbackTo(&getUIApiPHD2Stop::onRequestDtoParsed);
         }
 
-        auto returnResponse(const oatpp::Object<RequestDto>& body) -> Action {
+        Action onRequestDtoParsed(const oatpp::Object<RequestDto>& body) {
             if (configManagerPtr) {
-                if (auto value = configManagerPtr->getValue(
-                        "/lithium/client/phd2/running");
-                    value.has_value() && !value.value().get<bool>()) {
-                    LOG_F(WARNING, "PHD2 is not running");
-                    return _return(createWarningResponse("PHD2 is not running",
-                                                         Status::CODE_400));
+                auto value =
+                    configManagerPtr->getValue("/lithium/client/phd2/running");
+                if (value.has_value() && !value.value().get<bool>()) {
+                    return _return(
+                        createWarningResponse(COMMAND, "PHD2 is not running",
+                                              controller, Status::CODE_400));
                 }
             } else {
                 THROW_BAD_CONFIG_EXCEPTION("ConfigManager is not initialized");
@@ -570,26 +434,22 @@ public:
                 GET_OR_CREATE_PTR(processManagerPtr,
                                   atom::system::ProcessManager,
                                   Constants::PROCESS_MANAGER)
-
                 if (!processManagerPtr->terminateProcessByName("phd2")) {
-                    return _return(createErrorResponse("Failed to stop PHD2",
-                                                       Status::CODE_500));
+                    return _return(createErrorResponse(
+                        COMMAND, "Failed to stop PHD2", controller));
                 }
-
-                configManagerPtr->setValue("/lithium/client/phd2/running",
-                                           false);
-                return _return(createSuccessResponse());
+                updatePHD2RunningStatus(false);
             } catch (const std::exception& e) {
+                LOG_F(ERROR, "getUIApiPHD2Stop: Exception occurred: {}",
+                      e.what());
                 return _return(createErrorResponse(
-                    std::format("Failed to stop PHD2: {}", e.what()),
-                    Status::CODE_500));
+                    COMMAND, "Failed to stop PHD2", controller));
             }
-            return _return(
-                controller->createDtoResponse(Status::CODE_200, nullptr));
+            return _return(createSuccessResponse(COMMAND, controller));
         }
     };
 };
 
-#include OATPP_CODEGEN_END(ApiController)  /// <-- End Code-Gen
+#include OATPP_CODEGEN_END(ApiController)  // <-- End Code-Gen
 
 #endif /* PHD2CONTROLLER_HPP */

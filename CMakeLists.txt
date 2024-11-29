@@ -164,11 +164,8 @@ target_link_libraries(lithium_server
         lithium-config
         lithium-task
         lithium-addons
-        oatpp-websocket
-        oatpp-swagger
-        oatpp-openssl
-        oatpp-zlib
-        oatpp
+        lithium-debug
+        lithium-script
         loguru
         atom
         fmt::fmt
@@ -176,11 +173,13 @@ target_link_libraries(lithium_server
         OpenSSL::Crypto
         ${ZLIB_LIBRARIES}
         sqlite3
-        cpp_httplib
         tinyxml2
         pocketpy
         ${Readline_LIBRARIES}
+        ${FFI_LIBRARIES}
         pybind11::embed
+        ${CURSES_LIBRARIES}
+        yaml-cpp::yaml-cpp
 )
 
 if(WIN32)

@@ -28,43 +28,20 @@ Description: Configor
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-#define GetIntConfig(path)                           \
+#define GET_CONFIG(path, type)                       \
     GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
         .value()                                     \
         ->getValue(path)                             \
         .value()                                     \
-        .get<int>()
+        .get<type>()
 
-#define GetFloatConfig(path)                         \
-    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
-        .value()                                     \
-        ->getValue(path)                             \
-        .value()                                     \
-        .get<float>()
-
-#define GetBoolConfig(path)                          \
-    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
-        .value()                                     \
-        ->getValue(path)                             \
-        .value()                                     \
-        .get<bool>()
-
-#define GetDoubleConfig(path)                        \
-    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
-        .value()                                     \
-        ->getValue(path)                             \
-        .value()                                     \
-        .get<double>()
-
-#define GetStringConfig(path)                        \
-    GetPtr<ConfigManager>(Constatns::CONFIG_MANAGER) \
-        .value()                                     \
-        ->getValue(path)                             \
-        .value()                                     \
-        .get<std::string>()
+#define GetIntConfig(path) GET_CONFIG(path, int)
+#define GetFloatConfig(path) GET_CONFIG(path, float)
+#define GetBoolConfig(path) GET_CONFIG(path, bool)
+#define GetDoubleConfig(path) GET_CONFIG(path, double)
+#define GetStringConfig(path) GET_CONFIG(path, std::string)
 
 #define GET_CONFIG_VALUE(configManager, path, type, outputVar)              \
-    type outputVar;                                                         \
     do {                                                                    \
         auto opt = (configManager)->getValue(path);                         \
         if (opt.has_value()) {                                              \
@@ -223,12 +200,28 @@ public:
     auto loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
 
     /**
+     * @brief Reloads configuration data from a file or directory.
+     * @param path The path to the file or directory.
+     * @return bool True if the configuration was successfully reloaded, false
+     * otherwise.
+     */
+    auto reload(const fs::path& path) -> bool;
+
+    /**
      * @brief Saves the current configuration to a file.
      * @param file_path The path to save the configuration file.
      * @return bool True if the configuration was successfully saved, false
      * otherwise.
      */
     [[nodiscard]] auto saveToFile(const fs::path& file_path) const -> bool;
+
+    /**
+     * @brief Saves the current configuration to a directory.
+     * @param dir_path The path to save the configuration directory.
+     * @return bool True if the configuration was successfully saved, false
+     * otherwise.
+     */
+    [[nodiscard]] auto saveToDir(const fs::path& dir_path) const -> bool;
 
     /**
      * @brief Cleans up the configuration by removing unused entries or
@@ -246,6 +239,10 @@ public:
      * @param src The JSON object to merge into the current configuration.
      */
     void mergeConfig(const json& src);
+
+    auto compareConfig(const json& src) -> std::vector<std::string>;
+
+    [[nodiscard]] auto dumpConfig() const -> std::string;
 
     /**
      * @brief Asynchronously loads configuration data from a file.

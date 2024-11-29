@@ -506,6 +506,10 @@ void PythonManager::executeScriptWithLogging(const std::string& script_content,
 }
 
 // 显式实例化模板函数
+template void PythonManager::callFunction<void>(const std::string&,
+                                                const std::string&);
+template void PythonManager::callFunction<void, const std::string&>(
+    const std::string&, const std::string&, const std::string&);
 template int PythonManager::callFunction<int>(const std::string&,
                                               const std::string&);
 template double PythonManager::callFunction<double>(const std::string&,

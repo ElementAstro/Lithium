@@ -9,7 +9,6 @@ void bind_exceptions(py::module &m) {
     py::register_exception<atom::error::Exception>(m, "Exception");
     py::register_exception<atom::error::SystemErrorException>(
         m, "SystemErrorException");
-    py::register_exception<atom::error::NestedException>(m, "NestedException");
     py::register_exception<atom::error::RuntimeError>(m, "RuntimeError");
     py::register_exception<atom::error::LogicError>(m, "LogicError");
     py::register_exception<atom::error::UnlawfulOperation>(m,

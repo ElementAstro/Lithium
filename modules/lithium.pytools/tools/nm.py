@@ -1,3 +1,4 @@
+# python
 """
 NM Tool for analyzing symbols in binary files.
 Provides functionalities to retrieve, filter, search, count, and export symbols from a binary.
@@ -7,10 +8,17 @@ import argparse
 import subprocess
 import json
 import csv
-from typing import List, Tuple, Optional, Dict
 import sys
 import os
+import re
+from typing import List, Tuple, Optional, Dict
+
 from loguru import logger
+from rich.console import Console
+from rich.table import Table
+from rich.progress import track
+
+console = Console()
 
 # Configure loguru for logging
 logger.remove()  # Remove the default logger to customize logging settings
@@ -23,7 +31,11 @@ logger.add(
     encoding="utf-8",
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <level>{message}</level>",
 )
-logger.add(sys.stdout, level="INFO", format="<level>{message}</level>")
+logger.add(
+    sys.stderr,
+    level="INFO",
+    format="<level>{message}</level>",
+)
 
 
 class NMError(Exception):
@@ -66,9 +78,13 @@ class NM:
             logger.warning(
                 f"Binary file is not executable: {self.binary_path}")
 
-    def _run_nm(self) -> str:
+    def _run_nm(self, demangle: bool = False, extern_only: bool = False) -> str:
         """
         Executes the 'nm' command on the binary and captures its output.
+
+        Args:
+            demangle (bool): Whether to demangle C++ symbol names.
+            extern_only (bool): Whether to display only external symbols.
 
         Returns:
             str: The standard output from the 'nm' command.
@@ -77,9 +93,15 @@ class NM:
             NMError: If the 'nm' command fails or is not found.
         """
         logger.debug(f"Running nm on binary: {self.binary_path}")
+        cmd = ['nm', self.binary_path]
+        if demangle:
+            cmd.append('-C')
+        if extern_only:
+            cmd.append('-g')
+        logger.debug(f"Command: {' '.join(cmd)}")
         try:
             result = subprocess.run(
-                ['nm', self.binary_path],
+                cmd,
                 capture_output=True,
                 text=True,
                 check=True
@@ -95,47 +117,58 @@ class NM:
             raise NMError(
                 "nm command not found. Please ensure it is installed and in PATH.") from exc
 
-    def get_symbols(self) -> List[Tuple[str, str, str]]:
+    def get_symbols(self, demangle: bool = False, extern_only: bool = False) -> List[Tuple[str, str, str]]:
         """
         Retrieves all symbols from the binary along with their addresses and types.
+
+        Args:
+            demangle (bool): Whether to demangle C++ symbol names.
+            extern_only (bool): Whether to retrieve only external symbols.
 
         Returns:
             List[Tuple[str, str, str]]: A list of tuples containing address, symbol type, and symbol name.
         """
-        output = self._run_nm()
+        output = self._run_nm(demangle=demangle, extern_only=extern_only)
         symbols = []
 
         # Parse nm output
         for line in output.splitlines():
             if line.strip():  # Ignore empty lines
-                parts = line.split()
-                if len(parts) >= 3:
-                    address, symbol_type, symbol_name = parts[0], parts[1], ' '.join(
-                        parts[2:])
-                    symbols.append((address, symbol_type, symbol_name))
+                parts = line.strip().split(maxsplit=2)
+                if len(parts) == 3:
+                    address, symbol_type, symbol_name = parts
+                elif len(parts) == 2:
+                    address, symbol_type = parts
+                    symbol_name = ''
                 else:
                     logger.warning(f"Unparsed line: {line}")
+                    continue
+                symbols.append((address, symbol_type, symbol_name))
 
         logger.info(f"Total symbols retrieved: {len(symbols)}")
         return symbols
 
-    def filter_symbols(self, symbol_type: Optional[str] = None) -> List[Tuple[str, str, str]]:
+    def filter_symbols(self, symbol_type: Optional[str] = None, regex: Optional[str] = None) -> List[Tuple[str, str, str]]:
         """
-        Filters the retrieved symbols by their type.
+        Filters the retrieved symbols by their type or name pattern.
 
         Args:
-            symbol_type (Optional[str]): The type of symbol to filter by (e.g., T, D, B).
+            symbol_type (Optional[str]): The type of symbol to filter by (e.g., 'T', 'D', 'B').
+            regex (Optional[str]): A regular expression to filter symbol names.
 
         Returns:
             List[Tuple[str, str, str]]: A list of filtered symbols.
         """
         symbols = self.get_symbols()
         if symbol_type:
-            filtered = [s for s in symbols if s[1] == symbol_type]
+            symbols = [s for s in symbols if s[1] == symbol_type]
             logger.info(
-                f"Symbols filtered by type '{symbol_type}': {len(filtered)} found")
-            return filtered
-        logger.info("No symbol type filter applied.")
+                f"Symbols filtered by type '{symbol_type}': {len(symbols)} found")
+        if regex:
+            pattern = re.compile(regex)
+            symbols = [s for s in symbols if pattern.search(s[2])]
+            logger.info(
+                f"Symbols filtered by pattern '{regex}': {len(symbols)} found")
         return symbols
 
     def find_symbol(self, symbol_name: str) -> Optional[Tuple[str, str, str]]:
@@ -179,7 +212,7 @@ class NM:
 
     def display_symbols(self, symbols: List[Tuple[str, str, str]], detailed: bool = False) -> None:
         """
-        Formats and displays the list of symbols.
+        Formats and displays the list of symbols using Rich for enhanced terminal output.
 
         Args:
             symbols (List[Tuple[str, str, str]]): The list of symbols to display.
@@ -187,14 +220,19 @@ class NM:
         """
         if not symbols:
             logger.info("No symbols to display.")
-            print("No symbols to display.")
+            console.print("[bold yellow]No symbols to display.[/bold yellow]")
             return
 
+        table = Table(title="Symbol Table")
+
+        table.add_column("Address", style="cyan")
+        table.add_column("Type", style="magenta")
+        table.add_column("Name", style="green")
+
         for addr, sym_type, name in symbols:
-            if detailed:
-                print(f"Address: {addr}, Type: {sym_type}, Name: {name}")
-            else:
-                print(f"{addr}: {sym_type} {name}")
+            table.add_row(addr, sym_type, name)
+
+        console.print(table)
         logger.info(f"Displayed {len(symbols)} symbols.")
 
     def count_symbols_by_type(self) -> Dict[str, int]:
@@ -229,7 +267,7 @@ class NM:
             if export_format == 'txt':
                 with open(filename, 'w', encoding='utf-8') as f:
                     for addr, sym_type, name in symbols:
-                        f.write(f"{addr}: {sym_type} {name}\n")
+                        f.write(f"{addr} {sym_type} {name}\n")
                 logger.info(f"Symbols exported to {filename} in TXT format.")
             elif export_format == 'csv':
                 with open(filename, 'w', newline='', encoding='utf-8') as f:
@@ -270,6 +308,81 @@ class NM:
             raise NMError(
                 "XML export requires the xml module, which is not available.") from exc
 
+    def get_symbol_sizes(self) -> List[Tuple[str, str, str, str]]:
+        """
+        Retrieves symbols along with their sizes.
+
+        Returns:
+            List[Tuple[str, str, str, str]]: A list of tuples containing address, size, symbol type, and symbol name.
+        """
+        logger.debug("Retrieving symbols with sizes.")
+        cmd = ['nm', '-S', self.binary_path]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            symbols = []
+            for line in result.stdout.splitlines():
+                if line.strip():
+                    parts = line.strip().split(maxsplit=3)
+                    if len(parts) == 4:
+                        address, size, symbol_type, symbol_name = parts
+                    else:
+                        logger.warning(f"Unparsed line: {line}")
+                        continue
+                    symbols.append((address, size, symbol_type, symbol_name))
+            logger.info(f"Total symbols with sizes retrieved: {len(symbols)}")
+            return symbols
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error running nm with -S: {e}")
+            raise NMError(f"Error running nm with -S: {e}") from e
+
+    def display_symbol_sizes(self, symbols: List[Tuple[str, str, str, str]]) -> None:
+        """
+        Displays symbols along with their sizes using Rich.
+
+        Args:
+            symbols (List[Tuple[str, str, str, str]]): The list of symbols with sizes.
+        """
+        if not symbols:
+            logger.info("No symbols with sizes to display.")
+            console.print(
+                "[bold yellow]No symbols with sizes to display.[/bold yellow]")
+            return
+
+        table = Table(title="Symbol Sizes")
+
+        table.add_column("Address", style="cyan")
+        table.add_column("Size", style="blue")
+        table.add_column("Type", style="magenta")
+        table.add_column("Name", style="green")
+
+        for addr, size, sym_type, name in symbols:
+            table.add_row(addr, size, sym_type, name)
+
+        console.print(table)
+        logger.info(f"Displayed {len(symbols)} symbols with sizes.")
+
+    def search_symbols(self, pattern: str) -> List[Tuple[str, str, str]]:
+        """
+        Searches for symbols matching a regular expression pattern.
+
+        Args:
+            pattern (str): The regular expression pattern to search for.
+
+        Returns:
+            List[Tuple[str, str, str]]: A list of matching symbols.
+        """
+        logger.debug(f"Searching symbols with pattern: {pattern}")
+        symbols = self.get_symbols()
+        regex = re.compile(pattern)
+        matching_symbols = [s for s in symbols if regex.search(s[2])]
+        logger.info(f"Found {len(matching_symbols)} symbols matching pattern.")
+        return matching_symbols
+
 
 def main():
     """
@@ -294,13 +407,21 @@ def main():
                         help='Export symbols to a file (supports txt, csv, json, xml).')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Increase output verbosity.')
+    parser.add_argument('--demangle', action='store_true',
+                        help='Demangle symbol names.')
+    parser.add_argument('--extern', action='store_true',
+                        help='Display only external symbols.')
+    parser.add_argument('--size', action='store_true',
+                        help='Display symbols with sizes.')
+    parser.add_argument('--pattern', type=str,
+                        help='Search symbols matching a regex pattern.')
 
     args = parser.parse_args()
 
     # Adjust loguru logging level based on verbosity
     if args.verbose:
-        logger.remove()  # Remove the default stdout logger
-        logger.add(sys.stdout, level="DEBUG",
+        logger.remove()
+        logger.add(sys.stderr, level="DEBUG",
                    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <level>{message}</level>")
 
     try:
@@ -312,10 +433,18 @@ def main():
     try:
         actions_performed = False
 
-        if args.filter:
+        if args.size:
             actions_performed = True
-            logger.info(f"Filtering symbols by type: {args.filter}")
-            filtered_symbols = nm_tool.filter_symbols(args.filter)
+            logger.info("Displaying symbols with sizes.")
+            symbols_with_sizes = nm_tool.get_symbol_sizes()
+            nm_tool.display_symbol_sizes(symbols_with_sizes)
+
+        if args.filter or args.pattern:
+            actions_performed = True
+            logger.info(
+                f"Filtering symbols by type: {args.filter} and pattern: {args.pattern}")
+            filtered_symbols = nm_tool.filter_symbols(
+                symbol_type=args.filter, regex=args.pattern)
             nm_tool.display_symbols(filtered_symbols, args.detailed)
 
         if args.search:
@@ -325,7 +454,8 @@ def main():
             if found_symbol:
                 nm_tool.display_symbols([found_symbol], args.detailed)
             else:
-                print(f"Symbol '{args.search}' not found.")
+                console.print(
+                    f"[bold red]Symbol '{args.search}' not found.[/bold red]")
 
         if args.address:
             actions_performed = True
@@ -334,15 +464,17 @@ def main():
             if found_symbol:
                 nm_tool.display_symbols([found_symbol], args.detailed)
             else:
-                print(f"No symbol found at address '{args.address}'.")
+                console.print(
+                    f"[bold red]No symbol found at address '{args.address}'.[/bold red]")
 
         if args.count:
             actions_performed = True
             logger.info("Counting symbols by type.")
             counts = nm_tool.count_symbols_by_type()
-            print("\nSymbol counts by type:")
+            console.print(
+                "\n[bold underline]Symbol counts by type:[/bold underline]")
             for sym_type, count in counts.items():
-                print(f"{sym_type}: {count}")
+                console.print(f"[green]{sym_type}[/green]: {count}")
 
         if args.export:
             actions_performed = True
@@ -350,14 +482,19 @@ def main():
             logger.info(
                 f"Exporting symbols to {args.export} in {export_format.upper()} format.")
             nm_tool.export_symbols(args.export, export_format)
-            print(
-                f"Symbols exported to {args.export} in {export_format.upper()} format.")
+            console.print(
+                f"[bold green]Symbols exported to {args.export} in {export_format.upper()} format.[/bold green]")
 
         # Default behavior: display all symbols if no specific action is taken
         if not actions_performed:
             logger.info("Displaying all symbols.")
-            print(f"\nAll symbols in {args.binary}:")
-            nm_tool.display_symbols(nm_tool.get_symbols(), args.detailed)
+            console.print(
+                f"\n[bold underline]All symbols in {args.binary}:[/bold underline]")
+            nm_tool.display_symbols(
+                nm_tool.get_symbols(demangle=args.demangle,
+                                    extern_only=args.extern),
+                args.detailed
+            )
 
     except NMError as e:
         logger.error(e)

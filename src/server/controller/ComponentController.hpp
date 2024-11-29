@@ -2,6 +2,7 @@
 #define LITHIUM_SERVER_COMPONENT_CONTROLLER_HPP
 
 #include <any>
+#include <asio/io_context.hpp>
 #include <exception>
 #include <optional>
 #include <stdexcept>
@@ -85,8 +86,8 @@ public:
         : oatpp::web::server::api::ApiController(objectMapper) {
         GET_OR_CREATE_WEAK_PTR(mComponentManager, lithium::ComponentManager,
                                Constants::COMPONENT_MANAGER);
-        GET_OR_CREATE_WEAK_PTR(mMessageBus, atom::async::MessageBus,
-                               Constants::MESSAGE_BUS);
+        mMessageBus =
+            GetPtr<atom::async::MessageBus>(Constants::MESSAGE_BUS).value();
         mMessageQueue = std::make_shared<atom::async::ThreadSafeQueue<json>>();
 
         mMessageBus.lock()->subscribe<json>(
@@ -95,8 +96,8 @@ public:
                 ComponentController::mMessageQueue->emplace(message);
             });
 #if ENABLE_ASYNC
-        GET_OR_CREATE_PTR(mAsyncIO, atom::async::io::AsyncFile,
-                          Constants::ASYNC_IO);
+        mAsyncIO =
+            GetPtr<atom::async::io::AsyncFile>(Constants::ASYNC_IO).value();
 #endif
     }
 
@@ -237,7 +238,8 @@ public:
 
     ENDPOINT_INFO(getUIApiServreComponentUnload) {
         info->summary = "Unload component";
-        info->addConsumes<RequestComponentUnloadDto>("application/json");
+        info->addConsumes<Object<RequestComponentUnloadDto>>(
+            "application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
                                              "application/json");
         info->addResponse<Object<ReturnComponentUnloadNotFoundDto>>(
@@ -337,7 +339,8 @@ public:
 
     ENDPOINT_INFO(getUIApiServreComponentReload) {
         info->summary = "Reload component";
-        info->addConsumes<RequestComponentReloadDto>("application/json");
+        info->addConsumes<Object<RequestComponentReloadDto>>(
+            "application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200,
                                              "application/json");
     }
@@ -748,7 +751,8 @@ public:
                         if (realArg.has_value()) {
                             functionArgs.push_back(realArg.value());
                         } else {
-                            // LOG_F(ERROR, "Failed to parse argument: {}", arg);
+                            // LOG_F(ERROR, "Failed to parse argument: {}",
+                            // arg);
                             return _return(createErrorResponse<
                                            ReturnComponentFunctionNotFoundDto>(
                                 "Failed to parse argument", component, function,
@@ -828,6 +832,11 @@ public:
     };
 };
 
+std::weak_ptr<lithium::ComponentManager> ComponentController::mComponentManager;
+std::weak_ptr<atom::async::MessageBus> ComponentController::mMessageBus;
+std::shared_ptr<atom::async::ThreadSafeQueue<json>>
+    ComponentController::mMessageQueue;
+std::weak_ptr<atom::async::io::AsyncFile> ComponentController::mAsyncIO;
 #include OATPP_CODEGEN_END(ApiController)  /// <-- End Code-Gen
 
 #endif  // LITHIUM_SERVER_COMPONENT_CONTROLLER_HPP

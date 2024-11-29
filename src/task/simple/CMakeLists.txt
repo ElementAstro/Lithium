@@ -40,7 +40,7 @@ set(PROJECT_LIBS
     atom-async-io
     atom-utils
     loguru
-    yaml-cpp
+    yaml-cpp::yaml-cpp
     ${CMAKE_THREAD_LIBS_INIT}
 )
 

@@ -19,6 +19,8 @@ set(${PROJECT_NAME}_LIBS
     atom-component
     atom-error
     lithium-config
+    lithium-script
+    lithium-addon
     loguru
     ${CMAKE_THREAD_LIBS_INIT}
 )

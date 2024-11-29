@@ -1,6 +1,8 @@
 #include "controller/ComponentController.hpp"
+#include "controller/ConfigController.hpp"
 #include "controller/FileController.hpp"
 #include "controller/RoomsController.hpp"
+// #include "controller/ScriptController.hpp"
 #include "controller/StaticController.hpp"
 #include "controller/StatisticsController.hpp"
 
@@ -26,9 +28,11 @@ void run(const oatpp::base::CommandLineArguments& args) {
 
     /* Create RoomsController and add all of its endpoints to router */
     router->addController(std::make_shared<ComponentController>());
+    router->addController(ConfigController::createShared());
     router->addController(std::make_shared<RoomsController>());
     router->addController(std::make_shared<StaticController>());
     router->addController(std::make_shared<FileController>());
+    // router->addController(std::make_shared<ScriptController>());
     router->addController(std::make_shared<StatisticsController>());
 
     router->addController(INDIController::createShared());

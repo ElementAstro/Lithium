@@ -15,6 +15,7 @@
 
 #include "data/ScriptDto.hpp"
 
+#include "atom/extra/tinyxml2/tinyxml2.h"
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
@@ -36,12 +37,6 @@
 
 #if __has_include(<yaml-cpp/yaml.h>)
 #include <yaml-cpp/yaml.h>
-#endif
-
-#if __has_include(<tinyxml2/tinyxml2.h>)
-#include <tinyxml2/tinyxml2.h>
-#elif __has_include(<tinyxml2.h>)
-#include <tinyxml2.h>
 #endif
 
 #include <fstream>
@@ -271,7 +266,7 @@ public:
                                     scriptDto->interpreter->path, "")) {
                                 LOG_F(ERROR,
                                       "Interpreter is not executable: {}",
-                                      scriptDto->interpreter->path);
+                                      scriptDto->interpreter->path->c_str());
                                 return finish();
                             }
                         }
@@ -288,7 +283,7 @@ public:
                                     LOG_F(ERROR,
                                           "Unable to get interpreter path: "
                                           "{}",
-                                          scriptDto->interpreter->interpreter);
+                                          scriptDto->interpreter->interpreter->c_str());
                                     return finish();
                                 }
                             }

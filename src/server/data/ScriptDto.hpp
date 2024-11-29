@@ -12,8 +12,8 @@ Description: Data Transform Object for INDI Controller
 
 **************************************************/
 
-#ifndef INDIDTO_HPP
-#define INDIDTO_HPP
+#ifndef SCRIPTDTO_HPP
+#define SCRIPTDTO_HPP
 
 #include "data/RequestDto.hpp"
 #include "data/StatusDto.hpp"
@@ -186,4 +186,4 @@ class ReturnScriptRunDto : public StatusDto {
 
 #include OATPP_CODEGEN_END(DTO)  ///< End DTO codegen section
 
-#endif  // INDIDTO_HPP
+#endif  // SCRIPTDTO_HPP
